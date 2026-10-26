@@ -281,3 +281,25 @@ _Avoid_: handler, controller, use case
 The default output of a read verb: the few facts an agent needs next, within a fixed size budget.
 The whole record is a separate request.
 _Avoid_: digest, overview
+
+### Distribution
+
+**Engine**:
+The coach itself: the code, verbs, skills and hooks, released as one versioned whole. One
+installed engine serves any number of instances.
+_Avoid_: framework, template, core
+
+**Instance**:
+One athlete's directory: config, profile, the store and its committed export, and nothing of the
+engine. Where every verb runs.
+_Avoid_: workspace, data repo, my-training
+
+**Engine pin**:
+The one engine version an instance declares it was last upgraded to. A verb from any other
+version stops before touching the instance.
+_Avoid_: requirement, compatibility range
+
+**Upgrade**:
+Bringing an instance up to a newer installed engine in one approved step: migrate the store,
+regenerate what the engine owns in the instance, move the pin, commit.
+_Avoid_: sync, framework-sync, migrate (one part of it)
