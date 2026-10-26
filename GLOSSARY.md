@@ -70,8 +70,9 @@ _Avoid_: span, cycle
 
 **WeekPlan**:
 The plan for one week: its rotation position, its overrides with their reasons, its status
-(draft, approved, superseded) and, once approved, its frozen prescriptions.
-_Avoid_: overlay, proposal, draft file, one-off
+(approved, superseded) and its frozen prescriptions. It exists only once approved; before that
+there is only the plan file the agent is editing.
+_Avoid_: overlay, proposal, draft, one-off
 
 **Override**:
 A typed, reasoned departure from the program version's rule, scoped to a week, a planned session
@@ -115,8 +116,15 @@ one precedence order, never stored.
 _Avoid_: week type, week status
 
 **Approval**:
-The athlete's recorded yes to one WeekPlan, by id. The only thing a Hevy push can bind to.
-_Avoid_: sign-off, confirmation, approval hash
+The athlete's recorded yes to one WeekPlan, by id, given at the prompt for the one write that
+pushes it. The only thing a Hevy push can bind to. There is no approve step of its own.
+_Avoid_: sign-off, confirmation, approval hash, self-approval
+
+**Write plan**:
+Exactly what a push would do, as one hash: the WeekPlan that would be frozen, each Hevy write,
+and the version of each routine touched. Shown with the dry run, handed back to the write, and
+refused when anything underneath it has moved.
+_Avoid_: approval hash, plan hash, expect-plan
 
 ### Log
 
