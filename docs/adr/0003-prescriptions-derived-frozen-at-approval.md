@@ -1,0 +1,36 @@
+---
+status: accepted
+date: 2026-10-26
+---
+
+# Prescriptions are derived from rule and history, and frozen only at approval
+
+A prescription (this week's sets, load, reps and RPE for one line) is computed from the program
+version, the exposures logged so far and the WeekPlan's typed overrides. It is never authored and
+never stored as a weekly delta. The one exception is approval: when the athlete approves a
+WeekPlan, the prescriptions it derived at that moment are frozen onto it, because approval must
+bind to exact numbers and a later workout import must not change what was approved and pushed.
+Likewise no progression state is stored: e1RM, double-progression stage and miss counts are
+recomputed from exposures, and a training max is a recorded Decision.
+
+## Considered options
+
+- **Derived, frozen at approval (chosen).** Coaches move only the dose weekly, by rule from last
+  week's log (wayfinder #14). Deriving reproduces that; freezing at approval keeps the audit
+  exact. The frozen copy is a recorded fact (what was said yes to), not cached derived data.
+- **Stored weekly prescriptions as the plan.** The old overlay model. A delta over a delta
+  reintroduced the compounding return cut (template #257) and needed drift checks between the
+  stored numbers and the history they came from.
+- **Derived with no freeze.** Pure, but a late import or an annotation silently changes the
+  approved numbers, so the Hevy push could not prove it sent what was approved.
+
+## Consequences
+
+- A WeekPlan carries overrides and reasons while a draft, and gains its prescriptions on approval.
+  Re-planning midweek supersedes it and freezes afresh.
+- A return cut is measured once from the pre-layoff exposure, never from a frozen prescription
+  that already carries the cut.
+- Tests of progression assert `prescribe(program_version, exposures, overrides, date)` against
+  values; nothing reads a stored progression row.
+- The schema has no `prescription` table outside the approved WeekPlan, and no
+  `progression_state` table.

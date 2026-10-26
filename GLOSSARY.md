@@ -5,6 +5,217 @@ integrity, Hevy shape) and an agent that owns coaching judgement with a recorded
 
 ## Language
 
+### Program
+
+**Program**:
+The athlete's authored training structure, as an identity that persists across its versions.
+_Avoid_: routine, plan, template
+
+**Program version**:
+One immutable adopted snapshot of a program: its sessions, lines, schemes, schedule rule and block
+policy. A persisting swap or a block-boundary redesign is a new version.
+_Avoid_: program edit, revision, patch
+
+**Session**:
+A template inside a program version: title, lines, kind and tier. It knows nothing about the
+calendar.
+_Avoid_: routine, day, workout (which is what was logged)
+
+**Session kind**:
+What a session is: lifting, conditioning, practice (a daily drill with nothing to progress), or
+coach-led.
+_Avoid_: type, category
+
+**Coach-led session**:
+A session whose content someone else programs, carried as estimated sets per muscle rather than
+lines. It fills a slot and counts when it happened.
+_Avoid_: external session, PT session
+
+**Session tier**:
+Whether a session is core (a week is judged on it) or optional (bonus volume; skipping it is not a
+miss).
+_Avoid_: priority, importance
+
+**Slot**:
+A place in a program version's schedule rule that names which session fills it: a rotation week
+and weekday, or none, plus a cadence.
+_Avoid_: day, position
+
+**Cadence**:
+How often a slot expects its session: weekly (a weekday in a rotation week), standing (any day,
+when it fits) or daily.
+_Avoid_: frequency, schedule type
+
+**Line**:
+One exercise in a session: the exercise, its load mode, set groups, rest, cues and progression
+scheme.
+_Avoid_: entry, item, session exercise
+
+**Set type**:
+What a prescribed or logged set is for: warm-up, working or activation. A rep-out is a working set
+with an open top, not a type.
+_Avoid_: set kind
+
+**Rotation position**:
+The schedule-rule week a WeekPlan is planned against. Proposed by the engine, confirmed by the
+athlete when the WeekPlan is approved.
+_Avoid_: week letter, current week, inferred week
+
+### Week
+
+**Week**:
+The Monday-to-Sunday span a WeekPlan covers, and the unit adherence and the hard-week count are
+judged in.
+_Avoid_: span, cycle
+
+**WeekPlan**:
+The plan for one week: its rotation position, its overrides with their reasons, its status
+(draft, approved, superseded) and, once approved, its frozen prescriptions.
+_Avoid_: overlay, proposal, draft file, one-off
+
+**Override**:
+A typed, reasoned departure from the program version's rule, never a hand-set number. A WeekPlan
+holds those that live for its span; a Decision holds those that last longer.
+_Avoid_: delta, tweak, adjustment, standing override (say "override Decision")
+
+**Planned session**:
+A session put on a calendar date by a WeekPlan. A moved session is a planned session on its new
+date; a one-off is a planned session with no slot behind it.
+_Avoid_: scheduled session, instance
+
+**Prescription**:
+The derived numbers for one line of one planned session: sets, load, reps or range and RPE target,
+computed from the program version, history and overrides, and frozen into the WeekPlan at approval.
+_Avoid_: target, proposal, projection
+
+**Prescribed set**:
+One set inside a prescription: its type, load, reps or range and RPE.
+_Avoid_: set target
+
+**Week kind**:
+What a closed week counted as: hard, light, return, one-off, minimum, break or partial. Derived by
+one precedence order, never stored.
+_Avoid_: week type, week status
+
+**Approval**:
+The athlete's recorded yes to one WeekPlan, by id. The only thing a Hevy push can bind to.
+_Avoid_: sign-off, confirmation, approval hash
+
+### Log
+
+**Workout**:
+What was logged on a date, imported from Hevy or entered by hand: raw facts, append-only, never
+deleted. A workout Hevy no longer has is tombstoned.
+_Avoid_: history entry, mirror, session (which is the template)
+
+**Logged set**:
+One raw set in a workout, as recorded.
+_Avoid_: actual set, performed set
+
+**Annotation**:
+A correction applied when a workout or planned session is read (discount, repair, load mode,
+void, trained-unlogged, cancelled). It has a stable id, is withdrawn by a later annotation and is
+never written into the workout or sent to Hevy.
+_Avoid_: correction, edit, fix
+
+**Exposure**:
+An exercise in a workout with at least one working set left after annotations: the unit
+progression and e1RM read from.
+_Avoid_: performance, session log
+
+**Match**:
+The link from a workout to the planned session it fulfilled, or none.
+_Avoid_: mapping, reconciliation
+
+**Miss**:
+A planned session whose week has ended with no match, no move and no cancellation. Derived, never
+stored.
+_Avoid_: skipped session (an optional session skipped is not a miss)
+
+**Activity**:
+A logged non-lifting bout (a run, a class, conditioning done outside a session) with date,
+duration, RPE and whether it was quality work.
+_Avoid_: cardio entry, bout, wellness
+
+**Status span**:
+A dated span of ill, injured, travel or no-training, open-ended allowed, withdrawn never deleted.
+_Avoid_: status day, availability, wellness day
+
+**e1RM**:
+Estimated one-rep max from a qualifying exposure. Recomputed from exposures, never stored.
+_Avoid_: training max (a Decision), strength estimate
+
+**Hard set**:
+A working set at RPE above 5. Counted as one for the muscle it targets directly and a half for a
+muscle it works indirectly.
+_Avoid_: effective set, real set
+
+### Ledger
+
+**Check-in**:
+The dated record of a review: its tier (light or deep), the athlete's answers and the coach's
+read. The event that closes a week.
+_Avoid_: review, week review, card (which is the rendered form)
+
+**Block**:
+A run of weeks under one hard-week ceiling, opened at adoption or after a reset and closed by the
+check-in that resets the count.
+_Avoid_: mesocycle, cycle, phase
+
+**Decision**:
+A coaching choice recorded with its reason and outcome: an override with an until date, a light
+week, a training max, a declined ceiling, or going against a research claim.
+_Avoid_: note, rationale, flag
+
+**Niggle**:
+A reported discomfort tracked over time, with a status history and the load constraints it
+imposes.
+_Avoid_: injury (which needs a professional), issue, pain entry
+
+**Follow-up**:
+Something to revisit on a date, with the events that raised, deferred, kept, resolved or dropped
+it.
+_Avoid_: todo, reminder, action item
+
+**Short-sleep week**:
+The fatigue trigger: at least 4 of the last 7 measured nights under 7 hours.
+_Avoid_: sleep trigger, poor sleep
+
+**Sleep gate**:
+The nutrition rule: a 14-night mean under 7 hours means recomp at maintenance rather than a cut.
+_Avoid_: sleep rule, sleep check
+
+### Kit and loads
+
+**Exercise**:
+A library entry a line references: name, Hevy template id, load mode, muscles and movement
+pattern.
+_Avoid_: movement, lift (fine in prose, not as the noun)
+
+**Equipment**:
+The kit the athlete has at a location, which fixes the loads an exercise can be set to.
+_Avoid_: kit (fine in prose), inventory, gear
+
+**Load mode**:
+How an exercise's load is counted: total, per hand doubled, single implement, bodyweight, assisted,
+band, duration or distance.
+_Avoid_: weight type, load type
+
+**Load**:
+A weight in athlete units together with its load mode. The one place unit conversion and
+per-hand doubling happen.
+_Avoid_: weight, kg, hevy weight
+
+### Hevy
+
+**Routine**:
+Hevy's own object for a session. The engine projects into it and never owns its content.
+_Avoid_: hevy session, remote routine
+
+**Routine map**:
+The stored link from a session to a Hevy routine id, recorded only after a verified write.
+_Avoid_: routine ids, mapping table
+
 ### Agent interface
 
 **Verb**:
