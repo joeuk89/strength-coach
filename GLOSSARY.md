@@ -16,6 +16,11 @@ One immutable adopted snapshot of a program: its sessions, lines, schemes, sched
 policy. A persisting swap or a block-boundary redesign is a new version.
 _Avoid_: program edit, revision, patch
 
+**Lifting goal**:
+What a program version is for: hypertrophy, strength or maintenance. Set when the version is
+authored, it fixes the default weekly dose target and what the week is checked against.
+_Avoid_: goal (fine in prose), objective, training focus
+
 **Session**:
 A template inside a program version: title, lines, kind and tier. It knows nothing about the
 calendar.
@@ -184,6 +189,18 @@ A working set at RPE above 5. Counted as one for the muscle it targets directly 
 muscle it works indirectly.
 _Avoid_: effective set, real set
 
+### Athlete
+
+**Profile**:
+The athlete's own prose: who they are, the goal and phase in words, why the week has its shape,
+limits in words, coaching preferences and history. Read by a coach, never by code.
+_Avoid_: profile.md (the file; fine in paths), athlete doc, status
+
+**Coaching preference**:
+A standing agreement about how to coach the athlete, kept in the profile. An agreement that
+constrains a line or a load is an override Decision instead.
+_Avoid_: rule, note, preference (alone)
+
 ### Ledger
 
 **Check-in**:
@@ -210,6 +227,11 @@ _Avoid_: injury (which needs a professional), issue, pain entry
 Something to revisit on a date, with the events that raised, deferred, kept, resolved or dropped
 it.
 _Avoid_: todo, reminder, action item
+
+**Observation**:
+A pattern the coach has noticed about the athlete, dated, with the evidence that raised it,
+confirmed by the athlete and retired with a reason when it stops holding.
+_Avoid_: coach's note, note, insight
 
 **Short-sleep week**:
 The fatigue trigger: at least 4 of the last 7 measured nights under 7 hours.
