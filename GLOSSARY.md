@@ -137,6 +137,15 @@ A logged non-lifting bout (a run, a class, conditioning done outside a session) 
 duration, RPE and whether it was quality work.
 _Avoid_: cardio entry, bout, wellness
 
+**Weigh-in**:
+One bodyweight observation on a date, typed in or imported, with its source. Read for a trend and
+for total system mass in bodyweight and assisted lifts.
+_Avoid_: reading, bodyweight record, scale weight
+
+**Sleep night**:
+Hours asleep on one night, typed in or imported, with its source. A weekly mean is not a night.
+_Avoid_: wellness row, sleep reading
+
 **Status span**:
 A dated span of ill, injured, travel or no-training, open-ended allowed, withdrawn never deleted.
 _Avoid_: status day, availability, wellness day
@@ -180,10 +189,6 @@ _Avoid_: todo, reminder, action item
 **Short-sleep week**:
 The fatigue trigger: at least 4 of the last 7 measured nights under 7 hours.
 _Avoid_: sleep trigger, poor sleep
-
-**Sleep gate**:
-The nutrition rule: a 14-night mean under 7 hours means recomp at maintenance rather than a cut.
-_Avoid_: sleep rule, sleep check
 
 ### Kit and loads
 
