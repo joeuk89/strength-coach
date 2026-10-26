@@ -1,0 +1,50 @@
+---
+status: accepted
+date: 2026-10-26
+---
+
+# SQLite is the source of truth; git sees only a text export
+
+The old system held the truth in about 20 overlapping JSON files with hand-written integrity
+checks and no transaction across files. The engine stores everything that is not authored prose
+in one SQLite database (Python stdlib), gitignored in the instance at `.coach/coach.db`. Git sees
+a deterministic export, sorted JSONL per table, written by `publish` after approval; `import`
+rebuilds the database from it and runs by itself whenever the database is missing or older than
+the export's commit. SQLite won on cross-record transactions and rows made immutable by schema,
+which no file layout gets for free, and on SQL views giving the agent its 1–3 KB summaries.
+
+## Considered options
+
+Scored against the athlete's weights (integrity 25, simplicity 20, audit 20, migration 15,
+testability 10, portability 10), after a red-team pass that corrected three advocate claims: the
+old `status` is slow because of its schema validator and page re-rendering, not file scans;
+foreign keys replace about 7 checks, not 15; per-file atomic writes already existed.
+
+- **SQLite + export with auto-import (chosen): 82.**
+- **Single-file JSON store, one atomic replace: 74.5.** Atomic, 6 ms to parse, but integrity stays
+  in code. Wins if the athlete ever edits stored data by hand as a habit.
+- **Files as truth loaded into in-memory SQLite: 72.5.** Constraints and views without a binary
+  file, at the cost of a bespoke write path, a load per verb, and a post-crash state that refuses
+  to load.
+- **One file per table: 69.5.** The old shape, consolidated.
+- **SQLite binary committed: rejected.** Binary diffs are no audit trail.
+- **Event log plus snapshot: not scored.** Its two benefits are taken piecemeal below.
+
+## Consequences
+
+- `PRAGMA foreign_keys = ON` is set in the single connection factory and covered by a test; it
+  defaults to off per connection.
+- The Hevy write audit is an append-only committed file written at request time, never only a
+  database row: a session abandoned between a Hevy push and `publish` must still leave a record.
+- Workout import is append-only with tombstones; approval binds to an immutable plan row, not a
+  hash over a mutable file.
+- The export is output. No code reads it except `import`; the athlete never edits it.
+- Files stay files when they are authored prose: `config.toml`, `profile.md`, `.env`, research
+  notes, recipe cards. The store never caches a copy of `config.toml`.
+- Stored data is never edited by hand. The exception is the program, which is authored: an
+  `adopt` verb validates a text form and records it as a new program version.
+- Git sees one commit per `publish`; drafts and proposals never reach git.
+- Before cutover, a schema change is "drop the database and re-import"; after it, one linear
+  `user_version` migration chain. Adding a UNIQUE constraint or changing a CHECK needs a table
+  rebuild in SQLite.
+- A second machine clones the instance and runs the engine; auto-import does the rest.
