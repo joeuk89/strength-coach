@@ -226,6 +226,27 @@ _Avoid_: movement, lift (fine in prose, not as the noun)
 The kit the athlete has at a location, which fixes the loads an exercise can be set to.
 _Avoid_: kit (fine in prose), inventory, gear
 
+**Location**:
+A named place the athlete trains, with its own equipment. A session names its default location;
+a planned session may be moved to another.
+_Avoid_: gym (fine in prose), venue, site
+
+**Rack**:
+The enumerated loads one implement can be set to at a location. At home every implement is a
+rack, taken from plate-pool's published achievable loads; at a kit-less location only dumbbells
+and kettlebells are.
+_Avoid_: grid (which is an increment rule, not a list), inventory
+
+**Equipment kind**:
+What an exercise is done with: barbell, dumbbell, kettlebell, leg attachment, vest, machine,
+cable, band or bodyweight. A location maps each kind it supplies to one of its implements.
+_Avoid_: equipment (which is the kit itself), implement type
+
+**Safety ceiling**:
+A load the athlete will not go above on one exercise, set with a reason. Not a kit limit, which
+is whatever the rack can build.
+_Avoid_: cap, max
+
 **Load mode**:
 How an exercise's load is counted: total, per hand doubled, single implement, bodyweight, assisted,
 band, duration or distance.
