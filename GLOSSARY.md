@@ -74,9 +74,26 @@ The plan for one week: its rotation position, its overrides with their reasons, 
 _Avoid_: overlay, proposal, draft file, one-off
 
 **Override**:
-A typed, reasoned departure from the program version's rule, never a hand-set number. A WeekPlan
+A typed, reasoned departure from the program version's rule, scoped to a week, a planned session
+or a line. A load appears in one only as the typed field of a pin, never in prose. A WeekPlan
 holds those that live for its span; a Decision holds those that last longer.
 _Avoid_: delta, tweak, adjustment, standing override (say "override Decision")
+
+**Recovery ceiling**:
+The lowest load or RPE a line may be set to on a date: a niggle's cap, the return band's cut,
+the illness cap on the first session back, or a light week's RPE ceiling.
+_Avoid_: limit, safety cap
+
+**Violation**:
+A hard constraint a WeekPlan breaks: an off-grid load, a recovery ceiling exceeded, a return
+band that disagrees with the days off, a block ceiling passed without a Decision. Approval is
+refused while one stands anywhere in the plan.
+_Avoid_: error, hard flag
+
+**Warning**:
+A coaching signal the validator reports on a line and the agent must read but may leave: a top
+set above the e1RM model, a stall streak, a short-sleep week, unexplained drift from last week.
+_Avoid_: soft flag, notice
 
 **Planned session**:
 A session put on a calendar date by a WeekPlan. A moved session is a planned session on its new
