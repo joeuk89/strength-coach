@@ -86,8 +86,8 @@ _Avoid_: span, cycle
 **WeekPlan**:
 The plan for one week: its rotation position, its overrides with their reasons, its status
 (approved, superseded) and its frozen prescriptions. It exists only once approved; before that
-there is only the plan file the agent is editing.
-_Avoid_: overlay, proposal, draft, one-off
+there is only the Draft the agent is editing.
+_Avoid_: overlay, proposal, draft (that is the file, not the plan), one-off
 
 **Override**:
 A typed, reasoned departure from the program version's rule, scoped to a week, a planned session
@@ -344,6 +344,11 @@ One command the agent can run, doing a whole job (validate, diff, write, verify,
 to re-run. The engine has a small, budgeted set of them.
 _Avoid_: subcommand, tool, endpoint
 
+**Draft**:
+A file the agent writes for one verb to consume: a plan, a check-in record, a program text form, a
+manual workout. Disposable; nothing reads it after the verb takes it.
+_Avoid_: proposal, overlay, working file, input file
+
 **Envelope**:
 The one JSON document a verb prints: whether it succeeded, its result or error, and any warnings.
 _Avoid_: response, output, payload
@@ -392,8 +397,8 @@ installed engine serves any number of instances.
 _Avoid_: framework, template, core
 
 **Instance**:
-One athlete's directory: config, profile, the store and its committed export, and nothing of the
-engine. Where every verb runs.
+One athlete's directory: config, profile, the store and its committed export, the rendered pages
+and the write audit, and nothing of the engine. Where every verb runs.
 _Avoid_: workspace, data repo, my-training
 
 **Engine pin**:
