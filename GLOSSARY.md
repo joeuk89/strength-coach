@@ -154,7 +154,7 @@ _Avoid_: actual set, performed set
 
 **Annotation**:
 A correction applied when a workout or planned session is read (discount, repair, load mode,
-void, trained-unlogged, cancelled). It has a stable id, is withdrawn by a later annotation and is
+void, trained-unlogged, cancelled, miss tag, match). It has a stable id, is withdrawn by a later annotation and is
 never written into the workout or sent to Hevy.
 _Avoid_: correction, edit, fix
 
@@ -164,7 +164,8 @@ progression and e1RM read from.
 _Avoid_: performance, session log
 
 **Match**:
-The link from a workout to the planned session it fulfilled, or none.
+The link from a workout to the planned session it fulfilled, or none. Derived from date and
+session kind, corrected by a match annotation, never stored.
 _Avoid_: mapping, reconciliation
 
 **Miss**:
@@ -214,9 +215,25 @@ _Avoid_: rule, note, preference (alone)
 ### Ledger
 
 **Check-in**:
-The dated record of a review: its tier (light or deep), the athlete's answers and the coach's
-read. The event that closes a week.
-_Avoid_: review, week review, card (which is the rendered form)
+The dated event of a review: its tier (light or deep), the window it reviews and the coach's
+read. The athlete's answers are records of their own that point back to it. Closes every week
+its window covers.
+_Avoid_: review, week review, card (which is the rendered form), record (which is the rendered page)
+
+**Check-in window**:
+The span a check-in reviews: from the day after the previous check-in's window to its own date.
+One longer than the first return band makes the check-in a catch-up.
+_Avoid_: period, gap
+
+**Coach's read**:
+The coach's own prose in a check-in: voice, never data. Shown verbatim beside the generated
+facts and never parsed.
+_Avoid_: summary, assessment, narrative
+
+**Athlete note**:
+Something the athlete said at a check-in, kept verbatim with the date and, when it is about one
+thing, a pointer to it. Surfaced where it is next useful, never classified by code.
+_Avoid_: free text, comment, feedback
 
 **Block**:
 A run of weeks under one hard-week ceiling, opened at adoption or after a reset and closed by the
