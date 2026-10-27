@@ -100,16 +100,29 @@ The lowest load or RPE a line may be set to on a date: a niggle's cap, the retur
 the illness cap on the first session back, or a light week's RPE ceiling.
 _Avoid_: limit, safety cap
 
+**Flag**:
+A violation or a warning: a named condition the engine found on a typed scope (a week, a planned
+session, a line, an exposure, a routine, a workout or the instance). Its identity is the code and
+the scope, never its message.
+_Avoid_: issue, check result, finding
+
 **Violation**:
 A hard constraint a WeekPlan breaks: an off-grid load, a recovery ceiling exceeded, a return
 band that disagrees with the days off, a block ceiling passed without a Decision. Approval is
-refused while one stands anywhere in the plan.
-_Avoid_: error, hard flag
+refused while one stands anywhere in the plan; it clears only when the fact behind it changes.
+_Avoid_: error, hard flag, block
 
 **Warning**:
-A coaching signal the validator reports on a line and the agent must read but may leave: a top
-set above the e1RM model, a stall streak, a short-sleep week, unexplained drift from last week.
-_Avoid_: soft flag, notice
+A coaching signal the engine reports and the agent must read but may leave: a top set above the
+e1RM model, a stall streak, a short-sleep week, unexplained drift from last week. Never blocks
+approval. Left by an Acknowledgement, or cleared when the fact behind it changes.
+_Avoid_: soft flag, notice, info
+
+**Acknowledgement**:
+The coach's typed reason for leaving a warning: the warning's key, the facts it stated when
+left, a reason category and free text. Lives on the WeekPlan for that week, or on a Decision
+with an until date to outlast it. Never deleted.
+_Avoid_: resolution, dismissal, snooze, suppression
 
 **Planned session**:
 A session put on a calendar date by a WeekPlan. A moved session is a planned session on its new
@@ -242,7 +255,8 @@ _Avoid_: mesocycle, cycle, phase
 
 **Decision**:
 A coaching choice recorded with its reason and outcome: an override with an until date, a light
-week, a training max, a declined ceiling, or going against a research claim.
+week, a training max, a declined ceiling, a warning left until a date, or going against a
+research claim.
 _Avoid_: note, rationale, flag
 
 **Niggle**:
