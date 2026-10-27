@@ -16,10 +16,11 @@ One immutable adopted snapshot of a program: its sessions, lines, schemes, sched
 policy. A persisting swap or a block-boundary redesign is a new version.
 _Avoid_: program edit, revision, patch
 
-**Lifting goal**:
-What a program version is for: hypertrophy, strength or maintenance. Set when the version is
-authored, it fixes the default weekly dose target and what the week is checked against.
-_Avoid_: goal (fine in prose), objective, training focus
+**Emphasis**:
+What a program version optimises for its block: hypertrophy, strength or maintenance. Chosen
+from the goal when the version is authored, it fills every default a line leaves unsaid and sets
+what the week is checked against.
+_Avoid_: lifting goal, goal (which is the athlete's), training focus, intent
 
 **Session**:
 A template with a title, lines, kind and tier, inside a program version or carried by a niggle.
@@ -208,6 +209,11 @@ _Avoid_: status day, availability, wellness day
 Estimated one-rep max from a qualifying exposure. Recomputed from exposures, never stored.
 _Avoid_: training max (a Decision), strength estimate
 
+**Cadence signal**:
+A block-boundary reading, per exercise, of whether its progression is moving too slowly or too
+fast: resets taken, stall streak and the e1RM trend over the block. A warning, never a level.
+_Avoid_: level, training age, experience, graduation
+
 **Hard set**:
 A working set at RPE above 5. Counted as one for the muscle it targets directly and a half for a
 muscle it works indirectly.
@@ -224,6 +230,21 @@ _Avoid_: profile.md (the file; fine in paths), athlete doc, status
 A standing agreement about how to coach the athlete, kept in the profile. An agreement that
 constrains a line or a load is an override Decision instead.
 _Avoid_: rule, note, preference (alone)
+
+**Goal**:
+What the athlete is training for, as a record: hypertrophy or strength, the priority lifts, the
+milestones and the why in words. One is current; revising it supersedes it with a reason.
+_Avoid_: lifting goal, objective, target, aim
+
+**Priority lift**:
+An exercise the goal names as one the athlete is judged on by e1RM: first in its session, on a
+strength scheme, tested at the end of a block and asked about first.
+_Avoid_: main lift, competition lift, focus lift, big lift
+
+**Milestone**:
+A strength target on one exercise with no date: an e1RM, a load for reps or a bodyweight
+multiple. Whether it is reached is read from exposures, never recorded.
+_Avoid_: PR goal, target (alone), follow-up (which has a date)
 
 ### Ledger
 
@@ -251,7 +272,12 @@ _Avoid_: free text, comment, feedback
 **Block**:
 A run of weeks under one hard-week ceiling, opened at adoption or after a reset and closed by the
 check-in that resets the count.
-_Avoid_: mesocycle, cycle, phase
+_Avoid_: mesocycle, cycle, phase (which is about bodyweight)
+
+**Phase**:
+The body-composition phase in force: deficit, maintenance or surplus, with its intended rate and
+what ends it. Opened and closed with a reason; one open at a time.
+_Avoid_: block (a run of hard weeks), cut, bulk (fine in prose), diet, strategy
 
 **Decision**:
 A coaching choice recorded with its reason and outcome: an override with an until date, a light

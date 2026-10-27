@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-27 by ADR 0014 (the version field is `emphasis`, `experience` leaves `[athlete]`, milestones are typed on the Goal)
 ---
 
 # The profile is prose a coach reads; what code or a check-in needs is a record
@@ -33,15 +34,18 @@ and follow-ups are already records.
 
 ## Consequences
 
-- `coach.toml` `[athlete]` holds the facts rules read: units, birth date, height, experience,
-  session length caps, available days, week start, timezone. No lifting goal.
-- Program version carries `goal` (`hypertrophy`, `strength`, `maintenance`) and optional explicit
-  per-muscle weekly dose targets. The goal sets the default dose target when none is given
+- `coach.toml` `[athlete]` holds the facts rules read: units, birth date, height, session
+  length caps, available days, week start, timezone. No lifting goal, and no `experience`
+  (ADR 0014: level is a derived per-lift signal, never a stored fact).
+- Program version carries `emphasis` (`hypertrophy`, `strength`, `maintenance`; named `goal`
+  until ADR 0014 moved the athlete's Goal to its own record) and optional explicit
+  per-muscle weekly dose targets. The emphasis sets the default dose target when none is given
   (hypertrophy: 10 hard sets per primary muscle of core lifts, rising toward 20 with experience,
   rn:minimum-effective-dose; maintenance: about a third; strength: no default, targets must be
   agreed) and the dose rule warns on a week under or over it. Powerbuilding is `hypertrophy` plus
-  strength schemes on the chosen lifts, stated line by line. How goals reach the agent's judgement
-  and the other formulas is its own decision ticket, which Program authoring waits on.
+  strength schemes on the chosen lifts, stated line by line; ADR 0014 makes those lifts the
+  Goal's priority lifts and has adopt fill the strength scheme on them. How goals reach the
+  agent's judgement and the other formulas is ADR 0014 and `docs/spec/goals.md`.
 - Observation is a ledger record: text, evidence refs, the Check-in that raised it, the Check-in
   and reason that retired it. Observations are raised and retired only inside a `checkin record`
   file; the athlete's yes to the record is the confirmation. No `observation` verb.
@@ -58,4 +62,5 @@ and follow-ups are already records.
   athlete facts, equipment by location, open niggles with constraints, open follow-ups, active
   observations, standing override Decisions, the last three check-in reads. It lives at
   `pages/athlete.md` (ADR 0012).
-- Strength milestones with no date stay prose; a dated one is a Follow-up.
+- A dated strength milestone is a Follow-up. An undated one was prose here; ADR 0014 makes it a
+  typed Milestone on the Goal so distance and date reached can be derived.

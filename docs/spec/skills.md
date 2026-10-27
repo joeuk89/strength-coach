@@ -21,7 +21,9 @@ Four skills, all in the plugin (ADR 0007), none in the instance:
 | `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections) on the athlete's yes and nothing else |
 
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
-0011), `goals` (the goal is on the program version and in the profile prose, ADR 0009), `setup`
+0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
+why in the profile prose, ADR 0014; what each skill asks, judges and explains per emphasis is one
+table in `goals.md` that the skills cite), `setup`
 (config and the Hevy key are `coach init`), `framework-sync` (`coach upgrade`), nutrition, recipes
 and meal plans (ADR 0004).
 

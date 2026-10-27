@@ -35,6 +35,8 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 | `routine` | Hevy routine id | a Routine map row at import |
 | `workout` | Hevy workout id | a workout version at import |
 | `instance` | none | the instance itself (setup, pins, snapshots) |
+| `version` | program version id | a program version at adopt (ADR 0014) |
+| `exercise` | exercise id | one exercise across blocks, for cadence signals and milestones (ADR 0014) |
 
 Two flags with the same code on the same scope cannot exist: a code states one condition per
 scope, so the key is a key. The message is display only and is never stored. The params (the
@@ -146,7 +148,7 @@ lawfully change the fact behind.
 
 ## Code registry
 
-The v1 codes, drawn from ADR 0005, 0008, 0010 and 0011. Later tickets add a code only by adding
+The v1 codes, drawn from ADR 0005, 0008, 0010, 0011 and 0014. Later tickets add a code only by adding
 a row here; a contract test holds that every code the engine emits is in this table.
 
 ### Violations
@@ -161,6 +163,8 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` |
 | `plan_not_current` | week | named WeekPlan id, current draft hash | re-running the dry run on the current Draft |
 | `rotation_unconfirmed` | week | inferred position, source | the agent confirming the rotation position in the Draft |
+| `goal_missing` | version | none | `goal adopt` |
+| `priority_lifts_required` | version | emphasis | a Goal with priority lifts, or a different emphasis |
 
 ### Warnings on a plan (acknowledgeable)
 
@@ -177,6 +181,17 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `session_drop_suggested` | session | reason (sleep debt, status day, quality stack), evidence refs |
 | `frozen_load_off_snapshot` | session | line, load, snapshot date |
 
+### Warnings on a program version at adopt (acknowledgeable, frozen on the version)
+
+| Code | Scope | Params |
+| --- | --- | --- |
+| `emphasis_off_goal` | version | goal kind, emphasis |
+| `scheme_off_emphasis` | line | line scheme, emphasis, expected band |
+| `priority_lift_absent` | version | exercise id |
+| `priority_lift_not_first` | session | exercise id, position |
+| `dose_off_band` | version | muscle or lift, target, band, phase |
+| `deload_off_emphasis` | version | deload policy, expected shape |
+
 ### Warnings outside a plan (clear by fact)
 
 | Code | Scope | Params |
@@ -187,6 +202,11 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `niggle_unconstrained` | instance | niggle id, opened |
 | `engine_pin_dev` | instance | pinned version, running version |
 | `snapshot_stale` | instance | source (plate-pool, hevy), snapshot date, age limit |
+| `cadence_slow` | exercise | resets, scheme, e1RM slope, blocks |
+| `cadence_fast` | exercise | exposures at top of range, scheme |
+| `milestone_reached` | exercise | milestone, exposure ref, date |
+| `phase_condition_met` | instance | phase id, condition, value |
+| `phase_trend_off` | instance | phase id, target rate, observed rate, window |
 
 ### Codes pending other tickets
 

@@ -1,0 +1,267 @@
+# Goals: how the athlete's goal reaches the coach and the program
+
+Spec for wayfinder #25. The research behind it is `goal-programming.md` (what each goal changes
+in a program, with evidence) and `training-level.md` (how coaches define level, detect
+graduation and plan long term). The decision is ADR 0014; the nouns are in `GLOSSARY.md`.
+
+The shape in one paragraph: the athlete has one current **Goal** (a record: kind, priority
+lifts, milestones, the why). Each **Program version** carries an **emphasis** chosen from it,
+and at adoption every default a line leaves unsaid is filled from the emphasis and written into
+the version, so the weekly rule reads the version only. A **Phase** (deficit, maintenance,
+surplus) is the one long-range structure that outlives a block; it tilts the defaults and sets
+the bodyweight trend the week is checked against. At each block boundary a derived progress
+report shows the coach where the athlete stands against the Goal, with per-lift **cadence
+signals** in place of a stored training level. Code reads the Goal and Phase at exactly two
+moments, adopt and the block boundary; the coach reads them whenever a judgement is made.
+
+## The nouns
+
+### Goal
+
+One current row; `goal adopt` records a new one and marks the previous `superseded`. Rows are
+immutable.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `kind` | `hypertrophy` or `strength` | What the athlete is training for. Maintenance is an emphasis, not a goal (ADR 0014) |
+| `priority_lifts` | ordered list of Exercise refs, may be empty | The lifts the athlete is judged on by e1RM. A `hypertrophy` goal with priority lifts is what coaches sell as powerbuilding |
+| `milestones` | list of Milestone | See below |
+| `why` | text | The look, the reason, the long-term direction in the athlete's words. Shown to the coach, never parsed |
+| `because` | text | Why this row supersedes the previous one; "first goal" at onboarding |
+| `adopted` | date | |
+| `status` | `current` or `superseded` | Derived from being the newest row; stored for the export |
+
+### Milestone
+
+A strength target on one exercise with no date. A dated target is a Follow-up (ADR 0009).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `exercise` | Exercise ref | Need not be a priority lift (the gym-only deadlift) |
+| `target.kind` | `e1rm`, `load_x_reps`, `bodyweight_multiple` | |
+| `target.value` | load in athlete units; load plus reps; a multiple | A bodyweight multiple is read against the 14-day Weigh-in average on the exposure's date |
+
+**Reached** is derived: the first Exposure whose e1RM (or logged load for reps) meets the
+target, with its date. Never stored. The progress report shows it; the block boundary raises
+`milestone_reached` once. With fewer than two weigh-ins in the 14 days before an exposure, a
+bodyweight multiple is "not computable" and shown as such.
+
+### Emphasis
+
+A field of the Program version, `hypertrophy`, `strength` or `maintenance`, replacing the
+former `goal` field (ADR 0009, amended). It fills every default a line leaves unsaid and sets
+what the week is checked against. `maintenance` keeps the Goal's schemes and intensity and cuts
+the dose; it has no schemes of its own, which is why it cannot be a Goal kind.
+
+### Phase
+
+A ledger record, one open at a time.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `kind` | `deficit`, `maintenance`, `surplus` | |
+| `rate_pct_bw_per_week` | number | Intended bodyweight change; 0 for maintenance; negative in a deficit |
+| `until.kind` | `date`, `bodyweight_at_or_below`, `bodyweight_at_or_above`, `coachs_call` | |
+| `until.value` | date or bodyweight in athlete units | Absent for `coachs_call` |
+| `opened`, `closed` | date plus the Check-in or Goal row that did it, and a reason | |
+
+Opened and closed inside a `checkin record` file or a `goal adopt` draft; the athlete's yes to
+that file is the confirmation. No `phase` verb. A reached `until` condition raises
+`phase_condition_met` at the next check-in; it never closes the phase on its own. Bodyweight
+conditions read the 14-day Weigh-in average. No waist or body-fat condition in v1 (nutrition is
+out of scope, ADR 0004).
+
+## Writing a Goal
+
+`goal adopt <draft>` validates a Draft and records the row. It is a plain store write, not an
+asked verb, because nothing leaves the store; `publish` commits the export as usual. The
+`onboard` skill writes the first Goal before the first program; the `program` skill writes a new
+one when the athlete's aim changes. The Draft:
+
+```toml
+kind = "hypertrophy"
+because = "first goal at onboarding"
+priority_lifts = ["bench_press_barbell", "pull_up_strict"]
+why = """
+Strong and jacked: big arms, legs, glutes and thick abs at a body fat that is easy to live at.
+The test is jeans and a t-shirt. Bench and the strict pull-up first; the 2×BW deadlift is a
+gym lift for later.
+"""
+
+[[milestones]]
+exercise = "deadlift_barbell"
+target = { kind = "bodyweight_multiple", value = 2.0 }
+
+[[milestones]]
+exercise = "bench_press_barbell"
+target = { kind = "bodyweight_multiple", value = 1.25 }
+
+[[milestones]]
+exercise = "pull_up_strict"
+target = { kind = "load_x_reps", load = 0, reps = 5 }
+
+[phase]
+open = { kind = "maintenance", rate_pct_bw_per_week = 0.0, until = { kind = "coachs_call" }, because = "recomp at maintenance since 11 Oct 2026" }
+```
+
+`goal adopt` refuses an unknown exercise, a duplicate priority lift, a milestone with no target,
+and a second open Phase. It records the diff from the previous Goal in the envelope.
+
+## Defaults per emphasis
+
+What the `program` skill proposes and `adopt` fills into a line that names nothing. Citations
+are to the research notes (`rn:goal-programming §n`); each number is marked evidence or opinion
+there. A line that names its own scheme, dose or rest keeps it; adopt only warns when it does
+not fit (next section).
+
+| Knob | `hypertrophy` line | priority lift (any goal) and `strength` line | `maintenance` version | Source |
+| --- | --- | --- | --- | --- |
+| Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
+| RIR | stimulus dial: start at 3, walk toward 1 over the block's hard weeks | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
+| Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
+| Progression model | double progression on straight sets | RIR-autoregulated load, or a training-max percentage, with a top set and back-offs | hold load; no step | §4, opinion resting on Helms 2018, Hickmott 2022 |
+| Stall signal | reps at the target RIR flat across the muscle's lines | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
+| Deload | cut sets 30–50 %, hold load and RIR | hold intensity, cut sets; a **test** set type (heavy single or AMRAP) on priority lifts in the last week sets the next block's training max | no planned deload | §6, evidence that intensity is held |
+| Order | free; chosen for fatigue and preference | priority lift first in its session | as the Goal | §7, evidence |
+| Rest | 1.5–3 min | 2–5 min | as the line's load | §9, evidence; rest follows load, not goal |
+
+Two rules that follow:
+
+- A `hypertrophy` version with priority lifts gets the hypertrophy column everywhere except on
+  the priority lifts, which get the middle column, including the test set in the deload week.
+- A `strength` version has priority lifts by definition; `adopt` refuses one with none
+  (`priority_lifts_required`). Its non-priority lines default to the hypertrophy column, which
+  is what every strength template does with its accessories.
+
+### What the Phase changes
+
+Opinion, from Israetel and Helms (`rn:training-level §4`): the Phase moves the proposed dose
+within its band and never the intensity.
+
+| Phase | Dose default | Checked against |
+| --- | --- | --- |
+| `deficit` | lower half of the band; intensity held so strength is kept | bodyweight trend within ±50 % of the target rate over the block |
+| `maintenance` | the emphasis default | bodyweight trend flat (±0.25 % BW per week) |
+| `surplus` | upper half of the band | bodyweight trend within ±50 % of the target rate |
+
+A bodyweight trend outside its band is `phase_trend_off`, a warning at the check-in, resolved by
+the coach's read (diet is out of scope; the engine states the fact).
+
+## Adopt: the goal checks
+
+Added to whatever Program authoring specifies. One violation, the rest warnings left by an
+Acknowledgement in the program Draft and frozen on the version, with the same identity rules as
+plan warnings (`validation.md`); scope `version` is the program version id.
+
+| Code | Severity | Scope | Params | Cleared or left by |
+| --- | --- | --- | --- | --- |
+| `goal_missing` | violation | version | none | `goal adopt` |
+| `priority_lifts_required` | violation | version | emphasis | a Goal with priority lifts, or a different emphasis |
+| `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
+| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme |
+| `priority_lift_absent` | warning | version | exercise id | Acknowledgement, or a line for it |
+| `priority_lift_not_first` | warning | session | exercise id, position | Acknowledgement, or reordering |
+| `dose_off_band` | warning | version | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
+| `deload_off_emphasis` | warning | version | deload policy, expected shape | Acknowledgement, or the expected shape |
+
+The filled defaults appear in the adopt diff, so the athlete sees what the emphasis chose.
+
+## What reaches the weekly loop
+
+Nothing reads the Goal weekly. `prescribe(program_version, exposures, overrides, date)` keeps
+its signature (ADR 0003). The goal-specific weekly behaviour is a property of the scheme the
+version names:
+
+- the dose check against the version's per-muscle target and, for priority lifts, the per-lift
+  target (ADR 0009, extended);
+- the hypertrophy RIR walk and set ramp across the block's hard weeks, read from the hard-week
+  count;
+- strength lines holding RIR as a cap and moving load from e1RM;
+- the stall signal each scheme watches (`stall_streak` reads reps-at-RIR on a hypertrophy line
+  and e1RM trend on a strength line; the Weekly prescription ticket fixes the counts).
+
+So a change of goal reaches the week only through a new Program version, which is the one
+place a coach would look for it.
+
+## The block boundary
+
+The block boundary is the check-in that records a block reset Decision. The `program` skill runs
+then, and a deep check-in reads the same report.
+
+### `coach progress`
+
+A read verb, derived from the store, rendered to `pages/progress.md` at `publish` (ADR 0012).
+Compact summary by default; `--full` adds per-line history.
+
+| Section | Content |
+| --- | --- |
+| Priority lifts | per lift: e1RM now, change over the closed block and over the last three, best load for reps, stall streak and resets under the current scheme, cadence signal if any |
+| Milestones | per milestone: distance (load, reps or ×BW to go) or the date reached |
+| Dose | per muscle and per priority lift: hard sets achieved against target, by week of the block |
+| Adherence | core sessions by tier, misses by tag |
+| Phase | kind, target rate, 14-day bodyweight trend against it, the `until` condition and whether it is met |
+| Goal | kind, adopted date, `why` verbatim |
+
+### Cadence signals
+
+The replacement for a stored training level (`rn:training-level §2`, thresholds opinion). Per
+exercise, raised at the block boundary, scope `exercise`, cleared by a new Program version
+or left by a `leave warning` Decision:
+
+| Code | Condition |
+| --- | --- |
+| `cadence_slow` | two resets on the line under the same scheme within the closed block and the one before, **or** a non-positive e1RM slope across two consecutive closed hard blocks with adherence at or above the floor |
+| `cadence_fast` | every exposure in the closed block hit the top of its rep range at or under the target RIR, with no stall |
+
+A reset is the stall move the weekly rule records; its definition is the Weekly prescription
+ticket's. The signal never carries the words novice, intermediate or advanced; those stay
+prose. The response is always a new Program version with a Decision citing the warning (a slower
+or faster scheme on that lift, a different progression cadence), never an automatic change.
+
+### Other block-boundary flags
+
+| Code | Scope | Params |
+| --- | --- | --- |
+| `milestone_reached` | exercise | milestone, exposure ref, date |
+| `phase_condition_met` | instance | phase id, condition, value |
+| `phase_trend_off` | instance | phase id, target rate, observed rate, window |
+
+## What the skills ask, judge and explain
+
+One table; the skills cite it and do not copy it, so each stays under its budget
+(`skills.md`). Each cell is the whole of what the emphasis changes.
+
+| Moment | `hypertrophy` | priority lifts and `strength` | `maintenance` |
+| --- | --- | --- | --- |
+| `check-in` asks | reps and RIR on the lines that moved; pump and soreness as a dose read | the priority lifts first: did the top set move, how did it feel, any grind | whether the kept lifts held |
+| `plan-week` judges | dose attainment against target; where the RIR walk is in the block; a flat line early in a block wants sets, late wants the deload | e1RM trend on each priority lift; fatigue against the RIR cap; a flat block is normal, not a crisis | nothing weekly beyond the recovery ceilings |
+| `plan-week` explains a line as | last week's reps at RIR plus the block's set ramp | e1RM times the scheme | held |
+| `program` at the boundary | reads `coach progress`: dose achieved, muscles behind target, cadence signals; proposes next block's sets and any swap | reads `coach progress`: e1RM over three blocks, milestones, cadence signals; proposes scheme changes on signalled lifts, a test week result as the training max | whether to return to the Goal's emphasis |
+| `onboard` and `program` write | the Goal, the Phase and the `why`; the long-term direction in the profile prose | | |
+
+The Profile adds the why and the long-term direction in words; never a number the Goal already
+holds.
+
+## Worked example: the carried-over athlete
+
+Goal `hypertrophy`, priority lifts bench and strict pull-up, milestones as in the Draft above,
+Phase `maintenance` until coach's call. Program version 1 adopts with emphasis `hypertrophy`;
+adopt fills double progression at RIR 3→1 and 10 sets per muscle on every line, a top set plus
+back-offs and 8 sets per week on bench and the pull-up, a 30–50 % set cut with a test set on both
+in the deload week, and warns `priority_lift_not_first` if the pull-up sits after rows. At the
+first block boundary `coach progress` shows bench e1RM over the block, the pull-up's best reps,
+dose by muscle, the flat bodyweight trend, and no cadence signal; the `program` skill proposes
+block 2. Two blocks later a `cadence_slow` on bench is answered by a new version with a
+training-max percentage scheme on bench, the Decision citing the warning.
+
+## Handed to other tickets
+
+- **Program authoring** (#22): the authored form carries `emphasis`; the defaults table above
+  is what adopt fills; the `test` set type ships; the adopt checks above join its list.
+- **Weekly prescription** (#26): defines the stall and reset per scheme that `stall_streak` and
+  `cadence_slow` read; the hypertrophy RIR walk and set ramp as the scheme applied to the
+  hard-week count.
+- **Verb set** (#16): `goal adopt` (plain write) and `coach progress` (read).
+- **Override catalogue** (#19): the test week needs no override; it is the deload policy.
+- **Schema**: Goal, Milestone and Phase tables; `priority_lifts` and `emphasis` on the version;
+  the two new scope kinds (`version`, `exercise`) in the flag registry.

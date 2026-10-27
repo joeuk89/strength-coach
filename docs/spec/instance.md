@@ -66,13 +66,13 @@ Four tables. Unknown tables and keys are a violation on every verb.
 | Table | Owner | Holds |
 | --- | --- | --- |
 | `[engine]` | engine | `version`, the engine pin (ADR 0007) |
-| `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `birth_date`, `height_cm`, `experience`, `available_days`, `session_minutes`, plus `checkin_cadence_days` |
+| `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `birth_date`, `height_cm`, `available_days`, `session_minutes`, plus `checkin_cadence_days` |
 | `[hevy]` | athlete | present when Hevy is used; empty in v1 |
 | `[location.<name>]` | athlete | `kind = "plate-pool"` with `url`, or `kind = "grid"` with increments and bar weights (ADR 0008) |
 
-No lifting goal (it is on the Program version), no caps, no thresholds, no feature toggles
-(ADR 0004). A number that is a rule is an engine constant; one that is an agreement is a Decision
-(ADR 0013).
+No lifting goal (the Goal is a record and the emphasis is on the Program version, ADR 0014), no
+`experience` (level is derived per lift), no caps, no thresholds, no feature toggles (ADR 0004).
+A number that is a rule is an engine constant; one that is an agreement is a Decision (ADR 0013).
 
 ## coach init
 
