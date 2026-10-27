@@ -56,6 +56,6 @@ and follow-ups are already records.
   plan-draft skills, and named in the generated CLAUDE.md; `coach status` never includes it.
 - One rendered athlete page composes the prose verbatim with sections generated from the store:
   athlete facts, equipment by location, open niggles with constraints, open follow-ups, active
-  observations, standing override Decisions, the last three check-in reads. Where rendered pages
-  live is decided separately.
+  observations, standing override Decisions, the last three check-in reads. It lives at
+  `pages/athlete.md` (ADR 0012).
 - Strength milestones with no date stay prose; a dated one is a Follow-up.

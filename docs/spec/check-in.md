@@ -96,8 +96,8 @@ All of these are pure functions of the store at a date and are never stored:
   kind `defer deep review` until its date. No stored flag, no title.
 - **The rendered record**: rendered on demand from the row, its sourced records and the store as it
   stands now, so later annotations and imports improve an old page rather than being hidden from
-  it. The read is the only frozen text. Whether the page is committed or gitignored is decided by
-  Rendered pages.
+  it. The read is the only frozen text. The page is committed and regenerated at every publish
+  (ADR 0012).
 
 ## The prose rule
 

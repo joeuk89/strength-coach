@@ -373,6 +373,12 @@ The default output of a read verb: the few facts an agent needs next, within a f
 The whole record is a separate request.
 _Avoid_: digest, overview
 
+**Rendered page**:
+A markdown file the engine writes from the store for the athlete to read: the weekly sheet, a
+routine page, a check-in record, the athlete page, progress. Written whole at every publish, read
+by no code, edited by nobody.
+_Avoid_: document (fine in prose), report, dashboard, generated file
+
 ### Distribution
 
 **Engine**:
