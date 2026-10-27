@@ -68,15 +68,16 @@ WeekPlan override, a longer park or resume is a Decision.
   session with a Decision.
 - None of these is a new gated write. They are store writes on the athlete's yes, recorded as the
   Decision or niggle event; their Hevy effect lands on the next `plan apply`, whose dry run shows
-  the routine create or delete (ADR 0006).
+  the routine create or retire (ADR 0006).
 
 ## Hevy
 
 - Every session with a Hevy template gets a routine. Rotation sessions project into the program's
   folder; standing, daily and rehab sessions into a second fixed folder, so the app's home shows
   the week's lifting first.
-- Routines are created only on `plan apply`. A parked or retired session's routine is deleted on
-  the next push: routines are projections and only workout history is protected.
+- Routines are created only on `plan apply`. A parked or retired session's routine is retired on
+  the next push (Hevy's API has no DELETE; see ADR 0011): routines are projections and only
+  workout history is protected.
 - Practice workouts match the practice session by routine id and import as ordinary append-only
   Workouts.
 
@@ -86,7 +87,7 @@ WeekPlan override, a longer park or resume is a Decision.
   session.
 - The override catalogue (wayfinder #19) carries drop planned session on the WeekPlan and park
   and resume session as Decision kinds.
-- The Hevy integration (wayfinder #17) carries the second folder and routine delete on retire.
+- The Hevy integration (wayfinder #17) carries the second folder and routine retire (ADR 0011).
 - Program authoring (wayfinder #22) carries session-level conditioning schemes and the hold scheme.
 - Regression tests: a conditioning workout produces no Exposure; a practice workout produces no
   Exposure for an exercise that also sits in a lifting session; a parked session is absent from

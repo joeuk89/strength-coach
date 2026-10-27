@@ -296,8 +296,29 @@ Hevy's own object for a session. The engine projects into it and never owns its 
 _Avoid_: hevy session, remote routine
 
 **Routine map**:
-The stored link from a session to a Hevy routine id, recorded only after a verified write.
+The stored link from a session to a Hevy routine id and its status (active, retired, missing),
+recorded only after a verified write.
 _Avoid_: routine ids, mapping table
+
+**Spare routine**:
+A retired routine, renamed and moved to the Retired folder, that a later session may take over.
+Hevy cannot delete a routine, so nothing is ever removed.
+_Avoid_: deleted routine, unused routine, temporary routine
+
+**Tombstone**:
+The record that Hevy no longer returns a workout. The workout and its sets stay; reads skip it.
+Never withdrawn.
+_Avoid_: deletion, removal
+
+**Drift**:
+A live routine that differs from the plan in force, found at import. Resolved by an override or
+by the next push; never adopted into the store.
+_Avoid_: app edit, out of sync
+
+**Write audit**:
+The committed append-only file holding every request the engine sent to Hevy and every read-back
+verify, written at request time.
+_Avoid_: writes log, hevy log
 
 ### Agent interface
 
