@@ -22,9 +22,9 @@ authored, it fixes the default weekly dose target and what the week is checked a
 _Avoid_: goal (fine in prose), objective, training focus
 
 **Session**:
-A template inside a program version: title, lines, kind and tier. It knows nothing about the
-calendar.
-_Avoid_: routine, day, workout (which is what was logged)
+A template with a title, lines, kind and tier, inside a program version or carried by a niggle.
+It knows nothing about the calendar.
+_Avoid_: routine, day, workout (which is what was logged), add-on
 
 **Session kind**:
 What a session is: lifting, conditioning, practice (a daily drill with nothing to progress), or
@@ -38,8 +38,18 @@ _Avoid_: external session, PT session
 
 **Session tier**:
 Whether a session is core (a week is judged on it) or optional (bonus volume; skipping it is not a
-miss).
+miss). A practice is always optional.
 _Avoid_: priority, importance
+
+**Rehab session**:
+A session a niggle carries, from a physio or the coach: planned while the niggle is open, retired
+when it resolves, never part of a program version.
+_Avoid_: rehab routine, prehab, add-on
+
+**Parked session**:
+A program version's session taken out of force by a Decision until a later Decision resumes it.
+The version itself never changes.
+_Avoid_: status, parked (as a field), disabled
 
 **Slot**:
 A place in a program version's schedule rule that names which session fills it: a rotation week
@@ -163,8 +173,8 @@ stored.
 _Avoid_: skipped session (an optional session skipped is not a miss)
 
 **Activity**:
-A logged non-lifting bout (a run, a class, conditioning done outside a session) with date,
-duration, RPE and whether it was quality work.
+A logged non-lifting bout (a run, a class, a conditioning session's workout) with date, duration,
+RPE and whether it was quality work.
 _Avoid_: cardio entry, bout, wellness
 
 **Weigh-in**:
@@ -219,8 +229,8 @@ week, a training max, a declined ceiling, or going against a research claim.
 _Avoid_: note, rationale, flag
 
 **Niggle**:
-A reported discomfort tracked over time, with a status history and the load constraints it
-imposes.
+A reported discomfort tracked over time, with a status history, the load constraints it imposes
+and any rehab session it carries.
 _Avoid_: injury (which needs a professional), issue, pain entry
 
 **Follow-up**:
