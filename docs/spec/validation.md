@@ -148,7 +148,7 @@ lawfully change the fact behind.
 
 ## Code registry
 
-The v1 codes, drawn from ADR 0005, 0008, 0010, 0011 and 0014. Later tickets add a code only by adding
+The v1 codes, drawn from ADR 0005, 0008, 0010, 0011, 0014 and 0015 (`program.md`). Later tickets add a code only by adding
 a row here; a contract test holds that every code the engine emits is in this table.
 
 ### Violations
@@ -165,6 +165,24 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `rotation_unconfirmed` | week | inferred position, source | the agent confirming the rotation position in the Draft |
 | `goal_missing` | version | none | `goal adopt` |
 | `priority_lifts_required` | version | emphasis | a Goal with priority lifts, or a different emphasis |
+| `unknown_key` | version | key path | removing the key from the program Draft |
+| `unknown_exercise` | line | exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id |
+| `unknown_scheme` | line, session | scheme name, param | a registry scheme and its params |
+| `unknown_load_mode` | line | load mode | a glossary load mode |
+| `duplicate_id` | version | session id or (session, exercise) | unique ids; merging the duplicate lines |
+| `schedule_session_missing` | version | week, weekday, session id | a session with that id, or removing the slot |
+| `session_unscheduled` | session | session id | a slot in a rotation week, or a `cadence` |
+| `cadence_on_scheduled` | session | session id, cadence | removing the cadence |
+| `location_unknown` | version, session | location | a `[location.<name>]` in `coach.toml` |
+| `equipment_unsupplied` | line | equipment kind, location | mapping the kind at the location, or another location or exercise |
+| `rehab_in_version` | session | session id | removing it; a rehab session is raised on a niggle |
+| `practice_not_optional` | session | session id | `tier = "optional"` |
+| `coach_led_has_lines` | session | session id | removing the lines or the `estimated_sets` |
+| `start_load_missing` | line | exercise id, days since last exposure | a `start_load` on the line |
+| `start_load_off_rack` | line | start load, location, two nearest rows | a start load on a rack row |
+| `no_working_sets` | line | scheme | a working group, or `hold` |
+| `set_type_not_allowed` | line | set type, scheme | a permitted type, or a scheme that permits it |
+| `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry |
 
 ### Warnings on a plan (acknowledgeable)
 
@@ -191,6 +209,12 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `priority_lift_not_first` | session | exercise id, position |
 | `dose_off_band` | version | muscle or lift, target, band, phase |
 | `deload_off_emphasis` | version | deload policy, expected shape |
+| `muscle_no_hard_sets` | version | muscle, sessions searched |
+| `session_over_minutes` | session | estimate, `minutes` |
+| `block_open_at_redesign` | version | block id, hard weeks so far |
+| `start_load_ignored` | line | start load, last exposure load, exposure ref |
+| `superset_rest_differs` | session | superset label, rest values |
+| `session_retired` | version | session id, routine id if mapped |
 
 ### Warnings outside a plan (clear by fact)
 

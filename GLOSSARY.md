@@ -12,9 +12,15 @@ The athlete's authored training structure, as an identity that persists across i
 _Avoid_: routine, plan, template
 
 **Program version**:
-One immutable adopted snapshot of a program: its sessions, lines, schemes, schedule rule and block
-policy. A persisting swap or a block-boundary redesign is a new version.
+One immutable adopted snapshot of a program: its sessions, lines, schemes, schedule, dose target
+and deload policy, authored whole as one file. A persisting swap or a block-boundary redesign is
+a new version.
 _Avoid_: program edit, revision, patch
+
+**Version kind**:
+Whether a program version amends the one before it (a swap, a fix, a scheme change; the block
+and rotation continue) or redesigns it (the block closes and a new one opens).
+_Avoid_: replace, major version, new program
 
 **Emphasis**:
 What a program version optimises for its block: hypertrophy, strength or maintenance. Chosen
@@ -53,9 +59,14 @@ The version itself never changes.
 _Avoid_: status, parked (as a field), disabled
 
 **Slot**:
-A place in a program version's schedule rule that names which session fills it: a rotation week
+A place in a program version's schedule that names which session fills it: a rotation week
 and weekday, or none, plus a cadence.
 _Avoid_: day, position
+
+**Rotation week**:
+One named week of a program version's schedule, mapping weekdays to sessions. The schedule is
+an ordered list of them; a one-week rotation is a fixed week.
+_Avoid_: week letter, cycle week, schedule rule
 
 **Cadence**:
 How often a slot expects its session: weekly (a weekday in a rotation week), standing (any day,
@@ -63,13 +74,36 @@ when it fits) or daily.
 _Avoid_: frequency, schedule type
 
 **Line**:
-One exercise in a session: the exercise, its load mode, set groups, rest, cues and progression
-scheme.
+One exercise in a session: the exercise, its load mode, set groups, rest, cues, progression
+scheme and start load. One exercise appears at most once per session.
 _Avoid_: entry, item, session exercise
 
+**Scheme**:
+The named progression rule a line or a conditioning session runs under, with its parameters:
+what it reads from history, how it moves the dose, when it counts a stall and what it does in a
+deload. Declared once in the engine's registry; the form names it.
+_Avoid_: progression (alone), plugin, model
+
+**Start load**:
+The load a line opens at before any exposure exists, in athlete units and per hand where the
+load mode is per hand. Must be a row on the session location's rack. History, once it exists,
+replaces it.
+_Avoid_: starting weight, initial load, seed
+
+**Dose target**:
+The hard sets per muscle per week, and per priority lift, a program version is checked against.
+Filled from the emphasis and phase when the version leaves it unsaid.
+_Avoid_: volume target, landmark, MEV
+
+**Deload policy**:
+A program version's hard-week ceiling, the set cut taken in the light week and whether priority
+lifts are tested in it. Filled from the emphasis when unsaid.
+_Avoid_: block rule, light-week rule
+
 **Set type**:
-What a prescribed or logged set is for: warm-up, working or activation. A rep-out is a working set
-with an open top, not a type.
+What a prescribed or logged set is for: warm-up, working, activation or test. A rep-out is a
+working set with an open top, not a type; an activation set counts no hard set and yields no
+exposure; a test set is the heavy single or AMRAP that sets a training max.
 _Avoid_: set kind
 
 **Rotation position**:
