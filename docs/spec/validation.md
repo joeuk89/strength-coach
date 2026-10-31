@@ -159,7 +159,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or relax the constraint); the return band's exposure or days off; removing the light-week override; a lower `pin load` |
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version |
-| `hevy_template_missing` | line | exercise id, missing columns | editing the Exercise so its four template columns are present |
+| `hevy_template_missing` | line | exercise id, missing columns | an Exercise with a `hevy_template_id`, or one with all four template columns so `plan apply` can create the template; an Exercise that has the id never needs the other three (`cutover.md`) |
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` |
 | `plan_not_current` | week | named WeekPlan id, current draft hash | re-running the dry run on the current Draft |
 | `rotation_unconfirmed` | week | inferred position, source | the agent confirming the rotation position in the Draft |

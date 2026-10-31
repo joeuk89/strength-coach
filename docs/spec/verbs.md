@@ -139,7 +139,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | decision | `[[decision]]` | a Decision of any of the ten kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`), or a `retire` of one | |
 | annotation | `[[annotation]]` | an Annotation, or the withdrawal of one | |
 | note | `[[note]]` | an Athlete note with its optional `about` ref | |
-| workout | `[[workout]]` | a manual workout when Hevy is off (ADR 0004); never sent to Hevy | |
+| workout | `[[workout]]` | a workout Hevy never saw: Hevy off (ADR 0004), or a session the athlete reports and did not log (`cutover.md`); never sent to Hevy | |
 | weigh_in | `[[weigh_in]]` | a Weigh-in | |
 | sleep_night | `[[sleep_night]]` | a Sleep night | |
 | activity | `[[activity]]` | an Activity | |

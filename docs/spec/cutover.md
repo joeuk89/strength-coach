@@ -1,12 +1,12 @@
 # Cutover: history import and the fresh start
 
-Spec for wayfinder #30, decided 2026-10-31. The Hevy history comes across whole; the program does
+Spec for wayfinder #30 and #31, decided 2026-10-31. The Hevy history comes across whole; the program does
 not. Version 1 is designed from scratch through `onboard` and `program`, with the old routines
 and the imported history as reference the agent reads. This replaces the pre-charting note that
 the old program would carry over as version 1 (`program.md`'s worked example stays as an
 illustration of the form). The routine steps in Hevy and the hour-by-hour switch belong to the
-routine cutover ticket; the ledger Draft of carried-over coaching state belongs to the migration
-ticket. This file settles what each of them may assume.
+routine cutover ticket; the ledger Draft of carried-over coaching state is "The cutover
+check-in" below. This file settles what each of them may assume.
 
 ## What carries and what does not
 
@@ -16,8 +16,14 @@ ticket. This file settles what each of them may assume.
 | Hevy body measurements (42) | `weigh_in` rows, source `hevy`, through the same pull |
 | Hevy routines and folders (17 and 4) | the `routine` and `folder` mirror through the same pull; `routine_map` is the routine ticket's |
 | Custom Hevy template ids (11 in the account, 8 in the history) | `exercise.hevy_template_id`, recorded by `[[exercise]]` at onboarding |
-| Open niggles, follow-ups, observations, Goal, Phase | the ledger Draft (migration ticket) |
-| Three external PT sessions | three manual `workout` rows in the ledger Draft: source `manual`, no session, title `PT session`, minutes, session RPE, no sets |
+| Goal and Phase | the `goal adopt` Draft the `onboard` skill writes (`goals.md`) |
+| Open niggles, open follow-ups, the patterns among the Coach's notes | the cutover check-in (below) |
+| Two unlogged PT sessions (6 and 13 Oct 2026) | two manual `workout` rows in the cutover check-in: source `manual`, no session, title `PT session`, minutes, session RPE where reported, no sets. The third external annotation (20 Oct) is in Hevy and arrives with `import` |
+| The `[cardio]` run caps | one `activity_cap` Decision in the cutover check-in |
+| The 24 old Decisions | nothing. Every one expired by 2026-11-01 and names a session that will not exist |
+| The `[caps]` table | nothing. The bar's limit derives from kit (ADR 0008) |
+| Resolved niggles, the two illness episodes, the resolved follow-up | nothing. They stay readable in the archived `data/` |
+| Setup facts and history among the Coach's notes | nothing |
 | The program, its 13 session ids, the rotation position, the Block count | nothing. Version 1 is a `redesign` and opens its own Block (ADR 0015) |
 | 11 miss tags | nothing. They name planned sessions that never exist in the store |
 | Load modes set per span by overlays (14 exercise rows) | nothing. Load mode is a column of the Exercise |
@@ -69,14 +75,59 @@ harness asserts it on the fixture.
    reads the old routines from the mirror and the imported history as reference and takes a
    critical view of both.
 4. `coach program adopt` of version 1.
-5. `coach record` of the ledger Draft: the custom template ids, niggles, follow-ups,
-   observations, Phase, the three manual PT workouts.
+5. `coach checkin record` of the cutover check-in: the custom template ids, open niggles with
+   their constraints, open follow-ups, Observations, the run cap, the two manual PT workouts.
 6. The first `plan draft` and `plan apply`. What happens to the 17 old routines in Hevy at that
    push is the routine ticket's decision. The athlete may delete old routines by hand in the app
    beforehand; the hard constraint covers workout history, not routines.
 
 Import comes before design because it is read-only against Hevy and the design should see the
 history it will anchor on.
+
+## The cutover check-in
+
+The carried-over coaching state is one Draft, hand-written by the agent at cutover from the
+archived `data/` and `profile.md`, reviewed line by line by the athlete, and taken by
+`checkin record`. No converter script and no hidden verb: the Draft is about fifteen tables, and
+this section pins their content so the agent at cutover only brings niggle status up to the day.
+
+It is a check-in file, not a plain `record` file, because Observations are reserved to the
+check-in (ADR 0009) and every carried row should name the check-in that confirmed it. The row is
+ordinary: tier `deep`, window the old instance's final week, read "state carried from the old
+instance" in the coach's words. It is the instance's first deep check-in on record, so the deep
+cadence and `defer_deep_review` count from cutover day. `checkin open` is not run first; nothing
+in the schema marks it special.
+
+| Kind | Rule | Content as of 2026-10-31 |
+| --- | --- | --- |
+| `[[exercise]]` | every custom template the old library knows, as a new Exercise with `source = record`, keeping the old id; if version 1 already declared it, the record is the in-place edit adding the template id. `hevy_template_id` and `hevy_title` only: an Exercise that has its template id never needs the other three Hevy columns (`validation.md`, `hevy_template_missing`). A template the account holds and the library never knew waits for `exercise_unmapped` | ten: `custom_arch_hold`, `custom_decline_lateral_raise`, `custom_dip_negatives`, `custom_flexed_arm_hang`, `custom_hollow_hold`, `custom_jumping_pull_up`, `custom_pallof_press_band`, `custom_pull_up_top_hold`, `custom_straight_arm_lat_pulldown_band`, `custom_suitcase_carry` (eight in history) |
+| `[[niggle]]` | open niggles only, one record each: `opened` = old `first_noted`, `site`, the current status (old `watching` is `reported`), the old history collapsed into the event text, and the constraint set the agent proposes from the old prose and the overrides that cite the niggle, each confirmed or struck by the athlete in the file. Resolved niggles and the illness episodes do not migrate | two: hamstring after runs (n-0003, easing, proposed `rpe_cap` 7 on pattern `hinge`); left shoulder (n-0006, easing, proposed `rpe_cap` 7 on `db_lateral_raise` if still in force) |
+| `[[followup]]` | open follow-ups only, one `kept` event each, `due` = old `review_at` | none |
+| `[[observation]]` | the Coach's notes that are patterns with evidence (ADR 0009). Agreements about how to coach stay in `profile.md`; agreements that shaped the old program inform the fresh design and become no record; setup facts and history are dropped | seven: drift adds volume; drift adds intensity on top sets; PT sessions run hard whatever is asked; PT sessions go under-logged; the PT's A/B alternation is unreliable; active holidays are training stress; the PT rarely programmes deadlifts |
+| `[[decision]]` | one `activity_cap` for runs with the old `[cardio]` numbers, because `pain`, evidence `niggle:n-0003`, no `until`, retired when the hamstring resolves. `park_session` rows only if version 1 authors the conditioning sessions and the athlete still wants them parked | `activity_kind = "run"`, `weekly_distance = 17`, `single_distance = 6` |
+| `[[workout]]` | the external PT annotations whose session Hevy never saw, minutes and RPE as reported, NULL where not | two: 6 Oct 2026 (60 min, RPE unknown), 13 Oct 2026 (60 min, RPE 9) |
+
+The Draft lives at `.coach/drafts/<date>-checkin.toml` (`instance.md`), gitignored; the export
+`publish` commits is the record, and the Draft hash on every row is the audit.
+
+### Acceptance check
+
+`cutover.md` is the expected `coach status` after step 5, and that list is the check:
+
+- `exercise_unmapped`: 0 of 57 workouts;
+- two open niggles, each with at least one constraint (no "niggle open with no load constraint"
+  warning);
+- open follow-ups: none, or exactly the ones the Draft carried;
+- the seven Observations current;
+- two manual workouts;
+- one `activity_cap` in force;
+- one current Goal and one open Phase;
+- `publish --dry-run` row counts equal to the Draft's table counts.
+
+Before cutover day the parity harness runs this Draft against its fixture, so the record path is
+tested before it runs for real. The former check, "the first `plan apply --dry-run` reproduces the
+old instance's next week", compared programs; with the program not carried there is none to
+compare.
 
 ## Known gaps, stated once
 

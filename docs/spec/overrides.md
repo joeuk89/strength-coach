@@ -104,8 +104,9 @@ the plan's own overrides, the dry run lists it as in force, and the agent never 
 Where the plan carries an override of the same kind on the same line, the plan wins for that
 week and the Decision stays recorded.
 
-The old `[caps]` table is `safety_ceiling` rows; the old `[cardio]` weekly and single run caps
-are `activity_cap` rows. The quality-bout cap, the spike ratio and the sleep numbers are engine
+The old `[caps]` table becomes nothing: the bar's limit derives from kit (ADR 0008) and a
+`safety_ceiling` exists only where the athlete sets one with a reason. The old `[cardio]` weekly
+and single run caps are one `activity_cap` row. The quality-bout cap, the spike ratio and the sleep numbers are engine
 constants with their citation (ADR 0013).
 
 No outcome field. A Decision is written only when it is made and its kind is the outcome: a
@@ -238,6 +239,6 @@ without it the only lawful input is that typed field, so no other code exists fo
   `exercise_id`, params, reason triple), the `decision` table with kind, `session_id` and
   `exercise_id` as columns, params, `until`, `superseded_by` and `retired_by`; the Decision-kind
   registry stays in code and generates the `kind` CHECK.
-- **Migration**: old `[caps]` to `safety_ceiling`, old `[cardio]` run caps to `activity_cap`,
-  the two parked conditioning sessions to `park_session`, open standing overrides to
-  `override` Decisions with their until dates.
+- **Migration** (settled in `cutover.md`): old `[caps]` to nothing (ADR 0008), old `[cardio]`
+  run caps to one `activity_cap`, the 24 old Decisions dropped (expired, scoped to sessions that
+  will not exist), `park_session` only if version 1 authors the conditioning sessions.
