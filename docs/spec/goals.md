@@ -215,7 +215,7 @@ Compact summary by default; `--full` adds per-line history.
 
 The replacement for a stored training level (`rn:training-level §2`, thresholds opinion). Per
 exercise, raised at the block boundary, scope `exercise`, cleared by a new Program version
-or left by a `leave warning` Decision:
+or left by a `leave_warning` Decision:
 
 | Code | Condition |
 | --- | --- |
@@ -295,5 +295,5 @@ training-max percentage scheme on bench, the Decision citing the warning.
   is never moved by the rule (`training_max_due` asks for a Decision).
 - **Verb set** (#16): `goal adopt` (plain write) and `coach progress` (read).
 - **Override catalogue** (#19): the test week needs no override; it is the deload policy.
-- **Schema**: Goal, Milestone and Phase tables; `priority_lifts` and `emphasis` on the version;
+- **Schema** (settled in `schema.md`): `goal`, `goal_priority_lift`, `milestone` and `phase` tables; `emphasis` on the version and `priority_lifts` read from the current Goal at adopt, never copied;
   the two new scope kinds (`version`, `exercise`) in the flag registry.

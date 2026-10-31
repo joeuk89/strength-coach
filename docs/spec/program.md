@@ -174,7 +174,7 @@ cannot ride along.
 ```toml
 [[acknowledge]]
 flag = "scheme_off_emphasis@line:b-sat-push/bb_bench_press"
-because = "coaching_choice"
+because = "coach_judgement"
 text = "Keep the 4×5 linear bench for one more block; the top-and-back-off switch waits for the first test week."
 ```
 
@@ -470,12 +470,12 @@ minutes = 90
 
 [[acknowledge]]
 flag = "scheme_off_emphasis@line:b-sat-push/bb_bench_press"
-because = "coaching_choice"
+because = "coach_judgement"
 text = "Keep the 4×5 linear bench for one more block; top-and-back-off waits for the first test week."
 
 [[acknowledge]]
 flag = "scheme_off_emphasis@line:a-sat-pull/pull_up"
-because = "coaching_choice"
+because = "coach_judgement"
 text = "The pull-up progresses through the assistance ladder and negatives; the single is the test."
 ```
 

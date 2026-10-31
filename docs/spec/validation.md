@@ -106,7 +106,7 @@ exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no `
 An acknowledgement on a WeekPlan dies with that week: if the condition holds next week the
 warning returns and the coach judges it again. When the coach wants it quiet for longer (the old
 `repeated_decline` walk and the adherence suppression windows, which the parity checklist
-replaced with a snooze date), the acknowledgement is a **Decision** of kind `leave warning`: the
+replaced with a snooze date), the acknowledgement is a **Decision** of kind `leave_warning`: the
 same `{key, params_hash, because, text, evidence}` plus an until date. The validator treats the
 warning as left while the Decision is in force and the params hash is unchanged.
 
@@ -132,7 +132,7 @@ bears on a line, and clears only when the fact behind it changes through its own
 | Warning | Clears by |
 | --- | --- |
 | Drift on a live routine (ADR 0011) | an override on the next WeekPlan, or the next push overwriting it |
-| A tombstoned workout id reappearing (ADR 0011) | a `match` or `exclude` Annotation on the new version |
+| A tombstoned workout id reappearing (ADR 0011) | a `match` or `void` Annotation on the new version |
 | A follow-up due | a Follow-up event (kept, deferred, resolved, dropped) |
 | A niggle open with no load constraint | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
 | Engine pin on a `.dev` build (ADR 0007) | pinning a release, or `coach upgrade` |
@@ -242,6 +242,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `phase_trend_off` | instance | phase id, target rate, observed rate, window |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes |
 | `training_max_unused` | exercise | scheme, decision id |
+| `exercise_unmapped` | workout | Hevy template id, title; cleared by an `[[exercise]]` record giving the template id (`schema.md`) |
 
 ### Codes pending other tickets
 

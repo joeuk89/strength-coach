@@ -234,9 +234,10 @@ without it the only lawful input is that typed field, so no other code exists fo
 - **Weekly prescription** (#26, settled in `prescription.md`): the week-kind precedence, the
   per-line order of modifiers (ADR 0017), a held line still takes the week transform.
 - **Scheme registry** (#28, settled in `program.md`): `wave_531` is the one v1 scheme that declares `training_max`.
-- **Schema**: `override` rows on the WeekPlan (kind, scope refs, params, reason triple), the
-  `decision` table with kind, params, `until`, `superseded_by` and the retire link, and the
-  Decision-kind registry as a table the contract tests read.
+- **Schema** (settled in `schema.md`): `override` rows on the WeekPlan (kind, `session_id`,
+  `exercise_id`, params, reason triple), the `decision` table with kind, `session_id` and
+  `exercise_id` as columns, params, `until`, `superseded_by` and `retired_by`; the Decision-kind
+  registry stays in code and generates the `kind` CHECK.
 - **Migration**: old `[caps]` to `safety_ceiling`, old `[cardio]` run caps to `activity_cap`,
   the two parked conditioning sessions to `park_session`, open standing overrides to
   `override` Decisions with their until dates.

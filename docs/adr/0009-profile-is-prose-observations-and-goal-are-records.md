@@ -51,8 +51,8 @@ and follow-ups are already records.
   file; the athlete's yes to the record is the confirmation. No `observation` verb.
 - The old Coach's notes split: patterns (drift adds intensity, PT sessions go under-logged) become
   Observations; agreements that constrain a line or a load (dumbbell curls not barbell, box squats
-  on the PT day only) become override Decisions with no until date, defined by the Override
-  catalogue; agreements about how to coach (a bad night moves the session, waist is a monthly ask)
+  on the PT day only) become `safety_ceiling` Decisions, or `override` Decisions renewed at eight weeks, as the
+  Override catalogue defines them (ADR 0016, 0018); agreements about how to coach (a bad night moves the session, waist is a monthly ask)
   are coaching preferences in the prose.
 - `profile.md` carries no schedule, no recovery history, no status log, no front matter, no
   rendered regions. The agent changes it only on the athlete's yes in conversation; `publish`

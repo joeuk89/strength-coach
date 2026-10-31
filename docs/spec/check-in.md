@@ -94,7 +94,7 @@ All of these are pure functions of the store at a date and are never stored:
 - **Week closure**: a week is closed when a `current` check-in's window covers its Sunday.
 - **Deep due**: 42 days since the newest `current` row with `tier = deep`, or a light week newly
   proposed, or a restructure, or the previous check-in was a catch-up; suppressed by a Decision of
-  kind `defer deep review` until its date. No stored flag, no title.
+  kind `defer_deep_review` until its date. No stored flag, no title.
 - **The rendered record**: rendered on demand from the row, its sourced records and the store as it
   stands now, so later annotations and imports improve an old page rather than being hidden from
   it. The read is the only frozen text. The page is committed and regenerated at every publish

@@ -163,7 +163,7 @@ days off > 10 is a return week with the cap at 7.
 
 ### Niggle constraints
 
-Four kinds on the Niggle record (field shapes are the Schema ticket's), binding while the
+Four kinds on the Niggle record (`niggle_constraint` rows per event, `schema.md`), binding while the
 niggle's status says so (ADR 0010); the strictest across every open niggle binds:
 
 | Kind | Does |

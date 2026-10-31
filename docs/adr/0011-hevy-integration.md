@@ -39,7 +39,7 @@ reused, a folder is forever.
 - One verb pulls workouts (events since the last import minus a 10-minute overlap; `--full`
   re-lists everything), routines, folders, exercise templates and body measurements, and stores
   normalised rows with the raw payload kept on the row. No cache directory. Exposure, Match, e1RM
-  and the Activity of a conditioning workout stay views.
+  and the Activity of a conditioning workout stay views; the `activity` table holds hand-entered bouts only (ADR 0018).
 - A Workout is versioned by (Hevy id, `updated_at`). An app edit appends a version; reads take the
   latest. A delete event, or an id missing from a full pull, appends a tombstone (id, noticed at,
   source `event` or `full pull`). Reads skip tombstoned workouts; the rows stay; a tombstone is
@@ -55,7 +55,7 @@ reused, a folder is forever.
   `plan apply` that needs one, adopted by exact title when one already exists, refused when two
   share a title. Their ids live on a folder table. Programs never create folders.
 - The Routine map is one table: session id, Hevy routine id, folder, status
-  `active | retired | missing | unverified`. Only `plan apply` writes it, after a verified write.
+  `active | retired | missing | unverified`. `plan apply` writes it after a verified write; the one other writer is import flipping a row to `missing`.
 - A retired session's routine gets one PUT: title `(unused) <old title>`, folder Retired,
   exercises kept. It becomes a spare. A session needing a routine takes the oldest spare before
   POSTing a new one; a spare mapped to another session is never taken.

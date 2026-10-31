@@ -59,8 +59,8 @@ WeekPlan override, a longer park or resume is a Decision.
 
 ## Lifecycle
 
-- A one-week drop: WeekPlan override. A park or resume for longer: an override Decision with no
-  until date; the sessions in force on a date are the version's sessions minus those parked.
+- A one-week drop: WeekPlan override. A park or resume for longer: a `park_session` or
+  `resume_session` Decision with no until date (ADR 0016, 0018); the sessions in force on a date are the version's sessions minus those parked.
 - Promotion of a conditioning session to core is a tier change, so a new program version through
   `adopt`.
 - A rehab session is raised on the niggle and retires when the niggle resolves; a chronic niggle

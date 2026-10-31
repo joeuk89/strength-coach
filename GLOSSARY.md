@@ -484,6 +484,11 @@ annotation, a note, a workout, a reading, a status day, an exercise edit, an obs
 registry of kinds serves every verb that records.
 _Avoid_: entry type, event type, table
 
+**Ref**:
+A typed text pointer to one record, written as its kind and id, used where one field may point
+at records of more than one kind: evidence, what a note is about, what an annotation corrects.
+_Avoid_: link, pointer, foreign key (which is a single-kind column)
+
 **Compact summary**:
 The default output of a read verb: the few facts an agent needs next, within a fixed size budget.
 The whole record is a separate request.
@@ -511,6 +516,16 @@ _Avoid_: framework, template, core
 One athlete's directory: config, profile, the store and its committed export, the rendered pages
 and the write audit, and nothing of the engine. Where every verb runs.
 _Avoid_: workspace, data repo, my-training
+
+**Export**:
+The text copy of the store that git commits: one sorted file per table and a manifest, written
+whole at every publish and read only to rebuild the store.
+_Avoid_: backup, dump, mirror, snapshot (which is the kit's)
+
+**Schema version**:
+The one number that says which shape of the store an instance's database and export are in.
+Moves only by upgrade, forward only, one step at a time.
+_Avoid_: migration number, db version, format
 
 **Engine pin**:
 The one engine version an instance declares it was last upgraded to. A verb from any other
