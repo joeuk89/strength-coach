@@ -419,8 +419,9 @@ to re-run. The engine has a small, budgeted set of them.
 _Avoid_: subcommand, tool, endpoint
 
 **Draft**:
-A file the agent writes for one verb to consume: a plan, a check-in record, a program text form, a
-manual workout. Disposable; nothing reads it after the verb takes it.
+A file written for one verb to consume: a plan, a check-in record, a program text form, a ledger
+of records. The agent writes it, or a verb writes it as a form for the agent to edit. Disposable;
+nothing reads it after the verb takes it.
 _Avoid_: proposal, overlay, working file, input file
 
 **Envelope**:
@@ -446,6 +447,17 @@ _Avoid_: preview, simulate, plan (which is a noun here)
 A plain function behind a verb that owns the procedure and the transaction, taking a typed request
 and returning a typed result. It knows nothing about the command line.
 _Avoid_: handler, controller, use case
+
+**Read view**:
+A named, parametrised read of the store that answers one recurring question as a list of rows.
+The agent filters by naming the view and its parameters, never by reshaping another verb's output.
+_Avoid_: query (the verb that runs one), report, filter
+
+**Record kind**:
+One typed table a ledger Draft may carry: a niggle event, a follow-up event, a decision, an
+annotation, a note, a workout, a reading, a status day, an exercise edit, an observation. One
+registry of kinds serves every verb that records.
+_Avoid_: entry type, event type, table
 
 **Compact summary**:
 The default output of a read verb: the few facts an agent needs next, within a fixed size budget.

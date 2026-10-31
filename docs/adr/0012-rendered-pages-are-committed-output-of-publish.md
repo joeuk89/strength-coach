@@ -48,7 +48,8 @@ phone through the GitHub app on the private instance repo; Hevy carries the set-
 - A hand edit to a page is overwritten silently at the next publish. There is no check for it and
   no warning. Pages carry a generated header saying so.
 - No render verb. Rendering is a step inside `publish`. Previewing a plan before approval is the
-  draft's job; whether a read verb prints a page to stdout is for the Verb set.
+  draft's job. No read verb prints a page to stdout: envelopes carry data, pages are files
+  (`docs/spec/verbs.md`).
 - Loads on pages are in athlete units with a plate-pool deep link per loaded line, from the frozen
   prescription (ADR 0008). The generated sections of a check-in record are tested against the
   store; the read is never parsed (`docs/spec/check-in.md`).

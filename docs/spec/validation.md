@@ -83,7 +83,7 @@ contract test holds that no verb declaration accepts a violation key as an ackno
 A warning is left by an **Acknowledgement**: `{key, params_hash, because, text, evidence}`. The
 `because` categories are the override's (pain, kit, stall, fatigue, schedule, athlete request,
 coach judgement); the text is the coach's voice, unpoliced; evidence refs are optional (niggle,
-exposure, check-in). `plan validate` refuses an acknowledgement with no `because`.
+exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no `because`.
 
 - **Home.** The agent writes acknowledgements in the plan Draft next to the overrides. They freeze
   onto the WeekPlan at approval and show at the approval prompt as "left warnings" with their
@@ -95,10 +95,10 @@ exposure, check-in). `plan validate` refuses an acknowledgement with no `because
 - **Binding.** An acknowledgement matches a flag when the key matches and the params hash is
   unchanged. A stall streak growing from 2 to 3 changes the hash, so the warning returns fresh
   and must be judged again.
-- **No inheritance.** A superseding WeekPlan in the same span inherits nothing: `plan validate`
+- **No inheritance.** A superseding WeekPlan in the same span inherits nothing: `plan apply --dry-run`
   reports a warning as left only if the Draft acknowledges it or a Decision covers it. Re-planning
   midweek restates the acknowledgements, which the agent does by starting the Draft from the
-  current plan's export (a verb-set matter). No judgement is carried silently into a plan the
+  current plan's export (`query flags` and `query lines`, `verbs.md`). No judgement is carried silently into a plan the
   coach did not look at.
 
 ### Longer than a week
@@ -134,13 +134,13 @@ bears on a line, and clears only when the fact behind it changes through its own
 | Drift on a live routine (ADR 0011) | an override on the next WeekPlan, or the next push overwriting it |
 | A tombstoned workout id reappearing (ADR 0011) | a `match` or `exclude` Annotation on the new version |
 | A follow-up due | a Follow-up event (kept, deferred, resolved, dropped) |
-| A niggle open with no load constraint | a Niggle constraint or close, through the niggle verb |
+| A niggle open with no load constraint | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
 | Engine pin on a `.dev` build (ADR 0007) | pinning a release, or `coach upgrade` |
 | Kit or Hevy snapshot older than its age limit (ADR 0008, ADR 0011) | `coach import` |
 
 ## Violations
 
-No verb and no flag writes around a violation. `plan validate` reports every violation per
+No verb and no flag writes around a violation. `plan apply --dry-run` (the only plan check, `verbs.md`) reports every violation per
 scope in one envelope and refuses approval while any stands anywhere in the plan. Each code in
 the registry names the verb or record that clears it; a contract test holds that every
 violation code has one (ADR 0005's consequence), so no constraint can exist that the agent cannot
@@ -156,7 +156,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | Code | Scope | Params | Cleared by |
 | --- | --- | --- | --- |
 | `load_off_grid` | line | load, implement, location, nearest grid loads | a `pin load` override on a grid value; a kit change in `coach.toml`; `coach import` of a new plate-pool snapshot |
-| `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | the niggle verb (close, or relax the constraint); the return band's exposure or days off; removing the light-week override; a lower `pin load` |
+| `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or relax the constraint); the return band's exposure or days off; removing the light-week override; a lower `pin load` |
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a Decision declining the ceiling, a light week override, or a block reset Decision |
 | `hevy_template_missing` | line | exercise id, missing columns | editing the Exercise so its four template columns are present |
@@ -183,6 +183,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `no_working_sets` | line | scheme | a working group, or `hold` |
 | `set_type_not_allowed` | line | set type, scheme | a permitted type, or a scheme that permits it |
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry |
+| `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) |
 
 ### Warnings on a plan (acknowledgeable)
 
