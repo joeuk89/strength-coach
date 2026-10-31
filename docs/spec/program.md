@@ -107,13 +107,21 @@ Set types:
 
 - `warm_up` groups carry `count` and `reps` only; their loads are derived from the working load
   by the ADR 0008 ladder and never authored.
-- `working` is the default. Drop sets and sets to failure are working sets; a rep-out is a
-  working group with an open top.
+- `working` is the default. Sets to failure are working sets; a rep-out is a working group with
+  an open top.
 - `activation` is a real type: low load, counts no hard set, excluded from e1RM and from the
   working-set count. A line whose only groups are activation is valid and yields no Exposure
   (the old "warm-up with no working sets" problem, review "The data model").
-- `test` is a heavy single or an AMRAP that sets the next block's training max, allowed only
-  under a scheme whose registry row permits it.
+- `test` is a heavy single or an AMRAP that sets the next block's training max (a `training_max`
+  Decision, ADR 0016), allowed only under a scheme whose registry row permits it.
+
+Set structures (drop sets, rest-pause, myo-reps) are not in v1. The evidence puts them level with
+straight sets for growth and ahead only on time (`rn:progression-methods`), no source uses one
+as a stall response, and the four set types cannot express them: a group would need its own
+rest, a load taken from the group before it, and a rule for which of its sets count as hard
+sets and qualify for e1RM. A version that wants one authors plain working sets. When they
+arrive, the opening set of a myo-rep cluster is a `working` set, so `activation` keeps its
+meaning.
 
 ### Dose and deload
 
@@ -197,9 +205,19 @@ catalogue).
 | `hold` | none | warm_up, working, activation, test | nothing; the authored numbers stand until an override or a new version | the authored sets, `start_load` where load-bearing |
 | `assistance_ladder` | `rungs` (assisted loads, descending), `reps`, `sets`, `rpe` | working | reps at RPE on the current rung | the first rung |
 | `top_backoff` | `top = { reps, rpe }`, `backoff = { sets, reps, pct_of_top }` | warm_up, working, test | e1RM from the line's exposures, RPE as a cap | `start_load` is the top set; back-offs derive from it |
+| `wave_531` | none; the registry holds the waves `[[65, 75, 85], [70, 80, 90], [75, 85, 95]]` of the training max at `5/3/1` reps, last working set open (`"5+"`, `"3+"`, `"1+"`) | warm_up, working, test | the current `training_max` Decision on the exercise and the last rep-out | `start_load` is the training max until a Decision exists |
 
-Not in v1: `wave_531`, `fixed_reps_rpe`, `rpe_anchored`, `maintenance` (maintenance is the
-emphasis cutting dose, not a scheme).
+`wave_531` is the slow strength cadence: the scheme the `program` skill names when `cadence_slow`
+fires on a `top_backoff` lift (`goals.md`, **Response to a cadence signal**). Adopt never fills
+it. Its wave is the Block's hard-week count, cycling; the light week is the version's deload
+policy, not a fourth wave. It is the one v1 scheme that reads a `training_max`, so
+`training_max_unused` fires on every other.
+
+Not in v1, judged against the evidence (`rn:progression-methods`): `rpe_anchored` (it is
+`top_backoff` under another name); `fixed_reps_rpe` (straight sets at an RPE-capped load are
+`top_backoff` with `backoff = { sets = n − 1, reps = top.reps, pct_of_top = 100 }`);
+`maintenance` (the emphasis cutting dose, not a scheme). Cluster sets change no outcome for this
+athlete and are not a scheme.
 
 ### Session schemes, v1
 
@@ -470,8 +488,9 @@ squat steps by the home rack's next barbell row.
 ## Handed to other tickets
 
 - **Weekly prescription** (#26): the stall and reset rule per scheme, the registry defaults for
-  `linear` and `top_backoff`, the hypertrophy RIR walk and set ramp, the derivation of a
-  conditioning session's dose from its last Activity.
+  `linear` and `top_backoff`, how `wave_531` moves the training max after a short rep-out, the
+  hypertrophy RIR walk and set ramp, the derivation of a conditioning session's dose from its
+  last Activity.
 - **Override catalogue** (#19, settled in `overrides.md`): the trigger for promoting a one-week swap, the swap and pin
   override kinds `--apply-plan` folds in.
 - **Verb set** (#16): `program adopt`, `program show` (`--draft`, `--apply-plan`), `coach schema`

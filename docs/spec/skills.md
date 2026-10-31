@@ -17,7 +17,7 @@ Four skills, all in the plugin (ADR 0007), none in the instance:
 | --- | --- | --- |
 | `check-in` | The weekly review | A check-in is due, the athlete reports on the week, or the newest check-in is older than a week |
 | `plan-week` | The week's prescription | A check-in has closed a week, a light or constrained week is agreed, a midweek change is needed |
-| `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring) |
+| `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring). Its Judge keys `cadence_slow` and `cadence_fast` to **Response to a cadence signal** in `goals.md` and carries no switching rule of its own |
 | `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections) on the athlete's yes and nothing else |
 
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR

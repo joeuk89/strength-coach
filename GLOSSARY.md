@@ -103,8 +103,13 @@ _Avoid_: block rule, light-week rule
 **Set type**:
 What a prescribed or logged set is for: warm-up, working, activation or test. A rep-out is a
 working set with an open top, not a type; an activation set counts no hard set and yields no
-exposure; a test set is the heavy single or AMRAP that sets a training max.
+exposure; a test set is the heavy single or AMRAP whose result becomes the training max.
 _Avoid_: set kind
+
+**Training max**:
+The load a percentage scheme takes its waves from. A Decision, or the line's start load until
+one exists; moved by a test set or by the coach, never derived from e1RM.
+_Avoid_: TM, working max, e1RM
 
 **Rotation position**:
 The schedule-rule week a WeekPlan is planned against. Proposed by the engine, confirmed by the

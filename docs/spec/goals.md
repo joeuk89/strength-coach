@@ -119,7 +119,7 @@ not fit (next section).
 | Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
 | RIR | stimulus dial: start at 3, walk toward 1 over the block's hard weeks | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
 | Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
-| Progression model | double progression on straight sets | RIR-autoregulated load, or a training-max percentage, with a top set and back-offs | hold load; no step | §4, opinion resting on Helms 2018, Hickmott 2022 |
+| Scheme adopt fills | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods` |
 | Stall signal | reps at the target RIR flat across the muscle's lines | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
 | Deload | cut sets 30–50 %, hold load and RIR | hold intensity, cut sets; a **test** set type (heavy single or AMRAP) on priority lifts in the last week sets the next block's training max | no planned deload | §6, evidence that intensity is held |
 | Order | free; chosen for fatigue and preference | priority lift first in its session | as the Goal | §7, evidence |
@@ -129,6 +129,11 @@ Two rules that follow:
 
 - A `hypertrophy` version with priority lifts gets the hypertrophy column everywhere except on
   the priority lifts, which get the middle column, including the test set in the deload week.
+- `linear` and `wave_531` are never filled. `linear` is the novice pace and no level is stored
+  (ADR 0014); a coach names it, or moves a lift to it on `cadence_fast`. `wave_531` is the
+  answer to `cadence_slow` on a `top_backoff` lift. Whether a dumbbell rack's steps are too
+  coarse for `top_backoff` is the coach's judgement at authoring, not a check: a priority lift
+  named `double_progression` in a 3–6 range is inside the expected band and raises nothing.
 - A `strength` version has priority lifts by definition; `adopt` refuses one with none
   (`priority_lifts_required`). Its non-priority lines default to the hypertrophy column, which
   is what every strength template does with its accessories.
@@ -158,7 +163,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `goal_missing` | violation | version | none | `goal adopt` |
 | `priority_lifts_required` | violation | version | emphasis | a Goal with priority lifts, or a different emphasis |
 | `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
-| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme |
+| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, or `double_progression` with a rep range inside 3–6 |
 | `priority_lift_absent` | warning | version | exercise id | Acknowledgement, or a line for it |
 | `priority_lift_not_first` | warning | session | exercise id, position | Acknowledgement, or reordering |
 | `dose_off_band` | warning | version | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
@@ -220,6 +225,29 @@ ticket's. The signal never carries the words novice, intermediate or advanced; t
 prose. The response is always a new Program version with a Decision citing the warning (a slower
 or faster scheme on that lift, a different progression cadence), never an automatic change.
 
+### Response to a cadence signal
+
+The one place the scheme-switching rule lives; the `program` skill's Judge cites it
+(`skills.md`). A scheme changes only when its cadence has run out, which is what the signal
+says: the switch under `linear` is the second reset, per lift, and there is no second count
+(`rn:progression-methods`, the switching table; Starting Strength's end of the one-to-three
+range, matching `cadence_slow`). Within a block the weekly rule answers a stall with its own
+reset; the boundary is where the scheme may change.
+
+| Signal | Line's scheme | The version may | Never |
+| --- | --- | --- | --- |
+| `cadence_slow` | `linear` | move the line to `double_progression` (hypertrophy line) or `top_backoff` (priority lift or strength line) | keep resetting |
+| `cadence_slow` | `double_progression` | add sets early in the next block, plan the deload, swap the exercise or change the rep range at the boundary | change the scheme: no source does |
+| `cadence_slow` | `top_backoff` | move the lift to `wave_531`, the training max set by the test set or a `training_max` Decision; or change back-off volume and add a variation first | drop to a hypertrophy scheme to escape a strength stall |
+| `cadence_slow` | `wave_531` | lower the training max about 10 % by Decision and stay a cycle; the scheme stands | raise the training max to chase the miss |
+| `cadence_slow` | `assistance_ladder` | hold the rung; at zero assistance move to `double_progression` on reps | skip rungs |
+| `cadence_fast` | `double_progression`, `top_backoff` | propose `linear` on that lift while the rack has a next row; the signal is the evidence, no stored level is needed | fill `linear` without a Decision |
+| `cadence_fast` | `linear` | nothing; the pace is right | |
+
+Two signals that look like a stall and are not: RPE rising at a held load on many lines is
+fatigue, answered by the deload policy; RPE rising or pain on one line is technique or a
+niggle, answered by a swap or a Niggle, never a scheme.
+
 ### Other block-boundary flags
 
 | Code | Scope | Params |
@@ -238,7 +266,7 @@ One table; the skills cite it and do not copy it, so each stays under its budget
 | `check-in` asks | reps and RIR on the lines that moved; pump and soreness as a dose read | the priority lifts first: did the top set move, how did it feel, any grind | whether the kept lifts held |
 | `plan-week` judges | dose attainment against target; where the RIR walk is in the block; a flat line early in a block wants sets, late wants the deload | e1RM trend on each priority lift; fatigue against the RIR cap; a flat block is normal, not a crisis | nothing weekly beyond the recovery ceilings |
 | `plan-week` explains a line as | last week's reps at RIR plus the block's set ramp | e1RM times the scheme | held |
-| `program` at the boundary | reads `coach progress`: dose achieved, muscles behind target, cadence signals; proposes next block's sets and any swap | reads `coach progress`: e1RM over three blocks, milestones, cadence signals; proposes scheme changes on signalled lifts, a test week result as the training max | whether to return to the Goal's emphasis |
+| `program` at the boundary | reads `coach progress`: dose achieved, muscles behind target, cadence signals; proposes next block's sets and any swap, never a scheme change on a stalled `double_progression` line | reads `coach progress`: e1RM over three blocks, milestones, cadence signals; proposes scheme changes on signalled lifts per **Response to a cadence signal**, a test week result as the training max | whether to return to the Goal's emphasis |
 | `onboard` and `program` write | the Goal, the Phase and the `why`; the long-term direction in the profile prose | | |
 
 The Profile adds the why and the long-term direction in words; never a number the Goal already
@@ -262,7 +290,7 @@ training-max percentage scheme on bench, the Decision citing the warning.
   is what adopt fills; the `test` set type ships; the adopt checks above join its list.
 - **Weekly prescription** (#26): defines the stall and reset per scheme that `stall_streak` and
   `cadence_slow` read; the hypertrophy RIR walk and set ramp as the scheme applied to the
-  hard-week count.
+  hard-week count; the `wave_531` training-max move after a short rep-out.
 - **Verb set** (#16): `goal adopt` (plain write) and `coach progress` (read).
 - **Override catalogue** (#19): the test week needs no override; it is the deload policy.
 - **Schema**: Goal, Milestone and Phase tables; `priority_lifts` and `emphasis` on the version;

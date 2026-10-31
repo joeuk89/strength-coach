@@ -154,9 +154,9 @@ text = "The hamstring is resolved; the run cap goes with it."
   schedule, kit and time.
 - **A safety ceiling** truncates the rack for its exercise: no derived load crosses it, and a
   `pin_load` above it is `load_off_grid` with the ceiling named in the params.
-- **A training max** is read only by the schemes that declare it (`top_backoff`; `wave_531` if
-  #28 admits it). One on an exercise whose scheme ignores it is `training_max_unused`. A scheme
-  that reads one and finds none derives from e1RM.
+- **A training max** is read only by the schemes that declare it: in v1 `wave_531` alone
+  (`program.md`). One on an exercise whose scheme ignores it is `training_max_unused`. A scheme
+  that reads one and finds none takes the line's `start_load` as the training max.
 
 ## The reason triple
 
@@ -233,7 +233,7 @@ without it the only lawful input is that typed field, so no other code exists fo
 
 - **Weekly prescription** (#26): the week-kind precedence, the per-line order of modifiers,
   what `hold` and the light-week cut do together, the volume warnings a `minimum_week` trips.
-- **Scheme registry** (#28): which schemes declare `training_max`.
+- **Scheme registry** (#28, settled in `program.md`): `wave_531` is the one v1 scheme that declares `training_max`.
 - **Schema**: `override` rows on the WeekPlan (kind, scope refs, params, reason triple), the
   `decision` table with kind, params, `until`, `superseded_by` and the retire link, and the
   Decision-kind registry as a table the contract tests read.

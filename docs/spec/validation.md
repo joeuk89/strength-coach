@@ -210,7 +210,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | Code | Scope | Params |
 | --- | --- | --- |
 | `emphasis_off_goal` | version | goal kind, emphasis |
-| `scheme_off_emphasis` | line | line scheme, emphasis, expected band |
+| `scheme_off_emphasis` | line | line scheme, emphasis, expected band (`goals.md` names the band per emphasis) |
 | `priority_lift_absent` | version | exercise id |
 | `priority_lift_not_first` | session | exercise id, position |
 | `dose_off_band` | version | muscle or lift, target, band, phase |
