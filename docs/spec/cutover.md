@@ -71,10 +71,10 @@ checked by eye on the day (`testing.md`, "The cutover Draft").
 1. `coach init`.
 2. `coach import --full`: the whole history, the routine and folder mirror, body measurements.
    `status` now shows the unmapped template list.
-3. The `onboard` skill: profile, Goal (`goal adopt`), and version 1 designed fresh. The agent
+3. The `onboard` skill: profile, Goal and Phase (`goal adopt`), no program.
+4. The `program` skill: version 1 designed fresh and adopted (`coach program adopt`). The agent
    reads the old routines from the mirror and the imported history as reference and takes a
    critical view of both.
-4. `coach program adopt` of version 1.
 5. `coach checkin record` of the cutover check-in: the custom template ids, open niggles with
    their constraints, open follow-ups, Observations, the run cap, the two manual PT workouts.
 6. The first `plan draft` and `plan apply`: fresh routines, nothing adopted ("The switch").

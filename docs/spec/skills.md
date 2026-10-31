@@ -18,7 +18,7 @@ Four skills, all in the plugin (ADR 0007), none in the instance:
 | `check-in` | The weekly review | `status` says a check-in is due (`week.md`), or the athlete reports on the week |
 | `plan-week` | The week's prescription | A check-in has closed a week, a light or constrained week is agreed, a midweek change is needed |
 | `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring). Its Judge answers `cadence_slow` and `cadence_fast` only with a move the flag lists (`may_schemes`, `may`, `never`); the switching table is engine code specified in `goals.md`, and the skill carries none of it (ADR 0020) |
-| `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections) on the athlete's yes and nothing else |
+| `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections), the first Goal and the Phase (`goal adopt`) on the athlete's yes, and designs no program: `program`'s own When covers the first version (decided on ticket [Worked program and onboard skills](https://github.com/joeuk89/strength-coach/issues/36), 2026-10-31) |
 
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
 0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
@@ -142,7 +142,7 @@ asserted skill or CLAUDE.md wording have no successor.
 
 ## Worked example: `check-in`
 
-The reference for register and length. Under budget (about 2.2k characters). The card and its
+The reference for register and length. Under budget (about 2.5k characters). The card and its
 fields are the check-in spec (`check-in.md`); the verb names follow the Verb set ticket and the
 contract test holds them to it.
 
@@ -171,6 +171,8 @@ rather than carrying them.
   schedule problem for the plan, not a willpower problem.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
   shapes next week's dose; one bad night does not.
+- **Phase.** When the card says the until condition is met or the trend is off, propose
+  closing or keeping it with the athlete; a new Phase opens in the record.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain
   changes gait, sleep or daily tasks; never diagnose.
 - **Block and tier.** When the card's Block line carries a proposal or the derived tier is deep,
@@ -190,4 +192,143 @@ The athlete sees what will be recorded and says yes before any verb records it.
 
 ## Verbs
 `coach status`, `coach checkin open`, `coach checkin record`
+```
+
+## Worked example: `program`
+
+The heaviest judgement in the set, under budget (about 4.1k characters). Decided on wayfinder
+ticket [Worked program and onboard skills](https://github.com/joeuk89/strength-coach/issues/36),
+2026-10-31. It names no weekday, coach or gym: a fixed session is any session the athlete does
+not control, and "the PT Tuesday" is profile prose. Design-level coverage (every pattern, each
+muscle twice) is this Judge's and not a code check: `muscle_no_hard_sets` already catches what
+a missing hinge or row looks like in muscle terms, and a carry has no muscle of its own. A
+program that ships without a hinge while the muscle check stays quiet is the evidence to add
+one. The phase judgement reads age and height from the profile and applies no formula, so
+neither returns to `[athlete]` (`instance.md`).
+
+```markdown
+---
+name: program
+description: Authoring or revising a program version. Use for the first program once the
+  profile and Goal exist, at a block boundary, after a cadence signal or a sustained stall,
+  when a swap has persisted, when a parked session is promoted, or when the athlete's days,
+  kit or fixed sessions change. Also /program.
+---
+
+## Read first
+The profile, once. For a revision, the progress report from `coach progress` and the current
+version from `coach program show --draft`. For a first program, the imported history and any
+routines in the mirror, read as what the athlete has done, never as what they should do next.
+
+## Ask
+State for confirmation what is already known: the days and minutes, each location and its kit,
+and every session the athlete does not control (coach-led, a sport, a class) with its day and
+what it trains. Ask only what is missing: the lifts they want to feel first, exercises they
+refuse or love, and for a revision what the last block taught them that the report cannot show.
+One message; follow up only for a gap that blocks the design.
+
+## Judge
+- **The split.** Fit the week to the days the athlete has, never the reverse. Each muscle
+  twice across a rotation week where the days allow, once with a reason where they do not. A
+  fixed session covers what it covers, its estimated sets count, and the designed sessions fill
+  around it: never the same muscles hard the day after. Fewer sessions done beats more sessions
+  missed; under `low` adherence design the smaller week with the same hard sets per muscle.
+- **Coverage.** Every pattern in the rotation. The hinge and a carry go in on purpose because
+  they are dropped first; `muscle_no_hard_sets` sees a muscle, not a pattern.
+- **Order and time.** Priority lifts first (`priority_lift_not_first`), the heaviest work while
+  fresh, accessories last and the first cut when `session_over_minutes` fires. Superset small
+  lifts to buy time, never the compounds.
+- **Scheme, RPE and rest per line.** A top set and back-offs on a load-bearing priority lift,
+  double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
+  a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
+  with the reason or change the line.
+- **Dose.** The filled targets open a block, they do not cap it. Raise a muscle the report shows
+  behind and under target; leave what is growing alone. A deficit keeps the dose, a surplus can
+  carry more; `dose_off_band` names the departure. An older athlete, or one who recovers slowly,
+  earns the shorter block and the fuller deload, not a smaller dose.
+- **Signals.** Answer `cadence_slow` and `cadence_fast` only with a move the flag lists, the
+  Decision citing the flag. A stalled double-progression line wants sets, a swap or a new rep
+  range, never a new scheme. RPE rising everywhere is fatigue for the deload policy; on one
+  line it is technique or a niggle.
+- **Emphasis and Phase.** The Goal's kind unless this block serves it better another way
+  (`emphasis_off_goal`): maintenance when life asks for less, a strength block when a milestone
+  is close. Re-read the Phase at every boundary against the trend the report shows and what the
+  athlete says about their body; a new Phase travels in the Goal draft.
+- **Kind.** A swap, a scheme change or a session changed inside the same split is an `amend`.
+  A new split, emphasis or Phase is a `redesign`; one mid-block is acknowledged with why the
+  block cannot finish (`block_open_at_redesign`).
+
+## Explain
+Walk the athlete through the week as they will live it, session by session, then the rules
+that move it week to week. Say why each exercise is there and what would earn a swap. Quote
+every load, set count and filled default from the adopt dry run; never retype one. For a
+revision, lead with what the report says changed and what this version does about it.
+
+The athlete sees what will be recorded and says yes before any verb records it.
+
+## Verbs
+`coach status`, `coach progress`, `coach program show`, `coach program adopt`,
+`coach goal adopt`, `coach query`, `coach schema`
+```
+
+## Worked example: `onboard`
+
+Under budget (about 3.3k characters). It writes the profile, the Goal and the Phase and stops;
+the first program is `program`'s moment, so the first conversation is two skill loads like the
+core loop. `cutover.md` step 3 splits the same way. A priority lift is unbounded in number and
+the Judge says what each costs instead of capping them.
+
+```markdown
+---
+name: onboard
+description: The first conversation with an athlete. Use after `coach init`, when no profile
+  exists, or when the athlete wants to start over on who they are and what they train for.
+  Writes the profile, the Goal and the Phase; the program is the next moment. Also /onboard.
+---
+
+## Read first
+`coach status`, for what init recorded and whether a history was imported. With a history, the
+exposures and weigh-ins from `coach query`, as evidence of where the athlete is today.
+
+## Ask
+One conversation in the coach's voice, in this order because each answer shapes the next: who
+they are and how they got here; what they want and why, in their words, until the kind of goal
+is plain (bigger, stronger, or both with named lifts); which lifts matter most and any number
+that would mean something to them; how their body is (age, height, injuries, limits, and weight
+if they volunteer it); the week as it stands (the days and minutes already recorded, stated for
+confirmation; the sessions they do not control; where they train and with what kit); and how
+they want to be coached (voice, how much a week may change, what a bad night does to a
+session). A fact the history answers, what they lift, how often, their bodyweight, is stated
+for confirmation, never asked.
+
+## Judge
+- **Goal kind.** Strength when the athlete names numbers on lifts; hypertrophy when they
+  describe a look; both is hypertrophy with priority lifts. Maintenance is never a goal.
+- **Priority lifts.** Any number, each one the athlete can train most weeks on the kit they
+  have. Say what each costs before they name it: a strength scheme, its own weekly dose, first
+  place in its session, a test single every light week, the first question at every check-in. A
+  lift possible only at a second location is a milestone, not a priority.
+- **Milestones.** Each measurable on one lift with no date; a dated target waits for the first
+  check-in as a follow-up. Set them from the history where there is one, from the athlete's
+  words where not, and never from a formula.
+- **Phase.** Deficit when the athlete wants to be leaner and the trend is flat or rising;
+  surplus when they want to be bigger, are lean by their own account and the trend is flat;
+  maintenance when unsure, in the first weeks of coaching, or when weight is not the point,
+  until coach's call. The rate is the kind's default; a bodyweight condition only when the
+  athlete has one. Calories are the athlete's own tool, never this conversation.
+- **Prose or record.** A current pain or limit is a niggle with a constraint at the first
+  check-in; a lift the athlete refuses is a coaching preference; a fixed session is part of why
+  the week has its shape. Nothing goes in the profile that a record holds.
+- **Done.** Onboarding ends when the profile, Goal and Phase are written. It designs no program.
+
+## Explain
+Read the profile back to the athlete, in their words and yours: who, the goal and why, the
+week's shape and why it has it, limits, how they want to be coached, history. Then the Goal and
+Phase as the draft states them. Say what changes each: the Goal when the aim changes, the
+profile when they say so, the Phase at a check-in or a block boundary.
+
+The athlete sees what will be recorded and says yes before any verb records it.
+
+## Verbs
+`coach status`, `coach query`, `coach goal adopt`
 ```

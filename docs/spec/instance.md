@@ -76,8 +76,8 @@ A number that is a rule is an engine constant; one that is an agreement is a Dec
 
 Every `[athlete]` fact has a rule that reads it; a fact with no reader is profile prose, not
 config. Birth date and height are prose for that reason: the `onboard` skill writes them in the
-profile's facts section and the coach reads them there (the ticket "Worked program and onboard
-skills" may bring height back if a code rule needs it).
+profile's facts section and the coach reads them there; the phase judgement reads them with no
+formula, so no code rule needs either (`skills.md`, the `onboard` worked example).
 
 | Fact | Shape | Reader |
 | --- | --- | --- |
