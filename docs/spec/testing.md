@@ -14,6 +14,11 @@ Tests assert behaviour on values. No test reads a spec document, an ADR, the glo
 body or any other prose to decide pass or fail. A test may name the spec section or ADR that
 owns the rule in a comment, so a reader can find the reasoning; it never parses it.
 
+One explicit exception: the contract test that the engine's `schema.sql` is byte-identical to
+the SQL blocks of `docs/spec/schema.md` reads that document. The DDL is hand-written and hand-copied, and this test is what keeps the
+copy honest; the test that every CHECK list equals its code registry guards the other direction.
+No second exception is added without amending this paragraph.
+
 `docs/spec/parity.md` is the 2026-10-26 review of the old system's behaviours. It is reference,
 not a test source: later decisions changed or dropped many of its rows, and where they differ
 the spec documents and ADRs win. No test cites a parity row.
@@ -98,7 +103,7 @@ Six packages, one import direction (ADR 0019):
 | Package | Owns | May import |
 | --- | --- | --- |
 | `core` | schemes, e1RM, return bands, week kind, units, loads and rounding, the eight-step `prescribe` pipeline (ADR 0017), validation rules, the registries (`schemes`, `flags`, `record-kinds`, `views`) | stdlib, `core` |
-| `store` | `schema.sql` (byte-identical to `schema.md`), the connection factory with `foreign_keys` on, migrations, functions that read rows into `core` values and write values as rows | `core` |
+| `store` | `schema.sql` (byte-identical to `schema.md`) and the frozen DDL of each past version, the catalogue seed, the connection factory with `foreign_keys` on, the rebuild from the export, migrations, functions that read rows into `core` values and write values as rows | `core` |
 | `hevy` | the `HevyClient` protocol, the real client over `urllib`, payload parsing from the fixture shapes | `core` |
 | `render` | `pages/*` and the plan and program Drafts, as text from `core` values | `core` |
 | `services` | one function per leaf: load a snapshot through `store`, run `core`, write in one transaction, return a typed result or raise `Refused`, `Invalid`, `Unreachable` or `Setup` | `core`, `store`, `hevy`, `render` |

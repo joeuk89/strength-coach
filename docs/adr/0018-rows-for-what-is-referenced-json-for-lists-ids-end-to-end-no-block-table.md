@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
+amended: 2026-10-31 by wayfinder #42 (the supersede write is the third sanctioned in-place write beside the four state tables and the two Hevy mirrors; one open Phase of any kind; `docs/spec/schema.md`)
 ---
 
 # Rows for what is referenced, JSON for lists; one id form end to end; typed text refs; the Block is derived
@@ -46,8 +47,11 @@ integrity the schema keeps.
 
 - 36 tables, in `docs/spec/schema.md` as DDL that the engine's `schema.sql` matches byte for
   byte. No table for Block, planned session, Exposure, Match, Miss, e1RM or progression state.
-- Rows are immutable and a correction is a new row, with four named in-place exceptions
-  (`exercise`, `observation`, `phase`, `routine_map`), each with its audit stated.
+- Rows are immutable and a correction is a new row, with three named kinds of in-place write
+  (amended 2026-10-31): the supersede write (the superseding transaction flips the old row's
+  `status` and sets its forward pointer on `week_plan`, `check_in`, `goal` and `decision`), four
+  state tables (`exercise`, `observation`, `phase`, `routine_map`), and the two Hevy mirrors
+  (`routine`, `folder`) that import overwrites and never deletes; each with its audit stated.
 - A rehab session is a `rehab_session` row under its niggle with its lines as JSON, never a
   version row; `lines` unions it in.
 - Decision `session_id` and `exercise_id` are columns, not params, because the supersede rule

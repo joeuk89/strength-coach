@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #42 (the load step is the location's alone: a plate-pool location's next row, a grid location's increment per implement kind; no exercise or catalogue increment exists)
 ---
 
 # plate-pool owns the home inventory; the coach imports its achievable loads and rounds to them
@@ -32,9 +33,11 @@ owner with a public URL, and the coach needs only its output, not its input.
 ## Consequences
 
 - **Location is a noun.** Each session in a program version names its default location; a
-  WeekPlan override moves a planned session to another. Increment precedence stays location,
-  then exercise, then catalogue. An exercise whose equipment kind the location cannot supply is
-  a violation at prescribe time, never a silent fallback.
+  WeekPlan override moves a planned session to another. The load step is the location's alone
+  (amended 2026-10-31): the next row of a plate-pool location's table, or a grid location's
+  increment for the implement kind; no exercise or catalogue carries an increment. An exercise
+  whose equipment kind the location cannot supply is a violation at prescribe time, never a
+  silent fallback.
 - **Exercise carries an equipment kind** (barbell, dumbbell, kettlebell, leg attachment, vest,
   machine, cable, band, bodyweight); each location maps kinds to its implements (home maps
   weighted bodyweight work to the vest, the gym to a dip belt).

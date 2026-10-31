@@ -2,17 +2,18 @@
 
 Spec for wayfinder #29, decided 2026-10-31. The decisions behind it are ADR 0001 (SQLite is the
 truth, git sees a sorted export) and ADR 0018 (rows or JSON, ids, refs, no Block table). The
-first build ticket copies the DDL below into the engine as `schema.sql` byte for byte; a
-contract test holds that the two match.
+DDL below is hand-written and copied by hand into the engine as `schema.sql`; a contract test
+holds that the two match byte for byte. Each migration freezes the DDL it leaves behind
+("Schema version and migrations").
 
 The shape in one paragraph: 36 tables. Anything another row refers to by id, or a `query` view
 filters on, is a row with a real key; ordered lists and scheme or override params are JSON
 text columns. Ids are engine-assigned prefixed strings used unchanged in envelopes, evidence
 refs and the export. Nothing derived has a table: Exposure, Match, Miss, e1RM, Week kind,
 days off, the anchor, the Block, the cadence signal and a logged set's Exercise are core functions
-over these rows. Rows
-are immutable; a correction is a new row, and the four exceptions (`exercise`, `observation`,
-`phase`, `routine_map`) are named below.
+over these rows. Rows are immutable and a correction is a new row, with three stated kinds of
+in-place write ("Updated in place"): the supersede write on four tables, four tables that are a
+state rather than a fact about a date, and the two Hevy mirrors that import overwrites.
 
 ## Ids
 
@@ -33,25 +34,43 @@ A **ref** is a typed text pointer, `kind:id`, used wherever one column may point
 one table: evidence, a note's `about`, an annotation's target, a flag scope, `derived_from`.
 Validated by the writing service against the live tables; never a SQL foreign key.
 
-| Kind | Form |
-| --- | --- |
-| `planned_session` | `planned_session:<plan id>/<session id>/<date>` |
-| `exposure` | `exposure:<workout id>/<exercise id>` |
-| `workout` | `workout:<workout id>` or `workout:<workout id>/<exercise id>` |
-| `exercise`, `niggle`, `follow_up`, `decision`, `check_in`, `goal`, `routine`, `milestone`, `phase` | `<kind>:<id>` |
-| `rn` | a research note citation: `rn:<note>.<n>` names a claim of a claims note, `rn:<note> §<n>` a numbered section of a prose note (`research-notes.md`) |
+This table is the one ref grammar; every document's examples use these forms. A workout id is
+Hevy's (a UUID, `b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13`) or `w-<n>` for a manual one.
+
+| Kind | Form | Example |
+| --- | --- | --- |
+| `planned_session` | `planned_session:<date>/<session id>`, resolved against the plan in force on that date | `planned_session:2026-11-04/upper-a` |
+| `exposure` | `exposure:<workout id>/<exercise id>` | `exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/ohp` |
+| `workout` | `workout:<workout id>` or `workout:<workout id>/<exercise id>` | `workout:w-0002` |
+| `block` | `block:b-<opening date>` (derived, no table) | `block:b-2026-10-05` |
+| `check_in` | `check_in:ci-<date>[-n]` | `check_in:ci-2026-10-24` |
+| `exercise`, `niggle`, `follow_up`, `decision`, `goal`, `routine`, `milestone`, `phase` | `<kind>:<id>` | `niggle:n-0004`, `routine:3f9d2c7e-1b44-4a0e-8d55-c6a1e2b7f904` |
+| `rn` | a research note citation: `rn:<note>.<n>` names a claim of a claims note, `rn:<note> §<n>` a numbered section of a prose note (`research-notes.md`) | `rn:deloads.3` |
 
 A column that only ever points at one table is a plain foreign key (`check_in`, `session_id`,
-`exercise_id`, `niggle_id`).
+`exercise_id`, `niggle_id`). A flag key is not a ref: it is `code@<scope kind>:<parts>`,
+`validation.md`'s one key grammar.
 
 ## DDL
 
 Conventions: dates are ISO text (`2026-11-02`), instants are ISO text in UTC with seconds,
 booleans are `INTEGER CHECK IN (0, 1)`, JSON columns are `TEXT` holding one JSON document, and
-every CHECK over a `kind` column is generated at build time from the matching code registry
-(`validation.md`, `verbs.md`, `overrides.md`, `program.md`). `PRAGMA foreign_keys = ON` is set
-by the one connection factory (ADR 0001). Every row a Draft verb writes carries `draft_hash` and
-`recorded_at`; every ledger row carries a nullable `check_in`.
+every CHECK list over a `kind`, `status`, `because` or `source` column is written by hand here
+and in the frozen DDL; the contract test that each list equals the matching code registry
+(`validation.md`, `verbs.md`, `overrides.md`, `program.md`) is the guard against the two
+drifting. `PRAGMA foreign_keys = ON` is set by the one connection factory (ADR 0001). Every row
+a Draft verb writes carries `draft_hash` and `recorded_at`.
+
+The `check_in` column: every table a check-in file may carry rows of has `check_in TEXT
+REFERENCES check_in(id)`, NULL when the row came through `record` or `import`: `workout`,
+`annotation`, `weigh_in`, `sleep_night`, `activity`, `status_span`, `athlete_note`, `decision`,
+`niggle_event`, `follow_up_event`. `observation` has it NOT NULL (check-in file only). No other
+table has it; `niggle` and `follow_up` are reached through their first event.
+
+The seven-value reason registry (`pain`, `kit`, `stall`, `fatigue`, `schedule`,
+`athlete_request`, `coach_judgement`; ADR 0005) is the `because` CHECK on `override`,
+`decision`, `acknowledgement` and `annotation`; a miss tag is the `because` of a `miss_tag`
+annotation.
 
 ### Program
 
@@ -68,7 +87,6 @@ CREATE TABLE exercise (                    -- updated in place; the one library
   equipment_kind     TEXT NOT NULL CHECK (equipment_kind IN ('barbell','dumbbell','kettlebell','leg_attachment','vest','machine','cable','band','bodyweight')),
   pattern            TEXT NOT NULL,
   muscles            TEXT NOT NULL,        -- JSON {primary:[], secondary:[]}
-  increment          REAL,                 -- athlete units; NULL means the location's
   hevy_title         TEXT,
   hevy_exercise_type TEXT,
   hevy_equipment     TEXT,
@@ -163,8 +181,7 @@ CREATE TABLE week_plan (
   status          TEXT NOT NULL CHECK (status IN ('approved','superseded')),
   approved_at     TEXT NOT NULL,
   write_plan_hash TEXT NOT NULL,
-  location        TEXT,                    -- a one_off_week location, else NULL
-  superseded_by   TEXT REFERENCES week_plan(id),
+  superseded_by   TEXT REFERENCES week_plan(id),  -- the supersede write ("Updated in place")
   draft_hash      TEXT NOT NULL,
   recorded_at     TEXT NOT NULL
 );
@@ -176,20 +193,22 @@ CREATE TABLE override (
   kind        TEXT NOT NULL CHECK (kind IN ('light_week','minimum_week','one_off_week','move_session','drop_session','add_session','relocate_session','swap_exercise','pin_load','hold','restate_sets','drop_line')),
   session_id  TEXT REFERENCES session(id),
   exercise_id TEXT REFERENCES exercise(id),
-  params      TEXT NOT NULL,               -- JSON, the kind's params
+  date        TEXT,                        -- add_session only: the date added; NULL on every other kind
+  params      TEXT NOT NULL,               -- JSON, the kind's remaining params
   because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
   text        TEXT NOT NULL,
-  evidence    TEXT                         -- JSON [ref]
+  evidence    TEXT,                        -- JSON [ref]
+  CHECK ((kind = 'add_session') = (date IS NOT NULL))
 );
-CREATE UNIQUE INDEX override_one_per_scope
-  ON override(plan_id, kind, COALESCE(session_id, ''), COALESCE(exercise_id, ''));
+CREATE UNIQUE INDEX override_one_per_scope   -- one per kind per scope; add_session's scope includes its date
+  ON override(plan_id, kind, COALESCE(session_id, ''), COALESCE(exercise_id, ''), COALESCE(date, ''));
 
 CREATE TABLE prescription (                -- frozen at approval, derivation steps included
   plan_id      TEXT NOT NULL REFERENCES week_plan(id),
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
-  set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]
+  set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
   flags        TEXT NOT NULL,              -- JSON [Flag]
@@ -198,8 +217,8 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
 );
 ```
 
-A planned session has no table. It is `planned_session:<plan>/<session>/<date>`, derived from
-the plan in force; a past plan's sessions are read from its `prescription` rows.
+A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
+in force on that date; a past plan's sessions are read from its `prescription` rows.
 
 ### Log
 
@@ -228,7 +247,7 @@ CREATE TABLE logged_set (
   position           INTEGER NOT NULL,
   hevy_template_id   TEXT,                 -- the Exercise is resolved on read through exercise.hevy_template_id
   hevy_title         TEXT,
-  set_type           TEXT NOT NULL CHECK (set_type IN ('warm_up','working','activation','test')),
+  set_type           TEXT NOT NULL CHECK (set_type IN ('warm_up','working','activation','test')),  -- Hevy: warmup -> warm_up, every other Hevy type -> working; the raw type stays in workout.raw
   weight_kg          REAL,
   reps               INTEGER,
   duration_s         INTEGER,
@@ -239,10 +258,11 @@ CREATE TABLE logged_set (
   FOREIGN KEY (workout_id, workout_updated_at) REFERENCES workout(id, updated_at)
 );
 
-CREATE TABLE tombstone (                   -- never withdrawn
+CREATE TABLE tombstone (                   -- presence events, never withdrawn: 'gone' when Hevy stops returning the id, 'back' when it returns again
   workout_id TEXT NOT NULL,
   noticed_at TEXT NOT NULL,
-  source     TEXT NOT NULL CHECK (source IN ('event','full_pull')),
+  kind       TEXT NOT NULL CHECK (kind IN ('gone','back')),
+  source     TEXT NOT NULL CHECK (source IN ('event','full')),  -- how import noticed it: the event pull or a full pull
   PRIMARY KEY (workout_id, noticed_at)
 );
 
@@ -251,7 +271,7 @@ CREATE TABLE annotation (                  -- applied on read in id order; withd
   kind        TEXT NOT NULL CHECK (kind IN ('discount','repair','load_mode','void','trained_unlogged','cancelled','miss_tag','match')),
   target      TEXT NOT NULL,               -- ref: workout[/exercise] or planned_session
   params      TEXT,                        -- JSON; match names the planned session here
-  because     TEXT NOT NULL,
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),  -- a miss_tag's because is the miss tag
   text        TEXT,
   withdraws   TEXT REFERENCES annotation(id),
   check_in    TEXT REFERENCES check_in(id),
@@ -259,17 +279,18 @@ CREATE TABLE annotation (                  -- applied on read in id order; withd
   recorded_at TEXT NOT NULL
 );
 
-CREATE TABLE weigh_in (
+CREATE TABLE weigh_in (                    -- withdrawn by a later row, as annotation; a correction withdraws and re-enters
   id TEXT PRIMARY KEY, date TEXT NOT NULL, kg REAL NOT NULL,
   source TEXT NOT NULL CHECK (source IN ('check_in','hevy','manual')),
+  withdraws TEXT REFERENCES weigh_in(id),
   check_in TEXT REFERENCES check_in(id), draft_hash TEXT, recorded_at TEXT NOT NULL
 );
 
-CREATE TABLE sleep_night (
+CREATE TABLE sleep_night (                 -- as weigh_in; one live row per (night, source) is a record-time check, reading_duplicate
   id TEXT PRIMARY KEY, night TEXT NOT NULL, hours REAL NOT NULL,
-  source TEXT NOT NULL CHECK (source IN ('check_in','hevy','manual')),
-  check_in TEXT REFERENCES check_in(id), draft_hash TEXT, recorded_at TEXT NOT NULL,
-  UNIQUE (night, source)
+  source TEXT NOT NULL CHECK (source IN ('check_in','manual')),
+  withdraws TEXT REFERENCES sleep_night(id),
+  check_in TEXT REFERENCES check_in(id), draft_hash TEXT, recorded_at TEXT NOT NULL
 );
 
 CREATE TABLE activity (                    -- hand-entered bouts; conditioning workouts stay a view
@@ -284,7 +305,7 @@ CREATE TABLE status_span (
   kind TEXT NOT NULL CHECK (kind IN ('ill','injured','travel','no_training')),
   from_date TEXT NOT NULL, to_date TEXT,   -- NULL is open-ended
   text TEXT,
-  withdrawn_by TEXT REFERENCES status_span(id),
+  withdraws TEXT REFERENCES status_span(id),  -- as annotation: a withdrawing row names the one it withdraws
   check_in TEXT REFERENCES check_in(id), draft_hash TEXT NOT NULL, recorded_at TEXT NOT NULL
 );
 ```
@@ -301,7 +322,7 @@ CREATE TABLE check_in (
   readiness     TEXT CHECK (readiness IN ('poor','ok','good')),
   read          TEXT NOT NULL,             -- the coach's read, verbatim
   status        TEXT NOT NULL CHECK (status IN ('current','superseded')),
-  superseded_by TEXT REFERENCES check_in(id),
+  superseded_by TEXT REFERENCES check_in(id),  -- the supersede write
   draft_hash    TEXT NOT NULL,
   recorded_at   TEXT NOT NULL
 );
@@ -332,15 +353,16 @@ CREATE TABLE decision (
   session_id    TEXT REFERENCES session(id),      -- pulled out of params: the supersede rule keys on it
   exercise_id   TEXT REFERENCES exercise(id),     -- likewise
   params        TEXT NOT NULL,             -- JSON, the kind's remaining params
-  until         TEXT,                      -- date
+  until         TEXT,                      -- date, inclusive; decline_ceiling's is the Sunday of its week (overrides.md)
   because       TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
   text          TEXT NOT NULL,
   evidence      TEXT,                      -- JSON [ref]
-  superseded_by TEXT REFERENCES decision(id),
-  retired_by    TEXT REFERENCES decision(id),     -- set by a 'retire' row in the same transaction
+  superseded_by TEXT REFERENCES decision(id),     -- the supersede write
+  retired_by    TEXT REFERENCES decision(id),     -- the supersede write, by a 'retire' row
   check_in      TEXT REFERENCES check_in(id),
   draft_hash    TEXT NOT NULL,
-  recorded_at   TEXT NOT NULL
+  recorded_at   TEXT NOT NULL,
+  CHECK (kind NOT IN ('override','leave_warning','decline_ceiling','defer_deep_review') OR until IS NOT NULL)
 );
 
 CREATE TABLE niggle (
@@ -388,7 +410,7 @@ CREATE TABLE follow_up_event (             -- the raising event is 'kept' with t
   follow_up_id TEXT NOT NULL REFERENCES follow_up(id),
   date         TEXT NOT NULL,
   kind         TEXT NOT NULL CHECK (kind IN ('deferred','kept','resolved','dropped')),
-  due          TEXT,                       -- required for deferred and kept
+  due          TEXT,                       -- kept: the due date set or confirmed; deferred: moved later than the previous due (a record-time check)
   text         TEXT,
   check_in     TEXT REFERENCES check_in(id),
   draft_hash   TEXT NOT NULL,
@@ -403,7 +425,7 @@ CREATE TABLE goal (
   because       TEXT NOT NULL,
   adopted       TEXT NOT NULL,             -- date
   status        TEXT NOT NULL CHECK (status IN ('current','superseded')),
-  superseded_by TEXT REFERENCES goal(id),
+  superseded_by TEXT REFERENCES goal(id),  -- the supersede write
   draft_hash    TEXT NOT NULL,
   recorded_at   TEXT NOT NULL
 );
@@ -443,19 +465,19 @@ CREATE TABLE phase (                       -- closed in place; one open at a tim
   recorded_at          TEXT NOT NULL,
   CHECK ((closed IS NULL) = (closed_by IS NULL) AND (closed IS NULL) = (closed_because IS NULL))
 );
-CREATE UNIQUE INDEX phase_open ON phase(kind) WHERE closed IS NULL;
+CREATE UNIQUE INDEX phase_open ON phase((closed IS NULL)) WHERE closed IS NULL;  -- one open Phase of any kind
 ```
 
 ### Hevy
 
 ```sql
-CREATE TABLE folder (
+CREATE TABLE folder (                      -- the mirror: upserted by import and by apply's create, never deleted
   role    TEXT PRIMARY KEY CHECK (role IN ('program','standing','retired')),
   hevy_id TEXT NOT NULL UNIQUE,
   title   TEXT NOT NULL
 );
 
-CREATE TABLE routine (                     -- the mirror, rewritten by import and by apply's read-back
+CREATE TABLE routine (                     -- the mirror: upserted by hevy_id by import and by apply's read-back, never deleted
   hevy_id     TEXT PRIMARY KEY,
   updated_at  TEXT NOT NULL,
   title       TEXT NOT NULL,
@@ -497,15 +519,35 @@ The Hevy write audit is a file, `hevy/writes.jsonl`, not a table (ADR 0001, 0011
 
 ### Updated in place
 
-Four tables break append-only, each for a stated reason; everything else is insert-only and a
-correction is a new row that supersedes or withdraws the old one.
+Three kinds of in-place write exist and nothing else updates a row; every other correction is a
+new row that supersedes or withdraws the old one.
+
+**The supersede write.** When a new row supersedes an old one, the same transaction that
+inserts the new row flips the old row's `status` (where the table has one) and sets its forward
+pointer. The new row is the audit; the old row stays readable with the pointer to what replaced
+it. The partial unique indexes (`week_plan_in_force`, `goal_current`) admit the new row only
+because the flip happens in the same transaction.
+
+| Table | Flipped | Pointer set | By |
+| --- | --- | --- | --- |
+| `week_plan` | `status` to `superseded` | `superseded_by` | `plan apply` of a superseding plan for the same week |
+| `check_in` | `status` to `superseded` | `superseded_by` | `checkin record` for the same date with a different hash |
+| `goal` | `status` to `superseded` | `superseded_by` | `goal adopt` |
+| `decision` | nothing | `superseded_by`, or `retired_by` from a `retire` row | `record` or `checkin record` writing the later Decision |
+
+**State tables.** Four tables are a state rather than a fact about a date:
 
 | Table | Why |
 | --- | --- |
-| `exercise` | it is the library, not a fact about a date; adopt updates declared fields, the `[[exercise]]` record kind edits the template columns, load mode and equipment kind or declares a new entry (`cutover.md`), `plan apply` sets `hevy_template_id`; the Draft hash on the version or ledger row that caused the write is the audit |
+| `exercise` | it is the library, not a fact about a date; adopt updates declared fields, the `[[exercise]]` record kind edits the template columns, load mode and equipment kind or declares a new entry (`cutover.md`), `plan apply` sets `hevy_template_id`, `upgrade` inserts new catalogue ids ("The engine catalogue"); the Draft hash on the version or ledger row that caused the write is the audit |
 | `observation` | retired is a state of the same noticed pattern; the retiring check-in is the audit |
 | `phase` | closed is a state of the same phase; the closing check-in or goal is the audit |
 | `routine_map` | it records the live link; status moves with verified writes and imports |
+
+**Hevy mirrors.** `routine` and `folder` are overwritten per Hevy id by `import` and by `plan
+apply`'s read-back and create; they mirror the account, so the account is the audit. A mirror
+row is never deleted: a routine Hevy no longer returns keeps its row and its `routine_map` row
+flips to `missing` (ADR 0011).
 
 ## Views
 
@@ -516,15 +558,16 @@ rule lives in one place.
 
 ```sql
 CREATE VIEW plan_in_force AS               -- plan_in_force(date): the row whose week covers date
-  SELECT id, week, date(week, '+6 days') AS week_end, position, approved_at, write_plan_hash, location
+  SELECT id, week, date(week, '+6 days') AS week_end, position, approved_at, write_plan_hash
   FROM week_plan WHERE status = 'approved';
 
-CREATE VIEW workout_current AS             -- latest version of every workout Hevy still has
+CREATE VIEW workout_current AS             -- latest version of every workout whose latest presence event is not 'gone'
   SELECT w.* FROM workout w
   WHERE w.updated_at = (SELECT max(updated_at) FROM workout WHERE id = w.id)
-    AND NOT EXISTS (SELECT 1 FROM tombstone t WHERE t.workout_id = w.id);
+    AND COALESCE((SELECT kind FROM tombstone t WHERE t.workout_id = w.id
+                  ORDER BY noticed_at DESC LIMIT 1), 'back') = 'back';
 
-CREATE VIEW decision_in_force AS           -- filter by until >= date in the service
+CREATE VIEW decision_in_force AS           -- the one in-force rule; the service filters by until IS NULL OR until >= date
   SELECT * FROM decision WHERE superseded_by IS NULL AND retired_by IS NULL AND kind <> 'retire';
 
 CREATE VIEW niggle_current AS              -- latest event per niggle
@@ -540,7 +583,24 @@ CREATE VIEW follow_up_current AS           -- latest event per follow-up
 CREATE VIEW annotation_current AS          -- withdrawn ones removed
   SELECT a.* FROM annotation a
   WHERE NOT EXISTS (SELECT 1 FROM annotation b WHERE b.withdraws = a.id);
+
+CREATE VIEW weigh_in_current AS            -- the same shape on each withdrawable reading: a withdrawing row is never live
+  SELECT r.* FROM weigh_in r
+  WHERE r.withdraws IS NULL AND NOT EXISTS (SELECT 1 FROM weigh_in b WHERE b.withdraws = r.id);
+
+CREATE VIEW sleep_night_current AS
+  SELECT r.* FROM sleep_night r
+  WHERE r.withdraws IS NULL AND NOT EXISTS (SELECT 1 FROM sleep_night b WHERE b.withdraws = r.id);
+
+CREATE VIEW status_span_current AS
+  SELECT r.* FROM status_span r
+  WHERE r.withdraws IS NULL AND NOT EXISTS (SELECT 1 FROM status_span b WHERE b.withdraws = r.id);
 ```
+
+A withdrawing row on `weigh_in`, `sleep_night` or `status_span` restates the withdrawn row's
+required columns (the record parser copies them) and is itself never read; an annotation's
+withdrawing row works the same way. A corrected reading is a withdrawal plus a fresh row in the
+same Draft.
 
 The six `query` views of `verbs.md` (`exposures`, `readings`, `flags`, `lines`, `routines`,
 `ledger`) are service reads composed from these views and the core functions; `readings` is
@@ -560,8 +620,8 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 | `[[annotation]]` | `annotation` |
 | `[[note]]` | `athlete_note` |
 | `[[workout]]` | `workout` (source `manual`), `logged_set` |
-| `[[weigh_in]]`, `[[sleep_night]]`, `[[activity]]` | the table of the same name |
-| `[[status_span]]` | `status_span`; a withdrawal is a new row with nothing but `withdrawn_by` pointing back |
+| `[[weigh_in]]`, `[[sleep_night]]`, `[[activity]]` | the table of the same name; a weigh-in or sleep night is withdrawn by a new row whose `withdraws` names it |
+| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span |
 | `[[exercise]]` | `exercise`, in place |
 | `[[observation]]` | `observation`, insert or retire in place; check-in file only |
 
@@ -571,8 +631,18 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 `acknowledgement` and upserts `exercise`. `plan apply` writes `week_plan`, `override`,
 `prescription`, `acknowledgement`, then `routine`, `routine_map`, `folder` and
 `exercise.hevy_template_id` as each Hevy write verifies. `import` writes `workout`,
-`logged_set`, `tombstone`, `routine`, `weigh_in` (source `hevy`), `kit_snapshot`,
-`import_run`, and flips `routine_map` to `missing`.
+`logged_set`, `tombstone`, `weigh_in` (source `hevy`), `kit_snapshot`, `import_run`, upserts
+`routine` and `folder`, and flips `routine_map` to `missing`.
+
+## The engine catalogue
+
+The built-in exercise library ships inside the package as `src/coach/store/catalogue.jsonl`:
+one JSON object per line in `exercise` column order with `source = 'catalogue'`, the same shape
+as `export/exercise.jsonl`, so the export loader reads it. `init` inserts every line into the
+new store. `upgrade` merges it: a catalogue id the store lacks is inserted, an id the store has
+is left exactly as it stands, whatever the catalogue now says, because the instance's row may
+carry an athlete's edit (`[[exercise]]`) or a verified template id. No verb deletes an
+`exercise` row. The seed content is `cutover.md`'s (the old library's catalogue pairs).
 
 ## Export
 
@@ -586,37 +656,59 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 - No timestamp of the export itself anywhere, so an unchanged store exports byte-identical and
   `publish` on a clean store makes no commit.
 
-`import` creates a fresh database at the manifest's `schema_version`, loads every file in
-foreign-key order, then migrates forward (below). A manifest whose `schema_version` is newer
-than the engine's stops the verb with the setup exit class and the reason
-`export_newer_than_engine`; it is never a flag.
+**The rebuild.** The export is read in exactly one situation: `.coach/coach.db` is missing and
+`export/manifest.json` exists. Any verb that opens the store then rebuilds it first, in the
+`store` package, before doing its own work: a fresh database from the DDL of the manifest's
+`schema_version` (`schema.sql` or its frozen history, below), every file loaded in foreign-key
+order, then the migrations forward. `import` names the rebuild in its result when one happened. With a database
+present the export is never read, so no local row can be discarded by a rebuild; to take a newer
+export on a second machine the athlete deletes the database file, and `status` says so when the
+manifest's row count for any table exceeds the store's (`store_behind_export`, reported by
+`status` and a setup-class refusal on every store write until the database is rebuilt or
+`publish` has run). Two refusals, setup exit class, never a flag:
+
+- `export_newer_than_engine`: the manifest's `schema_version` is newer than the engine's.
+- `store_behind_export`: a table's manifest row count exceeds the store's.
 
 ## Schema version and migrations
 
 - `PRAGMA user_version` is the schema version; the envelope's `schema_version` reports it.
+- `schema.sql` is the current DDL. A migration that moves from `n` to `n+1` first copies the
+  old `schema.sql` to `src/coach/store/schema_history/v<n>.sql`, so the engine carries one
+  frozen DDL per past version and the rebuild can build a database at any exported version:
+  `schema.sql` when the manifest's version is current, else the history file.
 - Migrations are numbered Python functions `m0001` … applied in order inside one transaction;
   a migration that needs a UNIQUE or CHECK change rebuilds the table (ADR 0001).
-- `upgrade` is the only verb that moves `user_version` on a live store; `import` moves it only
-  on the fresh database it is building.
+- `upgrade` is the only verb that moves `user_version` on a live store; the rebuild moves it
+  only on the fresh database it is building.
 - Before cutover a schema change is "drop the database and re-import" and there are no
-  migrations; the chain starts at 1 on cutover day.
+  migrations; `schema_history/` is empty and the chain starts at 1 on cutover day.
 
 ## Flag codes
 
 One warning joins `validation.md`: `exercise_unmapped` (scope workout; params template id,
 title; cleared by an `[[exercise]]` record giving the template id). Import never refuses a
-workout for it: the set keeps a NULL `exercise_id` and its raw title. The `exclude` Annotation
-named in `validation.md` is the `void` kind; `workout_reappeared` clears by `match` or `void`.
+workout for it: the set keeps its raw template id and title and resolves its Exercise on read.
+The `exclude` Annotation named in `validation.md` is the `void` kind. `workout_reappeared` is
+raised when import appends a `back` tombstone row; the workout's latest version reads again from
+that moment, and the warning clears by a `match` or `void` annotation on it. One violation joins
+`validation.md`: `reading_duplicate` (scope instance; a second live `weigh_in` for one date and
+source, or `sleep_night` for one night and source; cleared by withdrawing one of them).
 
 ## Contract tests
 
-- `schema.sql` in the engine is byte-identical to the DDL blocks of this file, in order.
+- `schema.sql` in the engine is byte-identical to the DDL blocks of this file, in order (the
+  one test that reads a spec document, `testing.md`).
 - Every CHECK list over a `kind`, `status`, `because` or `source` column equals the matching
-  code registry.
+  code registry; this is the guard that keeps the hand-written lists honest.
 - `PRAGMA foreign_keys` is on from the connection factory (ADR 0001).
-- Export of a fixture store, re-import, re-export: byte-identical files.
-- The partial unique indexes hold: two approved plans for one week, two current goals, two open
-  phases, two overrides of one kind on one scope, all refused.
+- Export of a fixture store, delete the database, rebuild, re-export: byte-identical files.
+- The partial unique indexes hold: two approved plans for one week, two current goals, an open
+  deficit beside an open surplus, two overrides of one kind on one scope, two `add_session`
+  overrides of one session on one date, all refused; two `add_session` overrides of one session
+  on two dates are admitted.
+- A `back` tombstone row returns the workout's latest version to `workout_current`; a later
+  `gone` removes it again.
 - No table named `block`, `planned_session`, `exposure`, `match`, `miss`, `e1rm` or
   `progression_state` exists (ADR 0003, 0016, 0018).
 
@@ -625,11 +717,13 @@ named in `validation.md` is the `void` kind; `workout_reappeared` clears by `mat
 - **Cutover and history import** (settled in `cutover.md`): no old session id becomes a `session`
   row, version 1 is designed fresh; old workouts arrive through the ordinary `import --full`
   with `since` NULL and resolve their Exercise on read through `hevy_template_id`.
-- **Migration of carried-over state** (fog): the converter writes one ledger Draft (niggles,
-  follow-ups, observations, goal, phase, custom template ids, three manual workouts); there is
-  no program Draft to convert and no `--position`; nothing writes rows directly.
-- **Cutover of routines** (fog): old routine ids land in `routine` through import; whether any
-  reach `routine_map` is that ticket's call.
+- **Migration of carried-over state** (settled in `cutover.md`, "The cutover check-in"): one
+  hand-written check-in Draft carries the niggles, follow-ups, observations, goal, phase, custom
+  template ids and manual workouts through `checkin record`; no converter, no program Draft, no
+  `--position`; nothing writes rows directly.
+- **Cutover of routines** (settled in `cutover.md`, "The switch"): old routine ids land in
+  `routine` through import and none reaches `routine_map`; the first `plan apply` creates fresh
+  routines.
 - **Fixture instance** (settled in `testing.md`): one small synthetic instance under
   `tests/fixtures/instance/`, its `export/` imported by the same `import`; most tests build rows
   through scenario builders instead.

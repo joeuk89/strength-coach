@@ -25,7 +25,7 @@ on one plan.
 | week | `one_off_week` | `location` optional | a travel or kit-constrained week; every session relocates when `location` is given; pauses the hard count |
 | session | `move_session` | `to` date inside the week | the planned session moves; a move outside the week is a `drop_session` |
 | session | `drop_session` | none | the planned session leaves the plan; a core-tier drop is a miss, an optional one is not (ADR 0010) |
-| session | `add_session` | `session` id, `date`, `location` optional | a planned session with no slot behind it: any session of the version (parked ones included, as a one-off resume), a standing or a rehab session; never a body the version lacks |
+| session and date | `add_session` | `session` id, `date`, `location` optional | a planned session with no slot behind it: any session of the version (parked ones included, as a one-off resume), a standing or a rehab session; never a body the version lacks. Its scope includes the date, so one session may be added on two dates in a week (`schema.md`) |
 | session | `relocate_session` | `location` | the planned session's rack is this location's |
 | line | `swap_exercise` | `to` exercise id, `start_load` optional, `load_mode` optional | the line runs the other exercise under its scheme; with no exposure of `to` and no `start_load` the line is `start_load_missing` |
 | line | `pin_load` | `load` (athlete units, per hand where the mode is per hand) | the working load this week; grid and ceiling checks still apply; spent once the exposure exists |
@@ -77,7 +77,7 @@ exercise = "bb_bench_press"
 load = 100
 because = "coach_judgement"
 text = "Open the new block two steps under the model; the last exposure was a grinder."
-evidence = ["exposure:wk-9d11/bb_bench_press"]
+evidence = ["exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/bb_bench_press"]
 ```
 
 ## Decision kinds
@@ -94,7 +94,7 @@ triple; `until` where the table says so. Ids are engine-assigned (`d-0001`) and 
 | `training_max` | `exercise`, `load` | none | the earlier one on the same exercise |
 | `safety_ceiling` | `exercise`, `load` | optional | the earlier one on the same exercise |
 | `activity_cap` | `activity_kind` (`run`), `weekly_distance` or `weekly_minutes`, `single_distance` or `single_minutes` | optional | the earlier one on the same activity kind |
-| `decline_ceiling` | `block` id | none; lapses at the next week close, when the ceiling proposes again | the earlier one on the same block |
+| `decline_ceiling` | `block` id | required: the Sunday of the week it is made in, so it lapses when the week closes and the ceiling proposes again; `decision_in_force` is the one in-force rule | the earlier one on the same block |
 | `defer_deep_review` | none | required: the date it is due | the latest wins |
 | `against_research` | `ref` (`rn:…`) | none | nothing |
 | `retire` | `decision` id | none | ends the named Decision early |
@@ -133,7 +133,7 @@ weekly_distance = 17
 single_distance = 6
 because = "athlete_request"
 text = "Agreed at the 24 Oct check-in while the hamstring settles."
-evidence = ["niggle:n-0003", "checkin:2026-10-24"]
+evidence = ["niggle:n-0003", "check_in:ci-2026-10-24"]
 
 [[decision]]
 kind = "retire"
@@ -167,8 +167,9 @@ Every override and Decision carries `because`, `text` and `evidence`:
 - `because`: one of `pain`, `kit`, `stall`, `fatigue`, `schedule`, `athlete_request`,
   `coach_judgement` (ADR 0005). Any category on any kind; the pairing is never checked.
 - `text`: required, the coach's voice, unpoliced.
-- `evidence`: optional typed refs: `niggle:<id>`, `exposure:<workout>/<exercise>`,
-  `checkin:<date>`, `routine:<id>`, `decision:<id>`.
+- `evidence`: optional typed refs in `schema.md`'s ref grammar: `niggle:<id>`,
+  `exposure:<workout id>/<exercise id>`, `check_in:ci-<date>`, `routine:<id>`,
+  `decision:<id>`, `block:b-<date>`.
 
 ## Precedence and conflicts
 

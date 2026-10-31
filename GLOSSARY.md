@@ -360,8 +360,8 @@ and any rehab session it carries.
 _Avoid_: injury (which needs a professional), issue, pain entry
 
 **Follow-up**:
-Something to revisit on a date, with the events that raised, deferred, kept, resolved or dropped
-it.
+Something to revisit on a date, with the events that kept (the first one raises it), deferred,
+resolved or dropped it.
 _Avoid_: todo, reminder, action item
 
 **Observation**:
@@ -439,8 +439,8 @@ Hevy cannot delete a routine, so nothing is ever removed.
 _Avoid_: deleted routine, unused routine, temporary routine
 
 **Tombstone**:
-The record that Hevy no longer returns a workout. The workout and its sets stay; reads skip it.
-Never withdrawn.
+The record that Hevy stopped returning a workout (`gone`) or returned it again (`back`). The
+workout and its sets stay; reads skip it while its latest tombstone is `gone`. Never withdrawn.
 _Avoid_: deletion, removal
 
 **Drift**:
@@ -497,7 +497,7 @@ _Avoid_: query (the verb that runs one), report, filter
 
 **Record kind**:
 One typed table a ledger Draft may carry: a niggle event, a follow-up event, a decision, an
-annotation, a note, a workout, a reading, a status day, an exercise edit, an observation. One
+annotation, a note, a workout, a reading, a status span, an exercise edit, an observation. One
 registry of kinds serves every verb that records.
 _Avoid_: entry type, event type, table
 

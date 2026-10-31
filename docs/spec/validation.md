@@ -44,17 +44,22 @@ facts of the condition: a streak length, a ceiling and its kind, a drift class) 
 the key and are hashed separately; they are condition facts only, never derived display numbers
 that move with rounding.
 
-The key renders as one string, `code@scope-ref`, with the ref's parts joined by `/`:
+The key renders as one string, the one key grammar every document uses:
+`code@<scope kind>:<ref parts joined by />`, the kind alone when the scope has no ref. A dated
+scope (`week`, `session`, `line` on a WeekPlan) leads with the Monday; the calendar-free form
+(the same scopes at `program adopt`, and on a Decision, below) drops it:
 
 ```
-stall_streak@2026-11-03/upper-a/ohp
-block_ceiling_exceeded@2026-11-03
-routine_drift@abc123
+stall_streak@line:2026-11-03/upper-a/ohp
+block_ceiling_exceeded@week:2026-11-03
+scheme_off_emphasis@line:b-sat-push/bb_bench_press
+routine_drift@routine:3f9d2c7e-1b44-4a0e-8d55-c6a1e2b7f904
 engine_pin_dev@instance
 ```
 
 That string is what the agent writes in a Draft to acknowledge a warning and what `--fields`
-filters on. The params hash is a separate field, never part of the string.
+filters on. The params hash is a separate field, never part of the string. Refs inside params
+and evidence use `schema.md`'s ref grammar, which is separate from this key.
 
 ## One Flag shape everywhere
 
@@ -63,11 +68,11 @@ and `warnings[]`, is the same object:
 
 ```json
 {
-  "key": "stall_streak@2026-11-03/upper-a/ohp",
+  "key": "stall_streak@line:2026-11-03/upper-a/ohp",
   "code": "stall_streak",
   "severity": "warning",
   "scope": {"kind": "line", "week": "2026-11-03", "session": "upper-a", "exercise": "ohp"},
-  "params": {"streak": 3, "exposures": ["wk-7f2a/ohp", "wk-81c0/ohp", "wk-9d11/ohp"]},
+  "params": {"streak": 3, "exposures": ["exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/ohp", "exposure:0c4a9e61-2f7b-4d13-b8e0-5a3d7c2f1e88/ohp", "exposure:9a1f6d3b-7e25-4c60-a2d4-e8b5f0c3a716/ohp"]},
   "params_hash": "sha256:…",
   "rn": "rn:…",
   "message": "OHP has stalled for 3 exposures at 42.5 kg",
@@ -206,6 +211,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry | `null` |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) | `null` |
 | `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) | `null` |
+| `reading_duplicate` | instance | reading kind, date or night, source, the live row's id | withdrawing one of the two rows in the Draft (`schema.md`, `check-in.md` "Correcting") | `null` |
 
 ### Warnings on a plan (acknowledgeable)
 
@@ -222,7 +228,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
 | `rpe_ceiling_unchecked` | line | cap, clipped load, anchor exposure ref | rn:autoregulation.6 |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
-| `session_drop_suggested` | session | reason (`status_day`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_day` `null` |
+| `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
 | `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) | rn:volume-frequency.1 |
 | `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) | rn:volume-frequency.3 |
 | `frozen_load_off_snapshot` | session | line, load, snapshot date | `null` |

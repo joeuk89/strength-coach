@@ -28,7 +28,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | --- | --- | --- |
 | `status` | read | where we stand and what needs attention; what the SessionStart hook shows |
 | `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
-| `import [--full] [--only hevy\|kit]` | store write | Hevy workouts append-only with tombstones (ADR 0011) and the plate-pool snapshot (ADR 0008) |
+| `import [--full] [--only hevy\|kit]` | store write | Hevy workouts append-only with tombstones (ADR 0011) and the plate-pool snapshot (ADR 0008); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
 | `checkin open [--date <d>] [--tier light\|deep]` | read | the check-in card (`check-in.md`) |
 | `checkin record <draft>` | store write | the Check-in row plus every record the file carries |
 | `record <draft>` | store write | ledger writes outside a check-in, any mix of record kinds |
@@ -94,9 +94,9 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 
 | Leaf | Default `result` |
 | --- | --- |
-| `status` | in order: engine version against the pin; Hevy on or off, age of the last import and of the kit snapshot; plan in force (week, approved date, hash, routines verified or `unverified`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store. No prose line |
+| `status` | in order: engine version against the pin; Hevy on or off, age of the last import and of the kit snapshot; plan in force (week, approved date, hash, routines verified or `unverified`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line |
 | `schema` | the declaration(s), or the registry rows |
-| `import` | per source: ran or skipped and why; Hevy: workouts new, versioned, tombstoned, window; kit: snapshot date and whether it changed |
+| `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); per source: ran or skipped and why; Hevy: workouts new, versioned, gone, back, window; kit: snapshot date and whether it changed |
 | `checkin open` | the card (`check-in.md`), derived tier, window; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
@@ -145,7 +145,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | weigh_in | `[[weigh_in]]` | a Weigh-in | |
 | sleep_night | `[[sleep_night]]` | a Sleep night | |
 | activity | `[[activity]]` | an Activity | |
-| status_day | `[[status_day]]` | a status day span: ill, injured, travel, `no_training`; withdrawn, never deleted | |
+| status_span | `[[status_span]]` | a Status span: ill, injured, travel, `no_training`; withdrawn, never deleted | |
 | exercise | `[[exercise]]` | an edit to an existing library Exercise (the four Hevy template columns, load mode, equipment kind; name and identity stay), or a new library Exercise with every column, `source = record`, for a Hevy template the history uses and no program line names (`cutover.md`) | |
 | observation | `[[observation]]` | an Observation raised or retired (ADR 0009) | yes |
 
@@ -208,7 +208,7 @@ re-run with the same `--expect` prompts again and resumes from the Routine map's
 | 1 | a Draft with any violation on `plan apply --dry-run`, `program adopt`, `checkin record`, `record`, `goal adopt`; `draft_exists`; an unknown view or record kind |
 | 3 | `plan apply` without `--expect`, with a changed hash, or under bypass permissions |
 | 4 | Hevy unreachable, on `import` and `plan apply` |
-| 5 | `init` on an instance, a pin mismatch, a missing Hevy key with Hevy on |
+| 5 | `init` on an instance, a pin mismatch, a missing Hevy key with Hevy on; on the rebuild, `export_newer_than_engine`; on any store write, `store_behind_export` (`schema.md`, "The rebuild") |
 
 `error.code` carries the flag code or the refusal reason. Nothing else refuses.
 
@@ -229,7 +229,8 @@ Generated from the declarations, none hand-written per verb:
 
 - **Override catalogue** (#19, settled in `overrides.md`): the Decision kinds `[[decision]]` accepts; the override kinds
   `--apply-plan` folds in.
-- **Schema**: the `draft_hash` column on every row a Draft verb writes; the record-kind and view
-  registries as tables the contract tests read.
+- **Schema** (settled in `schema.md`): the `draft_hash` column on every row a Draft verb writes;
+  the record-kind and view registries stay in code and `schema --registry` is how a contract
+  test reads them.
 - **Skills**: the four skills name only these leaves; `check-in` names `status`, `checkin open`,
   `checkin record`, `record`, `query`.

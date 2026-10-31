@@ -13,7 +13,7 @@ check-in" below; the routines in Hevy and the week-boundary switch are "The swit
 | --- | --- |
 | Every Hevy workout the account still has (66 as of 2026-10-23, since 2026-03-29) | `workout` and `logged_set` rows through the ordinary `import --full` |
 | Hevy body measurements (42) | `weigh_in` rows, source `hevy`, through the same pull |
-| Hevy routines and folders (17 and 4) | the `routine` and `folder` mirror through the same pull; `routine_map` is the routine ticket's |
+| Hevy routines and folders (17 and 4) | the `routine` and `folder` mirror through the same pull; none reaches `routine_map` ("The switch") |
 | Custom Hevy template ids (11 in the account, 8 in the history) | `exercise.hevy_template_id`, recorded by `[[exercise]]` at onboarding |
 | Goal and Phase | the `goal adopt` Draft the `onboard` skill writes (`goals.md`) |
 | Open niggles, open follow-ups, the patterns among the Coach's notes | the cutover check-in (below) |
@@ -58,7 +58,7 @@ Three writers set `exercise.hevy_template_id`:
 
 | Writer | When |
 | --- | --- |
-| the catalogue seed at `init` | Hevy built-in template ids (eight hex characters, the same in every account) shipped with the catalogue entry; seeded from the old library's 108 catalogue pairs and the six that the old code resolved by title |
+| the catalogue seed at `init` | Hevy built-in template ids (eight hex characters, the same in every account) shipped with the catalogue entry (`src/coach/store/catalogue.jsonl`, `schema.md` "The engine catalogue"); seeded from the old library's 108 catalogue pairs and the six that the old code resolved by title |
 | an `[[exercise]]` record | an account-specific custom template: an edit to an existing Exercise, or a new Exercise with every column and `source = record` when no program line names it |
 | `plan apply` | after a verified `POST /v1/exercise_templates` (ADR 0011) |
 
@@ -142,7 +142,8 @@ nothing. Routines the account holds that no Routine map row names, at cutover or
 the `routine` mirror and are never flagged, retired or touched; `query routines` shows the map,
 not the mirror. The athlete deletes the old routines and folders by hand in the app, and only
 after the first push has verified: while they coexist they cost nothing, and they are the
-rollback.
+rollback. Their mirror rows stay after the deletion; import never deletes a mirror row
+(ADR 0011).
 
 ### Order
 

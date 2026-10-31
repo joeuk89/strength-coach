@@ -35,13 +35,14 @@ answer lands:
 
 | Answer | Record |
 | --- | --- |
-| Missed core session, with its reason tag | Annotation of kind `miss tag` on the planned session. Miss stays derived; only the tag is stored |
+| Missed core session, with its reason tag | Annotation of kind `miss_tag` on the planned session; the tag is its `because`, one of the seven reasons (`schema.md`). Miss stays derived; only the tag is stored |
+| Planned session called off on purpose, not a miss (a rest day agreed, a session the plan should not have held) | Annotation of kind `cancelled` on the planned session; it leaves both of `week.md`'s denominators |
 | Coach-led session done | Normally nothing: the Hevy workout already fulfils it (see Matching). A hand-entered Workout with no sets, with minutes and session RPE, only when Hevy has nothing for that day |
-| Trained but not logged | Annotation `trained-unlogged` |
-| Sleep | Sleep night rows, source `check-in`. A period mean is not a night and is stored nowhere; the read may quote it |
-| Weight | Weigh-in, source `check-in` |
+| Trained but not logged | Annotation of kind `trained_unlogged` on the planned session |
+| Sleep | Sleep night rows, source `check_in`. A period mean is not a night and is stored nowhere; the read may quote it |
+| Weight | Weigh-in, source `check_in` |
 | Niggle reported, aggravated, easing, resolved | Niggle status event |
-| Follow-up disposition | Follow-up event: deferred, kept, resolved or dropped. A deep check-in gives every open one a disposition |
+| Follow-up disposition | Follow-up event: `kept` (the due date stands, or is set for the first time: the raising event is a `kept`), `deferred` (the due date moves later), `resolved` or `dropped`. A deep check-in gives every open one a disposition |
 | Free note from the athlete | Athlete note: date, text verbatim, optional `about` reference (planned session, exercise, niggle, follow-up). Never classified by code |
 | A pattern the coach has noticed, or one that stopped holding | Observation raised or retired (ADR 0009) |
 | Declined ceiling, deferred deep review, an agreement or an override for longer than a week | Decision (`overrides.md`) |
@@ -80,9 +81,12 @@ attaches to it.
 ## Correcting
 
 Rows are append-only. Re-running `checkin record` for the same date supersedes the earlier row
-(`status = superseded`). Records sourced from the superseded row stay unless the new file withdraws
-them: annotations by a withdrawing annotation, niggle and follow-up events by a later event. No
-edit in place, no delete.
+(`status = superseded`, the supersede write of `schema.md`). Records sourced from the superseded
+row stay unless the new file withdraws them: annotations by a withdrawing annotation, niggle and
+follow-up events by a later event, a weigh-in, sleep night or status span by a row that
+`withdraws` it. A mistyped reading is corrected by withdrawing it and entering the right one in
+the same file; a second live reading for one date and source is the violation
+`reading_duplicate`. No edit in place, no delete.
 
 ## Views
 

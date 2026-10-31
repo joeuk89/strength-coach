@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
+amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`)
 ---
 
 # Hevy is a projection target: allow-listed writes, append-only import, retire not delete
@@ -41,10 +42,16 @@ reused, a folder is forever.
   normalised rows with the raw payload kept on the row. No cache directory. Exposure, Match, e1RM
   and the Activity of a conditioning workout stay views; the `activity` table holds hand-entered bouts only (ADR 0018).
 - A Workout is versioned by (Hevy id, `updated_at`). An app edit appends a version; reads take the
-  latest. A delete event, or an id missing from a full pull, appends a tombstone (id, noticed at,
-  source `event` or `full pull`). Reads skip tombstoned workouts; the rows stay; a tombstone is
-  never withdrawn. An id that reappears gets a new version and a warning, not an undo.
-- Import flips a Routine map row to `missing` when Hevy no longer returns its id, and raises a
+  latest. A delete event, or an id missing from a full pull, appends a `gone` tombstone row (id,
+  noticed at, source `event` or `full`). Reads skip a workout whose latest tombstone row is
+  `gone`; the rows stay; a tombstone row is never withdrawn. An id that reappears gets a `back`
+  tombstone row and a `workout_reappeared` warning, not an undo (amended 2026-10-31): its latest
+  version reads again from that moment, and the warning clears by a `match` or `void`
+  annotation on it. Hevy's set type `warmup` lands as `warm_up` and every other Hevy set type
+  as `working`; the raw type stays on the stored payload.
+- Import upserts the `routine` and `folder` mirrors by Hevy id and never deletes a mirror row
+  (amended 2026-10-31). It flips a Routine map row to `missing` when Hevy no longer returns its
+  id, and raises a
   drift warning per routine, keyed (routine id, structural or load), when a live routine differs
   from the stored projection of the plan in force. Drift resolves only by a typed override on the
   next WeekPlan or by the next push overwriting it. The engine never adopts an app edit.

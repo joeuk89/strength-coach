@@ -21,7 +21,7 @@ Ownership tiers and where numbers live are ADR 0013; this page is the tables.
 ├── .coach/                    gitignored, the whole directory
 │   ├── coach.db               the store (ADR 0001)
 │   └── drafts/                Drafts: agent-written verb inputs
-├── export/                    written by publish, read by import (ADR 0001)
+├── export/                    written by publish, read only to rebuild a missing store (ADR 0001, schema.md)
 │   ├── manifest.json          schema version, engine version, row counts (schema.md)
 │   └── <table>.jsonl          one file per table, rows sorted by primary key (schema.md)
 ├── hevy/

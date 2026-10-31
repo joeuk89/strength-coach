@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #42 (the rebuild from the export runs only when the database file is missing, never on an export "older than a commit"; each migration freezes the DDL it leaves behind, `docs/spec/schema.md`)
 ---
 
 # SQLite is the source of truth; git sees only a text export
@@ -8,9 +9,10 @@ date: 2026-10-26
 The old system held the truth in about 20 overlapping JSON files with hand-written integrity
 checks and no transaction across files. The engine stores everything that is not authored prose
 in one SQLite database (Python stdlib), gitignored in the instance at `.coach/coach.db`. Git sees
-a deterministic export, sorted JSONL per table, written by `publish` after approval; `import`
-rebuilds the database from it and runs by itself whenever the database is missing or older than
-the export's commit. SQLite won on cross-record transactions and rows made immutable by schema,
+a deterministic export, sorted JSONL per table, written by `publish` after approval; the store
+rebuilds the database from it, by itself, in exactly one case: the database file is missing
+(amended 2026-10-31; with a database present the export is never read, so a rebuild can never
+discard a row the store has). SQLite won on cross-record transactions and rows made immutable by schema,
 which no file layout gets for free, and on SQL views giving the agent its 1–3 KB summaries.
 
 ## Considered options
@@ -45,6 +47,8 @@ foreign keys replace about 7 checks, not 15; per-file atomic writes already exis
   `adopt` verb validates a text form and records it as a new program version.
 - Git sees one commit per `publish`; drafts and proposals never reach git.
 - Before cutover, a schema change is "drop the database and re-import"; after it, one linear
-  `user_version` migration chain. Adding a UNIQUE constraint or changing a CHECK needs a table
-  rebuild in SQLite.
-- A second machine clones the instance and runs the engine; auto-import does the rest.
+  `user_version` migration chain over one frozen DDL per schema version, so a rebuild can build
+  an export at any version it was written at. Adding a UNIQUE constraint or changing a CHECK
+  needs a table rebuild in SQLite.
+- A second machine clones the instance and runs the engine; the missing database is rebuilt
+  from the export on the first verb. To take a newer export later, delete the database file.

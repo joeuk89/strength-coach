@@ -209,9 +209,9 @@ shape: the light cut is one transform from the version's `[deload]` table, and t
 per-scheme behaviour under a cut is the return band's (`prescription.md`). The form names a
 scheme and params only; `coach schema` prints the registry so the agent never guesses a param.
 Scheme params are only what the set groups and the rack cannot say: a param never repeats a
-group's `count`, `reps` or `rpe`, and the load step is the next row on the session location's
-rack at a plate-pool location and the grid increment at a grid location (ADR 0008 precedence:
-location, exercise, catalogue).
+group's `count`, `reps` or `rpe`, and the load step is the location's alone: the next row on
+the session location's rack at a plate-pool location, the increment for the implement kind at a
+grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 
 ### Line schemes, v1
 
@@ -520,5 +520,6 @@ squat steps by the home rack's next barbell row.
 - **Schema**: the `program_version` table with sequence number, kind, because, emphasis, the
   form and the frozen Acknowledgements; the `exercise` table as the library seeded from the
   engine catalogue; the scheme registry as the source of `unknown_scheme`.
-- **Migration**: the converter from the old `program.json` to this form, with the park Decisions
-  for the two conditioning sessions and the old rotation position as `--position`.
+- **Migration** (settled in `cutover.md`): no converter and no `--position`; version 1 is
+  designed fresh by the `program` skill, and a park Decision for a conditioning session exists
+  only if version 1 authors one.
