@@ -4,7 +4,8 @@ Research note for wayfinder #25: how coaches define an athlete's training level,
 that the athlete has moved up, and what they change when they do. Written in the glossary's terms
 (Program version, Block, Check-in, Decision, e1RM, Exposure, Warning). Claims are marked evidence
 or opinion. `docs/spec/program-practice.md` covers the shape of a block and the weekly rule; this
-note does not repeat it.
+note does not repeat it. Where the Implications below differ from `goals.md`, the spec wins
+(`docs/spec/research-notes.md`).
 
 ## 1. What "level" means
 
@@ -332,8 +333,8 @@ dose floor in a deficit, and the gain-rate band. The evidence that sequencing bl
 helps is weak (section 4), so a typed "strategy" of ordered future blocks would encode a
 convention the research does not back and the athlete's own coaches (BBM) do not require. If
 anything is typed it is **Phase**: kind (deficit, maintenance, surplus), start, target rate as
-%BW/week, until date or until condition, and the Lifting goal emphasis it implies; a Decision
-opens and closes one. The Program version keeps the lifting goal (ADR 0009). The sequence of
+%BW/week, until date or until condition, and the Emphasis it implies; a Decision
+opens and closes one. The Program version keeps the emphasis (ADR 0009, ADR 0014). The sequence of
 future blocks stays in the Profile prose and in Follow-ups (opinion).
 
 **What stays the coach's judgement.** Whether a stall is a graduation, a fatigue problem, or a

@@ -39,12 +39,12 @@ A strength target on one exercise with no date. A dated target is a Follow-up (A
 | --- | --- | --- |
 | `exercise` | Exercise ref | Need not be a priority lift (the gym-only deadlift) |
 | `target.kind` | `e1rm`, `load_x_reps`, `bodyweight_multiple` | |
-| `target.value` | load in athlete units; load plus reps; a multiple | A bodyweight multiple is read against the 14-day Weigh-in average on the exposure's date |
+| `target.value` | load in athlete units; load plus reps; a multiple | A bodyweight multiple is read against the 14-day Weigh-in average on the exposure's date (the 14 days are opinion) |
 
 **Reached** is derived: the first Exposure whose e1RM (or logged load for reps) meets the
 target, with its date. Never stored. The progress report shows it as a figure; there is no
 `milestone_reached` code (`week.md`). With fewer than two weigh-ins in the 14 days before an exposure, a
-bodyweight multiple is "not computable" and shown as such.
+bodyweight multiple is "not computable" and shown as such (two weigh-ins is opinion).
 
 ### Emphasis
 
@@ -119,9 +119,9 @@ not fit (next section).
 | Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
 | RIR | stimulus dial: the line's authored RPE stands every week (default 8, 2 RIR); the walk toward failure happens as double progression adds reps at a held load, not as a coded rule (`prescription.md`) | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
 | Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
-| Scheme adopt fills | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods` |
+| Scheme adopt fills | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods §3` |
 | Stall signal | reps at the target RIR flat across the muscle's lines | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
-| Deload | `set_cut_pct` 40, `load_cut_pct` 0, `rpe_cap` 8: cut sets, hold load | `set_cut_pct` 30, `load_cut_pct` 0, `rpe_cap` 8; `test_priority_lifts` prescribes a **test** single on each priority lift in the light week, whose result may become the next block's training max | no planned deload | §6, evidence that intensity is held; the percentages are this framework's defaults |
+| Deload | `set_cut_pct` 40, `load_cut_pct` 0, `rpe_cap` 8: cut sets, hold load | `set_cut_pct` 30, `load_cut_pct` 0, `rpe_cap` 8; `test_priority_lifts` prescribes a **test** single on each priority lift in the light week, whose result may become the next block's training max | no planned deload | §6 and rn:deloads.8 to .10, evidence that intensity is held; the percentages are this framework's defaults (opinion) |
 | Order | free; chosen for fatigue and preference | priority lift first in its session | as the Goal | §7, evidence |
 | Rest | 1.5–3 min | 2–5 min | as the line's load | §9, evidence; rest follows load, not goal |
 
@@ -140,12 +140,13 @@ Two rules that follow:
 
 ### What the Phase changes
 
-Opinion, from Israetel and Helms (`rn:training-level §4`): the Phase moves the proposed dose
-within its band and never the intensity.
+Opinion, from Israetel and Helms (`rn:training-level §4`): a surplus moves the proposed dose up
+within its band, a deficit keeps it (both sources keep volume in a deficit), and no Phase moves
+the intensity.
 
 | Phase | Dose default | Default rate (% BW per week) | Trend band |
 | --- | --- | --- | --- |
-| `deficit` | lower half of the band; intensity held so strength is kept | −0.5 | within ±50 % of the target rate |
+| `deficit` | the emphasis default, held: volume is kept in a deficit and intensity held so strength is kept | −0.5 | within ±50 % of the target rate |
 | `maintenance` | the emphasis default | 0 | ±0.25 % BW per week |
 | `surplus` | upper half of the band | +0.25 | within ±50 % of the target rate |
 
@@ -249,7 +250,7 @@ never`, with its `rn:` citations; this section is its spec, as `schema.md` is `s
 `program` skill's Judge answers a signal only with a move the flag lists and carries no table
 (`skills.md`, ADR 0020). A scheme changes only when its cadence has run out, which is what the
 signal says: the switch under `linear` is the second reset, per lift, and there is no second count
-(`rn:progression-methods`, the switching table; Starting Strength's end of the one-to-three
+(`rn:progression-methods §4`, the switching table; Starting Strength's end of the one-to-three
 range, matching `cadence_slow`). Within a block the weekly rule answers a stall with its own
 reset; the boundary is where the scheme may change.
 

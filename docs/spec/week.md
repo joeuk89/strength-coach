@@ -142,7 +142,7 @@ Four triggers, read over the check-in's window:
 | readiness | the check-in's `readiness` is `poor` | the Check-in row (`check-in.md`) |
 | RPE drift | a compound lift's logged RPE was 1 or more over target on 2 or more working sets in each of two consecutive exposures, each set against its own prescription with none extra, heavier, longer or with more reps, after an earlier steady exposure at the prescription, outside deload, light and return work | rn:autoregulation.4 |
 | niggle | a Niggle status event `aggravated` inside the window, or a niggle still `aggravated` on the window's first day | Niggle events |
-| Short-sleep week | at least 4 of the last 7 measured nights under 7 hours, with at least 4 nights of data | Sleep nights (glossary) |
+| Short-sleep week | at least 4 of the 7 calendar nights ending the day before the check-in measured under 7 hours, with at least 4 of those nights measured | Sleep nights; 7 hours is rn:sleep-dieting.1, 4 of 7 and the 4-night floor are opinion |
 
 Two triggers in one window **propose** a light week; one is a **watch** (rn:deloads.5). Under 3
 completed hard weeks nothing is proposed and the card says `skipped (<n> hard weeks)`
@@ -167,8 +167,8 @@ Per muscle, the fractional hard sets delivered in the closed week (direct 1, ind
 hard set is a working set above RPE 5, rn:volume-frequency.2, rn:proximity-to-failure.5) against
 the version's target, and the mean over the trailing four ordinary weeks. The card carries it;
 `plan draft` raises `dose_under_target` when delivered dose is under target in at least three of
-the trailing four ordinary weeks (rn:volume-frequency.3) and `session_dose_high` when a planned
-session exceeds 11 fractional sets (rn:volume-frequency.1). `progress` keeps its block-boundary
+the trailing four ordinary weeks (rn:volume-frequency.1; three of four is opinion) and
+`session_dose_high` when a planned session exceeds 11 fractional sets (rn:volume-frequency.3). `progress` keeps its block-boundary
 view.
 
 ## Activity rules

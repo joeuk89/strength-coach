@@ -369,7 +369,8 @@ confirmed by the athlete and retired with a reason when it stops holding.
 _Avoid_: coach's note, note, insight
 
 **Short-sleep week**:
-The fatigue trigger: at least 4 of the last 7 measured nights under 7 hours.
+The fatigue trigger read from Sleep nights: too many short nights in the week before a check-in.
+The counts and the hours are `docs/spec/week.md`'s, cited there.
 _Avoid_: sleep trigger, poor sleep
 
 ### Kit and loads

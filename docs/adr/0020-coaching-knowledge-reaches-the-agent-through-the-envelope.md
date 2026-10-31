@@ -42,7 +42,8 @@ could read them.
 - The per-emphasis table in `goals.md` is a design view: the "asks" row is the card builder's
   (the check-in card is emphasis-aware), the "judges" and "explains" rows are each skill's own
   Judge, in its own words, inside its budget. Nothing cites the table at runtime.
-- The Flag shape gains an optional top-level `rn` (`rn:<note> §<n>`), outside `params` and the
+- The Flag shape gains an optional top-level `rn` (`rn:<note>.<n>` for a claim, `rn:<note> §<n>`
+  for a section; `docs/spec/research-notes.md`), outside `params` and the
   hash, filled from the constant that raised it; the flag registry carries the column and
   `coach schema --registry flags` shows it. Rendered pages link it to the note at the pinned
   engine tag on GitHub.

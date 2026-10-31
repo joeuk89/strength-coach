@@ -23,15 +23,18 @@ Per line, in this order:
    A return-week exposure is kept, including one from a line that took the return band inside
    a light week: the return week's logs are the baseline for the week after (ADR 0005: no 43+
    re-test rule).
-2. If none in the last 90 days: the newest exposure of the exercise in **any** session (a
-   redesign with new session ids, a swap, a new line of an exercise already trained).
+2. If none in the last 90 days (two Blocks at the default ceiling; opinion): the newest exposure
+   of the exercise in **any** session (a redesign with new session ids, a swap, a new line of an
+   exercise already trained).
 3. If none: the line's `start_load` (or the `swap_exercise` override's) and the scheme's
    opening position (`program.md`, the scheme table). A load-bearing line with neither is
    `start_load_missing`.
 
-e1RM is always exercise-wide: the best qualifying point in the 42 days before the planned date,
-every session included. A newer exposure with more than 12 reps to failure at or above that
-point's load invalidates it until a newer qualifying point exists.
+e1RM is always exercise-wide: the best qualifying point in the 42 days before the planned date
+(one Block at the default ceiling, rn:deloads.3; the window is opinion), every session included.
+A qualifying set has 12 or fewer reps to failure, reps plus 10 minus RPE (rn:autoregulation.5).
+A newer exposure with more than 12 reps to failure at or above that point's load invalidates it
+until a newer qualifying point exists.
 
 **The anchor's load.** The anchor's top working load, as logged. A logged load that is not a row
 of the session location's rack is replaced by the nearest row **at or below** it, and the line
@@ -39,8 +42,8 @@ warns `offgrid_anchor_ignored` naming both. A historical load never defines the 
 
 **Days off per lift** = `max(layoff, exposure age − usual interval)`, where the layoff is the
 gap since the last lifting exposure of any kind (coach-led counts), the usual interval is the
-median of the lift's last four gaps clamped to 7–14 days, and 10 days of grace apply before a
-lift counts as decayed. `no_training` status spans count as days off. A `trained_unlogged`
+median of the lift's last four gaps clamped to 7–14 days (opinion), and 10 days of grace apply
+before a lift counts as decayed (the band with no change, rn:detraining-return.3). `no_training` status spans count as days off. A `trained_unlogged`
 Annotation on a planned session, or a hand-entered Workout with no sets (`week.md`), counts as a
 lifting exposure **date** for every line of that session: it resets the layoff and those lifts'
 exposure age, carries no load and never anchors. Nothing else moves days off.
@@ -68,7 +71,13 @@ cut.
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
 | `assistance_ladder` | reps and RPE per set on the current rung | every set at `reps` at or under `rpe` | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ `rpe` + 2 |
 | `top_backoff` | the exercise's best e1RM in the window | not a hit test: the top load is `load_for(e1RM, top.reps, top.rpe)` rounded down, **capped at one rack row above the anchor's top load**; back-offs are `pct_of_top` of the top, rounded nearest | | no e1RM in the window: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
-| `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision (+2.5/5 kg, or −10 %) |
+| `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
+
+Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
+`assistance_ladder` rn:bodyweight-skill-progression.3; `top_backoff` rn:progression-training-age.6
+and .8, rn:autoregulation.1; `wave_531` rn:progression-training-age.9. The one-row cap, the
+"RPE 2 over" test and `load_for` rounding down are this framework's (opinion). The catalogue
+behind the registry is rn:progression-methods §1 and §2.
 
 Notes:
 
@@ -91,12 +100,13 @@ Notes:
 
 One definition: three consecutive ordinary exposures of the line (light-week and return-week
 exposures skipped) with no gain on the scheme's metric raise `stall_streak` with the three
-exposure refs. The metric per scheme:
+exposure refs. Three is opinion: the sources say read the trend, not one session, and name no
+count (rn:progression-methods §4). The metric per scheme:
 
 | Scheme | Metric | The rule's own response |
 | --- | --- | --- |
 | `double_progression` | total reps at or under the authored RPE at the anchor load | none: hold. Sets, a deload or a swap are the agent's (`goals.md`, the cadence table at the boundary) |
-| `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`) sets the load to `reset_factor = 0.9` × the anchor load, rounded **down** to the rack. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
+| `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`, Starting Strength's "the 2nd time in a row", rn:training-level §2) sets the load to `reset_factor` × the anchor load, rounded **down** to the rack. Both are `linear` params (`program.md`); the registry default `reset_factor = 0.9` is the over-40 reset (5 % under 40, 10 % over 40, rn:training-level §2), so a coach names `reset_factor = 0.95` on the line for a younger athlete. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
 | `assistance_ladder` | the rung | hold the rung |
 | `top_backoff` | e1RM | none: the model holds the top set |
 | `wave_531` | the rep-out count | none: `training_max_due` or `rep_range_missed` says what happened |
@@ -153,8 +163,8 @@ scheme, and back-offs follow their top; at 0 the load is held. A `hold` line is 
 other (ADR 0017).
 
 Illness is not a cut and not a week kind here: an `ill` span since the line's anchor with no
-exposure since it ended caps every set of the line at RPE 7 in step 6, where it binds by `min`
-with the other ceilings.
+exposure since it ended caps every set of the line at RPE 7 in step 6 (rn:detraining-return.4),
+where it binds by `min` with the other ceilings.
 
 The closed week's kind for the Block's count (light, return, break, minimum, one_off, hard,
 missed, partial) is `week.md`'s read after the fact. `week.md`'s `return` is the athlete's
@@ -170,6 +180,8 @@ The band is a safety bound (ADR 0005, amended): no override waives or softens it
 lowers only. The one lawful route is the fact behind it: days off, which a `trained_unlogged`
 Annotation or a hand-entered Workout moves (above). `restate_sets` may still change the set
 groups of a return line, and the band's set delta then applies to the restated groups.
+
+The bands are rn:detraining-return.3, load factors as targets before rounding:
 
 | Days off | Load | Working sets | RPE cap |
 | --- | --- | --- | --- |
@@ -210,15 +222,16 @@ above one.
 
 Every set under a cap (the return band's, the deload policy's `rpe_cap` in a light week, illness,
 a niggle's `rpe_cap`) has
-its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down. A set whose implied
-reps to failure would exceed 12 has its reps cut to fit the model. With no usable e1RM the load
+its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down (the model and its
+limits, rn:autoregulation.5 and .6). A set whose implied reps to failure would exceed 12 has its
+reps cut to fit the model. With no usable e1RM the load
 is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`.
 
 ### The test set
 
 In a `light_week`, when the version's deload policy has `test_priority_lifts`, a priority lift
 under `top_backoff` or `wave_531` is prescribed one `test` single at `load_for(e1RM, 1, 9)`
-rounded down, before its working groups under the light cut. This is the only `test` set there
+rounded down (RPE 9 is opinion), before its working groups under the light cut. This is the only `test` set there
 is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
 `working` single. The rule writes nothing from the result; the agent reads it at the block
 boundary and records a `training_max` Decision if the lift moves to `wave_531`.

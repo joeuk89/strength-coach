@@ -43,7 +43,8 @@ and follow-ups are already records.
   until ADR 0014 moved the athlete's Goal to its own record) and optional explicit
   per-muscle weekly dose targets. The emphasis sets the default dose target when none is given
   (hypertrophy: 10 hard sets per primary muscle of core lifts, rising toward 20 with experience,
-  rn:minimum-effective-dose; maintenance: about a third; strength: no default, targets must be
+  rn:volume-frequency.1; maintenance: about a third, rn:minimum-effective-dose.1; strength: no
+  default, targets must be
   agreed) and the dose rule warns on a week under or over it. Powerbuilding is `hypertrophy` plus
   strength schemes on the chosen lifts, stated line by line; ADR 0014 makes those lifts the
   Goal's priority lifts and has adopt fill the strength scheme on them. How goals reach the

@@ -36,7 +36,8 @@ cited only from code.
   typed-in nights. The nutrition Sleep gate goes.
 - Research notes live in the engine repo only, never imported into the store, never shipped as
   package data and never read by a running agent (ADR 0020); every threshold in code carries its
-  `rn:` ref and one test in the repo resolves every ref to a current claim. No citation scan of
+  `rn:` ref and one test in the repo resolves every ref to a current claim or a numbered section
+  (`docs/spec/research-notes.md` lists the notes and the two ref forms). No citation scan of
   prose, no rendered regions, no prose tests. (Amended 2026-10-31: the original "parsed at
   runtime" meant this test.)
 - Nothing in v1 is optional, so there are no feature toggles.

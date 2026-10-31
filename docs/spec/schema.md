@@ -39,7 +39,7 @@ Validated by the writing service against the live tables; never a SQL foreign ke
 | `exposure` | `exposure:<workout id>/<exercise id>` |
 | `workout` | `workout:<workout id>` or `workout:<workout id>/<exercise id>` |
 | `exercise`, `niggle`, `follow_up`, `decision`, `check_in`, `goal`, `routine`, `milestone`, `phase` | `<kind>:<id>` |
-| `rn` | a research note citation, `rn:<note> §<n>` |
+| `rn` | a research note citation: `rn:<note>.<n>` names a claim of a claims note, `rn:<note> §<n>` a numbered section of a prose note (`research-notes.md`) |
 
 A column that only ever points at one table is a plain foreign key (`check_in`, `session_id`,
 `exercise_id`, `niggle_id`).
