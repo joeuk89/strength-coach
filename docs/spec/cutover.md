@@ -17,7 +17,7 @@ check-in" below; the routines in Hevy and the week-boundary switch are "The swit
 | Custom Hevy template ids (11 in the account, 8 in the history) | `exercise.hevy_template_id`, through one plain `record` of ten `[[exercise]]` rows before `onboard` ("The exercise record") |
 | Goal and Phase | the `goal adopt` Draft the `onboard` skill writes (`goals.md`) |
 | Open niggles, open follow-ups, the patterns among the Coach's notes | the cutover check-in (below) |
-| Two unlogged PT sessions (6 and 13 Oct 2026) | two manual `workout` rows in the cutover check-in: source `manual`, no session, title `PT session`, minutes, session RPE where reported, no sets. The third external annotation (20 Oct) is in Hevy and arrives with `import` |
+| Two unlogged coach-led sessions (6 and 13 Oct 2026) | two manual `workout` rows in the cutover check-in: source `manual`, no session, title `PT session`, minutes, session RPE where reported, no sets. The third external annotation (20 Oct) is in Hevy and arrives with `import` |
 | The `[cardio]` run caps | one `activity_cap` Decision in the cutover check-in |
 | The 24 old Decisions | nothing. Every one expired by 2026-11-01 and names a session that will not exist |
 | The `[caps]` table | nothing. The bar's limit derives from kit (ADR 0008) |

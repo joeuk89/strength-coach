@@ -87,7 +87,7 @@ No `status`: a parked session is a Decision, not a field (ADR 0010).
 | `load_mode` | no | Only when it departs from the Exercise's default; the Load type does the conversion |
 | `[[session.line.sets]]` | yes, at least one group | Set groups, below |
 | `rest_s` | yes | Seconds after each set of the line; the `program` skill proposes it from `goals.md`'s band, adopt never fills it |
-| `cues` | no | Free text, the canonical form cues |
+| `cues` | no | Prose, the canonical form cues |
 | `scheme` | yes | `{ name = "...", ...params }`; the registry below. Authored by the `program` skill, never filled: adopt warns `scheme_off_emphasis` when it sits outside the emphasis band (`goals.md`) |
 | `start_load` | load-bearing lines only | Athlete units; per hand for per-hand modes. See **Start loads** |
 | `superset` | no | A label; lines sharing it in one session are performed together |

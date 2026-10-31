@@ -1,4 +1,4 @@
-# How the lifting goal changes what a coach programs
+# How the athlete's goal changes what a coach programs
 
 Research note for wayfinder #25: what the athlete's goal (hypertrophy, strength, concurrent strength + hypertrophy, maintenance) changes in a program, with the evidence behind each change, in the glossary's terms (Program version, Emphasis, Line, Prescription, WeekPlan, Block, Decision). Where the Implications below differ from `goals.md`, the spec wins (`docs/spec/research-notes.md`). It extends `program-practice.md`, which already covers mesocycle shape, what moves weekly, swaps and deloads in general; nothing there is repeated. Claims are marked evidence or opinion.
 

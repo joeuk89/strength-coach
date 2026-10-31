@@ -50,7 +50,7 @@ and follow-ups are already records.
 - Observation is a ledger record: text, evidence refs, the Check-in that raised it, the Check-in
   and reason that retired it. Observations are raised and retired only inside a `checkin record`
   file; the athlete's yes to the record is the confirmation. No `observation` verb.
-- The old Coach's notes split: patterns (drift adds intensity, PT sessions go under-logged) become
+- The old Coach's notes split: patterns (drift adds intensity, coach-led sessions go under-logged) become
   Observations; agreements that constrain a line or a load (dumbbell curls not barbell, box squats
   on the PT day only) become `safety_ceiling` Decisions, or `override` Decisions renewed at eight weeks, as the
   Override catalogue defines them (ADR 0016, 0018); agreements about how to coach (a bad night moves the session, waist is a monthly ask)
@@ -61,7 +61,7 @@ and follow-ups are already records.
   `plan-week` skills, and named in the generated CLAUDE.md; `coach status` never includes it.
 - One rendered athlete page composes the prose verbatim with sections generated from the store:
   athlete facts, equipment by location, open niggles with constraints, open follow-ups, active
-  observations, standing override Decisions, the last three check-in reads. It lives at
+  observations, override Decisions, the last three check-in reads. It lives at
   `pages/athlete.md` (ADR 0012).
 - A dated strength milestone is a Follow-up. An undated one was prose here; ADR 0014 makes it a
   typed Milestone on the Goal so distance and date reached can be derived.

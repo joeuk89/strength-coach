@@ -50,7 +50,7 @@ open with no constraint); drift from last week's prescription with no override e
 - Scopes: week, planned session, line. Nothing finer: a change to one set is a line kind that
   restates the line's set groups.
 - Reason: a kind, a `because` category (pain, kit, stall, fatigue, schedule, athlete request,
-  coach judgement), free text in the coach's voice, and optional evidence references (niggle,
+  coach judgement), prose in the coach's voice, and optional evidence references (niggle,
   exposure, check-in). No regex or word-count policing of the text.
 - A load appears in an override only as the typed Load on a `pin load` kind, which still passes
   the grid and ceiling checks. Prose never carries a load.

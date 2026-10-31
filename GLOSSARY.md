@@ -57,7 +57,7 @@ _Avoid_: rehab routine, prehab, add-on
 **Parked session**:
 A program version's session taken out of force by a Decision until a later Decision resumes it.
 The version itself never changes.
-_Avoid_: status, parked (as a field), disabled
+_Avoid_: status (as a field here; the five status columns are `schema.md`'s), parked (as a field), disabled
 
 **Slot**:
 A place in a program version's schedule that names which session fills it: a rotation week
@@ -85,6 +85,12 @@ what it reads from history, how it moves the dose, when it counts a stall and wh
 deload. Declared once in the engine's registry; the form names it.
 _Avoid_: progression (alone), plugin, model
 
+**Rung**:
+One position on an assistance ladder: a listed assistance load or leverage a line is on. The
+ladder moves one rung at a time on a hit and steps back by rungs in a return band instead of
+cutting load.
+_Avoid_: level, step (which is a derivation step), stage
+
 **Start load**:
 The load a line opens at before any exposure exists, in athlete units and per hand where the
 load mode is per hand. Must be a row on the session location's rack. History, once it exists,
@@ -102,12 +108,27 @@ and whether priority lifts are tested in it. Filled from the emphasis when unsai
 override may restate the shape for that week.
 _Avoid_: block rule, light-week rule, deload type
 
+**Hard-week ceiling**:
+The number of hard closed weeks a Block may reach before a light week is due, declared by the
+deload policy as `hard_weeks_ceiling`. Passing it without a Decision is a violation.
+_Avoid_: block length, deload interval, block rule
+
 **Set type**:
 What a prescribed or logged set is for: warm-up, working, activation or test. A rep-out is a
 working set with an open top, not a type; an activation set counts no hard set and yields no
 exposure; a test set is the heavy single the deload policy prescribes on a priority lift in the
 light week, never authored, whose result may become the training max.
 _Avoid_: set kind
+
+**Rep-out**:
+A working set with an open top (`8+`): as many reps as its RPE cap allows. The last set of a
+`wave_531` wave, dropped in a return week. A working set, not a set type.
+_Avoid_: AMRAP, max set, plus set
+
+**Test week**:
+The light week in which the deload policy tests priority lifts with a test set. Not a week kind
+of its own: the closed week is `light`, and it needs no override.
+_Avoid_: test block, peaking week, re-test week
 
 **Training max**:
 The load a percentage scheme takes its waves from. A Decision, or the line's start load until
@@ -130,14 +151,14 @@ _Avoid_: span, cycle
 The plan for one week: its rotation position, its overrides with their reasons, its status
 (approved, superseded) and its frozen prescriptions. It exists only once approved; before that
 there is only the Draft the agent is editing.
-_Avoid_: overlay, proposal, draft (that is the file, not the plan), one-off
+_Avoid_: overlay, proposal, draft (that is the file, not the plan)
 
 **Override**:
 A typed, reasoned departure from the program version's rule, scoped to a week, a planned session
 or a line, from a closed catalogue of kinds. A load appears in one only as the typed field of a
 pin, never in prose. A WeekPlan holds those that live for its span; an override Decision holds
 one line-scope kind for up to eight weeks and applies itself to every week in its span.
-_Avoid_: delta, tweak, adjustment, standing override (say "override Decision")
+_Avoid_: delta (fine as a flag param), tweak, adjustment, standing override (say "override Decision")
 
 **Recovery ceiling**:
 The lowest load or RPE a line may be set to on a date: a niggle's cap, the return band's cut,
@@ -165,7 +186,7 @@ _Avoid_: soft flag, notice, info
 
 **Acknowledgement**:
 The coach's typed reason for leaving a warning: the warning's key, the facts it stated when
-left, a reason category and free text. Lives on the WeekPlan for that week, or on a Decision
+left, a reason category and prose. Lives on the WeekPlan for that week, or on a Decision
 with an until date to outlast it. Never deleted.
 _Avoid_: resolution, dismissal, snooze, suppression
 
@@ -177,7 +198,7 @@ _Avoid_: scheduled session, instance
 **Prescription**:
 The derived numbers for one line of one planned session: sets, load, reps or range and RPE target,
 computed from the program version, history and overrides, and frozen into the WeekPlan at approval.
-_Avoid_: target, proposal, projection
+_Avoid_: target, proposal, projection (which is a routine body)
 
 **Prescribed set**:
 One set inside a prescription: its type, load, reps or range and RPE.
@@ -189,6 +210,33 @@ session, else in any session, else none and the start load stands. Light-week ex
 never anchors; return-week ones are.
 _Avoid_: baseline, last week, derived-from (fine as the field name)
 
+**Days off**:
+Per lift, the larger of the layoff and the lift's exposure age beyond its usual interval. Moved
+only by exposures, `no_training` spans, a trained-unlogged annotation or a hand-entered workout.
+Sets the return band.
+_Avoid_: gap, rest days, time away
+
+**Layoff**:
+The gap since the athlete's last lifting exposure of any kind, coach-led included. One input to
+days off; a whole-week layoff over 10 days makes the closed week `return`.
+_Avoid_: break (which is a week kind), absence, hiatus
+
+**Usual interval**:
+The median of a lift's last four gaps between exposures, clamped to 7 to 14 days. Exposure age
+beyond it counts as days off for that lift.
+_Avoid_: frequency, cadence (which is a slot's)
+
+**Return band**:
+The cut a line takes by its days off: none to 10, then load ×0.95, ×0.90 or ×0.85 with one
+working set fewer and an RPE cap, measured from the pre-layoff anchor. A safety bound no override
+waives; only the days off behind it move.
+_Avoid_: decay, return rule, layoff penalty
+
+**Reset**:
+The `linear` scheme's response to a second consecutive miss at one load: the load drops to
+`reset_factor` × the anchor load, rounded down to the rack. Recorded as a derivation step.
+_Avoid_: deload (which is a week), rollback, restart
+
 **Derivation step**:
 One recorded move of the rule on one line: which step, the value before, the value after and
 why. The ordered list of them is the whole explanation of a prescription.
@@ -196,8 +244,14 @@ _Avoid_: rationale, provenance, reason (which is an override's)
 
 **Week kind**:
 What a closed week counted as: light, return, break, minimum, one-off, hard, missed or partial.
-Derived by one precedence order, never stored.
+Derived by one precedence order, never stored. Light, return and missed close the Block, hard
+adds one to its count, the other four pause it. Illness is a status span, not a kind.
 _Avoid_: week type, week status
+
+**Paused week**:
+A closed week whose kind leaves the Block count where it was: break, minimum, one-off or partial.
+Not a kind itself.
+_Avoid_: skipped week, neutral week
 
 **Ordinary week**:
 A closed week the program ran as authored, however it went: hard, partial or missed. The unit
@@ -207,7 +261,25 @@ _Avoid_: normal week, regular week
 **Session gate**:
 Whether a trained core lifting session counted as training stress for the hard-week count: enough
 of its working sets logged, close enough to the prescribed effort. Not a measure of compliance.
-_Avoid_: compliance, completion
+_Avoid_: compliance, completion, hard-week gate (fine in prose for the same test)
+
+**Hit**:
+A set, or an exposure, that met its scheme's target: every working set at the authored reps at or
+under the authored RPE. The scheme moves the dose on a hit and holds otherwise. A miss in this
+sense is a set short of its target, not the Miss noun (a planned session nobody trained).
+_Avoid_: success, pass (which is the gate's), completed
+
+**Adherence**:
+Trained over planned core sessions, summed across the last four ordinary closed weeks within the
+trailing eight: `ok` at 80 % or more, `watch` under 80 %, `low` under 70 %, `insufficient` with
+fewer than four ordinary weeks. The edges are the adherence floors.
+_Avoid_: compliance, consistency, adherence rate
+
+**Block boundary**:
+The check-in whose closed week ends the Block (light, return or missed), or the adoption of a
+redesign version. Where `coach progress` is read, cadence signals are raised and the `program`
+skill runs.
+_Avoid_: end of block, mesocycle end, block reset
 
 **Approval**:
 The athlete's recorded yes to one WeekPlan, by id, given at the prompt for the one write that
@@ -220,12 +292,24 @@ and the version of each routine touched. Shown with the dry run, handed back to 
 refused when anything underneath it has moved.
 _Avoid_: approval hash, plan hash, expect-plan
 
+**Plan in force**:
+The approved WeekPlan that covers a date: the newest `approved` plan for that week. What routines
+are diffed against, what planned-session refs resolve against and what `query` reads when no
+Draft is named.
+_Avoid_: current plan, active plan, live plan
+
 ### Log
 
 **Workout**:
 What was logged on a date, imported from Hevy or entered by hand: raw facts, append-only, never
 deleted. A workout Hevy no longer has is tombstoned.
 _Avoid_: history entry, mirror, session (which is the template)
+
+**Manual workout**:
+A hand-entered Workout, source `manual`, recorded through a `[[workout]]` record when Hevy has
+nothing for the day: Hevy off, or a session reported and not logged. Never sent to Hevy; may carry
+no sets, only minutes and session RPE.
+_Avoid_: offline workout, fake workout, synthetic workout
 
 **Logged set**:
 One raw set in a workout, as recorded.
@@ -271,8 +355,14 @@ A dated span of ill, injured, travel or no-training, open-ended allowed, withdra
 _Avoid_: status day, availability, wellness day
 
 **e1RM**:
-Estimated one-rep max from a qualifying exposure. Recomputed from exposures, never stored.
+Estimated one-rep max from the best qualifying set in the 42 days before a date, exercise-wide.
+Recomputed from exposures, never stored.
 _Avoid_: training max (a Decision), strength estimate
+
+**Qualifying set**:
+A working set e1RM may be read from: 12 or fewer reps to failure, counted as reps plus 10 minus
+RPE. A set past that is too far from failure to estimate.
+_Avoid_: valid set, countable set
 
 **Cadence signal**:
 A block-boundary reading, per exercise, of whether its progression is moving too slowly or too
@@ -325,10 +415,21 @@ The span a check-in reviews: from the day after the previous check-in's window t
 One longer than the first return band makes the check-in a catch-up.
 _Avoid_: period, gap
 
+**Catch-up**:
+A check-in whose window is longer than 10 days. Derived from the window, never stored; its deep
+tier is deferred to the next check-in.
+_Avoid_: late check-in, backlog, missed check-in
+
+**Card**:
+The check-in's opening view: the fields `checkin open` prefills from the store at a date and the
+questions it leaves for the athlete, in a fixed order. A pure function of the store, never
+stored; the `check-in` skill carries none of it.
+_Avoid_: form (which is a Draft), questionnaire, check-in (which is the event)
+
 **Coach's read**:
 The coach's own prose in a check-in: voice, never data. Shown verbatim beside the generated
 facts and never parsed.
-_Avoid_: summary, assessment, narrative
+_Avoid_: summary (fine as the `--summary` flag and the publish column), assessment, narrative
 
 **Athlete note**:
 Something the athlete said at a check-in, kept verbatim with the date and, when it is about one
@@ -360,14 +461,30 @@ and any rehab session it carries.
 _Avoid_: injury (which needs a professional), issue, pain entry
 
 **Follow-up**:
-Something to revisit on a date, with the events that kept (the first one raises it), deferred,
-resolved or dropped it.
+Something to revisit on a date, with its events: kept (the first, with the first due date, is
+what raises it), deferred, resolved or dropped.
 _Avoid_: todo, reminder, action item
 
 **Observation**:
 A pattern the coach has noticed about the athlete, dated, with the evidence that raised it,
 confirmed by the athlete and retired with a reason when it stops holding.
 _Avoid_: coach's note, note, insight
+
+**Supersede**:
+How a current record is replaced by a newer one on the same subject: the old row's status becomes
+`superseded` and points at its successor; nothing is deleted. WeekPlans, check-ins, Goals and
+Decisions supersede.
+_Avoid_: replace, overwrite, update in place
+
+**Withdraw**:
+How an annotation, a reading or a status span stops applying: a later row withdraws it and reads
+skip it; the row stays. A tombstone is never withdrawn.
+_Avoid_: delete, revoke, undo
+
+**Retire**:
+How an open thing ends with a reason: a Decision, an Observation, a niggle's rehab session or a
+Hevy routine. Retired in place, never deleted.
+_Avoid_: close (which is a week's), archive, remove
 
 **Short-sleep week**:
 The fatigue trigger read from Sleep nights: too many short nights in the week before a check-in.
@@ -377,8 +494,8 @@ _Avoid_: sleep trigger, poor sleep
 ### Kit and loads
 
 **Exercise**:
-A library entry a line references: name, Hevy template id, load mode, muscles and movement
-pattern.
+A library entry a line references: name, load mode, equipment kind, movement pattern, muscles,
+the Hevy template columns and where the row came from (catalogue, Draft or record).
 _Avoid_: movement, lift (fine in prose, not as the noun)
 
 **Equipment**:
@@ -392,15 +509,15 @@ _Avoid_: gym (fine in prose), venue, site
 
 **Rack**:
 The enumerated loads one implement can be set to at a location. At a plate-pool location every
-implement is a rack, read from the location's kit tables; at a grid location only a listed
-dumbbell or kettlebell set is.
+implement is a rack, read from the location's kit tables; at a grid location an implement is a
+rack only when its table lists one, else it follows an increment rule.
 _Avoid_: grid (which is an increment rule, not a list), inventory
 
 **Kit tables**:
 The achievable loads per implement that plate-pool generates from an inventory, committed in the
 instance beside it and read by the engine as the rack of a plate-pool location. Stale when the
 inventory has changed since they were generated.
-_Avoid_: snapshot, achievable.json (fine in prose, not as the noun)
+_Avoid_: snapshot, kit snapshot, achievable.json (fine in prose, not as the noun)
 
 **Inventory**:
 The athlete's plates, locking hardware and implements at one plate-pool location, written in
@@ -423,7 +540,7 @@ _Avoid_: apparatus, equipment item
 A load the athlete will not go above on one exercise, agreed as a Decision with a reason. It
 truncates the rack, so no derived load crosses it. Not a kit limit, which is whatever the rack
 can build, and not a niggle's cap, which lives and dies with the niggle.
-_Avoid_: cap, max
+_Avoid_: cap (fine as the field suffix in `load_cap`, `rpe_cap`, `activity_cap`; not as this noun), max
 
 **Activity cap**:
 An agreed weekly or single-bout limit on one activity kind (distance or minutes), recorded as a
@@ -447,14 +564,32 @@ Hevy's own object for a session. The engine projects into it and never owns its 
 _Avoid_: hevy session, remote routine
 
 **Routine map**:
-The stored link from a session to a Hevy routine id and its status (active, retired, missing),
-recorded only after a verified write.
-_Avoid_: routine ids, mapping table
+The stored link from a session to a Hevy routine id and its status: active, retired, missing
+or unverified. Written by `plan apply` after a verified write, left `unverified` when the
+read-back failed so a re-run sends only those, and flipped to `missing` by import.
+_Avoid_: routine ids, mapping table, routine status
 
 **Spare routine**:
 A retired routine, renamed and moved to the Retired folder, that a later session may take over.
 Hevy cannot delete a routine, so nothing is ever removed.
 _Avoid_: deleted routine, unused routine, temporary routine
+
+**Folder**:
+One of three Hevy routine folders the engine keeps: Program (the version's sessions), Standing
+(standing, daily and niggle-carried sessions) and Retired (spare routines). Created by
+`plan apply` on first need, mirrored at import, never renamed or deleted.
+_Avoid_: group, category, program folder (say Program)
+
+**Routine projection**:
+The routine body the engine builds from a session and its frozen prescriptions: what `plan apply`
+sends and what the dry run diffs offline against the stored copy.
+_Avoid_: routine content, payload, rendered routine
+
+**Mirror**:
+The store's copy of what Hevy returned (workouts with their raw payload, routines, folders,
+templates), upserted at import, never deleted and never edited. What every Hevy-facing read is
+built on.
+_Avoid_: cache, snapshot, sync table
 
 **Tombstone**:
 The record that Hevy stopped returning a workout (`gone`) or returned it again (`back`). The
@@ -486,6 +621,12 @@ an existing one. Disposable; nothing reads it after the verb takes it, and no ve
 current one: a read names the file by path or reads the plan in force.
 _Avoid_: proposal, overlay, working file, input file
 
+**Draft hash**:
+The hash of a Draft file a verb stores beside what it wrote. An identical hash on a second call
+returns the same rows and ids and writes nothing; a differing hash does what the record's spec
+says.
+_Avoid_: idempotency key, checksum, file hash (fine in prose)
+
 **Envelope**:
 The one JSON document a verb prints: whether it succeeded, its result or error, and any warnings.
 _Avoid_: response, output, payload
@@ -498,7 +639,7 @@ _Avoid_: status, error level
 **Writing verb**:
 A verb that changes something outside the engine's own store: Hevy, or git. The only kind of verb
 a permission prompt attaches to; each has a dry run. Four in v1.
-_Avoid_: gated command, mutation
+_Avoid_: gated command, mutation, asked verb (the same four, seen from the prompt)
 
 **Dry run**:
 A writing verb run without writing, returning what it would send and whether a guard would refuse
@@ -516,10 +657,26 @@ The agent filters by naming the view and its parameters, never by reshaping anot
 _Avoid_: query (the verb that runs one), report, filter
 
 **Record kind**:
-One typed table a ledger Draft may carry: a niggle event, a follow-up event, a decision, an
-annotation, a note, a workout, a reading, a status span, an exercise edit, an observation. One
+One typed table a ledger Draft may carry, twelve in v1: niggle, followup, decision, annotation,
+note, workout, weigh_in, sleep_night, activity, status_span, exercise and observation. One
 registry of kinds serves every verb that records.
 _Avoid_: entry type, event type, table
+
+**Registry**:
+A code table of named kinds the engine declares once: schemes, flags, record kinds, read views,
+phase kinds, week kinds, equipment kinds. Every CHECK list in the schema equals one,
+`coach schema --registry` prints it, and a contract test keeps them equal.
+_Avoid_: enum, lookup table, config
+
+**Catalogue**:
+The exercise library the engine ships as `catalogue.jsonl`: rows `init` seeds into a new store
+and `upgrade` adds to an existing one without touching rows it already has.
+_Avoid_: built-in library, defaults, seed (fine as the verb)
+
+**Library**:
+The instance's `exercise` table: the catalogue rows plus every Exercise declared in a program
+Draft or an `[[exercise]]` record. The one place a line's exercise resolves.
+_Avoid_: exercise list, catalogue (which is the shipped seed), database (which is the store)
 
 **Ref**:
 A typed text pointer to one record, written as its kind and id, used where one field may point
@@ -535,6 +692,13 @@ _Avoid_: digest, overview
 The coaching half of one moment in the loop: what to ask the athlete, what to judge and how to
 explain, naming the verbs it uses and never their order. The procedure those verbs run is theirs.
 _Avoid_: command, workflow, playbook, procedure
+
+**Contract test**:
+A test that the engine's declarations and documents agree: verb declarations against `--help` and
+`coach schema`, `schema.sql` against the SQL in `schema.md`, CHECK lists against registries,
+`rn:` refs against note headings, skill files against their verb lists and size. The only tests
+that open a document, and they never read what it says.
+_Avoid_: doc test, integration test, snapshot test
 
 **Rendered page**:
 A markdown file the engine writes from the store for the athlete to read: the weekly sheet, a
@@ -557,7 +721,7 @@ _Avoid_: workspace, data repo, my-training
 **Export**:
 The text copy of the store that git commits: one sorted file per table and a manifest, written
 whole at every publish and read only to rebuild the store.
-_Avoid_: backup, dump, mirror, snapshot (which is Hevy's)
+_Avoid_: backup, dump, mirror (which is the store's copy of Hevy), snapshot
 
 **Schema version**:
 The one number that says which shape of the store an instance's database and export are in.
@@ -580,3 +744,8 @@ engine's own store functions and `publish`, sized to overflow every list a defau
 truncates. Holds no real athlete data and proves the engine's own behaviour, never its likeness
 to anything that came before.
 _Avoid_: parity fixture, golden instance, anonymised slice
+
+**Scratch instance**:
+A throwaway instance the athlete makes by hand to rehearse the cutover Draft before the real one.
+Never committed and never a test.
+_Avoid_: test instance, staging, sandbox
