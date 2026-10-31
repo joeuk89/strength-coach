@@ -363,17 +363,19 @@ CREATE TABLE niggle_event (                -- status in force is the latest even
   recorded_at TEXT NOT NULL
 );
 
-CREATE TABLE niggle_constraint (           -- each event carries the whole set in force from its date
-  id          TEXT PRIMARY KEY,
+CREATE TABLE niggle_constraint (           -- each event carries the whole set in force from its date;
+  id          TEXT PRIMARY KEY,            -- binds under every status but 'resolved' (prescription.md)
   event_id    TEXT NOT NULL REFERENCES niggle_event(id),
   kind        TEXT NOT NULL CHECK (kind IN ('rpe_cap','load_cap','no_added_load','avoid')),
   exercise_id TEXT REFERENCES exercise(id),
   pattern     TEXT,
   value       REAL,                        -- the RPE or the load in athlete units
-  CHECK (kind <> 'rpe_cap' OR value IS NOT NULL),
-  CHECK (kind <> 'load_cap' OR (value IS NOT NULL AND exercise_id IS NOT NULL)),
+  CHECK (exercise_id IS NULL OR pattern IS NULL),
+  CHECK ((kind IN ('rpe_cap','load_cap')) = (value IS NOT NULL)),
+  CHECK (kind <> 'load_cap' OR (exercise_id IS NOT NULL)),
   CHECK (kind <> 'avoid' OR ((exercise_id IS NULL) <> (pattern IS NULL)))
 );
+-- a 'resolved' niggle_event carries no niggle_constraint rows: checked by `record`, not the DDL
 
 CREATE TABLE follow_up (
   id TEXT PRIMARY KEY, raised TEXT NOT NULL, text TEXT NOT NULL,

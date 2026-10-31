@@ -20,7 +20,7 @@ on one plan.
 
 | Scope | Kind | Params | Effect |
 | --- | --- | --- | --- |
-| week | `light_week` | `type = "deload" \| "light"` | the deload policy's cut (two-thirds of the sets; loads −10 % or held; RPE 6 or ≤ 8); ends the block |
+| week | `light_week` | optional `set_cut_pct`, `load_cut_pct`, `rpe_cap`, each restating the version's `[deload]` value for this week | the light cut on every lifting line (`prescription.md`); ends the block |
 | week | `minimum_week` | `keep = [session ids]`, at most two | every other planned session is dropped by derivation; pauses the hard count |
 | week | `one_off_week` | `location` optional | a travel or kit-constrained week; every session relocates when `location` is given; pauses the hard count |
 | session | `move_session` | `to` date inside the week | the planned session moves; a move outside the week is a `drop_session` |
@@ -56,7 +56,7 @@ Scope is given by which refs are present: none for the week, `session`, or `sess
 ```toml
 [[override]]
 kind = "light_week"
-type = "deload"
+load_cut_pct = 10                      # the version's policy holds load; drift says take some off
 because = "fatigue"
 text = "Sixth hard week and the squat drifted two sessions running."
 
@@ -149,7 +149,8 @@ text = "The hamstring is resolved; the run cap goes with it."
   block reset Decision: the Block closes by derived week kind (`light`, `return`, `missed`;
   `week.md`) or by a `redesign` version (ADR 0015).
 - **Niggle constraints.** A niggle's load constraint (a cap, no added load, avoid an exercise or
-  pattern) lives on the Niggle record and binds while its status says so (ADR 0010). A limit
+  pattern) lives on the Niggle record as the latest event's constraint rows, binding under every
+  status but `resolved`; relaxing one is an event listing the smaller set (`prescription.md`). A limit
   the athlete wants to outlive the niggle is a `safety_ceiling` with that reason, and the niggle
   closes. An `avoid` constraint removes or swaps the line by derivation, so `drop_line` is for
   schedule, kit and time.
@@ -172,10 +173,11 @@ Every override and Decision carries `because`, `text` and `evidence`:
 ## Precedence and conflicts
 
 - At most one override per kind per scope on one WeekPlan.
-- At most one of `light_week`, `minimum_week`, `one_off_week` per WeekPlan. Where the week kind
-  falls among a `no_training` status span, these overrides, a layoff and an illness is the
-  `prescription.md`'s week-kind table, as is the per-line order of scheme, override, week
-  transform, constraints, ceilings and rounding (ADR 0017).
+- At most one of `light_week`, `minimum_week`, `one_off_week` per WeekPlan. `minimum_week` and
+  `one_off_week` choose which sessions derive and where, and cut nothing; `light_week` is the
+  light cut on every line whose lift is not in a return band. The order of scheme, override,
+  cut, constraints, ceilings and rounding is `prescription.md`'s (ADR 0017).
+- No override waives a return band (ADR 0005): the band moves only with days off.
 - `drop_session` and `drop_line` beat every other override on their scope.
 - `pin_load` obeys every recovery ceiling: it can lower a load, never lift one above the ceiling.
 - The plan's override beats an override Decision of the same kind on the same line.
@@ -220,7 +222,7 @@ Rows in `validation.md`'s registry:
 | --- | --- | --- | --- |
 | `override_conflict` | violation | line, session, week | the two kinds |
 | `override_persisting` | warning (plan) | line | kind, weeks, plan ids |
-| `light_week_type_off_trigger` | warning (plan) | week | proposed type, chosen type, triggers |
+| `light_week_shape_off_trigger` | warning (plan) | week | proposed shape, the plan's shape, triggers |
 | `light_week_unprompted` | warning (plan) | week | hard-week count, ceiling |
 | `minimum_week_floor` | warning (plan) | week | priority lift, kept sessions |
 | `activity_cap_exceeded` | warning (outside a plan, no acknowledgement; history) | week | cap, observed, activity refs |
@@ -233,7 +235,7 @@ without it the only lawful input is that typed field, so no other code exists fo
 ## Handed to other tickets
 
 - **Weekly prescription** (#26, settled in `prescription.md`): the week-kind precedence, the
-  per-line order of modifiers (ADR 0017), a held line still takes the week transform.
+  per-line order of modifiers (ADR 0017), a held line still takes the cut.
 - **Scheme registry** (#28, settled in `program.md`): `wave_531` is the one v1 scheme that declares `training_max`.
 - **Schema** (settled in `schema.md`): `override` rows on the WeekPlan (kind, `session_id`,
   `exercise_id`, params, reason triple), the `decision` table with kind, `session_id` and

@@ -121,14 +121,14 @@ not fit (next section).
 | Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
 | Scheme adopt fills | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods` |
 | Stall signal | reps at the target RIR flat across the muscle's lines | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
-| Deload | cut sets 30–50 %, hold load and RIR | hold intensity, cut sets; a **test** set type (heavy single or AMRAP) on priority lifts in the last week sets the next block's training max | no planned deload | §6, evidence that intensity is held |
+| Deload | `set_cut_pct` 40, `load_cut_pct` 0, `rpe_cap` 8: cut sets, hold load | `set_cut_pct` 30, `load_cut_pct` 0, `rpe_cap` 8; `test_priority_lifts` prescribes a **test** single on each priority lift in the light week, whose result may become the next block's training max | no planned deload | §6, evidence that intensity is held; the percentages are this framework's defaults |
 | Order | free; chosen for fatigue and preference | priority lift first in its session | as the Goal | §7, evidence |
 | Rest | 1.5–3 min | 2–5 min | as the line's load | §9, evidence; rest follows load, not goal |
 
 Two rules that follow:
 
 - A `hypertrophy` version with priority lifts gets the hypertrophy column everywhere except on
-  the priority lifts, which get the middle column, including the test set in the deload week.
+  the priority lifts, which get the middle column, including the test single in the light week.
 - `linear` and `wave_531` are never filled. `linear` is the novice pace and no level is stored
   (ADR 0014); a coach names it, or moves a lift to it on `cadence_fast`. `wave_531` is the
   answer to `cadence_slow` on a `top_backoff` lift. Whether a dumbbell rack's steps are too
@@ -304,8 +304,9 @@ holds.
 Goal `hypertrophy`, priority lifts bench and strict pull-up, milestones as in the Draft above,
 Phase `maintenance` until coach's call. Program version 1 adopts with emphasis `hypertrophy`;
 adopt fills double progression at RIR 3→1 and 10 sets per muscle on every line, a top set plus
-back-offs and 8 sets per week on bench and the pull-up, a 30–50 % set cut with a test set on both
-in the deload week, and warns `priority_lift_not_first` if the pull-up sits after rows. At the
+back-offs and 8 sets per week on bench and the pull-up, a 40 % set cut with load held and a test
+single on both in the light week, and warns `priority_lift_not_first` if the pull-up sits after
+rows. At the
 first block boundary `coach progress` shows bench e1RM over the block, the pull-up's best reps,
 dose by muscle, the flat bodyweight trend, and no cadence signal; the `program` skill proposes
 block 2. Two blocks later a `cadence_slow` on bench, its `may_schemes` naming `wave_531`, is

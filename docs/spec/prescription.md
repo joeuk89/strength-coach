@@ -8,9 +8,9 @@ Nouns are in `GLOSSARY.md`.
 
 The shape in one paragraph: for every line of every planned session, `prescribe` picks one
 **anchor exposure**, lets the line's scheme move the dose from it, applies the plan's line
-override and any override Decision in force, applies **one** week-kind transform, then the
-niggle constraints, the RPE ceilings, the safety ceiling and the rack, and finally derives the
-warm-ups. Each step is recorded as a **derivation step** (step, from, to, cause), so the agent
+override and any override Decision in force, applies **one** cut (the return band or the light
+cut), then the niggle constraints, the RPE ceilings, the safety ceiling and the rack, and finally
+derives the warm-ups. Each step is recorded as a **derivation step** (step, from, to, cause), so the agent
 reads why a line landed where it did instead of a prose rationale. The rule never writes a
 number the agent did not ask for: it holds and warns where the old engine guessed.
 
@@ -20,8 +20,9 @@ Per line, in this order:
 
 1. The newest Exposure of the line's exercise **in the same session id**, skipping any
    exposure matched to a planned session in a `light_week` (deload logs are never a baseline).
-   A return-week exposure is kept: the return week's logs are the baseline for the week after
-   (ADR 0005: no 43+ re-test rule).
+   A return-week exposure is kept, including one from a line that took the return band inside
+   a light week: the return week's logs are the baseline for the week after (ADR 0005: no 43+
+   re-test rule).
 2. If none in the last 90 days: the newest exposure of the exercise in **any** session (a
    redesign with new session ids, a swap, a new line of an exercise already trained).
 3. If none: the line's `start_load` (or the `swap_exercise` override's) and the scheme's
@@ -39,7 +40,10 @@ warns `offgrid_anchor_ignored` naming both. A historical load never defines the 
 **Days off per lift** = `max(layoff, exposure age − usual interval)`, where the layoff is the
 gap since the last lifting exposure of any kind (coach-led counts), the usual interval is the
 median of the lift's last four gaps clamped to 7–14 days, and 10 days of grace apply before a
-lift counts as decayed. `no_training` status spans count as days off.
+lift counts as decayed. `no_training` status spans count as days off. A `trained_unlogged`
+Annotation on a planned session, or a hand-entered Workout with no sets (`week.md`), counts as a
+lifting exposure **date** for every line of that session: it resets the layoff and those lifts'
+exposure age, carries no load and never anchors. Nothing else moves days off.
 
 **What the hit test compares against.** `prescribe` cannot see any WeekPlan (ADR 0005), so a
 scheme judges the anchor against the **program version's authored** reps, range and RPE for the
@@ -55,7 +59,7 @@ line, as amended by an override Decision in force on the exposure's date. A past
 Every step in load is at most **one rack row** on the session location's rack for the
 exercise's equipment kind (grid increment at a grid location). No scheme has an `increment`.
 No scheme changes the set count: sets come from the version, a `restate_sets` override or the
-week transform.
+cut.
 
 | Scheme | Reads from the anchor | Hit | Move on a hit | Under | Over |
 | --- | --- | --- | --- | --- | --- |
@@ -75,8 +79,8 @@ Notes:
   only a recovery ceiling or the window expiring lowers it.
 - With no next rack row (a band at the top of its ladder, a dumbbell rack's heaviest pair) a
   hit holds and the step records `cause = rack_top`; the agent swaps or the version changes.
-- A `test` single (`program.md`) is prescribed only in a deload week, below.
-- A `hold` override replaces the scheme's move only: the week transform, constraints and
+- A `test` single is never authored; the deload policy prescribes it in a light week, below.
+- A `hold` override replaces the scheme's move only: the cut, constraints and
   ceilings still apply to a held line.
 - Conditioning sessions carry a session scheme and read the last matched Activity:
   `emom_density` at or under `rpe_target` → `minutes + minutes_step` up to `minutes_cap`, then
@@ -106,47 +110,66 @@ is fatigue, not a stall, and is the deload policy's.
 ADR 0017. Each step runs once, in this order, and records `(step, from, to, cause)` on the line
 when it changed anything. No step may raise a load a previous step lowered.
 
+Before any line derives, the plan's week override and the status spans choose **which sessions
+derive and where**: a `no_training` span covering the whole week plans nothing (`week.md`'s
+`break`); a `minimum_week` override derives only the kept sessions; a `one_off_week` override
+with a `location` derives every session there. These choose sessions, never numbers: a kept
+session in a minimum week still takes its return bands, illness caps and niggle constraints.
+
 | # | Step | Reads | Does |
 | --- | --- | --- | --- |
 | 1 | `scheme` | the anchor, the version's line | the move above |
 | 2 | `override` | the plan's line override | `swap_exercise` re-runs step 1 on the other exercise; `pin_load` replaces the working load (grid and ceilings still apply); `hold` repeats the anchor's dose; `restate_sets` replaces the set groups; `drop_line` ends the line |
 | 3 | `decision` | override Decisions in force on the planned date | the same kinds; the plan's override wins on the same kind and line |
-| 4 | `week` | the week kind | exactly one of: the return band, the deload cut, the light cut, nothing (below) |
+| 4 | `cut` | the lift's days off, the plan's `light_week` override | exactly one of: the return band, the light cut, nothing (below) |
 | 5 | `niggle` | open Niggles | constraints, strictest binds (below) |
-| 6 | `rpe_ceiling` | the week kind, illness, niggle caps | every capped set's load limited through the e1RM model (below) |
+| 6 | `rpe_ceiling` | the return band, the light week's `rpe_cap`, illness, niggle caps | every capped set's load limited through the e1RM model (below) |
 | 7 | `rack` | the location's rack, a `safety_ceiling` Decision | the safety ceiling truncates the rack; the load rounds to a row (ADR 0008: nearest by direction; a cut rounds to the nearest row no heavier than its target) |
-| 8 | `warm_up` | the working load | the ADR 0008 ladder (fewest plates within −10 % of target) |
+| 8 | `warm_up` | the first working set's load | the registry ramp, then the ADR 0008 ladder (below) |
 
 Ceilings never compose: a load cap from a niggle, a safety ceiling, an illness RPE cap, the
 light week's RPE ceiling and a `pin_load` all bind by `min`. A step that found a stricter
 ceiling already binding records `cause = not_binding`.
 
-### Week kind
+### The cut
 
-Derived inside `prescribe` from the plan's week override, the status spans and the days off,
-in one precedence order; the first that holds names the week:
+Step 4 applies exactly one cut per lifting line, the first that holds:
 
-| Order | Kind | Holds when | Transform on every lifting line |
+| Order | Cut | Holds when | Does |
 | --- | --- | --- | --- |
-| 1 | `break` | a `no_training` span covers the whole week | no session is planned |
-| 2 | `light` | a `light_week` override | type `deload`: two-thirds of each working group's sets (rounded, min 1), loads −10 % from the anchor, every set RPE 6, rep-outs closed. Type `light`: two-thirds of the sets, loads held, RPE ≤ 8 |
-| 3 | `minimum` | a `minimum_week` override | the kept sessions derive as normal; the rest are dropped |
-| 4 | `one_off` | a `one_off_week` override | every session at the named location; otherwise as normal |
-| 5 | `return` | days off for the lift > 10 | the return band, below |
-| 6 | `illness` | an `ill` span since the line's anchor and no exposure since it ended | no cut; RPE 7 on every set of the line (step 6) |
-| 7 | `hard` | otherwise | none |
+| 1 | the return band | the lift's days off > 10 | the band, below |
+| 2 | the light cut | the plan carries `light_week` | `set_cut_pct` off each working group's sets (rounded, min 1), `load_cut_pct` off the working load step 1 produced, rep-outs closed; the policy's `rpe_cap` is a ceiling in step 6 |
+| 3 | none | otherwise | |
+
+The return band wins because it is measured from the pre-layoff anchor; a light cut on top of it
+is the #257 shape (ADR 0017, amended). A line that took the return band inside a light week is a
+return line: its exposure anchors next week, where a light-week exposure would not.
+
+The light cut's shape is the version's `[deload]` table (`set_cut_pct`, `load_cut_pct`,
+`rpe_cap`; `program.md`, filled from the emphasis), as restated for the week by the `light_week`
+override (`overrides.md`). The load cut multiplies the working load step 1 produced (the anchor's
+move, the `top_backoff` top, the wave loads of the training max), so it is defined for every
+scheme, and back-offs follow their top; at 0 the load is held. A `hold` line is cut like any
+other (ADR 0017).
+
+Illness is not a cut and not a week kind here: an `ill` span since the line's anchor with no
+exposure since it ended caps every set of the line at RPE 7 in step 6, where it binds by `min`
+with the other ceilings.
 
 The closed week's kind for the Block's count (light, return, break, minimum, one_off, hard,
-missed, partial) is `week.md`'s read after the fact; this table is the prescribing read.
-`return` and `illness` are per line here (days off and illness are per lift); the others are per
-week. `week.md`'s `return` is the athlete's whole-week layoff, and illness is no closed-week
-kind at all.
+missed, partial) is `week.md`'s read after the fact. `week.md`'s `return` is the athlete's
+whole-week layoff; the band here is per lift.
 
 ### The return band
 
 Days off per lift as above. The cut is measured from the **lower** of the scheme's proposal and
 the anchor's load, so a return week never carries a progression, and from the pre-layoff
 anchor only: the week after derives from the return-week exposure by the ordinary scheme.
+
+The band is a safety bound (ADR 0005, amended): no override waives or softens it, and `pin_load`
+lowers only. The one lawful route is the fact behind it: days off, which a `trained_unlogged`
+Annotation or a hand-entered Workout moves (above). `restate_sets` may still change the set
+groups of a return line, and the band's set delta then applies to the restated groups.
 
 | Days off | Load | Working sets | RPE cap |
 | --- | --- | --- | --- |
@@ -161,37 +184,54 @@ return week only, with no rep-out set. A return line whose band, load, set delta
 not all derive together (an override fought the band) is `return_band_disagrees`.
 
 Illness alone (gap ≤ 10 days) is not a cut: the RPE 7 cap is the whole return. Illness with
-days off > 10 is a return week with the cap at 7.
+days off > 10 is a return line with the cap at 7.
 
 ### Niggle constraints
 
-Four kinds on the Niggle record (`niggle_constraint` rows per event, `schema.md`), binding while the
-niggle's status says so (ADR 0010); the strictest across every open niggle binds:
+Four kinds on the Niggle record (`niggle_constraint` rows per event, `schema.md`). The set in
+force is the latest event's rows, whatever its status short of `resolved`: `reported`,
+`aggravated`, `easing` and `chronic` all bind, and relaxing a constraint is an event that lists
+the smaller set, never a status change. A `resolved` event carries no rows. The strictest across
+every open niggle binds:
 
-| Kind | Does |
-| --- | --- |
-| `rpe_cap` | caps every set's RPE; a load limit follows in step 6 |
-| `load_cap` | caps the working load, athlete units |
-| `no_added_load` | caps the working load at the anchor's top load; a floor on assistance |
-| `avoid` | an exercise id or a movement pattern: the line is dropped by derivation |
+| Kind | Scope | `value` | Does |
+| --- | --- | --- | --- |
+| `rpe_cap` | global (no exercise, no pattern), one exercise, or one pattern | the RPE, required | caps every set's RPE; a load limit follows in step 6 |
+| `load_cap` | one exercise only | the load in athlete units, required | caps the working load |
+| `no_added_load` | global, one exercise, or one pattern | none | caps the working load at the anchor's top load; a floor on assistance |
+| `avoid` | exactly one of exercise, pattern | none | the line is dropped by derivation |
+
+Every row names at most one of `exercise_id` and `pattern`; `schema.md`'s CHECKs are this table.
 
 A line over a constraint is `recovery_ceiling_exceeded` naming the niggle; so is a `pin_load`
 above one.
 
 ### RPE ceilings
 
-Every set under a cap (the return band's, the light week's, illness, a niggle's `rpe_cap`) has
+Every set under a cap (the return band's, the deload policy's `rpe_cap` in a light week, illness,
+a niggle's `rpe_cap`) has
 its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down. A set whose implied
 reps to failure would exceed 12 has its reps cut to fit the model. With no usable e1RM the load
 is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`.
 
 ### The test set
 
-In a `light_week` of type `deload`, when the version's deload policy has `test_priority_lifts`,
-a priority lift under `top_backoff` or `wave_531` is prescribed one `test` single at
-`load_for(e1RM, 1, 9)` rounded down, before its working groups under the deload cut. The rule
-writes nothing from the result; the agent reads it at the block boundary and records a
-`training_max` Decision if the lift moves to `wave_531`.
+In a `light_week`, when the version's deload policy has `test_priority_lifts`, a priority lift
+under `top_backoff` or `wave_531` is prescribed one `test` single at `load_for(e1RM, 1, 9)`
+rounded down, before its working groups under the light cut. This is the only `test` set there
+is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
+`working` single. The rule writes nothing from the result; the agent reads it at the block
+boundary and records a `training_max` Decision if the lift moves to `wave_531`.
+
+### Warm-ups
+
+Step 8 derives each `warm_up` group's target as a percentage of the line's first working set's
+load after step 7 (the `top_backoff` top, the first wave load, a pinned load), from the registry
+ramp: one warm-up 60 %; two 50, 75; three 40, 60, 80; four or more spread evenly from 40 to 80.
+Reps are the group's own. Each target then takes the ADR 0008 ladder: the row with the fewest
+plates per side from 10 % under the target up to it, never above, ties lighter, then the row
+whose plates contain the previous warm-up's. The ramp is this framework's heuristic, cited to no
+source, and lives in the registry without an `rn:`.
 
 ## No last week
 
@@ -230,7 +270,7 @@ Home rack rows are plate-pool's; the barbell row above 120 is 125 and the row be
 
 **Squat, `double_progression`, 4×6–8 @8, anchor 120.** Logged 8, 8, 8, 8 at RPE 7.5, 8, 8, 8:
 every set at the top of the range at or under 8. Steps: `scheme 120 → 125 (hit)`, `rack 125
-(row)`, `warm_up 60, 95`. Change `4×6–8 @8: 120 → 125`. Logged 8, 8, 7, 6 instead: under, hold at
+(row)`, `warm_up 60, 90` (ramp 62.5 and 93.75, laddered). Change `4×6–8 @8: 120 → 125`. Logged 8, 8, 7, 6 instead: under, hold at
 120, no flag. Logged 8, 8, 8, 8 with the last at RPE 10: over, hold, `rep_range_missed`.
 
 **Bench, `linear`, 4×5 @8, anchor 120.** Week 1 logged 5, 5, 5, 4: one miss, hold at 120.
@@ -240,13 +280,14 @@ count restarts when an exposure at 107.5 is logged; a second reset within two bl
 `cadence_slow` at the boundary.
 
 **Assisted pull-up, `assistance_ladder`, rungs 60…0, 4×8 @8, on rung 40, after 25 days off.**
-Band 22–42: two rungs back to 60, sets 4 → 3, RPE ≤ 8. Steps: `week rung 40 → 60 (return
-22–42, 25 days off)`, `week sets 4 → 3`, `rpe_ceiling 8`. Change `4×8 @8 rung 40 → 3×8 @≤8 rung
+Band 22–42: two rungs back to 60, sets 4 → 3, RPE ≤ 8. Steps: `cut rung 40 → 60 (return
+22–42, 25 days off)`, `cut sets 4 → 3`, `rpe_ceiling 8`. Change `4×8 @8 rung 40 → 3×8 @≤8 rung
 60`. The week after derives from this exposure: a hit at 60 moves to 50, not back to 40.
 
 ## Handed to other tickets
 
-- **Schema** (#29): the Niggle constraint field shapes; nothing else, since no derived value
-  is stored (ADR 0003). The derivation steps are frozen with the prescriptions at approval.
+- **Schema** (#29, #42): the Niggle constraint field shapes and the scope CHECKs above; nothing
+  else, since no derived value is stored (ADR 0003). The derivation steps are frozen with the
+  prescriptions at approval.
 - **Migration**: the old `linear` state (`misses`, `through`) is not migrated; the count derives
   from the imported exposures.

@@ -105,15 +105,18 @@ No `status`: a parked session is a Decision, not a field (ADR 0010).
 
 Set types:
 
-- `warm_up` groups carry `count` and `reps` only; their loads are derived from the working load
-  by the ADR 0008 ladder and never authored.
+- `warm_up` groups carry `count` and `reps` only; their loads are derived from the first working
+  set's load by the registry ramp and the ADR 0008 ladder (`prescription.md`, Warm-ups) and never
+  authored.
 - `working` is the default. Sets to failure are working sets; a rep-out is a working group with
   an open top.
 - `activation` is a real type: low load, counts no hard set, excluded from e1RM and from the
   working-set count. A line whose only groups are activation is valid and yields no Exposure
   (the old "warm-up with no working sets" problem, review "The data model").
-- `test` is a heavy single or an AMRAP that sets the next block's training max (a `training_max`
-  Decision, ADR 0016), allowed only under a scheme whose registry row permits it.
+- `test` is the heavy single the deload policy prescribes on a priority lift in the light week,
+  whose result the coach may record as the next block's training max (a `training_max` Decision,
+  ADR 0016). It is never authored: a `test` group in the Draft is `set_type_not_allowed`. A
+  weekly max attempt is a `working` single.
 
 Set structures (drop sets, rest-pause, myo-reps) are not in v1. The evidence puts them level with
 straight sets for growth and ahead only on time (`rn:progression-methods`), no source uses one
@@ -138,9 +141,14 @@ pull_up = 8
 
 [deload]
 hard_weeks_ceiling = 6   # the Block ceiling; was `blocks.hard_weeks_ceiling`
-set_cut_pct = 40
+set_cut_pct = 40         # off each working group's sets in the light week
+load_cut_pct = 0         # off the working load; the evidence keeps the load (rn:goal-programming §6)
+rpe_cap = 8              # ceiling on every set in the light week
 test_priority_lifts = true
 ```
+
+The three shape fields are the light cut `prescription.md` applies on every lifting line of a
+`light_week`; the override may restate any of them for one week (`overrides.md`).
 
 ### New exercises
 
@@ -202,10 +210,10 @@ catalogue).
 | --- | --- | --- | --- | --- |
 | `double_progression` | none | warm_up, working, activation | reps at target RPE on the line's exposures | `start_load` at the bottom of the rep range |
 | `linear` | `misses_before_reset`, `reset_factor` (registry defaults) | warm_up, working, activation | the last exposure's load and whether its sets were made | `start_load`, the authored sets |
-| `hold` | none | warm_up, working, activation, test | nothing; the authored numbers stand until an override or a new version | the authored sets, `start_load` where load-bearing |
+| `hold` | none | warm_up, working, activation | nothing; the authored numbers stand until an override or a new version | the authored sets, `start_load` where load-bearing |
 | `assistance_ladder` | `rungs` (assisted loads, descending), `reps`, `sets`, `rpe` | working | reps at RPE on the current rung | the first rung |
-| `top_backoff` | `top = { reps, rpe }`, `backoff = { sets, reps, pct_of_top }` | warm_up, working, test | e1RM from the line's exposures, RPE as a cap | `start_load` is the top set; back-offs derive from it |
-| `wave_531` | none; the registry holds the waves `[[65, 75, 85], [70, 80, 90], [75, 85, 95]]` of the training max at `5/3/1` reps, last working set open (`"5+"`, `"3+"`, `"1+"`) | warm_up, working, test | the current `training_max` Decision on the exercise and the last rep-out | `start_load` is the training max until a Decision exists |
+| `top_backoff` | `top = { reps, rpe }`, `backoff = { sets, reps, pct_of_top }` | warm_up, working | e1RM from the line's exposures, RPE as a cap | `start_load` is the top set; back-offs derive from it |
+| `wave_531` | none; the registry holds the waves `[[65, 75, 85], [70, 80, 90], [75, 85, 95]]` of the training max at `5/3/1` reps, last working set open (`"5+"`, `"3+"`, `"1+"`) | warm_up, working | the current `training_max` Decision on the exercise and the last rep-out | `start_load` is the training max until a Decision exists |
 
 `wave_531` is the slow strength cadence: the scheme the `program` skill names when `cadence_slow`
 fires on a `top_backoff` lift (`goals.md`, **Response to a cadence signal**). Adopt never fills
@@ -286,7 +294,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `start_load_missing` | line | above |
 | `start_load_off_rack` | line | above |
 | `no_working_sets` | line | zero working sets under a scheme that reads them (every scheme but `hold`) |
-| `set_type_not_allowed` | line | a `test` group, or any type, under a scheme whose row does not permit it |
+| `set_type_not_allowed` | line | any authored `test` group (the deload policy alone prescribes one), or a type the scheme's row does not permit |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011) |
 | `acknowledgement_unmatched` | version | an `[[acknowledge]]` key adopt did not raise |
 | `goal_missing` | version | no current Goal (`goals.md`) |
@@ -340,8 +348,8 @@ sat = "b-sat-push"
 sun = "b-sun-pull"
 
 # [dose] and [deload] left unsaid: adopt fills per_muscle = 10, lift targets of 8 for
-# bb_bench_press and pull_up, hard_weeks_ceiling = 6, set_cut_pct = 40,
-# test_priority_lifts = true, and shows them in the diff.
+# bb_bench_press and pull_up, hard_weeks_ceiling = 6, set_cut_pct = 40, load_cut_pct = 0,
+# rpe_cap = 8, test_priority_lifts = true, and shows them in the diff.
 
 [[session]]
 id = "pt-tuesday"
@@ -447,7 +455,7 @@ minutes = 90
 
   [[session.line]]
   exercise = "pull_up"
-  sets = [{ count = 1, type = "test", reps = 1, rpe = 10 }]            # the strict single, under hold
+  sets = [{ count = 1, reps = 1, rpe = 10 }]                            # the strict single: a working set, under hold
   rest_s = 120
   cues = "neutral grip (parallel handles) — same grip every test · full dead hang start · collarbone to the bar · strict, no kip · one attempt, then move on"
   scheme = { name = "hold" }
@@ -478,7 +486,7 @@ text = "Keep the 4×5 linear bench for one more block; top-and-back-off waits fo
 [[acknowledge]]
 flag = "scheme_off_emphasis@line:a-sat-pull/pull_up"
 because = "coach_judgement"
-text = "The pull-up progresses through the assistance ladder and negatives; the single is the test."
+text = "The pull-up progresses through the assistance ladder and negatives; the weekly single is the measure."
 ```
 
 What the dry run shows for this file: the filled `[dose]` and `[deload]`; two `scheme_off_emphasis`

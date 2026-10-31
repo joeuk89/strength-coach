@@ -96,7 +96,7 @@ All of these are pure functions of the store at a date and are never stored:
   | 1 | Header | window, derived tier, catch-up or not, plan in force |
   | 2 | Sessions | every planned core session in the window: matched (workout, minutes, session RPE), trained-unlogged, cancelled or missed; asks a miss tag per miss and session RPE only where the sets carry none; the against-the-prescription read per session; optional sessions as a done streak |
   | 3 | Week kind | the closed week's kind, trained fraction, gate passes (`week.md`) |
-  | 4 | Block | hard weeks against the ceiling, triggers fired with evidence refs, the proposal: `deload`, `light`, `none` or `skipped (<n> hard weeks)` |
+  | 4 | Block | hard weeks against the ceiling, triggers fired with evidence refs, the proposal: a light week with the proposed shape (`week.md`), `none` or `skipped (<n> hard weeks)` |
   | 5 | Adherence | figure, weeks counted, state (`ok`, `watch`, `low`, `insufficient`) |
   | 6 | Dose | per muscle, delivered against the version's target, trailing four-ordinary-week mean |
   | 7 | Lifts | per the version's emphasis and priority lifts (`goals.md`, the check-in row of its per-emphasis table, ADR 0020): with priority lifts it leads with them, the top set's load and reps stated and how it moved and felt asked; on a `hypertrophy` version reps and RIR on the lines that moved, pump and soreness as a dose read; on `maintenance` whether the kept lifts held; e1RM rows compounds first |

@@ -96,14 +96,16 @@ Filled from the emphasis and phase when the version leaves it unsaid.
 _Avoid_: volume target, landmark, MEV
 
 **Deload policy**:
-A program version's hard-week ceiling, the set cut taken in the light week and whether priority
-lifts are tested in it. Filled from the emphasis when unsaid.
-_Avoid_: block rule, light-week rule
+A program version's hard-week ceiling, the shape of its light week (sets cut, load cut, RPE cap)
+and whether priority lifts are tested in it. Filled from the emphasis when unsaid; a light week's
+override may restate the shape for that week.
+_Avoid_: block rule, light-week rule, deload type
 
 **Set type**:
 What a prescribed or logged set is for: warm-up, working, activation or test. A rep-out is a
 working set with an open top, not a type; an activation set counts no hard set and yields no
-exposure; a test set is the heavy single or AMRAP whose result becomes the training max.
+exposure; a test set is the heavy single the deload policy prescribes on a priority lift in the
+light week, never authored, whose result may become the training max.
 _Avoid_: set kind
 
 **Training max**:
@@ -138,7 +140,8 @@ _Avoid_: delta, tweak, adjustment, standing override (say "override Decision")
 
 **Recovery ceiling**:
 The lowest load or RPE a line may be set to on a date: a niggle's cap, the return band's cut,
-the illness cap on the first session back, or a light week's RPE ceiling.
+the illness cap on the first session back, or a light week's RPE cap. The return band is also a
+safety bound: no override waives it, only the days off behind it move.
 _Avoid_: limit, safety cap
 
 **Flag**:

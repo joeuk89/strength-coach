@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #39 (the return band is a safety bound with no override route; its fact, days off, moves only through a `trained_unlogged` Annotation or a hand-entered Workout)
 ---
 
 # The rule derives every line; the agent departs from it only through typed, reasoned overrides
@@ -32,7 +33,7 @@ Hard (approval refused):
 - A load off the kit grid for the exercise, location and load mode.
 - A load or RPE above a recovery ceiling: a niggle's load cap or no-added-load constraint, the
   return band's cut from the pre-layoff exposure, the illness RPE 7 cap on the first session
-  back, a light or deload week's RPE ceiling.
+  back, a light week's RPE cap.
 - A return line whose band, load, set delta and RPE cap do not all agree with the days off.
 - A hard-week count over the block ceiling with no Decision declining the ceiling.
 - A line whose exercise has no Hevy template id or whose load mode disagrees with the exercise.
@@ -67,5 +68,9 @@ open with no constraint); drift from last week's prescription with no override e
   passes nor fails and does not make a week count as hard.
 - The validator has no override switch, so every departure from a safety bound is traceable to
   a Decision.
+- The return band is a safety bound like a niggle's cap: no override waives or softens it, and
+  `pin_load` lowers only. Its fact is days off per lift, which a `trained_unlogged` Annotation or
+  a hand-entered Workout moves by recording training that happened (amended 2026-10-31,
+  `docs/spec/prescription.md`).
 - Each hard constraint is downstream of a record the agent can change through a verb, which is
   a test on the verb set (wayfinder #16): no constraint may exist without such a verb.

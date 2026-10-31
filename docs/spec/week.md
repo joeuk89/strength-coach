@@ -67,7 +67,8 @@ denominator and neither passes nor fails (ADR 0005); it stays in the adherence d
 
 A planned session is **trained** when it has a Match, a `trained_unlogged` Annotation, or is a
 coach-led session that happened (a Match, or a hand-entered Workout with no sets). A shortened
-session is trained. A Miss is a planned core session whose week has closed untrained, unmoved and
+session is trained. A `trained_unlogged` Annotation and a hand-entered Workout also count as a
+lifting exposure date for the days off that set the return band (`prescription.md`). A Miss is a planned core session whose week has closed untrained, unmoved and
 uncancelled.
 
 ## The session gate
@@ -148,10 +149,13 @@ completed hard weeks nothing is proposed and the card says `skipped (<n> hard we
 (rn:deloads.4). The count reaching the version's `hard_weeks_ceiling` proposes whatever else is
 true (rn:deloads.3; `block_ceiling_exceeded` holds the plan to it).
 
-The proposed **type**: the ceiling, RPE drift or a niggle choose `deload`; readiness or sleep
-alone choose `light` (rn:deloads.8 to .10). The transforms are `prescription.md`'s. The coach
-chooses the type on the plan with a reason; `light_week_type_off_trigger` and
-`light_week_unprompted` judge the plan against this proposal (`overrides.md`).
+The proposed **shape**: the version's `[deload]` policy (sets cut, load held), plus a load cut
+when the ceiling, RPE drift or a niggle fired, and none when readiness or sleep alone did
+(rn:deloads.8 to .10; the policy's own numbers are `program.md`'s). The cut is
+`prescription.md`'s. The coach takes the light week on the plan, restating the policy's
+`set_cut_pct`, `load_cut_pct` or `rpe_cap` for the week with a reason where the proposal or
+their judgement says so; `light_week_shape_off_trigger` and `light_week_unprompted` judge the
+plan against this proposal (`overrides.md`).
 
 A proposal **stands** until the next plan carries a `light_week` override or a `decline_ceiling`
 Decision is written after it; `status` reports a standing one as "light week or deload pending".

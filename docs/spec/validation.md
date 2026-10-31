@@ -173,8 +173,8 @@ is the call of [Research notes on main and every number cited](https://github.co
 | Code | Scope | Params | Cleared by |
 | --- | --- | --- | --- |
 | `load_off_grid` | line | load, implement, location, nearest grid loads | a `pin load` override on a grid value; a kit change in `coach.toml`; `coach import` of a new plate-pool snapshot |
-| `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or relax the constraint); the return band's exposure or days off; removing the light-week override; a lower `pin load` |
-| `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together |
+| `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or an event with a smaller constraint set); days off moved by a `trained_unlogged` Annotation or a hand-entered Workout; removing the light-week override or raising its `rpe_cap`; a lower `pin load` |
+| `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together; no override waives the band |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version |
 | `hevy_template_missing` | line | exercise id, missing columns | an Exercise with a `hevy_template_id`, or one with all four template columns so `plan apply` can create the template; an Exercise that has the id never needs the other three (`cutover.md`) |
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` |
@@ -198,7 +198,7 @@ is the call of [Research notes on main and every number cited](https://github.co
 | `start_load_missing` | line | exercise id, days since last exposure | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there |
 | `start_load_off_rack` | line | start load, location, two nearest rows | a start load on a rack row |
 | `no_working_sets` | line | scheme | a working group, or `hold` |
-| `set_type_not_allowed` | line | set type, scheme | a permitted type, or a scheme that permits it |
+| `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) |
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) |
 | `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) |
@@ -223,7 +223,7 @@ is the call of [Research notes on main and every number cited](https://github.co
 | `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) |
 | `frozen_load_off_snapshot` | session | line, load, snapshot date |
 | `override_persisting` | line | kind, weeks, plan ids |
-| `light_week_type_off_trigger` | week | proposed type, chosen type, triggers |
+| `light_week_shape_off_trigger` | week | proposed shape, the plan's shape, triggers |
 | `light_week_unprompted` | week | hard-week count, ceiling |
 | `minimum_week_floor` | week | priority lift, kept sessions |
 
