@@ -34,6 +34,17 @@ or an ADR, the spec wins and the note is cited for its evidence only. The three 
 written before the decisions say so in their header; the claims notes say nothing and are read
 under this rule.
 
+## Evidence or opinion, marked
+
+Every number a spec table or registry row states as a rule (a threshold, window, band, default,
+cap or factor) carries either an `rn:` ref in one of the two forms above or the word "opinion"
+in the same row or sentence. A spec number with neither is a defect of the spec, not a choice.
+The research notes mark each claim the same way inside the note; `goals.md`'s defaults table,
+`prescription.md`'s steps and the four registry tables in `validation.md` (`rn` column, `null`
+for opinion) follow it, and **Numbers that rest on no citation** below is the index of the
+opinion numbers. A number marked opinion is this framework's and changes by amending the spec;
+a cited number changes only with its claim.
+
 ## The notes
 
 | Note | Form | Claims the spec reads and the numbers they own | Read by |

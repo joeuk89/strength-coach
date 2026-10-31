@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #43 (four asked verbs; `init` on a `.dev` build needs `--pin`; the Hevy deny is every method on `/v1/workouts*`; the drift warning is `generated_file_drift`); 2026-10-31 by wayfinder #44 (the missing-install line is a shell guard in the hook declaration; two `uv` installs, one per job)
+amended: 2026-10-31 by wayfinder #43 (four asked verbs; `init` on a `.dev` build needs `--pin`; the Hevy deny is every method on `/v1/workouts*`; the drift warning is `generated_file_drift`); 2026-10-31 by wayfinder #44 (the missing-install line is a shell guard in the hook declaration; two `uv` installs, one per job); 2026-10-31 by wayfinder #48 (the Any athlete principle replaces "other athletes are not a v1 acceptance test")
 ---
 
 # The engine ships as one repo that is both a Python package and a Claude Code plugin; an instance holds only data
@@ -70,7 +70,10 @@ hosts beyond Claude Code (hooks, cron, a human terminal) that a plugin alone can
 - **Visibility.** This repo stays private until the week-boundary cutover, then goes public the
   same day the two old repos are archived and the old template's README points here.
 - **The public template survives as `coach init` plus the README**, not as a repo to clone.
-  v1 is one athlete per instance and nothing hard-codes the author, but other athletes are not
-  a v1 acceptance test.
+  v1 is one athlete per instance. Nothing about one athlete lives in a type, rule, default or
+  skill (the map's **Any athlete** principle): one athlete's facts live in the instance's
+  `coach.toml`, profile, Goal, Phase and Program version, and the engine reads them there. A
+  second live athlete is not a v1 acceptance test; a second instance is, every CI run, as the
+  generated fixture instance of ADR 0019.
 - **Python floor 3.12**, stdlib only. `uv` is the supported installer; `pip` works from the
   same file but is undocumented.
