@@ -309,8 +309,9 @@ what it weighs.
   when the maker states it, `owner` when the athlete weighed it, else `unverified`. Then run
   `npx plate-pool achievable --inventory kit/<name>.json > kit/<name>.achievable.json`; a
   schema error is the athlete's answer to fix, never a value to guess.
-- **Map.** Every equipment kind the athlete's exercises use maps to one implement at the
-  location, or the kind is unsupplied there and `equipment_unsupplied` says so at adopt.
+- **Map.** `implements` names one implement at the location for every equipment kind the
+  athlete's exercises use, or the kind is unsupplied there and `equipment_unsupplied` says so
+  at adopt.
 - **Rack change.** Say what the new tables reach that the old did not, and what they lose:
   the bar's top row, the heaviest pair, any load in the plan in force that no longer exists
   (`frozen_load_off_rack` at the next draft).

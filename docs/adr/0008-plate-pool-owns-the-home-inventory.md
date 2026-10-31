@@ -1,7 +1,7 @@
 ---
 status: superseded in part by 0021 (ownership, import, the snapshot and the deep link; the rounding, warm-up, cap and frozen-prescription consequences stand)
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #42 (the load step is the location's alone: a plate-pool location's next row, a grid location's increment per implement kind; no exercise or catalogue increment exists)
+amended: 2026-10-31 by wayfinder #42 (the load step is the location's alone: a plate-pool location's next row, a grid location's increment per implement kind; no exercise or catalogue increment exists); 2026-10-31 by wayfinder #45 (the equipment-kind map is the location's `implements` table; grid implement tables are `instance.md`'s)
 ---
 
 # plate-pool owns the home inventory; the coach imports its achievable loads and rounds to them
@@ -39,8 +39,9 @@ owner with a public URL, and the coach needs only its output, not its input.
   whose equipment kind the location cannot supply is a violation at prescribe time, never a
   silent fallback.
 - **Exercise carries an equipment kind** (barbell, dumbbell, kettlebell, leg attachment, vest,
-  machine, cable, band, bodyweight); each location maps kinds to its implements (home maps
-  weighted bodyweight work to the vest, the gym to a dip belt).
+  machine, cable, band, bodyweight); each location maps kinds to its implements in its
+  `implements` table (home maps weighted bodyweight work to the vest, the gym to a dip belt;
+  the key and the grid implement tables are `instance.md`'s, wayfinder #45).
 - **Import.** `coach import` fetches the location's URL beside Hevy and stores the snapshot as
   a raw fact with URL, fetch time and content hash. The location fixes which tables apply:
   collars (clamp), uneven dumbbells (off), pair or single. Offline, the newest snapshot serves

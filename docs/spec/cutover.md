@@ -11,10 +11,10 @@ check-in" below; the routines in Hevy and the week-boundary switch are "The swit
 
 | Old fact | Target |
 | --- | --- |
-| Every Hevy workout the account still has (66 as of 2026-10-23, since 2026-03-29) | `workout` and `logged_set` rows through the ordinary `import --full` |
+| Every Hevy workout the account still has (66 as of 2026-10-23, since 2026-03-29; every one a lifting workout with sets, 16 of them on a custom template) | `workout` and `logged_set` rows through the ordinary `import --full` |
 | Hevy body measurements (42) | `weigh_in` rows, source `hevy`, through the same pull |
 | Hevy routines and folders (17 and 4) | the `routine` and `folder` mirror through the same pull; none reaches `routine_map` ("The switch") |
-| Custom Hevy template ids (11 in the account, 8 in the history) | `exercise.hevy_template_id`, recorded by `[[exercise]]` at onboarding |
+| Custom Hevy template ids (11 in the account, 8 in the history) | `exercise.hevy_template_id`, through one plain `record` of ten `[[exercise]]` rows before `onboard` ("The exercise record") |
 | Goal and Phase | the `goal adopt` Draft the `onboard` skill writes (`goals.md`) |
 | Open niggles, open follow-ups, the patterns among the Coach's notes | the cutover check-in (below) |
 | Two unlogged PT sessions (6 and 13 Oct 2026) | two manual `workout` rows in the cutover check-in: source `manual`, no session, title `PT session`, minutes, session RPE where reported, no sets. The third external annotation (20 Oct) is in Hevy and arrives with `import` |
@@ -63,9 +63,11 @@ Three writers set `exercise.hevy_template_id`:
 | an `[[exercise]]` record | an account-specific custom template: an edit to an existing Exercise, or a new Exercise with every column and `source = record` when no program line names it |
 | `plan apply` | after a verified `POST /v1/exercise_templates` (ADR 0011) |
 
-Import maps by template id only. There is no title heuristic. Expected `exercise_unmapped` on
-the first pull is 0 of 57 once the eight custom templates in the history are recorded; it is
-checked by eye on the day (`testing.md`, "The cutover Draft").
+Import maps by template id only. There is no title heuristic. Expected `exercise_unmapped`
+after the first pull is one flag per workout that carries a custom template (16 of 66 as of
+2026-10-23), and 0 of 66 once the exercise record of step 4 is taken; the denominator on the day
+is the workout count `import` reports. It is checked by eye on the day (`testing.md`, "The
+cutover Draft").
 
 ## Order of store writes at cutover
 
@@ -74,22 +76,48 @@ checked by eye on the day (`testing.md`, "The cutover Draft").
    `[location.home]` and the grid `[location.gym]` written (ADR 0021).
 3. `coach import --full`: the whole history, the routine and folder mirror, body measurements.
    `status` now shows the unmapped template list.
-4. The `onboard` skill: profile, Goal and Phase (`goal adopt`), no program.
-5. The `program` skill: version 1 designed fresh and adopted (`coach program adopt`). The agent
+4. `coach record` of the exercise record: the ten custom templates as library Exercises ("The
+   exercise record"). `exercise_unmapped` drops to 0 and every later Draft can name their ids.
+5. The `onboard` skill: profile, Goal and Phase (`goal adopt`), no program. A priority lift on
+   the Goal names an exercise id, so the library must already hold it.
+6. The `program` skill: version 1 designed fresh and adopted (`coach program adopt`). The agent
    reads the old routines from the mirror and the imported history as reference and takes a
-   critical view of both.
-6. `coach checkin record` of the cutover check-in: the custom template ids, open niggles with
-   their constraints, open follow-ups, Observations, the run cap, the two manual PT workouts.
-7. The first `plan draft` and `plan apply`: fresh routines, nothing adopted ("The switch").
+   critical view of both. Its lines on the ten custom templates reference library ids and declare
+   nothing, so the Draft carries no template columns for them and the dry run later shows zero
+   templates to create.
+7. `coach checkin record` of the cutover check-in: open niggles with their constraints, open
+   follow-ups, Observations, the run cap, the two manual PT workouts.
+8. The first `plan draft` and `plan apply`: fresh routines, nothing adopted ("The switch").
 
 Import comes before design because it is read-only against Hevy and the design should see the
-history it will anchor on.
+history it will anchor on. The exercise record comes before `onboard` because the Goal's
+priority lifts and the niggle constraints of step 7 name exercise ids, and `program adopt` would
+otherwise demand the four create columns for exercises whose template already exists.
+
+## The exercise record
+
+A plain `record` file (`verbs.md`, the `exercise` record kind), not part of the check-in: it
+carries no Observation and confirms nothing about a date. One `[[exercise]]` row per custom
+template the old library knows, as a new library Exercise with `source = record`, keeping the old
+id. A new Exercise declares every library column (`name`, `load_mode`, `equipment_kind`,
+`pattern`, `muscles`; `schema.md`) plus `hevy_template_id` and `hevy_title`; the other three
+Hevy columns (`hevy_exercise_type`, `hevy_equipment`, `hevy_muscle_group`) are the create
+columns, and an Exercise whose template exists never needs them (`validation.md`,
+`hevy_template_missing`). A template the account holds and the library never knew waits for
+`exercise_unmapped` to name it.
+
+Content as of 2026-10-31: ten rows, `custom_arch_hold`, `custom_decline_lateral_raise`,
+`custom_dip_negatives`, `custom_flexed_arm_hang`, `custom_hollow_hold`, `custom_jumping_pull_up`,
+`custom_pallof_press_band`, `custom_pull_up_top_hold`, `custom_straight_arm_lat_pulldown_band`,
+`custom_suitcase_carry` (eight in the history, in 16 of the 66 workouts). If version 1 later
+declares one of them again, adopt's upsert edits the row field by field and `hevy_template_id`
+stays (`program.md`, "New exercises").
 
 ## The cutover check-in
 
 The carried-over coaching state is one Draft, hand-written by the agent at cutover from the
 archived `data/` and `profile.md`, reviewed line by line by the athlete, and taken by
-`checkin record`. No converter script and no hidden verb: the Draft is about fifteen tables, and
+`checkin record`. No converter script and no hidden verb: the Draft is about a dozen tables, and
 this section pins their content so the agent at cutover only brings niggle status up to the day.
 
 It is a check-in file, not a plain `record` file, because Observations are reserved to the
@@ -102,7 +130,6 @@ in the schema marks it special.
 
 | Kind | Rule | Content as of 2026-10-31 |
 | --- | --- | --- |
-| `[[exercise]]` | every custom template the old library knows, as a new Exercise with `source = record`, keeping the old id; if version 1 already declared it, the record is the in-place edit adding the template id. `hevy_template_id` and `hevy_title` only: an Exercise that has its template id never needs the other three Hevy columns (`validation.md`, `hevy_template_missing`). A template the account holds and the library never knew waits for `exercise_unmapped` | ten: `custom_arch_hold`, `custom_decline_lateral_raise`, `custom_dip_negatives`, `custom_flexed_arm_hang`, `custom_hollow_hold`, `custom_jumping_pull_up`, `custom_pallof_press_band`, `custom_pull_up_top_hold`, `custom_straight_arm_lat_pulldown_band`, `custom_suitcase_carry` (eight in history) |
 | `[[niggle]]` | open niggles only, one record each: `opened` = old `first_noted`, `site`, the current status (old `watching` is `reported`), the old history collapsed into the event text, and the constraint set the agent proposes from the old prose and the overrides that cite the niggle, each confirmed or struck by the athlete in the file. Resolved niggles and the illness episodes do not migrate | two: hamstring after runs (n-0003, easing, proposed `rpe_cap` 7 on pattern `hinge`); left shoulder (n-0006, easing, proposed `rpe_cap` 7 on `db_lateral_raise` if still in force) |
 | `[[followup]]` | open follow-ups only, one `kept` event each, `due` = old `review_at` | none |
 | `[[observation]]` | the Coach's notes that are patterns with evidence (ADR 0009). Agreements about how to coach stay in `profile.md`; agreements that shaped the old program inform the fresh design and become no record; setup facts and history are dropped | seven: drift adds volume; drift adds intensity on top sets; PT sessions run hard whatever is asked; PT sessions go under-logged; the PT's A/B alternation is unreliable; active holidays are training stress; the PT rarely programmes deadlifts |
@@ -114,10 +141,10 @@ The Draft lives at `.coach/drafts/<date>-checkin.toml` (`instance.md`), gitignor
 
 ### Acceptance check
 
-The expected `coach status` after step 6 is the check; every item is a field of its default
+The expected `coach status` after step 7 is the check; every item is a field of its default
 summary (`verbs.md`), read with `--fields`:
 
-- `exercise_unmapped`: 0 of 57 workouts;
+- `exercise_unmapped`: 0 of 66 workouts (0 of whatever count the import reported);
 - two open niggles, each with at least one constraint (no "niggle open with no load constraint"
   warning);
 - open follow-ups: none, or exactly the ones the Draft carried;
@@ -140,9 +167,11 @@ compare.
 The account holds 17 routines in four folders (Week A, Week B, Conditioning, One-off weeks) and
 one with no folder. No old routine is adopted: the fresh design has no session that maps to one,
 and ADR 0011's spare rule takes only routines already in the Routine map. The first `plan apply`
-POSTs one routine per session into the Program folder and creates the three engine folders
-(Program, Standing, Retired); no old folder carries those titles, so adoption by title finds
-nothing. Routines the account holds that no Routine map row names, at cutover or later, sit in
+POSTs one routine per planned session of the week (ADR 0011: a push projects the WeekPlan's
+sessions, so a rotation session first planned in a later week gets its routine on that week's
+push) and creates the folders those routines need: Program, and Standing when the week plans a
+standing, daily or rehab session; Retired is created by the first retire. No old folder carries
+those titles, so adoption by title finds nothing. Routines the account holds that no Routine map row names, at cutover or later, sit in
 the `routine` mirror and are never flagged, retired or touched; `query routines` shows the map,
 not the mirror. The athlete deletes the old routines and folders by hand in the app, and only
 after the first push has verified: while they coexist they cost nothing, and they are the
@@ -152,7 +181,7 @@ rollback. Their mirror rows stay after the deletion; import never deletes a mirr
 ### Order
 
 Everything except the push happens during the last old-instance week, in the new instance repo,
-while the old instance keeps serving: steps 1 to 6 above, then `plan apply --dry-run` for the
+while the old instance keeps serving: steps 1 to 7 above, then `plan apply --dry-run` for the
 coming Monday until it passes clean. None of these writes Hevy. Sunday evening, after the last
 old-instance session is logged:
 
@@ -174,9 +203,14 @@ Every item is a number the engine already prints:
   development; `init` refuses to pin one, `verbs.md`);
 - `coach status` shows the acceptance list of "The cutover check-in";
 - the event import reports Sunday's workout (workout count up by one);
-- the dry run shows routine creates equal to the version's session count for the week, three
-  folder creates, zero updates, zero templates to create, no violation, and its hash is the one
-  passed to `--expect`.
+- the dry run shows routine creates equal to the WeekPlan's planned session count, one folder
+  create per folder those routines need (Program, and Standing when one is a standing, daily or
+  rehab session), zero updates, zero retires, zero templates to create, no violation, and its
+  hash is the one passed to `--expect`;
+- `plan apply --dry-run --full` shows no line anchored on a workout from the old instance's last
+  deload week. Pre-cutover workouts have no Match, so `prescription.md`'s rule that skips
+  light-week logs cannot see them, and an old deload log can be the first anchor. Where one is,
+  the agent writes a `pin_load` override on the line with the reason and the dry run is re-run.
 
 ### Rollback
 
@@ -191,5 +225,8 @@ superseded by the next Monday's `plan draft`.
 - Adherence reads "insufficient" for the first four ordinary weeks after cutover: no planned
   session exists before the first WeekPlan.
 - Workouts deleted in Hevy before cutover have no tombstone.
+- The anchor rule cannot tell an old deload-week log from a hard-week log (no Match before the
+  first WeekPlan); the pre-push checklist catches it once, and from the second WeekPlan on every
+  anchor is matched.
 - The old `linear` miss state, the Block count and the rotation position do not carry; the
   fresh version resets all three by construction.

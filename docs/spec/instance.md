@@ -66,15 +66,16 @@ flag, no `.env.example`. Without the table, `hevy_template_missing` is never rai
 
 ## coach.toml
 
-Four tables. An unknown table or key stops every verb with exit 5, `error.code =
-config_unknown_key`, naming the key (`verbs.md`): a setup refusal, not a flag.
+Four tables. An unknown table or key, or an `implements` value naming no implement of its
+location, stops every verb with exit 5, `error.code = config_unknown_key`, naming the key
+(`verbs.md`): a setup refusal, not a flag.
 
 | Table | Owner | Holds |
 | --- | --- | --- |
 | `[engine]` | engine | `version`, the engine pin (ADR 0007) |
 | `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `available_days`, `session_minutes`, `checkin_cadence_days`; each has a reader, below |
 | `[hevy]` | athlete | present when Hevy is used; empty in v1 |
-| `[location.<name>]` | athlete | `kind = "plate-pool"` with `kit = "<name>"` (naming `kit/<name>.json` and `kit/<name>.achievable.json`), `collars` and `dumbbells` (`pair` or `single`) choosing which tables apply, or `kind = "grid"` with increments and bar weights; either kind maps equipment kinds to its implements (ADR 0008, ADR 0021). No URL: the engine fetches nothing |
+| `[location.<name>]` | athlete | `kind = "plate-pool"` with `kit = "<name>"` (naming `kit/<name>.json` and `kit/<name>.achievable.json`), `collars` and `dumbbells` (`pair` or `single`) choosing which tables apply, or `kind = "grid"` with one `[location.<name>.implement.<implement>]` table per implement; either kind carries `implements`, the map from equipment kind to implement ("Locations", ADR 0008, ADR 0021). No URL: the engine fetches nothing |
 
 No lifting goal (the Goal is a record and the emphasis is on the Program version, ADR 0014), no
 `experience` (level is derived per lift), no caps, no thresholds, no feature toggles (ADR 0004).
@@ -108,6 +109,45 @@ tree it would write. On a `.dev` build it refuses without `--pin X.Y.Z`, the rel
 instance will run, so `[engine]` never holds a `.dev` version (ADR 0007, `verbs.md`). Creating
 the remote repository and pushing are the human's job and are printed as the next step.
 
+## Locations
+
+Every location carries `implements`, an inline table from equipment kind (`coach schema
+--registry equipment-kinds`) to the name of one implement the location has. Adopt reads it for
+every line whose load mode is `total`, `per_hand_x2` or `single_implement`: a kind the session's
+location does not map is `equipment_unsupplied` on the line, and mapping it here is the clearing
+path (`program.md`, `validation.md`). Lines under `bodyweight`, `assisted`, `band`, `duration` or
+`distance` carry no rack load and read no implement. An `implements` key outside the registry,
+or a value naming no implement of the location, is the setup refusal `config_unknown_key` on
+every verb: config is parsed whole before any verb runs.
+
+At a plate-pool location a value names an implement of the kit tables, so the load step is that
+implement's table. At a grid location a value names one of the location's own implement tables,
+each either an increment rule or a listed rack (ADR 0008):
+
+```toml
+[location.gym]
+kind = "grid"
+implements = { barbell = "bar", dumbbell = "rack", machine = "stack", cable = "stack", bodyweight = "dip_belt" }
+
+[location.gym.implement.bar]
+increment = 2.5     # athlete units
+base = 20           # the bare implement; optional, default 0
+max = 180           # optional
+
+[location.gym.implement.rack]
+rack = [4, 6, 8, 10, 12.5, 15, 17.5, 20, 22.5, 25, 30, 35, 40]
+
+[location.gym.implement.stack]
+increment = 5
+
+[location.gym.implement.dip_belt]
+increment = 2.5
+```
+
+A grid implement has exactly one of `increment` (with optional `base` and `max`) or `rack`; the
+rack of an `increment` implement is every multiple from `base` to `max`, or unbounded above when
+`max` is absent. The `kit` skill writes this table for the athlete (`skills.md`).
+
 ## Kit
 
 A plate-pool location's kit is two athlete-authored files (ADR 0021). `kit/<name>.json` is the
@@ -118,7 +158,7 @@ document format the engine states it parses), `plate_pool` (the version that wro
 (ADR 0019); it never parses the inventory, runs Node or fetches. A verb that rounds hashes the
 inventory first and stops with exit 5, `kit_tables_stale`, when the header disagrees (`verbs.md`).
 The `kit` skill edits these files and runs the generator for the athlete (`skills.md`). A grid
-location has no files: its kit is the `[location.<name>]` table alone.
+location has no files: its kit is the `[location.<name>]` table and its implement tables alone.
 
 ## Generated CLAUDE.md
 

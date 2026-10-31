@@ -213,7 +213,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `session_unscheduled` | session | session id | a slot in a rotation week, or a `cadence` | `null` |
 | `cadence_on_scheduled` | session | session id, cadence | removing the cadence | `null` |
 | `location_unknown` | version, session | location | a `[location.<name>]` in `coach.toml` | `null` |
-| `equipment_unsupplied` | line | equipment kind, location | mapping the kind at the location, or another location or exercise | `null` |
+| `equipment_unsupplied` | line | equipment kind, location | mapping the kind in the location's `implements` (`instance.md`), or another location or exercise | `null` |
 | `rehab_in_version` | session | session id | removing it; a rehab session is raised on a niggle | `null` |
 | `practice_not_optional` | session | session id | `tier = "optional"` | `null` |
 | `coach_led_has_lines` | session | session id | removing the lines or the `estimated_sets` | `null` |

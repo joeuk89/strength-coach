@@ -55,8 +55,9 @@ approved inside the `plan apply` transaction.
 
 - **The prompt** is a fixed layout budgeted to about 40 lines, held by a test: span and rotation
   position; per session, each line as exercise, sets × reps at load, with the delta against the
-  last exposure; every override with its kind and reason; warnings; the Hevy actions (update,
-  create, retire); then the hash. More is behind `--dry-run --full`.
+  last exposure; every override with its kind and reason; warnings; the Hevy actions (folder
+  create, routine update, create and retire, template create); then the hash. More is behind
+  `--dry-run --full`.
 - **The Approval record** holds the WeekPlan id, timestamp, Write plan hash and route (`prompt`
   or `terminal`, known by TTY). Not the summary text: it is reproducible from the frozen row.
   Nothing names the person; one athlete owns the instance.

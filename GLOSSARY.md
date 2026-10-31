@@ -409,8 +409,15 @@ _Avoid_: kit file, equipment list
 
 **Equipment kind**:
 What an exercise is done with: barbell, dumbbell, kettlebell, leg attachment, vest, machine,
-cable, band or bodyweight. A location maps each kind it supplies to one of its implements.
+cable, band or bodyweight. A location maps each kind it supplies to one of its implements in its
+`implements` table.
 _Avoid_: equipment (which is the kit itself), implement type
+
+**Implement**:
+One thing at a location that a load is set on: a bar, a dumbbell pair, a machine stack, a dip
+belt. At a plate-pool location an implement is a table of the kit tables; at a grid location it
+is one of the location's own implement tables, an increment rule or a listed rack.
+_Avoid_: apparatus, equipment item
 
 **Safety ceiling**:
 A load the athlete will not go above on one exercise, agreed as a Decision with a reason. It
