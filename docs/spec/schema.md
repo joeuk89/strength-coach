@@ -425,7 +425,7 @@ CREATE TABLE milestone (                   -- a restated milestone on a new Goal
 CREATE TABLE phase (                       -- closed in place; one open at a time
   id                   TEXT PRIMARY KEY,
   kind                 TEXT NOT NULL CHECK (kind IN ('deficit','maintenance','surplus')),
-  rate_pct_bw_per_week REAL NOT NULL,
+  rate_pct_bw_per_week REAL NOT NULL,    -- the kind's registry default when the Draft omits it (goals.md)
   until_kind           TEXT NOT NULL CHECK (until_kind IN ('date','bodyweight_at_or_below','bodyweight_at_or_above','coachs_call')),
   until_value          TEXT,
   opened               TEXT NOT NULL,      -- date

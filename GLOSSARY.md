@@ -327,8 +327,9 @@ check-in that resets the count.
 _Avoid_: mesocycle, cycle, phase (which is about bodyweight)
 
 **Phase**:
-The body-composition phase in force: deficit, maintenance or surplus, with its intended rate and
-what ends it. Opened and closed with a reason; one open at a time.
+The body-composition phase in force: deficit, maintenance or surplus, with its intended rate
+(defaulted per kind when unstated) and what ends it. Opened and closed with a reason; one open
+at a time.
 _Avoid_: block (a run of hard weeks), cut, bulk (fine in prose), diet, strategy
 
 **Decision**:

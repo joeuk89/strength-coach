@@ -14,8 +14,9 @@ at the next regeneration with no merge and no prompt beyond the verb's own ask; 
 already warned on the drift and the git diff of the regenerating commit shows what was lost.
 
 A number has one of three homes, by what it is. A **fact** about the athlete, their kit or their
-preferences lives in `coach.toml` (units, birth date, available days, session caps, check-in
-cadence, grid-kit increments). A **rule** the coach would apply to anyone is an engine constant
+preferences lives in `coach.toml` (units, available days, session minutes, check-in cadence,
+grid-kit increments; birth date and height are profile prose since no rule reads them, amended
+2026-10-31). A **rule** the coach would apply to anyone is an engine constant
 with its `rn:` citation beside it in code (return bands, adherence floor, light-week RPE ceiling,
 short-sleep hours, run-spike ratio, quality RPE, the 43+ re-test). An **agreement** between the
 coach and this athlete (a weekly run cap, a Safety ceiling, "box squats only at the gym") is a

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-27 by ADR 0014 (the version field is `emphasis`, `experience` leaves `[athlete]`, milestones are typed on the Goal)
+amended: 2026-10-27 by ADR 0014 (the version field is `emphasis`, `experience` leaves `[athlete]`, milestones are typed on the Goal); 2026-10-31 by the final review (birth date and height leave `[athlete]` for the profile prose: no rule reads them)
 ---
 
 # The profile is prose a coach reads; what code or a check-in needs is a record
@@ -34,9 +34,11 @@ and follow-ups are already records.
 
 ## Consequences
 
-- `coach.toml` `[athlete]` holds the facts rules read: units, birth date, height, session
-  length caps, available days, week start, timezone. No lifting goal, and no `experience`
-  (ADR 0014: level is a derived per-lift signal, never a stored fact).
+- `coach.toml` `[athlete]` holds the facts rules read: units, session length, available days,
+  week start, timezone, check-in cadence (`instance.md` names each fact's reader). No lifting
+  goal, and no `experience` (ADR 0014: level is a derived per-lift signal, never a stored fact).
+  Birth date and height were listed here; no rule reads them, so they are profile prose
+  (amended 2026-10-31).
 - Program version carries `emphasis` (`hypertrophy`, `strength`, `maintenance`; named `goal`
   until ADR 0014 moved the athlete's Goal to its own record) and optional explicit
   per-muscle weekly dose targets. The emphasis sets the default dose target when none is given

@@ -95,6 +95,9 @@ All of these are pure functions of the store at a date and are never stored:
   table, ADR 0020): with priority lifts it leads with them, the top set's load and reps stated
   and how it moved and felt asked; on a `hypertrophy` version it asks reps and RIR on the lines
   that moved, pump and soreness as a dose read; on `maintenance` whether the kept lifts held.
+  With an open Phase the card carries a Phase line: kind, target rate, the 14-day bodyweight
+  trend against it and the `until` condition; `phase_trend_off` and `phase_condition_met` are
+  raised here, not at the block boundary (`goals.md`, **What the Phase changes**).
   The `check-in` skill carries none of this.
 - **Week closure**: a week is closed when a `current` check-in's window covers its Sunday.
 - **Deep due**: 42 days since the newest `current` row with `tier = deep`, or a light week newly

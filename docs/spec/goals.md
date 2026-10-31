@@ -60,7 +60,7 @@ A ledger record, one open at a time.
 | Field | Type | Notes |
 | --- | --- | --- |
 | `kind` | `deficit`, `maintenance`, `surplus` | |
-| `rate_pct_bw_per_week` | number | Intended bodyweight change; 0 for maintenance; negative in a deficit |
+| `rate_pct_bw_per_week` | number | Intended bodyweight change; negative in a deficit. Optional in the Draft: the kind's default (**What the Phase changes**) is filled into the row |
 | `until.kind` | `date`, `bodyweight_at_or_below`, `bodyweight_at_or_above`, `coachs_call` | |
 | `until.value` | date or bodyweight in athlete units | Absent for `coachs_call` |
 | `opened`, `closed` | date plus the Check-in or Goal row that did it, and a reason | |
@@ -143,14 +143,22 @@ Two rules that follow:
 Opinion, from Israetel and Helms (`rn:training-level §4`): the Phase moves the proposed dose
 within its band and never the intensity.
 
-| Phase | Dose default | Checked against |
-| --- | --- | --- |
-| `deficit` | lower half of the band; intensity held so strength is kept | bodyweight trend within ±50 % of the target rate over the block |
-| `maintenance` | the emphasis default | bodyweight trend flat (±0.25 % BW per week) |
-| `surplus` | upper half of the band | bodyweight trend within ±50 % of the target rate |
+| Phase | Dose default | Default rate (% BW per week) | Trend band |
+| --- | --- | --- | --- |
+| `deficit` | lower half of the band; intensity held so strength is kept | −0.5 | within ±50 % of the target rate |
+| `maintenance` | the emphasis default | 0 | ±0.25 % BW per week |
+| `surplus` | upper half of the band | +0.25 | within ±50 % of the target rate |
 
-A bodyweight trend outside its band is `phase_trend_off`, a warning at the check-in, resolved by
-the coach's read (diet is out of scope; the engine states the fact).
+The default rates are the conservative end of each cited range (`rn:training-level §4`): loss
+0.5–1 % a week to keep muscle (Helms), gain 0.5–1.5 % a month (Helms) and 0.15–0.8 % a week for
+an intermediate (MacroFactor). The band half-widths are the engine's opinion under the same
+citation. Both live in the phase registry (`coach schema --registry phase`), beside the kinds.
+
+The observed rate is the change between the current 14-day Weigh-in average and the one 28 days
+earlier, per week; `checkin open` compares it once the Phase has 28 days of weigh-ins and raises
+`phase_trend_off` (phase id, target rate, observed rate, window) when it falls outside the band.
+It is a warning at the check-in, resolved by the coach's read (diet is out of scope; the engine
+states the fact). The card carries the Phase line it reads from (`check-in.md`).
 
 ## Adopt: the goal checks
 
@@ -264,13 +272,13 @@ Two signals that look like a stall and are not: RPE rising at a held load on man
 fatigue, answered by the deload policy; RPE rising or pain on one line is technique or a
 niggle, answered by a swap or a Niggle, never a scheme.
 
-### Other block-boundary flags
+### Other flags the Goal and Phase raise
 
-| Code | Scope | Params |
-| --- | --- | --- |
-| `milestone_reached` | exercise | milestone, exposure ref, date |
-| `phase_condition_met` | instance | phase id, condition, value |
-| `phase_trend_off` | instance | phase id, target rate, observed rate, window |
+| Code | Raised by | Scope | Params |
+| --- | --- | --- | --- |
+| `milestone_reached` | the block boundary | exercise | milestone, exposure ref, date |
+| `phase_condition_met` | `checkin open`, every check-in | instance | phase id, condition, value |
+| `phase_trend_off` | `checkin open`, every check-in | instance | phase id, target rate, observed rate, window |
 
 ## What the skills ask, judge and explain
 

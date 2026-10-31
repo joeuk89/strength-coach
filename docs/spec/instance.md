@@ -66,13 +66,26 @@ Four tables. Unknown tables and keys are a violation on every verb.
 | Table | Owner | Holds |
 | --- | --- | --- |
 | `[engine]` | engine | `version`, the engine pin (ADR 0007) |
-| `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `birth_date`, `height_cm`, `available_days`, `session_minutes`, plus `checkin_cadence_days` |
+| `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `available_days`, `session_minutes`, `checkin_cadence_days`; each has a reader, below |
 | `[hevy]` | athlete | present when Hevy is used; empty in v1 |
 | `[location.<name>]` | athlete | `kind = "plate-pool"` with `url`, or `kind = "grid"` with increments and bar weights (ADR 0008) |
 
 No lifting goal (the Goal is a record and the emphasis is on the Program version, ADR 0014), no
 `experience` (level is derived per lift), no caps, no thresholds, no feature toggles (ADR 0004).
 A number that is a rule is an engine constant; one that is an agreement is a Decision (ADR 0013).
+
+Every `[athlete]` fact has a rule that reads it; a fact with no reader is profile prose, not
+config. Birth date and height are prose for that reason: the `onboard` skill writes them in the
+profile's facts section and the coach reads them there (the ticket "Worked program and onboard
+skills" may bring height back if a code rule needs it).
+
+| Fact | Shape | Reader |
+| --- | --- | --- |
+| `units`, `bodyweight_units` | `kg` or `lb` | every load and weigh-in |
+| `week_starts`, `timezone` | weekday; IANA name | the week, the closed week and every date |
+| `available_days` | list of weekdays | `adopt`: a scheduled weekday outside the list is `session_on_unavailable_day` (`program.md`); the `program` skill designs the split around it |
+| `session_minutes` | integer | `adopt` fills it into a lifting session that states no `minutes`, so `session_over_minutes` reads it (`program.md`) |
+| `checkin_cadence_days` | integer, default 7 | the light-tier due rule (`check-in.md`) |
 
 ## coach init
 

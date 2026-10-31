@@ -230,6 +230,7 @@ is the call of [Research notes on main and every number cited](https://github.co
 | `deload_off_emphasis` | version | deload policy, expected shape |
 | `muscle_no_hard_sets` | version | muscle, sessions searched |
 | `session_over_minutes` | session | estimate, `minutes` |
+| `session_on_unavailable_day` | session | session id, weekday, `[athlete].available_days` |
 | `block_open_at_redesign` | version | block id, hard weeks so far |
 | `start_load_ignored` | line | start load, last exposure load, exposure ref |
 | `superset_rest_differs` | session | superset label, rest values |

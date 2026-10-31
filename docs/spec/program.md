@@ -73,7 +73,7 @@ their cadence on the session and never appear in the schedule.
 | `tier` | yes | `core` or `optional`. A practice must be `optional` |
 | `cadence` | when not in the schedule | `standing` or `daily`; a scheduled session is `weekly` and may not state a cadence |
 | `location` | no | Departs from the version's default |
-| `minutes` | no | The session's time budget; the rest-and-sets estimate over it is a warning |
+| `minutes` | no | The session's time budget; the rest-and-sets estimate over it is a warning. A lifting session that states none takes `[athlete].session_minutes`, filled into the version at adopt like an emphasis default |
 | `scheme` | conditioning only | Session-level scheme, below |
 | `estimated_sets` | coach-led only | `{ chest = 4, lats = 4, ... }` hard sets per muscle; a coach-led session has no lines |
 | `[[session.line]]` | lifting, conditioning, practice | Below |
@@ -299,6 +299,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `emphasis_off_goal`, `scheme_off_emphasis`, `priority_lift_absent`, `priority_lift_not_first`, `dose_off_band`, `deload_off_emphasis` | as `goals.md` | as `goals.md` |
 | `muscle_no_hard_sets` | version | muscle, sessions searched |
 | `session_over_minutes` | session | estimate, `minutes` |
+| `session_on_unavailable_day` | session | session id, weekday, `[athlete].available_days` |
 | `block_open_at_redesign` | version | block id, hard weeks so far |
 | `start_load_ignored` | line | start load, last exposure load, exposure ref |
 | `superset_rest_differs` | session | superset label, rest values |

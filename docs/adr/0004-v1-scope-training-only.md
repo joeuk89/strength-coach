@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by ADR 0014 (the Phase is a record that moves the dose default within its band, `goals.md`; the Profile line is gone)
 ---
 
 # v1 is training only: nutrition, recipes and meal plans leave the engine
@@ -38,6 +39,8 @@ cited only from code.
   prose, no rendered regions, no prose tests. (Amended 2026-10-31: the original "parsed at
   runtime" meant this test.)
 - Nothing in v1 is optional, so there are no feature toggles.
-- The nutrition phase is a line in the prose Profile; the dose-target rule reads only the lifting
-  goal.
+- The body-composition phase is a Phase record (deficit, maintenance, surplus, with a rate and an
+  until condition) that moves the dose default within the emphasis band and sets the bodyweight
+  trend the check-in reads; calories stay with the athlete's nutrition app. (Amended 2026-10-31:
+  the original made it a line in the prose Profile read by no rule; ADR 0014 and `goals.md`.)
 - Bringing nutrition or recipes back is a fresh effort with its own map.
