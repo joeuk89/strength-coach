@@ -21,6 +21,7 @@ check-in" below; the routines in Hevy and the week-boundary switch are "The swit
 | The `[cardio]` run caps | one `activity_cap` Decision in the cutover check-in |
 | The 24 old Decisions | nothing. Every one expired by 2026-11-01 and names a session that will not exist |
 | The `[caps]` table | nothing. The bar's limit derives from kit (ADR 0008) |
+| The `[equipment]` table and plate-pool's committed `inventory/inventory.json` | `kit/home.json`, a copy of the inventory, and `kit/home.achievable.json` from one run of the generator; the PT's gym as a grid `[location.gym]`; both written by the `kit` skill (ADR 0021) |
 | Resolved niggles, the two illness episodes, the resolved follow-up | nothing. They stay readable in the archived `data/` |
 | Setup facts and history among the Coach's notes | nothing |
 | The program, its 13 session ids, the rotation position, the Block count | nothing. Version 1 is a `redesign` and opens its own Block (ADR 0015) |
@@ -69,15 +70,17 @@ checked by eye on the day (`testing.md`, "The cutover Draft").
 ## Order of store writes at cutover
 
 1. `coach init`.
-2. `coach import --full`: the whole history, the routine and folder mirror, body measurements.
+2. The `kit` skill: `kit/home.json` copied from plate-pool's inventory, the generator run once,
+   `[location.home]` and the grid `[location.gym]` written (ADR 0021).
+3. `coach import --full`: the whole history, the routine and folder mirror, body measurements.
    `status` now shows the unmapped template list.
-3. The `onboard` skill: profile, Goal and Phase (`goal adopt`), no program.
-4. The `program` skill: version 1 designed fresh and adopted (`coach program adopt`). The agent
+4. The `onboard` skill: profile, Goal and Phase (`goal adopt`), no program.
+5. The `program` skill: version 1 designed fresh and adopted (`coach program adopt`). The agent
    reads the old routines from the mirror and the imported history as reference and takes a
    critical view of both.
-5. `coach checkin record` of the cutover check-in: the custom template ids, open niggles with
+6. `coach checkin record` of the cutover check-in: the custom template ids, open niggles with
    their constraints, open follow-ups, Observations, the run cap, the two manual PT workouts.
-6. The first `plan draft` and `plan apply`: fresh routines, nothing adopted ("The switch").
+7. The first `plan draft` and `plan apply`: fresh routines, nothing adopted ("The switch").
 
 Import comes before design because it is read-only against Hevy and the design should see the
 history it will anchor on.
@@ -111,7 +114,7 @@ The Draft lives at `.coach/drafts/<date>-checkin.toml` (`instance.md`), gitignor
 
 ### Acceptance check
 
-The expected `coach status` after step 5 is the check; every item is a field of its default
+The expected `coach status` after step 6 is the check; every item is a field of its default
 summary (`verbs.md`), read with `--fields`:
 
 - `exercise_unmapped`: 0 of 57 workouts;
@@ -149,7 +152,7 @@ rollback. Their mirror rows stay after the deletion; import never deletes a mirr
 ### Order
 
 Everything except the push happens during the last old-instance week, in the new instance repo,
-while the old instance keeps serving: steps 1 to 5 above, then `plan apply --dry-run` for the
+while the old instance keeps serving: steps 1 to 6 above, then `plan apply --dry-run` for the
 coming Monday until it passes clean. None of these writes Hevy. Sunday evening, after the last
 old-instance session is logged:
 

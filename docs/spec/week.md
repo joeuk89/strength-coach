@@ -208,6 +208,6 @@ A week is **closed** when a `current` Check-in's window covers its Sunday.
 | Verb | Codes |
 | --- | --- |
 | `checkin open` | `phase_trend_off`, `phase_condition_met`, `followup_due`, `niggle_unconstrained`, `cadence_slow`, `cadence_fast`, `training_max_unused`, `activity_cap_exceeded`, `run_spike` |
-| `import` | `routine_drift`, `workout_reappeared`, `exercise_unmapped`, `snapshot_stale`, `frozen_load_off_snapshot` |
+| `import` | `routine_drift`, `workout_reappeared`, `exercise_unmapped`, `snapshot_stale` |
 | `status` | `engine_pin_dev`, `generated_file_drift`, and every code standing |
-| `plan draft` | any of the above that bears on a line (`validation.md`) |
+| `plan draft` | `frozen_load_off_rack` (ADR 0021), and any of the above that bears on a line (`validation.md`) |

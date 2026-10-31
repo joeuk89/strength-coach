@@ -111,8 +111,8 @@ reused, a folder is forever.
   four statuses, raw payload columns, the four template columns on Exercise.
 - Program authoring (wayfinder #22) validates the template columns at `adopt`. Flag identity
   (wayfinder #23) keys the drift warning. The override catalogue (wayfinder #19) is the only
-  route for adopting an app edit. Verb set (wayfinder #16) names the import verb, which also
-  fetches the plate-pool snapshot (ADR 0008).
+  route for adopting an app edit. Verb set (wayfinder #16) names the import verb; it pulls Hevy
+  alone (the kit is a committed file, ADR 0021).
 - Regression tests: a non-allow-listed path raises before any request (run on `hevy/client.py`
   with the recording opener, `tests/hevy/`); a deleted workout leaves a
   tombstone and its sets; an app edit adds a version and the old one stays; a push with a moved

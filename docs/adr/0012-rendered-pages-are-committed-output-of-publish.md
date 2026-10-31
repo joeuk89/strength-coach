@@ -51,5 +51,6 @@ phone through the GitHub app on the private instance repo; Hevy carries the set-
   draft's job. No read verb prints a page to stdout: envelopes carry data, pages are files
   (`docs/spec/verbs.md`).
 - Loads on pages are in athlete units with a plate-pool deep link per loaded line, from the frozen
-  prescription (ADR 0008). The generated sections of a check-in record are tested against the
+  prescription, carrying the kit's short hash, and one set-up link per plate-pool location with the
+  inventory inline (ADR 0008, ADR 0021). The generated sections of a check-in record are tested against the
   store; the read is never parsed (`docs/spec/check-in.md`).

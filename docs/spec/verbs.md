@@ -30,7 +30,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | --- | --- | --- |
 | `status` | read | where we stand and what needs attention; what the SessionStart hook shows |
 | `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
-| `import [--full] [--only hevy\|kit]` | store write | Hevy workouts append-only with tombstones (ADR 0011) and the plate-pool snapshot (ADR 0008); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
+| `import [--full]` | store write | Hevy workouts append-only with tombstones (ADR 0011); kit is a committed file, never imported (ADR 0021); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
 | `checkin open [--date <d>] [--tier light\|deep]` | read | the check-in card (`check-in.md`) |
 | `checkin record <draft>` | store write | the Check-in row plus every record the file carries |
 | `record <draft>` | store write | ledger writes outside a check-in, any mix of record kinds |
@@ -41,7 +41,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `goal adopt <draft>` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
 | `progress` | read | the progress view (`goals.md`) |
 | `query <view> [params]` | read | one of the six read views below |
-| `publish [--dry-run]` | Writing verb (git) | export, pages, one commit (ADR 0001, 0012) |
+| `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
 | `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`) |
 
@@ -52,8 +52,8 @@ git`, and nothing else separates them: the permission rules ask on `hevy` and `g
 runs the dry run of a verb declared `hevy` or `git`, and `coach schema` prints the field. The
 four asked verbs are the four Writing verbs: `plan apply` (`hevy`), `publish`, `upgrade` and
 `init` (`git`). Every one declares `--dry-run`, which is what the hook's prompt shows: `plan
-apply` the Hevy actions and the hash (ADR 0006), `publish` the files it would write and the
-export row counts per table, `upgrade` the migrations it would run and the files it would
+apply` the Hevy actions and the hash (ADR 0006), `publish` the files it would write, the
+athlete-authored files it would commit and the export row counts per table, `upgrade` the migrations it would run and the files it would
 regenerate, `init` the tree it would write. A dry run opens no transaction and touches no file.
 
 Not leaves, and why:
@@ -118,9 +118,9 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 
 | Leaf | Default `result` |
 | --- | --- |
-| `status` | in order: engine version against the pin; Hevy on or off, age of the last import and of the kit snapshot, workouts stored (Hevy and manual counts); plan in force (week, approved date, hash, routines verified or `unverified`); program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
+| `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified`); program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
 | `schema` | the declaration(s), or the registry rows |
-| `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); per source: ran or skipped and why; Hevy: workouts new, versioned, gone, back, window; kit: snapshot date and whether it changed |
+| `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
 | `checkin open` | the card (`check-in.md`), derived tier, window; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
@@ -143,9 +143,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`plan draft --week`** defaults to the next week with no approved plan, or the current week
   while its plan is unapproved. When an approved WeekPlan exists for the week, the Draft is a
   superseding one and the summary names the plan it supersedes.
-- **`import --only`** picks one source. Without it both run, each as its own transaction: Hevy
-  unreachable still stores the kit snapshot and exits 4 with that result reported; Hevy off pulls
-  the kit only and says so.
+- **`import`** has one source, Hevy; with no `[hevy]` table it reports `skipped` and exits 0.
+  Kit is read from `kit/` by the verbs that round, never pulled (ADR 0021).
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
   Draft (`program.md`; the kinds and what each folds to are `overrides.md`'s).
 - **`schema --registry`** takes the name of any registry a `schema.md` CHECK list or a Draft
@@ -243,7 +242,7 @@ Routine map's statuses.
 | 1 | a Draft with any violation on `plan apply --dry-run`, `program adopt`, `checkin record`, `record`, `goal adopt`; `draft_exists` on an explicit `--out`; an unknown view or record kind; a routine read-back that differs (`verify_failed`, ADR 0011) |
 | 3 | a guard refuses a write: `plan apply` without `--expect` (`expect_missing`), with a changed hash (`expect_mismatch`), with a routine moved in Hevy since the import (`routine_moved`, ADR 0011), or when the write audit cannot be opened for append (`audit_unwritable`, ADR 0011). Whether a permission mode allows the prompt is the hook's answer, never the verb's |
 | 4 | Hevy unreachable, on `import` and `plan apply` |
-| 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import` and `plan apply`), an unknown table or key in `coach.toml` (`config_unknown_key`, on every verb); on the rebuild, `export_newer_than_engine`; on any store write, `store_behind_export` (`schema.md`, "The rebuild") |
+| 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import` and `plan apply`), an unknown table or key in `coach.toml` (`config_unknown_key`, on every verb), a plate-pool location whose `kit/<name>.achievable.json` is missing or carries an `inventory_sha256` other than the hash of `kit/<name>.json` (`kit_tables_stale`, naming the location and the generator command, on `plan draft` and `program adopt`; ADR 0021); on the rebuild, `export_newer_than_engine`; on any store write, `store_behind_export` (`schema.md`, "The rebuild") |
 
 `error.code` carries the flag code or the refusal reason named above. Nothing else refuses. A
 refusal reason is not a flag: it has no scope, no registry row and no `rn`.

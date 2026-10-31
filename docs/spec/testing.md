@@ -59,9 +59,10 @@ Three committed fixture directories cover what builders cannot:
 - `tests/fixtures/hevy/`: a handful of anonymised Hevy GET responses (a workout page, a routine,
   a folder, an exercise template). They fix the payload shapes the parser must accept and feed
   the parser tests only.
-- `tests/fixtures/kit/`: one synthetic plate-pool `achievable.json`. It feeds the `core/kit.py`
-  parser tests and every service test of an import at a plate-pool location; no test fetches
-  the published file.
+- `tests/fixtures/kit/`: one synthetic kit tables document, `<name>.achievable.json` with its
+  header, and the inventory it hashes against. It feeds the `core/kit.py` parser tests and every
+  service test that rounds at a plate-pool location, including the `kit_tables_stale` refusal
+  (ADR 0021).
 
 ## The fake Hevy
 
@@ -115,7 +116,7 @@ the instances on this machine, and `uv sync` in the checkout makes the dev envir
 pyproject.toml
 src/coach/
   __main__.py          python3 -m coach
-  core/                pure functions, frozen values, the code registries; kit.py parses achievable.json
+  core/                pure functions, frozen values, the code registries; kit.py parses the kit tables
   store/               schema.sql, connection factory, migrations, reads and writes
   hevy/                HevyClient protocol, the allow-listed client with its audit and retry, payload parsing
   render/              pages and Drafts as text; toml.py, the one TOML emitter
@@ -137,12 +138,12 @@ Six packages, one import direction (ADR 0019):
 
 | Package | Owns | May import |
 | --- | --- | --- |
-| `core` | schemes, e1RM, return bands, week kind, units, loads and rounding, the eight-step `prescribe` pipeline (ADR 0017), validation rules, the registries (`schemes`, `flags`, `record-kinds`, `views`) with their `rn` constants, the plate-pool snapshot parser (`kit.py`) | stdlib, `core` |
+| `core` | schemes, e1RM, return bands, week kind, units, loads and rounding, the eight-step `prescribe` pipeline (ADR 0017), validation rules, the registries (`schemes`, `flags`, `record-kinds`, `views`) with their `rn` constants, the kit tables parser (`kit.py`) | stdlib, `core` |
 | `store` | `schema.sql` (byte-identical to `schema.md`) and the frozen DDL of each past version, the catalogue seed, the connection factory with `foreign_keys` on, the rebuild from the export, migrations, functions that read rows into `core` values and write values as rows | `core` |
 | `hevy` | the `HevyClient` protocol, the real client over `urllib` with the allow-list, the 429 retry and the Write audit, payload parsing from the fixture shapes | `core` |
 | `render` | `pages/*` and the plan and program Drafts, as text from `core` values; `toml.py`, the one TOML emitter (`coach.toml` and both Drafts) | `core` |
 | `services` | one function per leaf: load a snapshot through `store`, run `core`, write in one transaction, return a typed result or raise `Refused`, `Invalid`, `Unreachable` or `Setup` | `core`, `store`, `hevy`, `render` |
-| `cli` | verb declarations, argv parsing, the envelope, exit-code mapping, instance-root discovery, `.env`, git, filesystem, the plate-pool fetch over `urllib`, the Clock built from `[athlete].timezone`, the `coach-hook` commands | everything |
+| `cli` | verb declarations, argv parsing, the envelope, exit-code mapping, instance-root discovery, `.env`, git, filesystem, reading `kit/` and hashing the inventory, the Clock built from `[athlete].timezone`, the `coach-hook` commands | everything |
 
 `core` never imports `sqlite3`, `urllib`, `os`, `pathlib`, `subprocess` or reads the current
 time; dates arrive as values. `render` never imports `store`. A contract test walks every module

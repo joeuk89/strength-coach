@@ -26,6 +26,9 @@ Ownership tiers and where numbers live are ADR 0013; this page is the tables.
 │   └── <table>.jsonl          one file per table, rows sorted by primary key (schema.md)
 ├── hevy/
 │   └── writes.jsonl           append-only write audit (ADR 0011)
+├── kit/                       athlete-authored, one pair of files per plate-pool location (ADR 0021)
+│   ├── <name>.json            the inventory, in plate-pool's inventory.schema.json
+│   └── <name>.achievable.json the tables `npx plate-pool achievable` emits from it, with its header
 └── pages/                     written by publish (ADR 0012)
 ```
 
@@ -71,7 +74,7 @@ config_unknown_key`, naming the key (`verbs.md`): a setup refusal, not a flag.
 | `[engine]` | engine | `version`, the engine pin (ADR 0007) |
 | `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `available_days`, `session_minutes`, `checkin_cadence_days`; each has a reader, below |
 | `[hevy]` | athlete | present when Hevy is used; empty in v1 |
-| `[location.<name>]` | athlete | `kind = "plate-pool"` with `url`, or `kind = "grid"` with increments and bar weights (ADR 0008) |
+| `[location.<name>]` | athlete | `kind = "plate-pool"` with `kit = "<name>"` (naming `kit/<name>.json` and `kit/<name>.achievable.json`), `collars` and `dumbbells` (`pair` or `single`) choosing which tables apply, or `kind = "grid"` with increments and bar weights; either kind maps equipment kinds to its implements (ADR 0008, ADR 0021). No URL: the engine fetches nothing |
 
 No lifting goal (the Goal is a record and the emphasis is on the Program version, ADR 0014), no
 `experience` (level is derived per lift), no caps, no thresholds, no feature toggles (ADR 0004).
@@ -94,16 +97,28 @@ formula, so no code rule needs either (`skills.md`, the `onboard` worked example
 
 Runs in a terminal, interactively. It asks for the `[athlete]` facts above with defaults where
 one exists (timezone from the machine, cadence 7 days), whether Hevy is used and if so the key,
-and the home location source (default the plate-pool URL). Every answer has a flag so personas,
+and nothing about kit (the `kit` skill writes every location, ADR 0021). Every answer has a flag so personas,
 fixtures and the migration run it non-interactively; `--defaults` takes every default. It
 refuses if any engine-owned path already exists and otherwise writes beside whatever is there.
 It writes the tree above with an empty store, `profile.md` absent (the `onboard` skill writes
-it), and the grid-location table as a commented example. It runs `git init` if the directory is
+it), `kit/` empty, and a `[location.<name>]` example of each kind, commented. It runs `git init` if the directory is
 not a repo and, after a final TTY confirmation listing the files, makes one commit,
 `coach init vX.Y.Z`; it is a Writing verb (git) like `upgrade`, with `--dry-run` printing the
 tree it would write. On a `.dev` build it refuses without `--pin X.Y.Z`, the release the
 instance will run, so `[engine]` never holds a `.dev` version (ADR 0007, `verbs.md`). Creating
 the remote repository and pushing are the human's job and are printed as the next step.
+
+## Kit
+
+A plate-pool location's kit is two athlete-authored files (ADR 0021). `kit/<name>.json` is the
+inventory in plate-pool's `inventory.schema.json`, the contract between the repos. `kit/<name>.achievable.json`
+is what `npx plate-pool achievable --inventory kit/<name>.json` emits: a header, `format` (the
+document format the engine states it parses), `plate_pool` (the version that wrote it) and
+`inventory_sha256`, then the tables. The engine reads only the tables file, through `core/kit.py`
+(ADR 0019); it never parses the inventory, runs Node or fetches. A verb that rounds hashes the
+inventory first and stops with exit 5, `kit_tables_stale`, when the header disagrees (`verbs.md`).
+The `kit` skill edits these files and runs the generator for the athlete (`skills.md`). A grid
+location has no files: its kit is the `[location.<name>]` table alone.
 
 ## Generated CLAUDE.md
 

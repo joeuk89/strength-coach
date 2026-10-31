@@ -92,5 +92,5 @@ else changes.
 | 14-day Weigh-in average, two weigh-ins minimum, 28-day observed-rate window | `goals.md`, Milestone and Phase | this framework's |
 | Phase band half-widths ±50 % of rate and ±0.25 % BW | `goals.md`, What the Phase changes | marked opinion under rn:training-level §4 |
 | catch-up at a window over 10 days; check-in cadence default 7 | `week.md`, When a check-in is due | the cadence is an `[athlete]` fact; 10 days is this framework's |
-| `snapshot_stale` age limits: plate-pool 90 days, Hevy 7 days | `validation.md` | a plan reads last week's exposures, so a mirror older than a week is stale; kit changes rarely |
+| `snapshot_stale` age limit: Hevy 7 days | `validation.md` | a plan reads last week's exposures, so a mirror older than a week is stale (the plate-pool limit went with the kit import, ADR 0021) |
 | the `linear` reset `misses_before_reset = 2`, `reset_factor = 0.9` | `prescription.md`, Stalls | **cited**: rn:training-level §2; 0.9 is the over-40 figure, named here because the default bakes in an age band and the line may set 0.95 |

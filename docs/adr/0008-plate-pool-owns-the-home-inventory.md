@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded in part by 0021 (ownership, import, the snapshot and the deep link; the rounding, warm-up, cap and frozen-prescription consequences stand)
 date: 2026-10-26
 amended: 2026-10-31 by wayfinder #42 (the load step is the location's alone: a plate-pool location's next row, a grid location's increment per implement kind; no exercise or catalogue increment exists)
 ---

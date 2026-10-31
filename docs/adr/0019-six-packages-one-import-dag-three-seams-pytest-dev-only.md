@@ -64,13 +64,12 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
 - **Import rule.** `core` imports stdlib and `core` only, and never `sqlite3`, I/O, the network or
   the current time; dates arrive as values. `store`, `hevy` and `render` import `core`.
   `services` imports those four. `cli` imports anything. `render` never imports `store`.
-  The plate-pool snapshot splits along the same line: `core/kit.py` parses an `achievable.json`
-  document into enumerated racks and is pure; the fetch of that document over `urllib` is a
-  `cli` function, run by the `import` command and handed to the `import` service as a value,
-  so a service test of an import at a plate-pool location reads `tests/fixtures/kit/` and never
-  the network. No `kit` module sits beside `hevy` and no module outside `store`, `hevy` and
-  `cli` imports `urllib`. (Should [Who owns the athlete's kit](https://github.com/joeuk89/strength-coach/issues/49)
-  move ownership into the instance, the fetch goes and the parse stays where it is.) The
+  The kit splits along the same line: `core/kit.py` parses a `kit/<name>.achievable.json`
+  document into enumerated racks and is pure; `cli` reads the committed file and the inventory's
+  hash and hands both to the service as values (ADR 0021), so a service test at a plate-pool
+  location reads `tests/fixtures/kit/` and nothing else. No `kit` module sits beside `hevy`, no
+  fetch of kit exists anywhere, and no module outside `store`, `hevy` and `cli` imports
+  `urllib`. The
   four typed errors (`Refused`, `Invalid`, `Unreachable`, `Setup`) live where every layer can
   raise them, and only `cli` maps them to exit codes.
 - **Seams.** `HevyClient` is a `typing.Protocol` of the four allow-listed writes, the GETs

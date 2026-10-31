@@ -391,10 +391,21 @@ a planned session may be moved to another.
 _Avoid_: gym (fine in prose), venue, site
 
 **Rack**:
-The enumerated loads one implement can be set to at a location. At home every implement is a
-rack, taken from plate-pool's published achievable loads; at a kit-less location only dumbbells
-and kettlebells are.
+The enumerated loads one implement can be set to at a location. At a plate-pool location every
+implement is a rack, read from the location's kit tables; at a grid location only a listed
+dumbbell or kettlebell set is.
 _Avoid_: grid (which is an increment rule, not a list), inventory
+
+**Kit tables**:
+The achievable loads per implement that plate-pool generates from an inventory, committed in the
+instance beside it and read by the engine as the rack of a plate-pool location. Stale when the
+inventory has changed since they were generated.
+_Avoid_: snapshot, achievable.json (fine in prose, not as the noun)
+
+**Inventory**:
+The athlete's plates, locking hardware and implements at one plate-pool location, written in
+plate-pool's schema and owned by the instance. The engine never reads it; plate-pool does.
+_Avoid_: kit file, equipment list
 
 **Equipment kind**:
 What an exercise is done with: barbell, dumbbell, kettlebell, leg attachment, vest, machine,
@@ -539,7 +550,7 @@ _Avoid_: workspace, data repo, my-training
 **Export**:
 The text copy of the store that git commits: one sorted file per table and a manifest, written
 whole at every publish and read only to rebuild the store.
-_Avoid_: backup, dump, mirror, snapshot (which is the kit's)
+_Avoid_: backup, dump, mirror, snapshot (which is Hevy's)
 
 **Schema version**:
 The one number that says which shape of the store an instance's database and export are in.

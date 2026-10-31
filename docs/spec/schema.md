@@ -24,7 +24,7 @@ state rather than a fact about a date, and the two Hevy mirrors that import over
 | `ci-` | `check_in` | the date, a superseding row adds `-2`, `-3`: `ci-2026-11-01-2` |
 | `b-` | Block (derived, no table) | its opening date: `b-2026-10-05` |
 | `w-` | `workout` (manual only; imports keep the Hevy id) | `w-0001` |
-| `d-`, `n-`, `ne-`, `f-`, `fe-`, `o-`, `a-`, `g-`, `m-`, `ph-`, `wi-`, `sn-`, `ac-`, `ss-`, `ks-`, `ir-`, `ak-` | `decision`, `niggle`, `niggle_event`, `follow_up`, `follow_up_event`, `observation`, `annotation`, `goal`, `milestone`, `phase`, `weigh_in`, `sleep_night`, `activity`, `status_span`, `kit_snapshot`, `import_run`, `acknowledgement` | max + 1 inside the writing transaction, four digits: `d-0001` |
+| `d-`, `n-`, `ne-`, `f-`, `fe-`, `o-`, `a-`, `g-`, `m-`, `ph-`, `wi-`, `sn-`, `ac-`, `ss-`, `ir-`, `ak-` | `decision`, `niggle`, `niggle_event`, `follow_up`, `follow_up_event`, `observation`, `annotation`, `goal`, `milestone`, `phase`, `weigh_in`, `sleep_night`, `activity`, `status_span`, `import_run`, `acknowledgement` | max + 1 inside the writing transaction, four digits: `d-0001` |
 
 Session and exercise ids are the authored ids from the program form (`push_a`, `bb_bench_press`).
 
@@ -497,16 +497,6 @@ CREATE TABLE routine_map (                 -- written by plan apply after a veri
   written_at    TEXT NOT NULL
 );
 
-CREATE TABLE kit_snapshot (                -- a plate-pool achievable.json as fetched
-  id           TEXT PRIMARY KEY,
-  location     TEXT NOT NULL,
-  url          TEXT NOT NULL,
-  fetched_at   TEXT NOT NULL,
-  content_hash TEXT NOT NULL,
-  payload      TEXT NOT NULL,              -- JSON
-  UNIQUE (location, content_hash)
-);
-
 CREATE TABLE import_run (
   id          TEXT PRIMARY KEY,
   at          TEXT NOT NULL,
@@ -633,7 +623,7 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 `acknowledgement` and upserts `exercise`. `plan apply` writes `week_plan`, `override`,
 `prescription`, `acknowledgement`, then `routine`, `routine_map`, `folder` and
 `exercise.hevy_template_id` as each Hevy write verifies. `import` writes `workout`,
-`logged_set`, `tombstone`, `weigh_in` (source `hevy`), `kit_snapshot`, `import_run`, upserts
+`logged_set`, `tombstone`, `weigh_in` (source `hevy`), `import_run`, upserts
 `routine` and `folder`, and flips `routine_map` to `missing`.
 
 ## The engine catalogue

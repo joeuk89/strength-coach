@@ -504,7 +504,7 @@ text = "The pull-up progresses through the assistance ladder and negatives; the 
 What the dry run shows for this file: the filled `[dose]` and `[deload]`; two `scheme_off_emphasis`
 warnings, both acknowledged; no `priority_lift_not_first` on `a-sat-pull` (the scapular line
 ahead of the pull-up is activation only and carries no working group, so the pull-up is first);
-every `start_load` checked against the home plate-pool snapshot; no violations. The old `increment` params are gone: the
+every `start_load` checked against the home rack (`kit/home.achievable.json`, ADR 0021); no violations. The old `increment` params are gone: the
 squat steps by the home rack's next barbell row.
 
 ## Handed to other tickets

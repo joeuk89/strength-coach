@@ -8,12 +8,15 @@ outlast the week.
 
 Decided on wayfinder ticket [Flag identity and lifecycle](https://github.com/joeuk89/strength-coach/issues/23),
 2026-10-27. The hard and warning conditions are ADR 0005's; Hevy's are ADR 0011's; the drop
-warnings are ADR 0010's; the kit snapshot warning is ADR 0008's. Amended 2026-10-31 by
+warnings are ADR 0010's; the frozen-load warning is ADR 0008's as ADR 0021 restates it. Amended 2026-10-31 by
 [Verb, hook and validation amendments](https://github.com/joeuk89/strength-coach/issues/43):
 `plan_not_current` dropped, `frozen_load_off_snapshot` moved outside the plan,
 `generated_file_drift`, `draft_ref_unresolved` and `niggle_constraint_on_resolved` registered,
 every outside-plan code given its raising verb and clearing fact, and a Decision's calendar-free
-scopes widened to `exercise` and `version`.
+scopes widened to `exercise` and `version`. Amended again the same day by
+[Who owns the athlete's kit](https://github.com/joeuk89/strength-coach/issues/49): `snapshot_stale`
+is Hevy's alone, `frozen_load_off_snapshot` is `frozen_load_off_rack` raised by `plan draft`, and
+stale kit tables are the setup refusal `kit_tables_stale`, not a flag (ADR 0021).
 
 ## Severity
 
@@ -156,8 +159,8 @@ verbs:
 | `routine_drift` (ADR 0011) | `import` | an override on the next WeekPlan, or the next push overwriting it |
 | `workout_reappeared` (ADR 0011) | `import` | a `match` or `void` Annotation on the new version |
 | `exercise_unmapped` (`cutover.md`) | `import` | an `[[exercise]]` record that maps or declares the Exercise |
-| `snapshot_stale` (ADR 0008, ADR 0011) | `import` | `coach import` fetching a fresh snapshot |
-| `frozen_load_off_snapshot` | `import` | the next WeekPlan, whose loads freeze on the new snapshot (`plan apply`); a frozen load never re-rounds (ADR 0008) |
+| `snapshot_stale` (ADR 0011) | `import` | `coach import` pulling Hevy again |
+| `frozen_load_off_rack` (ADR 0021) | `plan draft` | the next WeekPlan, whose loads freeze on the current rack (`plan apply`); a frozen load never re-rounds (ADR 0008) |
 | `followup_due` | `checkin open` | a Follow-up event (kept, deferred, resolved, dropped) |
 | `niggle_unconstrained` | `checkin open` | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
 | `cadence_slow`, `cadence_fast` | `checkin open` | the signal no longer holding, or a version giving the exercise another scheme; left by a `leave_warning` Decision |
@@ -192,7 +195,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 
 | Code | Scope | Params | Cleared by | `rn` |
 | --- | --- | --- | --- | --- |
-| `load_off_grid` | line | load, implement, location, nearest grid loads | a `pin load` override on a grid value; a kit change in `coach.toml`; `coach import` of a new plate-pool snapshot | `null` |
+| `load_off_grid` | line | load, implement, location, nearest grid loads | a `pin load` override on a grid value; a kit change in `coach.toml` or in `kit/` through the `kit` skill (ADR 0021) | `null` |
 | `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or an event with a smaller constraint set); days off moved by a `trained_unlogged` Annotation or a hand-entered Workout; removing the light-week override or raising its `rpe_cap`; a lower `pin load` | by ceiling kind: return band rn:detraining-return.3, illness rn:detraining-return.4, light week rn:deloads.10, niggle `null` |
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together; no override waives the band | rn:detraining-return.3 |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version | rn:deloads.3 |
@@ -280,8 +283,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `niggle_unconstrained` | instance | niggle id, opened | `null` |
 | `engine_pin_dev` | instance | pinned version, running version | `null` |
 | `generated_file_drift` | instance | file (`CLAUDE.md` or `.claude/settings.json`), engine version that generated it | `null` |
-| `frozen_load_off_snapshot` | session | week, line, frozen load, snapshot date | `null` |
-| `snapshot_stale` | instance | source (plate-pool, hevy), snapshot date, age limit (plate-pool 90 days, Hevy 7 days; opinion, `research-notes.md`) | `null` |
+| `frozen_load_off_rack` | session | week, line, frozen load, location | `null` |
+| `snapshot_stale` | instance | last import date, age limit (7 days; opinion, `research-notes.md`) | `null` |
 | `cadence_slow` | exercise | scheme, the scheme's metric (resets, stall streak or e1RM slope), blocks, `may_schemes`, `may`, `never` (the per-scheme condition and the switching table's row, `goals.md`) | rn:training-level §2 |
 | `cadence_fast` | exercise | scheme, the scheme's metric (exposures at top of range, or exposures the one-row cap bound), `may_schemes`, `may`, `never`; raised only on `double_progression` and `top_backoff` | rn:training-level §2 |
 | `phase_condition_met` | instance | phase id, condition, value | `null` |

@@ -11,13 +11,14 @@ plus programming pass (`benchmark.md`); the old check-in and program-week skills
 
 ## The set
 
-Four skills, all in the plugin (ADR 0007), none in the instance:
+Five skills, all in the plugin (ADR 0007), none in the instance:
 
 | Skill | Moment | When |
 | --- | --- | --- |
 | `check-in` | The weekly review | `status` says a check-in is due (`week.md`), or the athlete reports on the week |
 | `plan-week` | The week's prescription | A check-in has closed a week, a light or constrained week is agreed, a midweek change is needed |
 | `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring). Its Judge answers `cadence_slow` and `cadence_fast` only with a move the flag lists (`may_schemes`, `may`, `never`); the switching table is engine code specified in `goals.md`, and the skill carries none of it (ADR 0020) |
+| `kit` | A location or its equipment changes | After `coach init` when `coach.toml` has no location; the athlete reports equipment bought or lost, or a new place to train. Edits the inventory or the grid table, runs `npx plate-pool achievable`, explains the rack change and commits through `publish` on the athlete's yes; the athlete never runs a command (ADR 0021) |
 | `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections), the first Goal and the Phase (`goal adopt`) on the athlete's yes, and designs no program: `program`'s own When covers the first version (decided on ticket [Worked program and onboard skills](https://github.com/joeuk89/strength-coach/issues/36), 2026-10-31) |
 
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
@@ -274,11 +275,59 @@ The athlete sees what will be recorded and says yes before any verb records it.
 `coach goal adopt`, `coach query`, `coach schema`
 ```
 
+## Worked example: `kit`
+
+Under budget (about 2.2k characters). It owns every location write, so `onboard` names no skill
+and `cutover.md` step 2 is one run of it. The athlete says what they have; the skill does the
+files and the command.
+
+```markdown
+---
+name: kit
+description: Where the athlete trains and with what. Use after `coach init` when coach.toml has
+  no location, or when the athlete reports equipment bought or lost or a new place to train.
+  Writes the location, its inventory and its kit tables; the athlete runs nothing. Also /kit.
+---
+
+## Read first
+`coach status`, for the locations recorded and whether any kit tables are stale. For a change,
+the location's `kit/<name>.json` as it stands.
+
+## Ask
+Where they train, and for each place: a plate pool they load themselves (bar, adjustable
+dumbbells, plates and collars), or fixed kit (a dumbbell rack, machines, a bar with a known
+step). For a plate pool: every plate with its count and weight, the locking hardware, each
+implement's bare weight and limit, which collars they use. For fixed kit: the step per
+implement, the bar's weight, the dumbbells on the rack. A new purchase: what it is, how many,
+what it weighs.
+
+## Judge
+- **Kind.** A place where the athlete builds loads from plates is `plate-pool`; anything else
+  is `grid`. One pair of adjustable dumbbells with a dial is `grid` with an increment and a
+  maximum.
+- **Inventory.** Write `kit/<name>.json` in plate-pool's schema; mark a weight `verified` only
+  when the maker states it, `owner` when the athlete weighed it, else `unverified`. Then run
+  `npx plate-pool achievable --inventory kit/<name>.json > kit/<name>.achievable.json`; a
+  schema error is the athlete's answer to fix, never a value to guess.
+- **Map.** Every equipment kind the athlete's exercises use maps to one implement at the
+  location, or the kind is unsupplied there and `equipment_unsupplied` says so at adopt.
+- **Rack change.** Say what the new tables reach that the old did not, and what they lose:
+  the bar's top row, the heaviest pair, any load in the plan in force that no longer exists
+  (`frozen_load_off_rack` at the next draft).
+
+## Explain
+The location as it will be written, the rack change in loads, and which planned loads it
+touches. The athlete sees the files and says yes before `publish` commits them.
+
+## Verbs
+`coach status`, `coach publish`
+```
+
 ## Worked example: `onboard`
 
 Under budget (about 3.3k characters). It writes the profile, the Goal and the Phase and stops;
 the first program is `program`'s moment, so the first conversation is two skill loads like the
-core loop. `cutover.md` step 3 splits the same way. A priority lift is unbounded in number and
+core loop. `cutover.md` step 4 splits the same way. A priority lift is unbounded in number and
 the Judge says what each costs instead of capping them.
 
 ```markdown
