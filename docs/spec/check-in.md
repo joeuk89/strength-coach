@@ -20,8 +20,9 @@ citations").
 | `status` | `current` or `superseded` (see Correcting) |
 
 Nothing else. Adherence, week kind, block count, e1RMs, triggers and the hard-week count are
-views. A block reset, a light week or a deferred deep review decided at the check-in is a Decision
-row carrying the check-in reference.
+views. A declined ceiling or a deferred deep review decided at the check-in is a Decision row
+carrying the check-in reference; a light week taken is the `light_week` override on the next
+WeekPlan, and the block closes by the derived week kind (`overrides.md`).
 
 Catch-up is not stored: a check-in whose window is longer than the first return band (10 days) is a
 catch-up by definition, and the deep tier is deferred to the next check-in by the same test.
@@ -42,7 +43,7 @@ answer lands:
 | Follow-up disposition | Follow-up event: deferred, kept, resolved or dropped. A deep check-in gives every open one a disposition |
 | Free note from the athlete | Athlete note: date, text verbatim, optional `about` reference (planned session, exercise, niggle, follow-up). Never classified by code |
 | A pattern the coach has noticed, or one that stopped holding | Observation raised or retired (ADR 0009) |
-| Block reset, light week, deferred deep review, override | Decision |
+| Declined ceiling, deferred deep review, an agreement or an override for longer than a week | Decision (`overrides.md`) |
 
 ### Matching a coach-led session
 

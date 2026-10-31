@@ -246,7 +246,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
   to the Routine map, a rounding of any authored load, a rotation position for an `amend`.
 - `program show --draft` emits the current version as a Draft; `--apply-plan <week>` folds that
   WeekPlan's swap and pin overrides in, so promoting a persisting swap is an `amend` the agent
-  edits only to write `because`. The trigger for promotion is the Override catalogue's (#19).
+  edits only to write `because`. The trigger for promotion is `overrides.md`'s: `override_persisting` on the third consecutive plan.
 
 ### Violations
 
@@ -472,7 +472,7 @@ squat steps by the home rack's next barbell row.
 - **Weekly prescription** (#26): the stall and reset rule per scheme, the registry defaults for
   `linear` and `top_backoff`, the hypertrophy RIR walk and set ramp, the derivation of a
   conditioning session's dose from its last Activity.
-- **Override catalogue** (#19): the trigger for promoting a one-week swap, the swap and pin
+- **Override catalogue** (#19, settled in `overrides.md`): the trigger for promoting a one-week swap, the swap and pin
   override kinds `--apply-plan` folds in.
 - **Verb set** (#16): `program adopt`, `program show` (`--draft`, `--apply-plan`), `coach schema`
   printing the scheme registry.

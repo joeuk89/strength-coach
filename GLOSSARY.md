@@ -126,8 +126,9 @@ _Avoid_: overlay, proposal, draft (that is the file, not the plan), one-off
 
 **Override**:
 A typed, reasoned departure from the program version's rule, scoped to a week, a planned session
-or a line. A load appears in one only as the typed field of a pin, never in prose. A WeekPlan
-holds those that live for its span; a Decision holds those that last longer.
+or a line, from a closed catalogue of kinds. A load appears in one only as the typed field of a
+pin, never in prose. A WeekPlan holds those that live for its span; an override Decision holds
+one line-scope kind for up to eight weeks and applies itself to every week in its span.
 _Avoid_: delta, tweak, adjustment, standing override (say "override Decision")
 
 **Recovery ceiling**:
@@ -314,10 +315,12 @@ what ends it. Opened and closed with a reason; one open at a time.
 _Avoid_: block (a run of hard weeks), cut, bulk (fine in prose), diet, strategy
 
 **Decision**:
-A coaching choice recorded with its reason and outcome: an override with an until date, a light
-week, a training max, a declined ceiling, a warning left until a date, or going against a
-research claim.
-_Avoid_: note, rationale, flag
+A coaching choice recorded with its reason at the moment it is made; its kind is the outcome.
+An override with an until date, a parked session, a training max, a safety ceiling, an activity
+cap, a declined ceiling, a deferred deep review, a warning left until a date, or going against a
+research claim. Superseded by a later one on the same subject or retired with a reason, never
+deleted.
+_Avoid_: note, rationale, flag, proposal (which is on the card, not in the ledger)
 
 **Niggle**:
 A reported discomfort tracked over time, with a status history, the load constraints it imposes
@@ -366,9 +369,15 @@ cable, band or bodyweight. A location maps each kind it supplies to one of its i
 _Avoid_: equipment (which is the kit itself), implement type
 
 **Safety ceiling**:
-A load the athlete will not go above on one exercise, set with a reason. Not a kit limit, which
-is whatever the rack can build.
+A load the athlete will not go above on one exercise, agreed as a Decision with a reason. It
+truncates the rack, so no derived load crosses it. Not a kit limit, which is whatever the rack
+can build, and not a niggle's cap, which lives and dies with the niggle.
 _Avoid_: cap, max
+
+**Activity cap**:
+An agreed weekly or single-bout limit on one activity kind (distance or minutes), recorded as a
+Decision. Breaching it is reported, never prevented.
+_Avoid_: run cap (fine in prose), cardio limit
 
 **Load mode**:
 How an exercise's load is counted: total, per hand doubled, single implement, bodyweight, assisted,

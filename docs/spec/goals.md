@@ -185,7 +185,9 @@ place a coach would look for it.
 
 ## The block boundary
 
-The block boundary is the check-in that records a block reset Decision. The `program` skill runs
+The block boundary is the check-in whose closed week ends the Block by its derived kind (a light or
+return week, or under half trained), or the adoption of a `redesign` version (ADR 0015); there is
+no block reset Decision (`overrides.md`). The `program` skill runs
 then, and a deep check-in reads the same report.
 
 ### `coach progress`

@@ -122,7 +122,7 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
   unreachable still stores the kit snapshot and exits 4 with that result reported; Hevy off pulls
   the kit only and says so.
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
-  Draft (`program.md`; the kinds are the Override catalogue's, #19).
+  Draft (`program.md`; the kinds and what each folds to are `overrides.md`'s).
 - **`schema --registry`** takes `schemes`, `flags`, `record-kinds` or `views`. It is the one
   source every contract test reads a registry from.
 
@@ -136,7 +136,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | --- | --- | --- | --- |
 | niggle | `[[niggle]]` | a Niggle status event, with its load constraint and rehab session link (ADR 0010) | |
 | followup | `[[followup]]` | a Follow-up event: deferred, kept, resolved, dropped | |
-| decision | `[[decision]]` | a Decision of any kind (the kinds are the Override catalogue's, #19, and `validation.md`'s `leave warning`) | |
+| decision | `[[decision]]` | a Decision of any of the ten kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`), or a `retire` of one | |
 | annotation | `[[annotation]]` | an Annotation, or the withdrawal of one | |
 | note | `[[note]]` | an Athlete note with its optional `about` ref | |
 | workout | `[[workout]]` | a manual workout when Hevy is off (ADR 0004); never sent to Hevy | |
@@ -223,7 +223,7 @@ Generated from the declarations, none hand-written per verb:
 
 ## Hand-offs
 
-- **Override catalogue** (#19): the Decision kinds `[[decision]]` accepts; the override kinds
+- **Override catalogue** (#19, settled in `overrides.md`): the Decision kinds `[[decision]]` accepts; the override kinds
   `--apply-plan` folds in.
 - **Schema**: the `draft_hash` column on every row a Draft verb writes; the record-kind and view
   registries as tables the contract tests read.

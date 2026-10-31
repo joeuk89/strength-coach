@@ -158,7 +158,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `load_off_grid` | line | load, implement, location, nearest grid loads | a `pin load` override on a grid value; a kit change in `coach.toml`; `coach import` of a new plate-pool snapshot |
 | `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or relax the constraint); the return band's exposure or days off; removing the light-week override; a lower `pin load` |
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together |
-| `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a Decision declining the ceiling, a light week override, or a block reset Decision |
+| `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version |
 | `hevy_template_missing` | line | exercise id, missing columns | editing the Exercise so its four template columns are present |
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` |
 | `plan_not_current` | week | named WeekPlan id, current draft hash | re-running the dry run on the current Draft |
@@ -178,12 +178,13 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `rehab_in_version` | session | session id | removing it; a rehab session is raised on a niggle |
 | `practice_not_optional` | session | session id | `tier = "optional"` |
 | `coach_led_has_lines` | session | session id | removing the lines or the `estimated_sets` |
-| `start_load_missing` | line | exercise id, days since last exposure | a `start_load` on the line |
+| `start_load_missing` | line | exercise id, days since last exposure | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there |
 | `start_load_off_rack` | line | start load, location, two nearest rows | a start load on a rack row |
 | `no_working_sets` | line | scheme | a working group, or `hold` |
 | `set_type_not_allowed` | line | set type, scheme | a permitted type, or a scheme that permits it |
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) |
+| `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) |
 
 ### Warnings on a plan (acknowledgeable)
 
@@ -199,6 +200,10 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `unexplained_drift` | line | last prescription, this prescription, delta |
 | `session_drop_suggested` | session | reason (sleep debt, status day, quality stack), evidence refs |
 | `frozen_load_off_snapshot` | session | line, load, snapshot date |
+| `override_persisting` | line | kind, weeks, plan ids |
+| `light_week_type_off_trigger` | week | proposed type, chosen type, triggers |
+| `light_week_unprompted` | week | hard-week count, ceiling |
+| `minimum_week_floor` | week | priority lift, kept sessions |
 
 ### Warnings on a program version at adopt (acknowledgeable, frozen on the version)
 
@@ -232,14 +237,17 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `milestone_reached` | exercise | milestone, exposure ref, date |
 | `phase_condition_met` | instance | phase id, condition, value |
 | `phase_trend_off` | instance | phase id, target rate, observed rate, window |
+| `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes |
+| `training_max_unused` | exercise | scheme, decision id |
 
 ### Codes pending other tickets
 
 The parity checklist holds further warning conditions whose rule is not yet specified: volume
 undershoot and session volume high, the priority lift floor unplaceable, double-progression
-mismatch, infeasible RPE target, the "choose the load" state, cardio cap and spike, same-day lift
-and quality activity. Each lands here as a row when the weekly prescription rule or the override
-catalogue settles its condition and params.
+mismatch, infeasible RPE target, the run spike, same-day lift and quality activity. Each lands
+here as a row when the weekly prescription rule settles its condition and params. The "choose
+the load" state is `start_load_missing` on a swapped line and the cardio cap is
+`activity_cap_exceeded` (`overrides.md`).
 
 ## Contract tests
 
