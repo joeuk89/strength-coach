@@ -179,6 +179,17 @@ _Avoid_: target, proposal, projection
 One set inside a prescription: its type, load, reps or range and RPE.
 _Avoid_: set target
 
+**Anchor exposure**:
+The one exposure a line's prescription derives from: the newest of its exercise in the same
+session, else in any session, else none and the start load stands. Light-week exposures are
+never anchors; return-week ones are.
+_Avoid_: baseline, last week, derived-from (fine as the field name)
+
+**Derivation step**:
+One recorded move of the rule on one line: which step, the value before, the value after and
+why. The ordered list of them is the whole explanation of a prescription.
+_Avoid_: rationale, provenance, reason (which is an override's)
+
 **Week kind**:
 What a closed week counted as: hard, light, return, one-off, minimum, break or partial. Derived by
 one precedence order, never stored.

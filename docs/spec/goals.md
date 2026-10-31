@@ -117,7 +117,7 @@ not fit (next section).
 | Knob | `hypertrophy` line | priority lift (any goal) and `strength` line | `maintenance` version | Source |
 | --- | --- | --- | --- | --- |
 | Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
-| RIR | stimulus dial: start at 3, walk toward 1 over the block's hard weeks | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
+| RIR | stimulus dial: the line's authored RPE stands every week (default 8, 2 RIR); the walk toward failure happens as double progression adds reps at a held load, not as a coded rule (`prescription.md`) | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
 | Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
 | Scheme adopt fills | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods` |
 | Stall signal | reps at the target RIR flat across the muscle's lines | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
@@ -179,11 +179,13 @@ version names:
 
 - the dose check against the version's per-muscle target and, for priority lifts, the per-lift
   target (ADR 0009, extended);
-- the hypertrophy RIR walk and set ramp across the block's hard weeks, read from the hard-week
-  count;
+- no coded RIR walk and no coded set ramp: the authored RPE stands, and sets are added by the
+  agent through `restate_sets` or the next version when the dose check shows a muscle under
+  target (`prescription.md`);
 - strength lines holding RIR as a cap and moving load from e1RM;
-- the stall signal each scheme watches (`stall_streak` reads reps-at-RIR on a hypertrophy line
-  and e1RM trend on a strength line; the Weekly prescription ticket fixes the counts).
+- the stall signal each scheme watches (`stall_streak`: three ordinary exposures with no gain on
+  the scheme's metric, reps at the authored RPE on a hypertrophy line, e1RM on a strength line;
+  `prescription.md`).
 
 So a change of goal reaches the week only through a new Program version, which is the one
 place a coach would look for it.
@@ -264,8 +266,8 @@ One table; the skills cite it and do not copy it, so each stays under its budget
 | Moment | `hypertrophy` | priority lifts and `strength` | `maintenance` |
 | --- | --- | --- | --- |
 | `check-in` asks | reps and RIR on the lines that moved; pump and soreness as a dose read | the priority lifts first: did the top set move, how did it feel, any grind | whether the kept lifts held |
-| `plan-week` judges | dose attainment against target; where the RIR walk is in the block; a flat line early in a block wants sets, late wants the deload | e1RM trend on each priority lift; fatigue against the RIR cap; a flat block is normal, not a crisis | nothing weekly beyond the recovery ceilings |
-| `plan-week` explains a line as | last week's reps at RIR plus the block's set ramp | e1RM times the scheme | held |
+| `plan-week` judges | dose attainment against target; a flat line early in a block wants sets (`restate_sets`), late wants the deload | e1RM trend on each priority lift; fatigue against the RIR cap; a flat block is normal, not a crisis | nothing weekly beyond the recovery ceilings |
+| `plan-week` explains a line as | last week's reps at the authored RPE, from the derivation steps | e1RM times the scheme | held |
 | `program` at the boundary | reads `coach progress`: dose achieved, muscles behind target, cadence signals; proposes next block's sets and any swap, never a scheme change on a stalled `double_progression` line | reads `coach progress`: e1RM over three blocks, milestones, cadence signals; proposes scheme changes on signalled lifts per **Response to a cadence signal**, a test week result as the training max | whether to return to the Goal's emphasis |
 | `onboard` and `program` write | the Goal, the Phase and the `why`; the long-term direction in the profile prose | | |
 
@@ -288,9 +290,9 @@ training-max percentage scheme on bench, the Decision citing the warning.
 
 - **Program authoring** (#22): the authored form carries `emphasis`; the defaults table above
   is what adopt fills; the `test` set type ships; the adopt checks above join its list.
-- **Weekly prescription** (#26): defines the stall and reset per scheme that `stall_streak` and
-  `cadence_slow` read; the hypertrophy RIR walk and set ramp as the scheme applied to the
-  hard-week count; the `wave_531` training-max move after a short rep-out.
+- **Weekly prescription** (#26, settled in `prescription.md`): the stall and reset per scheme
+  that `stall_streak` and `cadence_slow` read; no coded RIR walk or set ramp; the training max
+  is never moved by the rule (`training_max_due` asks for a Decision).
 - **Verb set** (#16): `goal adopt` (plain write) and `coach progress` (read).
 - **Override catalogue** (#19): the test week needs no override; it is the deload policy.
 - **Schema**: Goal, Milestone and Phase tables; `priority_lifts` and `emphasis` on the version;

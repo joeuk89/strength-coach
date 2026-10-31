@@ -197,6 +197,9 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `over_rep_cap` | exposure | reps, cap |
 | `short_sleep_week` | week | short nights, threshold, window |
 | `stall_streak` | line | streak length, exposure refs |
+| `rep_range_missed` | line | set index, reps, range, logged RPE, authored RPE |
+| `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts |
+| `rpe_ceiling_unchecked` | line | cap, clipped load, anchor exposure ref |
 | `unexplained_drift` | line | last prescription, this prescription, delta |
 | `session_drop_suggested` | session | reason (sleep debt, status day, quality stack), evidence refs |
 | `frozen_load_off_snapshot` | session | line, load, snapshot date |

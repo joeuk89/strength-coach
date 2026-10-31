@@ -189,8 +189,8 @@ override, and a coach-led session is a session kind.
 ## Schemes
 
 One registry in code. Each scheme declares its name, a typed params table with defaults, the set
-types it may drive, what it reads from history, its stall and reset rule (the Weekly prescription
-ticket's, #26) and its deload shape. The form names a scheme and params only; `coach schema`
+types it may drive, what it reads from history, its stall and reset rule (`prescription.md`)
+and its deload shape. The form names a scheme and params only; `coach schema`
 prints the registry so the agent never guesses a param. Scheme params are only what the rack
 cannot know: the load step is the next row on the session location's rack at a plate-pool
 location and the grid increment at a grid location (ADR 0008 precedence: location, exercise,
@@ -487,10 +487,10 @@ squat steps by the home rack's next barbell row.
 
 ## Handed to other tickets
 
-- **Weekly prescription** (#26): the stall and reset rule per scheme, the registry defaults for
-  `linear` and `top_backoff`, how `wave_531` moves the training max after a short rep-out, the
-  hypertrophy RIR walk and set ramp, the derivation of a conditioning session's dose from its
-  last Activity.
+- **Weekly prescription** (#26, settled in `prescription.md`): the stall and reset rule per
+  scheme, the registry defaults for `linear` (2, 0.9), the one-row step cap on `top_backoff`,
+  `training_max_due` in place of a rule moving the training max, no coded RIR walk or set ramp,
+  the derivation of a conditioning session's dose from its last Activity.
 - **Override catalogue** (#19, settled in `overrides.md`): the trigger for promoting a one-week swap, the swap and pin
   override kinds `--apply-plan` folds in.
 - **Verb set** (#16): `program adopt`, `program show` (`--draft`, `--apply-plan`), `coach schema`

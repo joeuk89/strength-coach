@@ -173,8 +173,8 @@ Every override and Decision carries `because`, `text` and `evidence`:
 - At most one override per kind per scope on one WeekPlan.
 - At most one of `light_week`, `minimum_week`, `one_off_week` per WeekPlan. Where the week kind
   falls among a `no_training` status span, these overrides, a layoff and an illness is the
-  Weekly prescription rule's (#26), as is the per-line order of scheme, override, return decay,
-  light-week cut, constraints, ceilings and rounding.
+  `prescription.md`'s week-kind table, as is the per-line order of scheme, override, week
+  transform, constraints, ceilings and rounding (ADR 0017).
 - `drop_session` and `drop_line` beat every other override on their scope.
 - `pin_load` obeys every recovery ceiling: it can lower a load, never lift one above the ceiling.
 - The plan's override beats an override Decision of the same kind on the same line.
@@ -231,8 +231,8 @@ without it the only lawful input is that typed field, so no other code exists fo
 
 ## Handed to other tickets
 
-- **Weekly prescription** (#26): the week-kind precedence, the per-line order of modifiers,
-  what `hold` and the light-week cut do together, the volume warnings a `minimum_week` trips.
+- **Weekly prescription** (#26, settled in `prescription.md`): the week-kind precedence, the
+  per-line order of modifiers (ADR 0017), a held line still takes the week transform.
 - **Scheme registry** (#28, settled in `program.md`): `wave_531` is the one v1 scheme that declares `training_max`.
 - **Schema**: `override` rows on the WeekPlan (kind, scope refs, params, reason triple), the
   `decision` table with kind, params, `until`, `superseded_by` and the retire link, and the
