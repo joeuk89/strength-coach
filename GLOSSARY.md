@@ -536,3 +536,8 @@ _Avoid_: requirement, compatibility range
 Bringing an instance up to a newer installed engine in one approved step: migrate the store,
 regenerate what the engine owns in the instance, move the pin, commit.
 _Avoid_: sync, framework-sync, migrate (one part of it)
+
+**Fixture instance**:
+A small, hand-authored, synthetic instance the test suite imports. Holds no real athlete data
+and proves the engine's own behaviour, never its likeness to anything that came before.
+_Avoid_: parity fixture, golden instance, anonymised slice

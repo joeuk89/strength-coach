@@ -62,8 +62,8 @@ Three writers set `exercise.hevy_template_id`:
 | `plan apply` | after a verified `POST /v1/exercise_templates` (ADR 0011) |
 
 Import maps by template id only. There is no title heuristic. Expected `exercise_unmapped` on
-the first pull is 0 of 57 once the eight custom templates in the history are recorded; the parity
-harness asserts it on the fixture.
+the first pull is 0 of 57 once the eight custom templates in the history are recorded; it is
+checked by eye on the day (`testing.md`, "The cutover Draft").
 
 ## Order of store writes at cutover
 
@@ -121,8 +121,9 @@ The Draft lives at `.coach/drafts/<date>-checkin.toml` (`instance.md`), gitignor
 - one current Goal and one open Phase;
 - `publish --dry-run` row counts equal to the Draft's table counts.
 
-Before cutover day the parity harness runs this Draft against its fixture, so the record path is
-tested before it runs for real. The former check, "the first `plan apply --dry-run` reproduces the
+During the last old week the athlete runs this Draft once by hand against a scratch instance and
+checks this list by eye; the suite exercises the same path with a synthetic Draft
+(`testing.md`). The real Draft is never an engine test. The former check, "the first `plan apply --dry-run` reproduces the
 old instance's next week", compared programs; with the program not carried there is none to
 compare.
 
@@ -161,7 +162,7 @@ old-instance session is logged:
 
 Every item is a number the engine already prints:
 
-- the parity harness is green at the pinned engine tag;
+- the test suite is green at the pinned engine tag;
 - `coach status` shows the acceptance list of "The cutover check-in";
 - the event import reports Sunday's workout (workout count up by one);
 - the dry run shows routine creates equal to the version's session count for the week, three

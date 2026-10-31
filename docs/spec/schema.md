@@ -625,5 +625,6 @@ named in `validation.md` is the `void` kind; `workout_reappeared` clears by `mat
   no program Draft to convert and no `--position`; nothing writes rows directly.
 - **Cutover of routines** (fog): old routine ids land in `routine` through import; whether any
   reach `routine_map` is that ticket's call.
-- **Parity harness** (fog): a fixture instance is a set of `export/` files imported into a test
-  database by the same `import`.
+- **Fixture instance** (settled in `testing.md`): one small synthetic instance under
+  `tests/fixtures/instance/`, its `export/` imported by the same `import`; most tests build rows
+  through scenario builders instead.

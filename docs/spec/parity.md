@@ -1,5 +1,9 @@
 # Parity: which old behaviours the rebuilt engine reproduces
 
+> **Status: historical reference.** This is the 2026-10-26 review of the old system. Later decisions
+> changed or dropped many rows; where a spec document or ADR differs, it wins. No test cites a row
+> here (`docs/spec/testing.md`).
+
 Resolves wayfinder #10. Sources mined read-only: the old template's `tests/` (131 files, 43.6k
 lines), `docs/design/coach-contract.md` (C1–C55), `coach/`, the old instance's CLAUDE.md
 "Coaching principles", the research notes (`research/*.md`, all 16 `current` on 2026-10-26) and
