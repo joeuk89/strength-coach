@@ -1,12 +1,11 @@
 # Cutover: history import and the fresh start
 
-Spec for wayfinder #30 and #31, decided 2026-10-31. The Hevy history comes across whole; the program does
+Spec for wayfinder #30, #31 and #32, decided 2026-10-31. The Hevy history comes across whole; the program does
 not. Version 1 is designed from scratch through `onboard` and `program`, with the old routines
 and the imported history as reference the agent reads. This replaces the pre-charting note that
 the old program would carry over as version 1 (`program.md`'s worked example stays as an
-illustration of the form). The routine steps in Hevy and the hour-by-hour switch belong to the
-routine cutover ticket; the ledger Draft of carried-over coaching state is "The cutover
-check-in" below. This file settles what each of them may assume.
+illustration of the form). The ledger Draft of carried-over coaching state is "The cutover
+check-in" below; the routines in Hevy and the week-boundary switch are "The switch".
 
 ## What carries and what does not
 
@@ -77,9 +76,7 @@ harness asserts it on the fixture.
 4. `coach program adopt` of version 1.
 5. `coach checkin record` of the cutover check-in: the custom template ids, open niggles with
    their constraints, open follow-ups, Observations, the run cap, the two manual PT workouts.
-6. The first `plan draft` and `plan apply`. What happens to the 17 old routines in Hevy at that
-   push is the routine ticket's decision. The athlete may delete old routines by hand in the app
-   beforehand; the hard constraint covers workout history, not routines.
+6. The first `plan draft` and `plan apply`: fresh routines, nothing adopted ("The switch").
 
 Import comes before design because it is read-only against Hevy and the design should see the
 history it will anchor on.
@@ -128,6 +125,56 @@ Before cutover day the parity harness runs this Draft against its fixture, so th
 tested before it runs for real. The former check, "the first `plan apply --dry-run` reproduces the
 old instance's next week", compared programs; with the program not carried there is none to
 compare.
+
+## The switch
+
+### Routines
+
+The account holds 17 routines in four folders (Week A, Week B, Conditioning, One-off weeks) and
+one with no folder. No old routine is adopted: the fresh design has no session that maps to one,
+and ADR 0011's spare rule takes only routines already in the Routine map. The first `plan apply`
+POSTs one routine per session into the Program folder and creates the three engine folders
+(Program, Standing, Retired); no old folder carries those titles, so adoption by title finds
+nothing. Routines the account holds that no Routine map row names, at cutover or later, sit in
+the `routine` mirror and are never flagged, retired or touched; `query routines` shows the map,
+not the mirror. The athlete deletes the old routines and folders by hand in the app, and only
+after the first push has verified: while they coexist they cost nothing, and they are the
+rollback.
+
+### Order
+
+Everything except the push happens during the last old-instance week, in the new instance repo,
+while the old instance keeps serving: steps 1 to 5 above, then `plan apply --dry-run` for the
+coming Monday until it passes clean. None of these writes Hevy. Sunday evening, after the last
+old-instance session is logged:
+
+1. `coach import`: the event pull; Sunday's workout arrives.
+2. `plan apply --dry-run`; the pre-push checklist below holds.
+3. `plan apply --expect <hash>`.
+4. `publish`.
+5. The athlete deletes the 17 old routines and the four old folders in the app.
+6. The old instance repo gets a plain commit of its state as it stands and both old repos are
+   archived on GitHub (read-only, reversible). The old instance runs no final check-in: the
+   cutover check-in's window is its last week.
+
+### Pre-push checklist
+
+Every item is a number the engine already prints:
+
+- the parity harness is green at the pinned engine tag;
+- `coach status` shows the acceptance list of "The cutover check-in";
+- the event import reports Sunday's workout (workout count up by one);
+- the dry run shows routine creates equal to the version's session count for the week, three
+  folder creates, zero updates, zero templates to create, no violation, and its hash is the one
+  passed to `--expect`.
+
+### Rollback
+
+No path touches Hevy workout history. A refusal before any PUT (exit 3, exit 4) sent nothing. A
+POST that verifies badly leaves an `unverified` map row and a re-run resumes it (ADR 0006, 0011).
+If the re-run fails too, the athlete trains the week from the old routines still in the app, the
+old instance is not yet archived and serves the week, and the new instance's approved WeekPlan is
+superseded by the next Monday's `plan draft`.
 
 ## Known gaps, stated once
 
