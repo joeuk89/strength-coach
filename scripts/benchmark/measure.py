@@ -16,8 +16,11 @@ import re
 import subprocess
 from datetime import datetime
 
-COACH_CALL = re.compile(r"python3 -m coach\b")
-SUBCOMMAND = re.compile(r"python3 -m coach\s+([a-z][\w-]*)(?:\s+([a-z][\w-]*))?")
+# A call starts a command: the string start, a shell separator or a block opener, then the prefix.
+COACH_PREFIX = r"(?:^|[;&|(`{\n]|\b(?:do|then|else)\b)\s*(?:python3 -m )?coach"
+COACH_CALL = re.compile(COACH_PREFIX + r"(?=\s|$)")
+SUBCOMMAND = re.compile(COACH_PREFIX + r"\s+([a-z][\w-]*)(?:\s+([a-z][\w-]*))?")
+IN_TARGET_INSTRUCTION_TYPES = {"Project"}
 INLINE_PY = re.compile(r"python3? (?:-I )?(?:-c\b|-\s*<<|<<)")
 SKILL_PREFIX = "Base directory for this skill:"
 INSTRUCTION_PATH = re.compile(
@@ -60,6 +63,7 @@ def measure(path, repo):
     athlete_replies = 0
     skill_chars = 0
     claude_md_chars = 0
+    outside_target_chars = 0
     bash_instruction_files = {}
     with open(path, encoding="utf-8") as fh:
         for line in fh:
@@ -108,7 +112,13 @@ def measure(path, repo):
             elif kind == "attachment":
                 att = rec.get("attachment", {})
                 if att.get("type") == "instructions":
-                    claude_md_chars = sum(len(f.get("content", "")) for f in att.get("files", []))
+                    claude_md_chars = 0
+                    outside_target_chars = 0
+                    for f in att.get("files", []):
+                        if f.get("type") in IN_TARGET_INSTRUCTION_TYPES:
+                            claude_md_chars += len(f.get("content", ""))
+                        else:
+                            outside_target_chars += len(f.get("content", ""))
     if repo and last:
         for p in bash_instruction_files:
             bash_instruction_files[p] = file_size_at(repo, last, p)
@@ -125,6 +135,7 @@ def measure(path, repo):
         "peak_context_tokens": peak_context,
         "athlete_replies": athlete_replies,
         "instruction_tokens": round(instruction_chars / CHARS_PER_TOKEN),
+        "outside_target_tokens": round(outside_target_chars / CHARS_PER_TOKEN),
         "instruction_chars": {
             "skills": skill_chars,
             "claude_md": claude_md_chars,

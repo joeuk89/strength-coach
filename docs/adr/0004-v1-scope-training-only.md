@@ -37,9 +37,11 @@ cited only from code.
 - Research notes live in the engine repo only, never imported into the store, never shipped as
   package data and never read by a running agent (ADR 0020); every threshold in code carries its
   `rn:` ref and one test in the repo resolves every ref to a current claim or a numbered section
-  (`docs/spec/research-notes.md` lists the notes and the two ref forms). No citation scan of
-  prose, no rendered regions, no prose tests. (Amended 2026-10-31: the original "parsed at
-  runtime" meant this test.)
+  (`docs/spec/research-notes.md` lists the notes and the two ref forms). That test is a registry
+  test in `tests/contract/`, the second of the two named exceptions to the no-prose rule in
+  `docs/spec/testing.md`: it reads claim numbers and section headings, never a claim's text. No
+  citation scan of prose, no rendered regions, no other prose tests. (Amended 2026-10-31: the
+  original "parsed at runtime" meant this test.)
 - Nothing in v1 is optional, so there are no feature toggles.
 - The body-composition phase is a Phase record (deficit, maintenance, surplus, with a rate and an
   until condition) that moves the dose default within the emphasis band and sets the bodyweight

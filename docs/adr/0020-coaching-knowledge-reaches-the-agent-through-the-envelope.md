@@ -48,7 +48,8 @@ could read them.
   `coach schema --registry flags` shows it. Rendered pages link it to the note at the pinned
   engine tag on GitHub.
 - Research notes live in the engine repo only: not package data, not in the plugin, not in the
-  instance. One test in the repo resolves every `rn:` ref in code and the registry. ADR 0004's
+  instance. One test in the repo, the `rn:` registry test in `tests/contract/`
+  (`docs/spec/testing.md`), resolves every `rn:` ref in code and the registry. ADR 0004's
   "parsed at runtime" is amended to this.
 - The ad-hoc moment (a question outside the four skills, midweek) is not a skill: it is answered
   from the profile and the read verbs with nothing recorded, and the generated CLAUDE.md says so

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #43 (four asked verbs; `init` on a `.dev` build needs `--pin`; the Hevy deny is every method on `/v1/workouts*`; the drift warning is `generated_file_drift`)
+amended: 2026-10-31 by wayfinder #43 (four asked verbs; `init` on a `.dev` build needs `--pin`; the Hevy deny is every method on `/v1/workouts*`; the drift warning is `generated_file_drift`); 2026-10-31 by wayfinder #44 (the missing-install line is a shell guard in the hook declaration; two `uv` installs, one per job)
 ---
 
 # The engine ships as one repo that is both a Python package and a Claude Code plugin; an instance holds only data
@@ -54,8 +54,10 @@ hosts beyond Claude Code (hooks, cron, a human terminal) that a plugin alone can
 - **Hooks are declared once**, in the plugin, and call `coach-hook <event>` (a second console
   entry point beside `coach`, not one of its leaves; ADR 0019): SessionStart and
   PreToolUse on Bash, nothing else in v1 (the old PostToolUse hash guard went with the parity
-  checklist). If `coach` is not on PATH the hook says so in one line and exits 0, so a missing
-  install never blocks a session.
+  checklist). The hook is the engine, so the engine cannot report its own absence: each hook
+  declaration is a one-line shell guard, `command -v coach-hook >/dev/null && coach-hook <event>
+  || echo "coach engine not installed: uv tool install ..."`, which prints that line and exits 0
+  when the package is missing, so a missing install never blocks a session.
 - **Skills live only in the plugin.** The instance CLAUDE.md is short and generated. A local
   change to a skill is a branch of the engine, never an edit in the instance.
 - **Instance root** is the nearest ancestor of the cwd holding `coach.toml`, found the way git
@@ -63,7 +65,8 @@ hosts beyond Claude Code (hooks, cron, a human terminal) that a plugin alone can
   (real, simulated personas, a fixture) share one installed engine.
 - **The repo is its own marketplace**: `.claude-plugin/marketplace.json` lists one plugin, at
   the root. Until the repo is public the marketplace is added from the local checkout, which is
-  also the dev route: `uv tool install --editable` plus the local marketplace.
+  also the dev route: `uv tool install --editable .` for the `coach` and `coach-hook` on PATH,
+  `uv sync` for the dev group the suite runs under, plus the local marketplace (ADR 0019).
 - **Visibility.** This repo stays private until the week-boundary cutover, then goes public the
   same day the two old repos are archived and the old template's README points here.
 - **The public template survives as `coach init` plus the README**, not as a repo to clone.

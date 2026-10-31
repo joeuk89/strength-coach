@@ -90,7 +90,8 @@ The envelope is ADR 0002's: `schema_version`, `ok`, `verb`, `result` or `error {
 ## Drafts written by the engine
 
 ADR 0002 has documents travel as files the agent wrote. Two reads hand the agent a form larger
-than the cap, so they write it: `plan draft` and `program show --draft` write a TOML Draft to
+than the cap, so they write it: `plan draft` and `program show --draft` write a TOML Draft
+(through the one emitter in `render`, ADR 0019) to
 `.coach/drafts/<date>-<kind>.toml` (or `--out <path>`) and return the path, the file hash and a
 compact summary. The agent edits the file in place and passes the path to `plan apply` or
 `program adopt`. The engine never overwrites a Draft. When the default path already exists and
@@ -229,8 +230,10 @@ Verbs without a Draft:
 
 `plan apply` after a partial failure: the WeekPlan row is approved and frozen before the first
 Hevy call (approval survives a failed push, ADR 0006), each routine is PUT, read back and marked
-`active` or left `unverified`, and the audit line is appended before the response is parsed. The
-re-run with the same `--expect` prompts again and resumes from the Routine map's statuses.
+`active` or left `unverified`; the client writes the audit's request line before each send and
+its response line when the attempt ends (ADR 0011), so a request with no response line marks
+where a process died. The re-run with the same `--expect` prompts again and resumes from the
+Routine map's statuses.
 
 ## Exit classes
 
@@ -253,7 +256,8 @@ Generated from the declarations, none hand-written per verb:
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope is under 3 KB on the fixture instance.
+- Every default envelope is under 3 KB on the fixture instance, which overflows every list a
+  default summary truncates (`testing.md`); this test lives in `tests/contract/` only.
 - Every verb declared `writes: hevy` or `git` declares `--dry-run`, and its dry run on the
   fixture instance writes no file and opens no transaction.
 - Every violation code's clearing verb or record exists (`validation.md`).

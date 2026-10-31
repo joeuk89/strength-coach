@@ -25,11 +25,21 @@ Instruction tokens by source (characters ÷ 4):
 
 From the review, per check-in plus programming pass:
 
-- **Under 10 `python3 -m coach` calls.** Baseline: 82 and 141.
-- **Under 8k tokens of instructions loaded.** Baseline: 22k and 37k. The CLAUDE.md files alone
-  are 7–8k today, so the target needs both shorter skills and a shorter CLAUDE.md.
-- Zero inline Python filters is the implied target: every one marks a verb whose output the agent
-  could not use as printed.
+- **Under 10 `coach` calls.** Baseline: 82 and 141. A call is `coach` or `python3 -m coach` at
+  the start of a command (the string start, or after `;`, `&&`, `|`, `(`, `{`, `do`, `then`
+  or a newline), so
+  `coach-hook`, `coach.toml`, a `coach` directory passed to grep and the word in a commit
+  message are not calls.
+- **Under 8k tokens of engine-owned instructions loaded.** Baseline: 22k and 37k. The count is
+  the skills loaded, the project CLAUDE.md files and every instruction file read through Bash.
+  The athlete's global CLAUDE.md (the `User` file in the session's `instructions` attachment)
+  and the auto-memory index are outside it, because the engine cannot shorten them; the script
+  reports them as a separate `outside_target_tokens` figure. The baseline rows were measured
+  before the split and include the global file; re-measured on 2026-10-31 with the split, the
+  three sessions hold 19.2k, 34.4k and 19.1k in the target and 3.2k, 2.9k and 2.5k outside it,
+  so the project CLAUDE.md alone was 4.8k.
+- **Zero Bash calls with inline Python.** Baseline: 27 and 33. Every one marks a verb whose
+  output the agent could not use as printed.
 
 ## Method
 
@@ -48,9 +58,10 @@ How each column is computed:
 
 - **Wall time.** Last `timestamp` minus first, over every record in the file, rounded to the
   minute. Idle time while the athlete was away is included, so this is a ceiling.
-- **coach calls.** Occurrences of `python3 -m coach` in the `command` input of every Bash tool
-  call on assistant messages. A Bash call that chains three coach commands counts three.
-- **Distinct subcommands.** Unique `<group> <command>` pairs after `python3 -m coach`, where the
+- **coach calls.** Occurrences of `coach` or `python3 -m coach` at the start of a command
+  (`COACH_CALL` in the script) in the `command` input of every Bash tool call on assistant
+  messages. A Bash call that chains three coach commands counts three.
+- **Distinct subcommands.** Unique `<group> <command>` pairs after that prefix, where the
   command is the next bare word (not a flag). A group run with no command, such as `status` or
   `niggles --json`, counts as its own entry.
 - **Bash calls with inline Python.** Bash calls whose command contains `python3 -c`, `python -c`
@@ -61,10 +72,12 @@ How each column is computed:
 - **Athlete replies.** User records that are plain text (a string, or text blocks) and not a tool
   result, a skill load or a meta record. The opening slash command counts as one.
 - **Instruction tokens.** Characters ÷ 4 of three sources, summed: skill bodies (user text blocks
-  that start `Base directory for this skill:`), the CLAUDE.md files in the session's
+  that start `Base directory for this skill:`), the `Project` CLAUDE.md files in the session's
   `instructions` attachment, and every path matching `.claude/skills/**/*.md`, `reference/*.md`
   or `CLAUDE.md` named in a Bash command, sized with `git show` at the instance repo's last commit
   before the session ended. A file missing at that commit counts zero and is listed as `null`.
+  The attachment's `User` and `AutoMem` files (the global CLAUDE.md and the memory index) are
+  summed separately as `outside_target` and never enter the figure.
 
 Known limits:
 
@@ -79,6 +92,6 @@ Known limits:
 ## Re-running after a milestone
 
 1. Run one real check-in plus programming pass in the new system.
-2. Point the script at its transcript with `--repo` set to the new instance repo. Change
-   `COACH_CALL` and `SUBCOMMAND` in the script if the verb prefix is no longer `python3 -m coach`.
+2. Point the script at its transcript with `--repo` set to the new instance repo. `COACH_CALL`
+   and `SUBCOMMAND` already count both `coach` and `python3 -m coach`.
 3. Add a row above, dated, and keep the old rows.

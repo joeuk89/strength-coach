@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
-amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code)
+amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code); 2026-10-31 by wayfinder #44 (the Write audit is written by the client behind the `HevyClient` protocol, two lines per request; one test double, `FakeHevy`, and the real client tested with a recording opener; the 429 retry below the protocol)
 ---
 
 # Hevy is a projection target: allow-listed writes, append-only import, retire not delete
@@ -31,9 +31,12 @@ reused, a folder is forever.
   `POST /v1/exercise_templates`. Any other non-GET raises before a request is built. Permission
   config denies every method on `/v1/workouts*` and `WebFetch` to the Hevy host (ADR 0006).
 - API key from the environment, else `.env`; header only; scrubbed from errors, envelopes and
-  audit lines. 429: sleep 30 s, three tries; a token bucket on writes; reads never throttled. A
-  fixture transport that refuses writes and a fake Hevy that bumps `updated_at`, drops routine
-  notes on PUT and can corrupt a read-back carry over for tests.
+  audit lines. 429: sleep 30 s, three tries, inside the client and below the `HevyClient`
+  protocol (ADR 0019), so nothing above it sleeps; a token bucket on writes; reads never
+  throttled. One test double, `FakeHevy`, which satisfies the protocol and nothing more, bumps
+  `updated_at`, drops routine-level notes on PUT and can corrupt a read-back (`testing.md`). The
+  real client is tested with a recording opener that refuses every connection (amended
+  2026-10-31: the earlier "fixture transport" was this, not a second double).
 
 ## Import
 
@@ -89,10 +92,16 @@ reused, a folder is forever.
 ## Write audit
 
 - `hevy/writes.jsonl` in the instance, committed by the next `publish`, never under `.coach/`.
-  One line per request after retries (at, method, path, status, routine id, WeekPlan id, Write
-  plan hash, full request body, body digest) and one per verify (routine id, verified, diff).
-  Appended at request time; a write refuses to run before any request when the file cannot be
-  opened for append: exit 3, `error.code = audit_unwritable` (`docs/spec/verbs.md`).
+  The client writes it (ADR 0019): the audit is a method of the `HevyClient` protocol, the real
+  client appends to the file and `FakeHevy` keeps the same lines in memory, so `services` opens
+  no file and there is no fourth seam. Three line kinds (amended 2026-10-31): a **request**
+  line before the request is sent (at, method, path, routine id, WeekPlan id, Write plan hash,
+  full request body, body digest), a **response** line when the attempt ends after any retries
+  (at, method, path, body digest, status or the error, attempts), and a **verify** line after
+  each read-back (routine id, verified, diff). A request with no response line is one the
+  process died inside. `plan apply` calls `open_audit()` before its first live GET; when the file
+  cannot be opened for append the push refuses before any request: exit 3,
+  `error.code = audit_unwritable` (`docs/spec/verbs.md`).
 
 ## Consequences
 
@@ -104,7 +113,8 @@ reused, a folder is forever.
   (wayfinder #23) keys the drift warning. The override catalogue (wayfinder #19) is the only
   route for adopting an app edit. Verb set (wayfinder #16) names the import verb, which also
   fetches the plate-pool snapshot (ADR 0008).
-- Regression tests: a non-allow-listed path raises before any request; a deleted workout leaves a
+- Regression tests: a non-allow-listed path raises before any request (run on `hevy/client.py`
+  with the recording opener, `tests/hevy/`); a deleted workout leaves a
   tombstone and its sets; an app edit adds a version and the old one stays; a push with a moved
   `updated_at` sends nothing; a failed verify leaves an `unverified` row and the re-run sends only
   that routine; a retire never issues a DELETE.

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's)
+amended: 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's); 2026-10-31 by wayfinder #44 (`main` takes a client factory and a clock; the suite target is ADR 0019's ten seconds)
 ---
 
 # The agent drives the engine through a CLI over plain service functions
@@ -65,9 +65,11 @@ maintenance cost 15, testability 15, context cost per pass 10.
   asked verb's dry run into ask or deny. Their only logic of their own is the
   shell-command parser that finds a coach write or a raw Hevy call, ported trimmed from the old
   `gate.py`.
-- **Testability.** The entry point stays `main(argv, env, stdout, stderr) -> int`, in-process.
-  Services take a store connection and a clock, never a repo root, so core and service tests run
-  on an in-memory SQLite with no files. Only the command layer touches the filesystem, Hevy and
-  git. Target: the whole suite in well under a minute.
+- **Testability.** The entry point stays `main(argv, env, stdout, stderr) -> int`, in-process,
+  with two keyword-only arguments, `make_client` and `clock`, that default to the real ones
+  (ADR 0019). Services take a store connection, a Hevy client and a clock, never a repo root, so
+  core and service tests run on an in-memory SQLite with no files. Only the command layer touches
+  the filesystem, Hevy and git. Target: the whole suite in under ten seconds (ADR 0019; this
+  line said "well under a minute").
 - Whether the program is invoked as `coach` or `python3 -m coach` is the distribution decision;
   both must work.
