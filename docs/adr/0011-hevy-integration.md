@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
-amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`)
+amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code)
 ---
 
 # Hevy is a projection target: allow-listed writes, append-only import, retire not delete
@@ -74,12 +74,12 @@ reused, a folder is forever.
 ## Push
 
 - The dry run reads routine `updated_at` from the last import, offline. `plan apply` GETs every
-  touched routine live and refuses the whole push before any PUT when one differs, exit 3, "run
-  import and re-check". No force flag. The Write plan hash already covers those versions
+  touched routine live and refuses the whole push before any PUT when one differs, exit 3,
+  `error.code = routine_moved`, "run import and re-check". No force flag. The Write plan hash already covers those versions
   (ADR 0006).
 - Per routine in map order: PUT, GET back, diff by position on template id, set type, reps or rep
   range, duration, `weight_kg` within 0.001, rest seconds, exercise notes, title and folder. A
-  differing read-back stops the run and exits 1. The map row is still recorded, status
+  differing read-back stops the run and exits 1, `verify_failed`. The map row is still recorded, status
   `unverified`, so a re-run re-PUTs only unverified routines and those whose stored projection
   differs from live, and sends nothing when all match. A second POST never duplicates a routine.
 - Routine body rules and the note format carry from the parity checklist: `weight_kg` is the
@@ -91,7 +91,8 @@ reused, a folder is forever.
 - `hevy/writes.jsonl` in the instance, committed by the next `publish`, never under `.coach/`.
   One line per request after retries (at, method, path, status, routine id, WeekPlan id, Write
   plan hash, full request body, body digest) and one per verify (routine id, verified, diff).
-  Appended at request time; a write refuses to run when the file cannot be opened for append.
+  Appended at request time; a write refuses to run before any request when the file cannot be
+  opened for append: exit 3, `error.code = audit_unwritable` (`docs/spec/verbs.md`).
 
 ## Consequences
 

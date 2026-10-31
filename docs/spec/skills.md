@@ -144,7 +144,10 @@ asserted skill or CLAUDE.md wording have no successor.
 
 The reference for register and length. Under budget (about 2.5k characters). The card and its
 fields are the check-in spec (`check-in.md`); the verb names follow the Verb set ticket and the
-contract test holds them to it.
+contract test holds them to it. The per-emphasis asks of `goals.md`'s table are the card's Lifts
+field, so the skill cites no table: it judges what the card shows (ADR 0020). Every bullet in its
+Judge names a card field or a registered code and no number; the thresholds behind "a run of"
+and "held across check-ins" are the engine's.
 
 ```markdown
 ---
@@ -165,9 +168,9 @@ rather than carrying them.
 
 ## Judge
 - **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's
-  Readiness field records it; the RPE drift trigger on the card matters on the compound lifts,
-  elsewhere a rising RPE is a note.
-- **Misses.** A tag per missed core session. Pattern over blame: three weeks of `time` misses is a
+  Readiness field records it; an RPE drift trigger on the card's Block line matters on the
+  compound lifts, elsewhere a rising RPE is a note.
+- **Misses.** A tag per missed core session. Pattern over blame: a run of `time` misses is a
   schedule problem for the plan, not a willpower problem.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
   shapes next week's dose; one bad night does not.
@@ -179,8 +182,8 @@ rather than carrying them.
   propose and let the athlete adopt, decline with a reason or defer. When adherence is `low`,
   present a smaller schedule with the same weekly hard sets per muscle. The rotation position is
   confirmed, not asked.
-- **Patterns.** Raise an Observation when something has held for several weeks; retire one that
-  stopped holding. Cite the exposures or notes it rests on.
+- **Patterns.** Raise an Observation when something has held across check-ins; retire one that
+  stopped holding. Cite the exposures or notes it rests on (`coach query`).
 
 ## Explain
 The read is one or two sentences on the week, then what the tables cannot say. Lead with a win
@@ -191,7 +194,7 @@ it will contain; the plan does that.
 The athlete sees what will be recorded and says yes before any verb records it.
 
 ## Verbs
-`coach status`, `coach checkin open`, `coach checkin record`
+`coach status`, `coach checkin open`, `coach checkin record`, `coach query`
 ```
 
 ## Worked example: `program`

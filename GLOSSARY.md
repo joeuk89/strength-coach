@@ -146,9 +146,9 @@ safety bound: no override waives it, only the days off behind it move.
 _Avoid_: limit, safety cap
 
 **Flag**:
-A violation or a warning: a named condition the engine found on a typed scope (a week, a planned
-session, a line, an exposure, a routine, a workout or the instance). Its identity is the code and
-the scope, never its message.
+A violation or a warning: a named condition the engine found on one of nine typed scopes (a
+week, a planned session, a line, an exposure, a routine, a workout, the instance, a program
+version or an exercise). Its identity is the code and the scope, never its message.
 _Avoid_: issue, check result, finding
 
 **Violation**:
@@ -462,8 +462,9 @@ _Avoid_: subcommand, tool, endpoint
 
 **Draft**:
 A file written for one verb to consume: a plan, a check-in record, a program text form, a ledger
-of records. The agent writes it, or a verb writes it as a form for the agent to edit. Disposable;
-nothing reads it after the verb takes it.
+of records. The agent writes it, or a verb writes it as a form for the agent to edit, never over
+an existing one. Disposable; nothing reads it after the verb takes it, and no verb knows a
+current one: a read names the file by path or reads the plan in force.
 _Avoid_: proposal, overlay, working file, input file
 
 **Envelope**:
@@ -477,7 +478,7 @@ _Avoid_: status, error level
 
 **Writing verb**:
 A verb that changes something outside the engine's own store: Hevy, or git. The only kind of verb
-a permission prompt attaches to.
+a permission prompt attaches to; each has a dry run. Four in v1.
 _Avoid_: gated command, mutation
 
 **Dry run**:

@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #43 (four asked verbs; `init` on a `.dev` build needs `--pin`; the Hevy deny is every method on `/v1/workouts*`; the drift warning is `generated_file_drift`)
 ---
 
 # The engine ships as one repo that is both a Python package and a Claude Code plugin; an instance holds only data
@@ -32,8 +33,13 @@ hosts beyond Claude Code (hooks, cron, a human terminal) that a plugin alone can
 - **The instance pins the engine.** `coach.toml` carries `[engine] version = "X.Y.Z"`. Every
   verb compares it to its own version first; a mismatch is exit 5 with the two versions and the
   way out. Exact match, no ranges. A `.dev` build of the engine (an editable install) matches
-  any pin with a warning in the envelope, so unreleased code can run against a real instance.
-- **`coach upgrade`** is the third asked verb, beside `plan apply` and `publish`. After the
+  any pin with the warning `engine_pin_dev` in the envelope, so unreleased code can run against
+  a real instance. The pin itself is always a release: `init` on a `.dev` build refuses unless
+  `--pin X.Y.Z` names the release the instance will run, and only `upgrade` on a release build
+  rewrites `[engine]`, so `engine_pin_dev` clears by `upgrade` and by nothing else
+  (`docs/spec/verbs.md`).
+- **`coach upgrade`** is one of the four asked verbs, beside `plan apply`, `publish` and
+  `init`, each declared `writes: hevy` or `git` and each with a `--dry-run` (ADR 0002). After the
   human has installed the newer engine and plugin, it checks the tree is clean, runs the schema
   migrations, rewrites the export, bumps the pin, regenerates `.claude/settings.json` and the
   instance CLAUDE.md, and commits. It refuses if the installed engine is older than the pin.
@@ -41,9 +47,10 @@ hosts beyond Claude Code (hooks, cron, a human terminal) that a plugin alone can
   implicitly: a schema behind the engine is exit 5 until `upgrade` runs.
 - **Permission rules live in the instance**, because a plugin cannot ship them. `coach init`
   and `coach upgrade` generate them from the verb declarations: allow `coach`, ask on every verb
-  declared as writing, deny non-GET calls to `/v1/workouts*` as a second line behind the hook.
-  `coach status` warns on drift between the file and what it would generate; nothing rewrites
-  the file outside `upgrade`.
+  declared `writes: hevy` or `git`, deny every method on `/v1/workouts*` as a second line behind
+  the hook (ADR 0011). `coach status` warns `generated_file_drift` on drift between the file and
+  what it would generate (`docs/spec/validation.md`); nothing rewrites the file outside
+  `upgrade`.
 - **Hooks are declared once**, in the plugin, and call `coach-hook <event>` (a second console
   entry point beside `coach`, not one of its leaves; ADR 0019): SessionStart and
   PreToolUse on Bash, nothing else in v1 (the old PostToolUse hash guard went with the parity

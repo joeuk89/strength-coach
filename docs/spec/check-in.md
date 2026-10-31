@@ -27,6 +27,8 @@ the next WeekPlan, and the Block closes by the derived week kind (`week.md`).
 
 Catch-up is not stored: a check-in whose window is longer than 10 days is a catch-up by
 definition, and the deep tier is deferred to the next check-in by the same test (`week.md`).
+`checkin open --tier deep` is honoured on a catch-up all the same: the flag only ever raises the
+tier, so a coach who wants the deep pass now gets it, and the row records `deep`.
 
 ## The sourced records
 
@@ -45,6 +47,7 @@ answer lands:
 | Follow-up disposition | Follow-up event: `kept` (the due date stands, or is set for the first time: the raising event is a `kept`), `deferred` (the due date moves later), `resolved` or `dropped`. A deep check-in gives every open one a disposition |
 | Free note from the athlete | Athlete note: date, text verbatim, optional `about` reference (planned session, exercise, niggle, follow-up). Never classified by code |
 | A pattern the coach has noticed, or one that stopped holding | Observation raised or retired (ADR 0009) |
+| Phase opened, or the open one closed | Phase row (`goals.md`): the file's `[phase]` table, `kind`, `rate_pct_bw_per_week`, `until` and the reason, or `[phase] close = true` with the reason; the Check-in row is the `opened` or `closed` reference |
 | Declined ceiling, deferred deep review, an agreement or an override for longer than a week | Decision (`overrides.md`) |
 
 ### Matching a coach-led session
@@ -60,8 +63,10 @@ start and end and session RPE is the mean working-set RPE. The card prefills "lo
 A note is surfaced by rule in three places and nowhere else:
 
 1. The next check-in card lists every note in its window, verbatim, under the athlete's answers.
-2. The next plan draft's context lists every note since the last approved WeekPlan; a note with an
-   `about` reference is also shown beside that line, session or niggle in the draft.
+2. The next plan Draft carries every note since the last approved WeekPlan in its `[[note]]`
+   array, verbatim with `about`, and `plan draft`'s summary repeats them as `notes[]`
+   (`verbs.md`, `overrides.md`); a note with an `about` reference is also placed beside that
+   line, session or niggle in the Draft.
 3. The rendered check-in page prints the window's notes verbatim.
 
 A note has no lifecycle of its own. Once its window has closed it lives only on the rendered

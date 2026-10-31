@@ -49,7 +49,9 @@ Hevy's (a UUID, `b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13`) or `w-<n>` for a manual 
 
 A column that only ever points at one table is a plain foreign key (`check_in`, `session_id`,
 `exercise_id`, `niggle_id`). A flag key is not a ref: it is `code@<scope kind>:<parts>`,
-`validation.md`'s one key grammar.
+`validation.md`'s one key grammar. Inside one Draft, `<kind>:@<key>` cites a record the same
+file raises under `key = "<key>"`; the writing service rewrites it to the assigned id before the
+row is written, so no stored ref carries `@` (`verbs.md`, "A Draft-local key").
 
 ## DDL
 

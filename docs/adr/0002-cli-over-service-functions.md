@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's)
 ---
 
 # The agent drives the engine through a CLI over plain service functions
@@ -34,8 +35,9 @@ maintenance cost 15, testability 15, context cost per pass 10.
 - **Hosts.** v1 serves Claude Code, its SessionStart and PreToolUse hooks, and a human in a
   terminal for debugging. No other agent is served, and nothing may assume Claude Code is the only
   host.
-- **One declaration per verb** (name, arguments, input and output schema, examples, whether it
-  writes) generates `coach --help`, `coach <verb> --help`, `coach schema [verb]` as JSON Schema,
+- **One declaration per verb** (name, arguments, input and output schema, examples, and
+  `writes: none | store | hevy | git`, the one field that separates a read, a store write the
+  permission rules allow, and a Writing verb they ask on; `docs/spec/verbs.md`) generates `coach --help`, `coach <verb> --help`, `coach schema [verb]` as JSON Schema,
   and the contract tests that check each skill names only verbs that exist. No verb list is
   written by hand anywhere, CLAUDE.md included.
 - **Envelope:** `schema_version`, `ok`, `verb`, `result` or `error {code, message}`, `warnings[]`.
@@ -52,12 +54,15 @@ maintenance cost 15, testability 15, context cost per pass 10.
   write, 4 Hevy unreachable, 5 setup stops it. `error.code` carries the specific reason. Services
   raise typed exceptions (`Refused`, `Invalid`, `Unreachable`, `Setup`) and the CLI maps them to
   codes in one place.
-- **Approval attaches in two layers:** permission rules allow every read verb and ask on the one
-  writing verb, and a PreToolUse hook runs that verb's dry run so the prompt shows what Hevy will
-  receive. Bypass-permissions mode denies the write outright, because nobody would see the
-  prompt. The human side of approval is the Approval UX decision, not this one.
+- **Approval attaches in two layers:** permission rules allow every verb declared `writes: none`
+  or `store` and ask on every verb declared `hevy` or `git` (four in v1: `plan apply`,
+  `publish`, `upgrade`, `init`), and a PreToolUse hook runs that verb's `--dry-run`, which every
+  asked verb declares, so the prompt shows what Hevy, git or the tree will receive. The hook,
+  not the verb, denies in bypass-permissions mode, because nobody would see the prompt; a verb
+  never knows the permission mode. The human side of approval is the Approval UX decision, not
+  this one.
 - **Hooks are thin wrappers over verbs.** SessionStart wraps `coach status`; PreToolUse wraps the
-  writing verb's dry run into allow, ask or deny. Their only logic of their own is the
+  asked verb's dry run into ask or deny. Their only logic of their own is the
   shell-command parser that finds a coach write or a raw Hevy call, ported trimmed from the old
   `gate.py`.
 - **Testability.** The entry point stays `main(argv, env, stdout, stderr) -> int`, in-process.

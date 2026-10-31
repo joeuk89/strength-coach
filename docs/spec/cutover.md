@@ -103,7 +103,7 @@ in the schema marks it special.
 | `[[niggle]]` | open niggles only, one record each: `opened` = old `first_noted`, `site`, the current status (old `watching` is `reported`), the old history collapsed into the event text, and the constraint set the agent proposes from the old prose and the overrides that cite the niggle, each confirmed or struck by the athlete in the file. Resolved niggles and the illness episodes do not migrate | two: hamstring after runs (n-0003, easing, proposed `rpe_cap` 7 on pattern `hinge`); left shoulder (n-0006, easing, proposed `rpe_cap` 7 on `db_lateral_raise` if still in force) |
 | `[[followup]]` | open follow-ups only, one `kept` event each, `due` = old `review_at` | none |
 | `[[observation]]` | the Coach's notes that are patterns with evidence (ADR 0009). Agreements about how to coach stay in `profile.md`; agreements that shaped the old program inform the fresh design and become no record; setup facts and history are dropped | seven: drift adds volume; drift adds intensity on top sets; PT sessions run hard whatever is asked; PT sessions go under-logged; the PT's A/B alternation is unreliable; active holidays are training stress; the PT rarely programmes deadlifts |
-| `[[decision]]` | one `activity_cap` for runs with the old `[cardio]` numbers, because `pain`, evidence `niggle:n-0003`, no `until`, retired when the hamstring resolves. `park_session` rows only if version 1 authors the conditioning sessions and the athlete still wants them parked | `activity_kind = "run"`, `weekly_distance = 17`, `single_distance = 6` |
+| `[[decision]]` | one `activity_cap` for runs with the old `[cardio]` numbers, because `pain`, evidence `niggle:@hamstring` (the `[[niggle]]` record in the same file carries `key = "hamstring"`; the engine rewrites the ref to the assigned id, `verbs.md`), no `until`, retired when the hamstring resolves. `park_session` rows only if version 1 authors the conditioning sessions and the athlete still wants them parked | `activity_kind = "run"`, `weekly_distance = 17`, `single_distance = 6` |
 | `[[workout]]` | the external PT annotations whose session Hevy never saw, minutes and RPE as reported, NULL where not | two: 6 Oct 2026 (60 min, RPE unknown), 13 Oct 2026 (60 min, RPE 9) |
 
 The Draft lives at `.coach/drafts/<date>-checkin.toml` (`instance.md`), gitignored; the export
@@ -111,7 +111,8 @@ The Draft lives at `.coach/drafts/<date>-checkin.toml` (`instance.md`), gitignor
 
 ### Acceptance check
 
-`cutover.md` is the expected `coach status` after step 5, and that list is the check:
+The expected `coach status` after step 5 is the check; every item is a field of its default
+summary (`verbs.md`), read with `--fields`:
 
 - `exercise_unmapped`: 0 of 57 workouts;
 - two open niggles, each with at least one constraint (no "niggle open with no load constraint"
@@ -165,7 +166,9 @@ old-instance session is logged:
 
 Every item is a number the engine already prints:
 
-- the test suite is green at the pinned engine tag;
+- the engine is a release, `coach status` shows its version equal to the pin with no
+  `engine_pin_dev`, and the test suite is green at that tag (an editable `.dev` install is for
+  development; `init` refuses to pin one, `verbs.md`);
 - `coach status` shows the acceptance list of "The cutover check-in";
 - the event import reports Sunday's workout (workout count up by one);
 - the dry run shows routine creates equal to the version's session count for the week, three

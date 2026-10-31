@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011)
 ---
 
 # Approval is the human's yes to the one gated write, bound by a Write plan hash
@@ -35,17 +36,18 @@ approved inside the `plan apply` transaction.
 
 ## The hook
 
-- PreToolUse on Bash. It finds coach verbs whose declaration says they write to Hevy (never a
-  hard-coded name), runs their dry run, and answers ask with the summary, or deny with the
-  reason when the dry run refuses. Permission "ask" rules are generated from the same
-  declarations.
+- PreToolUse on Bash. It finds coach verbs whose declaration says `writes: hevy` or `git`
+  (never a hard-coded name), runs their `--dry-run`, which every such verb declares
+  (`docs/spec/verbs.md`), and answers ask with the summary, or deny with the reason when the
+  dry run refuses. Permission "ask" rules are generated from the same declarations.
 - It asks only in modes where a human sees the prompt: `default`, `acceptEdits`, `plan`,
   `auto` (a hook ask forces a real prompt there; the classifier cannot approve it). It denies in
   `bypassPermissions`, `dontAsk` and any mode it does not recognise. Headless `claude -p` needs
   nothing extra: the host denies an unanswered ask.
-- A raw HTTP write to the Hevy API in a Bash command asks with a warning that it skips the
-  verb's checks and audit, and is denied outright for any method on `/v1/workouts`. Permission
-  config also denies `WebFetch` to the Hevy host.
+- A raw HTTP call to the Hevy API in a Bash command asks with a warning that it skips the
+  verb's checks and audit, and is denied outright for every method, GET included, on
+  `/v1/workouts*` (ADR 0011: the client's allow-list is four endpoints and workout POST is not
+  among them). Permission config also denies `WebFetch` to the Hevy host.
 - If the hook cannot read the command or the dry run throws, it asks with the reason in normal
   modes and denies where no prompt exists. It never answers allow.
 

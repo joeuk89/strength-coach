@@ -55,13 +55,16 @@ run, not the file (ADR 0006), so the directory need not be visible.
 
 `.env` at the instance root holds exactly `HEVY_API_KEY`, gitignored, written by `init` when a
 key is given; the environment variable overrides it (ADR 0011). Whether Hevy is used is the
-presence of the `[hevy]` table in `coach.toml`, which is committed: a table with no key is a
-violation on `import` and `plan apply`, so a second machine that clones without `.env` fails
-loudly instead of planning without Hevy. No `enabled` flag, no `.env.example`.
+presence of the `[hevy]` table in `coach.toml`, which is committed: a table with no key stops
+`import` and `plan apply` with exit 5, `error.code = hevy_key_missing` (`verbs.md`), so a second
+machine that clones without `.env` fails loudly instead of planning without Hevy. No `enabled`
+flag, no `.env.example`. Without the table, `hevy_template_missing` is never raised and a
+`[[workout]]` record is the only way a workout enters the store (ADR 0006).
 
 ## coach.toml
 
-Four tables. Unknown tables and keys are a violation on every verb.
+Four tables. An unknown table or key stops every verb with exit 5, `error.code =
+config_unknown_key`, naming the key (`verbs.md`): a setup refusal, not a flag.
 
 | Table | Owner | Holds |
 | --- | --- | --- |
@@ -97,8 +100,10 @@ refuses if any engine-owned path already exists and otherwise writes beside what
 It writes the tree above with an empty store, `profile.md` absent (the `onboard` skill writes
 it), and the grid-location table as a commented example. It runs `git init` if the directory is
 not a repo and, after a final TTY confirmation listing the files, makes one commit,
-`coach init vX.Y.Z`; it is an asked verb like `upgrade`. Creating the remote repository and
-pushing are the human's job and are printed as the next step.
+`coach init vX.Y.Z`; it is a Writing verb (git) like `upgrade`, with `--dry-run` printing the
+tree it would write. On a `.dev` build it refuses without `--pin X.Y.Z`, the release the
+instance will run, so `[engine]` never holds a `.dev` version (ADR 0007, `verbs.md`). Creating
+the remote repository and pushing are the human's job and are printed as the next step.
 
 ## Generated CLAUDE.md
 

@@ -8,7 +8,12 @@ outlast the week.
 
 Decided on wayfinder ticket [Flag identity and lifecycle](https://github.com/joeuk89/strength-coach/issues/23),
 2026-10-27. The hard and warning conditions are ADR 0005's; Hevy's are ADR 0011's; the drop
-warnings are ADR 0010's; the kit snapshot warning is ADR 0008's.
+warnings are ADR 0010's; the kit snapshot warning is ADR 0008's. Amended 2026-10-31 by
+[Verb, hook and validation amendments](https://github.com/joeuk89/strength-coach/issues/43):
+`plan_not_current` dropped, `frozen_load_off_snapshot` moved outside the plan,
+`generated_file_drift`, `draft_ref_unresolved` and `niggle_constraint_on_resolved` registered,
+every outside-plan code given its raising verb and clearing fact, and a Decision's calendar-free
+scopes widened to `exercise` and `version`.
 
 ## Severity
 
@@ -127,9 +132,11 @@ A Decision names one full key, never a bare code: the coach cannot silence `sess
 everywhere for a block. A pattern that holds across lines earns a program change or an override
 Decision, not a blanket silence. Because a Decision outlives any one week, its key uses the
 calendar-free form of the scope: `session` and `line` refs without the Monday date (`session id`,
-`session id / exercise id`); `exposure`, `routine`, `workout` and `instance` refs are already
-calendar-free; a `week` scope cannot be the target of a Decision. The validator matches a
-Decision's key against the dated scopes that resolve to it.
+`session id / exercise id`); `exposure`, `routine`, `workout`, `instance`, `exercise` and
+`version` refs are already calendar-free, so a `leave_warning` may name a cadence signal
+(`cadence_slow@exercise:bb_bench_press`, `goals.md`) or an adopt warning on a version; a `week`
+scope cannot be the target of a Decision. The validator matches a Decision's key against the
+dated scopes that resolve to it.
 
 ### Never deleted
 
@@ -138,25 +145,31 @@ its until date or is retired with a reason. Both stay readable in the ledger.
 
 ## Warnings outside a plan
 
-Warnings the validator does not raise on a plan have no acknowledgement path. Each is reported in
-the envelope `warnings[]` of the verb that finds it, and on the next plan's warnings where it
-bears on a line, and clears only when the fact behind it changes through its own verb:
+Warnings the validator does not raise on a plan have no acknowledgement path. Each is raised by
+one verb, reported in that verb's envelope `warnings[]` and by `status` while it stands, shown on
+the next plan's warnings where it bears on a line, and clears only when the fact behind it
+changes through its own verb. This table is the whole list; `week.md` restates the raising
+verbs:
 
-| Warning | Clears by |
-| --- | --- |
-| Drift on a live routine (ADR 0011) | an override on the next WeekPlan, or the next push overwriting it |
-| A tombstoned workout id reappearing (ADR 0011) | a `match` or `void` Annotation on the new version |
-| A follow-up due | a Follow-up event (kept, deferred, resolved, dropped) |
-| A niggle open with no load constraint | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
-| Engine pin on a `.dev` build (ADR 0007) | pinning a release, or `coach upgrade` |
-| Kit or Hevy snapshot older than its age limit (ADR 0008, ADR 0011) | `coach import` |
-| A cadence signal (`cadence_slow`, `cadence_fast`) | the signal no longer holding, or a version giving the exercise another scheme |
-| A Phase off its trend | the observed rate back inside the band, or the Phase closing |
-| A Phase condition met | the Phase closing (`goal adopt`) |
-| A training max no scheme reads | retiring the Decision, or a version giving the exercise a scheme that reads it |
-| A quality-bout cap exceeded, a run spike | history; the week closing |
+| Code | Raised by | Clears by |
+| --- | --- | --- |
+| `routine_drift` (ADR 0011) | `import` | an override on the next WeekPlan, or the next push overwriting it |
+| `workout_reappeared` (ADR 0011) | `import` | a `match` or `void` Annotation on the new version |
+| `exercise_unmapped` (`cutover.md`) | `import` | an `[[exercise]]` record that maps or declares the Exercise |
+| `snapshot_stale` (ADR 0008, ADR 0011) | `import` | `coach import` fetching a fresh snapshot |
+| `frozen_load_off_snapshot` | `import` | the next WeekPlan, whose loads freeze on the new snapshot (`plan apply`); a frozen load never re-rounds (ADR 0008) |
+| `followup_due` | `checkin open` | a Follow-up event (kept, deferred, resolved, dropped) |
+| `niggle_unconstrained` | `checkin open` | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
+| `cadence_slow`, `cadence_fast` | `checkin open` | the signal no longer holding, or a version giving the exercise another scheme; left by a `leave_warning` Decision |
+| `phase_trend_off` | `checkin open` | the observed rate back inside the band, or the Phase closing |
+| `phase_condition_met` | `checkin open` | the Phase closing (`goal adopt` or a check-in file) |
+| `training_max_unused` | `checkin open` | retiring the Decision, or a version giving the exercise a scheme that reads it |
+| `activity_cap_exceeded`, `run_spike` | `checkin open` | history; the week closing |
+| `engine_pin_dev` (ADR 0007) | `status` | `coach upgrade` on a release build, the only writer of `[engine]`; `init` refuses to write a `.dev` pin (`verbs.md`) |
+| `generated_file_drift` (ADR 0007, 0013) | `status` | `coach upgrade` regenerating the file |
 
-Which verb reports each is `week.md`'s table.
+A milestone reached is a `progress` figure, not a code (`goals.md`), so nothing here can only
+clear by time.
 
 ## Violations
 
@@ -183,9 +196,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or an event with a smaller constraint set); days off moved by a `trained_unlogged` Annotation or a hand-entered Workout; removing the light-week override or raising its `rpe_cap`; a lower `pin load` | by ceiling kind: return band rn:detraining-return.3, illness rn:detraining-return.4, light week rn:deloads.10, niggle `null` |
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together; no override waives the band | rn:detraining-return.3 |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version | rn:deloads.3 |
-| `hevy_template_missing` | line | exercise id, missing columns | an Exercise with a `hevy_template_id`, or one with all four template columns so `plan apply` can create the template; an Exercise that has the id never needs the other three (`cutover.md`) | `null` |
+| `hevy_template_missing` | line | exercise id, missing columns | an Exercise with a `hevy_template_id`, or one with all four template columns so `plan apply` can create the template; an Exercise that has the id never needs the other three (`cutover.md`). Raised only when `coach.toml` has a `[hevy]` table: without Hevy no template is needed and the plan is approved on its numbers alone (ADR 0006) | `null` |
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` | `null` |
-| `plan_not_current` | week | named WeekPlan id, current draft hash | re-running the dry run on the current Draft | `null` |
 | `rotation_unconfirmed` | week | inferred position, source | the agent confirming the rotation position in the Draft | `null` |
 | `goal_missing` | version | none | `goal adopt` | `null` |
 | `priority_lifts_required` | version | emphasis | a Goal with priority lifts, or a different emphasis | `null` |
@@ -212,6 +224,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) | `null` |
 | `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) | `null` |
 | `reading_duplicate` | instance | reading kind, date or night, source, the live row's id | withdrawing one of the two rows in the Draft (`schema.md`, `check-in.md` "Correcting") | `null` |
+| `draft_ref_unresolved` | instance | the `@` ref, the file | a `key` on a record in the same file, or the stored id (`verbs.md`, "A Draft-local key") | `null` |
+| `niggle_constraint_on_resolved` | instance | niggle id | removing the constraint rows from the `resolved` event; a resolved niggle binds nothing (`prescription.md`) | `null` |
 
 ### Warnings on a plan (acknowledgeable)
 
@@ -231,7 +245,6 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
 | `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) | rn:volume-frequency.1 |
 | `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) | rn:volume-frequency.3 |
-| `frozen_load_off_snapshot` | session | line, load, snapshot date | `null` |
 | `override_persisting` | line | kind, weeks, plan ids | `null` |
 | `light_week_shape_off_trigger` | week | proposed shape, the plan's shape, triggers | rn:deloads.5, .8 to .10 |
 | `light_week_unprompted` | week | hard-week count, ceiling | rn:deloads.3 and .4 |
@@ -266,6 +279,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `followup_due` | instance | follow-up id, due date | `null` |
 | `niggle_unconstrained` | instance | niggle id, opened | `null` |
 | `engine_pin_dev` | instance | pinned version, running version | `null` |
+| `generated_file_drift` | instance | file (`CLAUDE.md` or `.claude/settings.json`), engine version that generated it | `null` |
+| `frozen_load_off_snapshot` | session | week, line, frozen load, snapshot date | `null` |
 | `snapshot_stale` | instance | source (plate-pool, hevy), snapshot date, age limit (plate-pool 90 days, Hevy 7 days; opinion, `research-notes.md`) | `null` |
 | `cadence_slow` | exercise | scheme, the scheme's metric (resets, stall streak or e1RM slope), blocks, `may_schemes`, `may`, `never` (the per-scheme condition and the switching table's row, `goals.md`) | rn:training-level §2 |
 | `cadence_fast` | exercise | scheme, the scheme's metric (exposures at top of range, or exposures the one-row cap bound), `may_schemes`, `may`, `never`; raised only on `double_progression` and `top_backoff` | rn:training-level §2 |

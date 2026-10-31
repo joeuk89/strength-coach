@@ -51,7 +51,10 @@ added lifting session counts toward the hard-week gate like any other.
 
 Scope is given by which refs are present: none for the week, `session`, or `session` plus
 `exercise`. Kind params sit inline beside the reason fields. Acknowledgements keep their own
-`[[acknowledge]]` array (`validation.md`).
+`[[acknowledge]]` array (`validation.md`). The engine writes the Athlete notes since the last
+approved WeekPlan into the Draft as a `[[note]]` array (`date`, `text`, `about`), context the
+coach reads while editing; `plan apply` ignores the array and the Write plan hash excludes it
+(`check-in.md`, "Athlete notes").
 
 ```toml
 [[override]]
@@ -133,7 +136,7 @@ weekly_distance = 17
 single_distance = 6
 because = "athlete_request"
 text = "Agreed at the 24 Oct check-in while the hamstring settles."
-evidence = ["niggle:n-0003", "check_in:ci-2026-10-24"]
+evidence = ["niggle:n-0003", "check_in:ci-2026-10-24"]   # or niggle:@<key> for a niggle raised in the same file (verbs.md)
 
 [[decision]]
 kind = "retire"

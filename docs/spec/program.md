@@ -307,7 +307,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `set_type_not_allowed` | line | any authored `test` group (the deload policy alone prescribes one), or a type the scheme's row does not permit |
 | `set_groups_off_scheme` | line | the working groups do not fit the scheme's row: a `top_backoff` first working group with `count` other than 1 or a range for `reps`, or no back-off group; more than one working group under `assistance_ladder`; a `wave_531` working group stating `reps` |
 | `rpe_missing` | line | a working group the scheme's row requires `rpe` on has none |
-| `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011) |
+| `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011); only when `coach.toml` has a `[hevy]` table (`validation.md`) |
 | `acknowledgement_unmatched` | version | an `[[acknowledge]]` key adopt did not raise |
 | `goal_missing` | version | no current Goal (`goals.md`) |
 | `priority_lifts_required` | version | `strength` emphasis under a Goal with no priority lifts (`goals.md`) |

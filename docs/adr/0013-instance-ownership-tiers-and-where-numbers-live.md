@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
+amended: 2026-10-31 by wayfinder #43 (`.coach/` placed in the engine-owned tier as local state; the drift warning named)
 ---
 
 # An instance has three ownership tiers, and a number lives where its kind says: fact in config, rule in code, agreement as a Decision
@@ -9,7 +10,10 @@ Every path in an instance belongs to one of three tiers. **Athlete-authored**: `
 outside `[engine]`, `profile.md`, `.env`, `.claude/settings.local.json` and additions to
 `.gitignore`. **Engine-owned**: CLAUDE.md, `.claude/settings.json`, `README.md`, `pages/`,
 `export/` and `[engine]` in `coach.toml`, regenerated wholesale by `upgrade` or `publish`, never
-merged. **Append-only**: `hevy/writes.jsonl`. A hand edit to an engine-owned file is overwritten
+merged; and, as local state that is never committed, `.coach/`: the store, which only verbs
+write and which is rebuilt from `export/` when missing (ADR 0001), and `drafts/`, files the
+agent and two verbs write for one verb to consume and nothing reads after (`docs/spec/instance.md`).
+**Append-only**: `hevy/writes.jsonl`. A hand edit to an engine-owned file is overwritten
 at the next regeneration with no merge and no prompt beyond the verb's own ask; `status` has
 already warned on the drift and the git diff of the regenerating commit shows what was lost.
 
@@ -56,8 +60,9 @@ generated files had no stated owner.
   (`docs/spec/instance.md`). The old `[cardio]` and `[caps]` tables split into engine constants
   and Decisions; the Override catalogue defines the Decision kinds that carry run caps and load
   ceilings.
-- `status` warns on drift between an engine-owned file and what the engine would generate, for
-  CLAUDE.md and `.claude/settings.json`. `pages/`, `README.md` and `export/` are rewritten at
+- `status` warns `generated_file_drift` (`docs/spec/validation.md`) on drift between an
+  engine-owned file and what the engine would generate, for CLAUDE.md and
+  `.claude/settings.json`; `upgrade` clears it by regenerating the file. `pages/`, `README.md` and `export/` are rewritten at
   every publish, so drift there lasts one publish and is not checked (ADR 0012).
 - No "local additions" block in the generated CLAUDE.md. The athlete speaks through the profile
   and `settings.local.json`.
