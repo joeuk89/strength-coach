@@ -124,7 +124,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
   Draft (`program.md`; the kinds and what each folds to are `overrides.md`'s).
 - **`schema --registry`** takes `schemes`, `flags`, `record-kinds` or `views`. It is the one
-  source every contract test reads a registry from.
+  source every contract test reads a registry from. `flags` carries each code's `rn` citation,
+  the one place a new agent sees every code with its evidence (ADR 0020).
 
 ## Record kinds
 

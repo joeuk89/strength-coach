@@ -69,10 +69,17 @@ and `warnings[]`, is the same object:
   "scope": {"kind": "line", "week": "2026-11-03", "session": "upper-a", "exercise": "ohp"},
   "params": {"streak": 3, "exposures": ["wk-7f2a/ohp", "wk-81c0/ohp", "wk-9d11/ohp"]},
   "params_hash": "sha256:…",
+  "rn": "rn:…",
   "message": "OHP has stalled for 3 exposures at 42.5 kg",
   "left": null
 }
 ```
+
+`rn` is the citation of the constant that raised the flag, `rn:<note> §<n>` or `null` when a
+code rests on none (a Hevy shape, a pin). It sits outside `params` and the hash, so a note
+renumbered or a citation added moves no key. It is the ref an `against_research` Decision or a
+coach's explanation quotes; a running agent reads no note (ADR 0020). Rendered pages link it to
+the note at the pinned engine tag.
 
 `left` is `null` or `{because, text, source: "weekplan" | "decision", evidence: [...]}`. A
 violation's `left` is always `null`: the shape has the field so one renderer serves both, and a
@@ -149,7 +156,10 @@ lawfully change the fact behind.
 ## Code registry
 
 The v1 codes, drawn from ADR 0005, 0008, 0010, 0011, 0014 and 0015 (`program.md`). Later tickets add a code only by adding
-a row here; a contract test holds that every code the engine emits is in this table.
+a row here; a contract test holds that every code the engine emits is in this table. The
+engine's registry carries one more column than these tables, `rn`, the citation each flag's `rn`
+field is filled from (ADR 0020); `coach schema --registry flags` prints it. The citation per row
+is the call of [Research notes on main and every number cited](https://github.com/joeuk89/strength-coach/issues/40).
 
 ### Violations
 
@@ -224,6 +234,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `start_load_ignored` | line | start load, last exposure load, exposure ref |
 | `superset_rest_differs` | session | superset label, rest values |
 | `session_retired` | version | session id, routine id if mapped |
+| `scheme_change_off_signal` | line | previous scheme, new scheme, signal key or none, `may_schemes` (`goals.md`, **Response to a cadence signal**) |
 
 ### Warnings outside a plan (clear by fact)
 
@@ -235,8 +246,8 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `niggle_unconstrained` | instance | niggle id, opened |
 | `engine_pin_dev` | instance | pinned version, running version |
 | `snapshot_stale` | instance | source (plate-pool, hevy), snapshot date, age limit |
-| `cadence_slow` | exercise | resets, scheme, e1RM slope, blocks |
-| `cadence_fast` | exercise | exposures at top of range, scheme |
+| `cadence_slow` | exercise | resets, scheme, e1RM slope, blocks, `may_schemes`, `may`, `never` (the switching table's row, `goals.md`) |
+| `cadence_fast` | exercise | exposures at top of range, scheme, `may_schemes`, `may`, `never`; never raised on a `linear` line |
 | `milestone_reached` | exercise | milestone, exposure ref, date |
 | `phase_condition_met` | instance | phase id, condition, value |
 | `phase_trend_off` | instance | phase id, target rate, observed rate, window |
@@ -261,3 +272,5 @@ the load" state is `start_load_missing` on a swapped line and the cardio cap is
 - Rewording a message changes no key and no params hash: a fixture plan validated under two
   renderers reports identical keys.
 - An acknowledgement whose params hash no longer matches is reported as not left.
+- Every `rn` in the registry resolves to a current claim in a research note (the ref test of
+  ADR 0004 covers the registry as well as code).

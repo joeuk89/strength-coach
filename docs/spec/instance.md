@@ -31,7 +31,7 @@ Ownership tiers and where numbers live are ADR 0013; this page is the tables.
 
 Nothing else. No `data/`, `check-ins/`, `routine/`, `reference/`, `research/`, `docs/` or
 `.agent/`: check-in records are pages, the program is in the store, research notes live in the
-engine (ADR 0004).
+engine repo and are read by no running agent (ADR 0004, ADR 0020).
 
 `.gitignore` as written by `init`:
 
@@ -92,5 +92,7 @@ pushing are the human's job and are printed as the next step.
 Under about forty lines, no coaching content (`docs/spec/skills.md`): what this directory is and
 the engine version; `coach --help` and `coach schema` as the way to learn verbs; the profile
 named once; the drafts convention named once; the one procedural line (the athlete says yes
-before any verb records); where the never-list's items live. Skills, hooks and permission rules
+before any verb records); one line for the ad-hoc moment (a question outside the skills is
+read-only: `coach status`, `coach progress`, `coach query`; `docs/spec/skills.md`); where the
+never-list's items live. Skills, hooks and permission rules
 come from the plugin and `settings.json`, so it lists none of them.

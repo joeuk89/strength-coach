@@ -90,7 +90,12 @@ All of these are pure functions of the store at a date and are never stored:
 
 - **The card**: fields in a fixed order, inapplicable fields dropped; prefill states what the store
   knows and asks only what it cannot; e1RM rows compounds first; athlete notes verbatim; the deep
-  tier adds misses by tag since the last deep check-in; due follow-ups.
+  tier adds misses by tag since the last deep check-in; due follow-ups. The card reads the
+  version's emphasis and priority lifts (`goals.md`, the check-in row of its per-emphasis
+  table, ADR 0020): with priority lifts it leads with them, the top set's load and reps stated
+  and how it moved and felt asked; on a `hypertrophy` version it asks reps and RIR on the lines
+  that moved, pump and soreness as a dose read; on `maintenance` whether the kept lifts held.
+  The `check-in` skill carries none of this.
 - **Week closure**: a week is closed when a `current` check-in's window covers its Sunday.
 - **Deep due**: 42 days since the newest `current` row with `tier = deep`, or a light week newly
   proposed, or a restructure, or the previous check-in was a catch-up; suppressed by a Decision of

@@ -168,6 +168,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `priority_lift_not_first` | warning | session | exercise id, position | Acknowledgement, or reordering |
 | `dose_off_band` | warning | version | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
 | `deload_off_emphasis` | warning | version | deload policy, expected shape | Acknowledgement, or the expected shape |
+| `scheme_change_off_signal` | warning | line | previous scheme, new scheme, signal key or none, `may_schemes` | Acknowledgement, or keeping the scheme, or a scheme the signal lists (**Response to a cadence signal**) |
 
 The filled defaults appear in the adopt diff, so the athlete sees what the emphasis chose.
 
@@ -220,18 +221,25 @@ or left by a `leave_warning` Decision:
 | Code | Condition |
 | --- | --- |
 | `cadence_slow` | two resets on the line under the same scheme within the closed block and the one before, **or** a non-positive e1RM slope across two consecutive closed hard blocks with adherence at or above the floor |
-| `cadence_fast` | every exposure in the closed block hit the top of its rep range at or under the target RIR, with no stall |
+| `cadence_fast` | every exposure in the closed block hit the top of its rep range at or under the target RIR, with no stall; checked only on `double_progression` and `top_backoff` lines (on `linear` the pace is right and there is nothing to propose) |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay
 prose. The response is always a new Program version with a Decision citing the warning (a slower
 or faster scheme on that lift, a different progression cadence), never an automatic change.
 
+Each signal carries its row of the switching table below in `params`: `may_schemes` (the
+schemes the line may move to, machine-read by `adopt`), `may` and `never` (short phrases the
+coach reads and quotes). That is how the rule reaches the agent: a running agent reads no table
+(ADR 0020).
+
 ### Response to a cadence signal
 
-The one place the scheme-switching rule lives; the `program` skill's Judge cites it
-(`skills.md`). A scheme changes only when its cadence has run out, which is what the signal
-says: the switch under `linear` is the second reset, per lift, and there is no second count
+The scheme-switching rule is an engine table in `core`, `(signal, scheme) → may_schemes, may,
+never`, with its `rn:` citations; this section is its spec, as `schema.md` is `schema.sql`'s. The
+`program` skill's Judge answers a signal only with a move the flag lists and carries no table
+(`skills.md`, ADR 0020). A scheme changes only when its cadence has run out, which is what the
+signal says: the switch under `linear` is the second reset, per lift, and there is no second count
 (`rn:progression-methods`, the switching table; Starting Strength's end of the one-to-three
 range, matching `cadence_slow`). Within a block the weekly rule answers a stall with its own
 reset; the boundary is where the scheme may change.
@@ -244,7 +252,13 @@ reset; the boundary is where the scheme may change.
 | `cadence_slow` | `wave_531` | lower the training max about 10 % by Decision and stay a cycle; the scheme stands | raise the training max to chase the miss |
 | `cadence_slow` | `assistance_ladder` | hold the rung; at zero assistance move to `double_progression` on reps | skip rungs |
 | `cadence_fast` | `double_progression`, `top_backoff` | propose `linear` on that lift while the rack has a next row; the signal is the evidence, no stored level is needed | fill `linear` without a Decision |
-| `cadence_fast` | `linear` | nothing; the pace is right | |
+
+`adopt` holds the rule with one warning, `scheme_change_off_signal` (scope line): a line whose
+scheme differs from the previous version's line for the same exercise id, in any session, and
+either no cadence signal is open on that exercise or the new scheme is outside the signal's
+`may_schemes`. A line whose exercise the previous version did not carry raises nothing. It runs
+on `amend` and `redesign` alike and is left by an Acknowledgement like the other adopt warnings:
+a coach may change a scheme for a reason the signal cannot see.
 
 Two signals that look like a stall and are not: RPE rising at a held load on many lines is
 fatigue, answered by the deload policy; RPE rising or pain on one line is technique or a
@@ -260,8 +274,11 @@ niggle, answered by a swap or a Niggle, never a scheme.
 
 ## What the skills ask, judge and explain
 
-One table; the skills cite it and do not copy it, so each stays under its budget
-(`skills.md`). Each cell is the whole of what the emphasis changes.
+One table so the four moments are seen together; nothing reads it at runtime (ADR 0020). The
+`check-in` asks row is the card builder's: `checkin open` reads the version's emphasis and
+priority lifts and asks accordingly (`check-in.md`). The other rows are each skill's own Judge,
+which carries its column in its own words inside its budget (`skills.md`). Each cell is the whole
+of what the emphasis changes.
 
 | Moment | `hypertrophy` | priority lifts and `strength` | `maintenance` |
 | --- | --- | --- | --- |
@@ -283,8 +300,8 @@ back-offs and 8 sets per week on bench and the pull-up, a 30–50 % set cut with
 in the deload week, and warns `priority_lift_not_first` if the pull-up sits after rows. At the
 first block boundary `coach progress` shows bench e1RM over the block, the pull-up's best reps,
 dose by muscle, the flat bodyweight trend, and no cadence signal; the `program` skill proposes
-block 2. Two blocks later a `cadence_slow` on bench is answered by a new version with a
-training-max percentage scheme on bench, the Decision citing the warning.
+block 2. Two blocks later a `cadence_slow` on bench, its `may_schemes` naming `wave_531`, is
+answered by a new version with that scheme on bench, the Decision citing the warning and its `rn`.
 
 ## Handed to other tickets
 

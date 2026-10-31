@@ -32,9 +32,11 @@ cited only from code.
   load ladder go.
 - The Short-sleep week trigger stays and reads sleep nights; with no importer it fires only on
   typed-in nights. The nutrition Sleep gate goes.
-- Research notes are parsed at runtime, never imported; every threshold in code carries its `rn:`
-  ref and one test resolves every ref to a current claim. No citation scan of prose, no rendered
-  regions, no prose tests.
+- Research notes live in the engine repo only, never imported into the store, never shipped as
+  package data and never read by a running agent (ADR 0020); every threshold in code carries its
+  `rn:` ref and one test in the repo resolves every ref to a current claim. No citation scan of
+  prose, no rendered regions, no prose tests. (Amended 2026-10-31: the original "parsed at
+  runtime" meant this test.)
 - Nothing in v1 is optional, so there are no feature toggles.
 - The nutrition phase is a line in the prose Profile; the dose-target rule reads only the lifting
   goal.

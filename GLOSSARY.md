@@ -262,7 +262,8 @@ _Avoid_: training max (a Decision), strength estimate
 
 **Cadence signal**:
 A block-boundary reading, per exercise, of whether its progression is moving too slowly or too
-fast: resets taken, stall streak and the e1RM trend over the block. A warning, never a level.
+fast: resets taken, stall streak and the e1RM trend over the block. A warning, never a level; it
+names the moves the next program version may and may not make on that exercise.
 _Avoid_: level, training age, experience, graduation
 
 **Hard set**:

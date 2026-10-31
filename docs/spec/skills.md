@@ -17,19 +17,30 @@ Four skills, all in the plugin (ADR 0007), none in the instance:
 | --- | --- | --- |
 | `check-in` | The weekly review | A check-in is due, the athlete reports on the week, or the newest check-in is older than a week |
 | `plan-week` | The week's prescription | A check-in has closed a week, a light or constrained week is agreed, a midweek change is needed |
-| `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring). Its Judge keys `cadence_slow` and `cadence_fast` to **Response to a cadence signal** in `goals.md` and carries no switching rule of its own |
+| `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring). Its Judge answers `cadence_slow` and `cadence_fast` only with a move the flag lists (`may_schemes`, `may`, `never`); the switching table is engine code specified in `goals.md`, and the skill carries none of it (ADR 0020) |
 | `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections) on the athlete's yes and nothing else |
 
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
 0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
-why in the profile prose, ADR 0014; what each skill asks, judges and explains per emphasis is one
-table in `goals.md` that the skills cite), `setup`
+why in the profile prose, ADR 0014; what the check-in asks per emphasis is the card's, what
+each skill judges and explains per emphasis is that skill's own Judge, and `goals.md` shows the
+four together as a design view, ADR 0020), `setup`
 (config and the Hevy key are `coach init`), `framework-sync` (`coach upgrade`), nutrition, recipes
 and meal plans (ADR 0004).
 
 Every skill is model-invoked from its description and also runs as `/<name>`. No skill names
 another skill: each When covers its own trigger, including the one that follows a check-in, so the
 core loop in one session is two skill loads, never one skill driving another.
+
+## What a running agent reads
+
+Four things, and nothing else (ADR 0020): the profile, the skill body, the envelopes (the card,
+flags, dry runs, `coach progress`) and its own coaching knowledge. No research note, spec table or
+reference file. Knowledge the engine owns arrives as typed fields on the flag or result that needs
+it: a cadence signal carries the moves the next version may make, every flag carries its `rn`
+citation, `coach schema --registry flags` lists every code with its citation. The agent's own
+knowledge is expected; where it disagrees with an engine rule, the rule stands and the departure
+is recorded with a reason.
 
 ## The template
 
@@ -88,10 +99,21 @@ goes there instead.
 | A rule the code already enforces, explained | Nowhere: the violation or warning says it |
 | Another skill's name | Nowhere: each skill's description is its own trigger |
 | Coaching principles shared across skills | The profile prose (preferences, voice, ADR 0009); otherwise each skill's own Judge |
+| A table the skill would "cite" (switching rule, per-emphasis defaults) | The flag's params (`may_schemes`, `may`, `never`) and the adopt diff; the skill's own Judge in its own words (ADR 0020) |
+| A research note, its claim or a pointer to one | The flag's `rn` field and `coach schema --registry flags`; a running agent reads no note (ADR 0020) |
 | A glossary term's avoid-list word | The glossary term |
 
 The generated CLAUDE.md carries no coaching content either: what the instance is, where the
 profile is, that `coach status` opens a session and `coach --help` is the manual.
+
+## The ad-hoc moment
+
+A question outside the four moments ("why is my bench flat?" on a Wednesday) is not a skill. It
+is answered from the profile and the read verbs (`coach status`, `coach progress`, `coach query`)
+with nothing recorded. If the conversation turns into a change, `plan-week`'s own description (a
+midweek change is needed) or `check-in`'s triggers it; an Observation waits for the next
+check-in. The generated CLAUDE.md carries this as one line, which is procedure, not coaching
+(`instance.md`). A fifth skill would have no Ask and no verbs beyond the read set.
 
 ## Budgets
 
