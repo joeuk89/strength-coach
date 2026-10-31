@@ -304,12 +304,13 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `superset_rest_differs` | session | superset label, rest values |
 | `session_retired` | version | session id, routine id if mapped |
 
-## Worked example: the carried-over program as version 1
+## Worked example: the old program restated as a version-1 Draft
 
-The old `program.json` (schema 10, "Week A / Week B around the PT Tuesday") translated by hand.
-Exercise ids carry over unchanged. Shown in full for two sessions and the coach-led one; the
-remaining sessions follow the same pattern. `kind = "redesign"` because it is the first version
-and opens the first Block; `--position` carries the old rotation position across.
+The old `program.json` (schema 10, "Week A / Week B around the PT Tuesday") translated by hand,
+to show the form on a real program. It is an illustration only: at cutover version 1 is designed
+fresh with the old routines as reference (`cutover.md`). Shown in full for two sessions and the
+coach-led one; the remaining sessions follow the same pattern. `kind = "redesign"` because it is
+the first version and opens the first Block.
 
 ```toml
 name = "Week A / Week B around the PT Tuesday (six days)"

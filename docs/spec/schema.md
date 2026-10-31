@@ -9,7 +9,8 @@ The shape in one paragraph: 36 tables. Anything another row refers to by id, or 
 filters on, is a row with a real key; ordered lists and scheme or override params are JSON
 text columns. Ids are engine-assigned prefixed strings used unchanged in envelopes, evidence
 refs and the export. Nothing derived has a table: Exposure, Match, Miss, e1RM, Week kind,
-days off, the anchor, the Block and the cadence signal are core functions over these rows. Rows
+days off, the anchor, the Block, the cadence signal and a logged set's Exercise are core functions
+over these rows. Rows
 are immutable; a correction is a new row, and the four exceptions (`exercise`, `observation`,
 `phase`, `routine_map`) are named below.
 
@@ -72,8 +73,8 @@ CREATE TABLE exercise (                    -- updated in place; the one library
   hevy_exercise_type TEXT,
   hevy_equipment     TEXT,
   hevy_muscle_group  TEXT,
-  hevy_template_id   TEXT UNIQUE,          -- written only by plan apply after a verified create
-  source             TEXT NOT NULL CHECK (source IN ('catalogue','draft'))
+  hevy_template_id   TEXT UNIQUE,          -- catalogue seed for built-ins, an [[exercise]] record, or plan apply after a verified create
+  source             TEXT NOT NULL CHECK (source IN ('catalogue','draft','record'))
 );
 
 CREATE TABLE program_version (
@@ -225,8 +226,7 @@ CREATE TABLE logged_set (
   workout_id         TEXT NOT NULL,
   workout_updated_at TEXT NOT NULL,
   position           INTEGER NOT NULL,
-  exercise_id        TEXT REFERENCES exercise(id),   -- NULL when the template is unmapped
-  hevy_template_id   TEXT,
+  hevy_template_id   TEXT,                 -- the Exercise is resolved on read through exercise.hevy_template_id
   hevy_title         TEXT,
   set_type           TEXT NOT NULL CHECK (set_type IN ('warm_up','working','activation','test')),
   weight_kg          REAL,
@@ -497,7 +497,7 @@ correction is a new row that supersedes or withdraws the old one.
 
 | Table | Why |
 | --- | --- |
-| `exercise` | it is the library, not a fact about a date; adopt updates declared fields, the `[[exercise]]` record kind edits the template columns, load mode and equipment kind, `plan apply` sets `hevy_template_id`; the Draft hash on the version or ledger row that caused the write is the audit |
+| `exercise` | it is the library, not a fact about a date; adopt updates declared fields, the `[[exercise]]` record kind edits the template columns, load mode and equipment kind or declares a new entry (`cutover.md`), `plan apply` sets `hevy_template_id`; the Draft hash on the version or ledger row that caused the write is the audit |
 | `observation` | retired is a state of the same noticed pattern; the retiring check-in is the audit |
 | `phase` | closed is a state of the same phase; the closing check-in or goal is the audit |
 | `routine_map` | it records the live link; status moves with verified writes and imports |
@@ -617,10 +617,13 @@ named in `validation.md` is the `void` kind; `workout_reappeared` clears by `mat
 
 ## Settles for later tickets
 
-- **Cutover and history import** (fog): old session ids become `session` rows and
-  `program_session` rows of `pv-1`; old routine ids land in `routine` and `routine_map`;
-  old workouts re-import through the ordinary path.
-- **Migration of carried-over state** (fog): the converter writes one program Draft, Decisions
-  as a ledger Draft and `--position`; nothing writes rows directly.
+- **Cutover and history import** (settled in `cutover.md`): no old session id becomes a `session`
+  row, version 1 is designed fresh; old workouts arrive through the ordinary `import --full`
+  with `since` NULL and resolve their Exercise on read through `hevy_template_id`.
+- **Migration of carried-over state** (fog): the converter writes one ledger Draft (niggles,
+  follow-ups, observations, goal, phase, custom template ids, three manual workouts); there is
+  no program Draft to convert and no `--position`; nothing writes rows directly.
+- **Cutover of routines** (fog): old routine ids land in `routine` through import; whether any
+  reach `routine_map` is that ticket's call.
 - **Parity harness** (fog): a fixture instance is a set of `export/` files imported into a test
   database by the same `import`.

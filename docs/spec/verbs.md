@@ -144,7 +144,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | sleep_night | `[[sleep_night]]` | a Sleep night | |
 | activity | `[[activity]]` | an Activity | |
 | status_day | `[[status_day]]` | a status day span: ill, injured, travel, `no_training`; withdrawn, never deleted | |
-| exercise | `[[exercise]]` | an edit to an existing library Exercise: the four Hevy template columns, load mode, equipment kind. Name and identity stay; new Exercises arrive only in a program Draft | |
+| exercise | `[[exercise]]` | an edit to an existing library Exercise (the four Hevy template columns, load mode, equipment kind; name and identity stay), or a new library Exercise with every column, `source = record`, for a Hevy template the history uses and no program line names (`cutover.md`) | |
 | observation | `[[observation]]` | an Observation raised or retired (ADR 0009) | yes |
 
 A reserved kind in a plain `record` file is the violation `record_kind_not_allowed`. A Phase is

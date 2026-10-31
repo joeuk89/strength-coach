@@ -242,7 +242,7 @@ a row here; a contract test holds that every code the engine emits is in this ta
 | `phase_trend_off` | instance | phase id, target rate, observed rate, window |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes |
 | `training_max_unused` | exercise | scheme, decision id |
-| `exercise_unmapped` | workout | Hevy template id, title; cleared by an `[[exercise]]` record giving the template id (`schema.md`) |
+| `exercise_unmapped` | workout | Hevy template id, title; a view over logged sets whose template id no Exercise carries, so an `[[exercise]]` record mapping or declaring the Exercise clears it for every version at once (`cutover.md`) |
 
 ### Codes pending other tickets
 
