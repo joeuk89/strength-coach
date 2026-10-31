@@ -1,15 +1,15 @@
 ---
 status: superseded in part by 0021 (ownership, import, the snapshot and the deep link; the rounding, warm-up, cap and frozen-prescription consequences stand)
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #42 (the load step is the location's alone: a plate-pool location's next row, a grid location's increment per implement kind; no exercise or catalogue increment exists); 2026-10-31 by wayfinder #45 (the equipment-kind map is the location's `implements` table; grid implement tables are `instance.md`'s)
+amended: 2026-10-31 by wayfinder #42 (the load step is the location's alone: a plate-pool location's next row, a grid location's increment per implement kind; no exercise or catalogue increment exists); 2026-10-31 by wayfinder #45 (the equipment-kind map is the location's `implements` table; grid implement tables are `instance.md`'s); 2026-10-31 by wayfinder #46 (the personal URL and the Hevy-cache comparison removed)
 ---
 
 # plate-pool owns the home inventory; the coach imports its achievable loads and rounds to them
 
 Equipment is modelled per location, and a location is one of two kinds. A **plate-pool
-location** (home) imports the achievable-load tables that plate-pool publishes
-(`https://joeuk89.github.io/plate-pool/api/achievable.json`) and treats every implement as an
-enumerated rack. A **grid location** (the PT's gym) is authored kit in `coach.toml`: increments,
+location** (home) takes the achievable-load tables plate-pool generates from the location's
+inventory (`kit/<name>.achievable.json`, ADR 0021; this ADR first had the engine fetch a
+published `achievable.json`) and treats every implement as an enumerated rack. A **grid location** (the PT's gym) is authored kit in `coach.toml`: increments,
 optional base masses, optional dumbbell or kettlebell rack, no plate counts. The engine never
 computes a plate breakdown; it rounds to loads that exist and links the athlete to plate-pool
 for how to build them. Chosen over the athlete's first lean (the coach store owns equipment and
@@ -42,10 +42,10 @@ owner with a public URL, and the coach needs only its output, not its input.
   machine, cable, band, bodyweight); each location maps kinds to its implements in its
   `implements` table (home maps weighted bodyweight work to the vest, the gym to a dip belt;
   the key and the grid implement tables are `instance.md`'s, wayfinder #45).
-- **Import.** `coach import` fetches the location's URL beside Hevy and stores the snapshot as
-  a raw fact with URL, fetch time and content hash. The location fixes which tables apply:
-  collars (clamp), uneven dumbbells (off), pair or single. Offline, the newest snapshot serves
-  with an age warning, as the Hevy cache does.
+- **Import.** Superseded by ADR 0021: the engine fetches nothing and keeps no snapshot; the
+  instance commits the tables and the engine stops on `kit_tables_stale` when they no longer
+  match the inventory. The location still fixes which tables apply: collars (clamp), uneven
+  dumbbells (off), pair or single.
 - **Rounding at a plate-pool location** selects from the rows of the applicable table, with the
   direction rules of the parity checklist (a cut or hold rounds no heavier, a step-up nearest,
   assistance the other way). The grid model survives only for grid locations and for machines,

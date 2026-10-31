@@ -13,8 +13,10 @@ outside the emphasis band. A **Phase** (deficit, maintenance,
 surplus) is the one long-range structure that outlives a block; it tilts the defaults and sets
 the bodyweight trend the week is checked against. At each block boundary a derived progress
 report shows the coach where the athlete stands against the Goal, with per-lift **cadence
-signals** in place of a stored training level. Code reads the Goal and Phase at exactly two
-moments, adopt and the block boundary; the coach reads them whenever a judgement is made.
+signals** in place of a stored training level. Code reads the Goal at two moments, adopt and
+the block boundary (`coach progress`); it reads the Phase there and at every `checkin open`, for
+the trend and the until condition (**What the Phase changes**); the coach reads both whenever a
+judgement is made.
 
 ## The nouns
 
@@ -85,7 +87,7 @@ one when the athlete's aim changes. The Draft:
 ```toml
 kind = "hypertrophy"
 because = "first goal at onboarding"
-priority_lifts = ["bench_press_barbell", "pull_up_strict"]
+priority_lifts = ["bb_bench_press", "pull_up"]
 why = """
 Strong and jacked: big arms, legs, glutes and thick abs at a body fat that is easy to live at.
 The test is jeans and a t-shirt. Bench and the strict pull-up first; the 2×BW deadlift is a
@@ -93,15 +95,15 @@ gym lift for later.
 """
 
 [[milestones]]
-exercise = "deadlift_barbell"
+exercise = "bb_deadlift"
 target = { kind = "bodyweight_multiple", value = 2.0 }
 
 [[milestones]]
-exercise = "bench_press_barbell"
+exercise = "bb_bench_press"
 target = { kind = "bodyweight_multiple", value = 1.25 }
 
 [[milestones]]
-exercise = "pull_up_strict"
+exercise = "pull_up"
 target = { kind = "load_x_reps", load = 0, reps = 5 }
 
 [phase]
@@ -319,9 +321,11 @@ holds.
 
 Goal `hypertrophy`, priority lifts bench and strict pull-up, milestones as in the Draft above,
 Phase `maintenance` until coach's call. The `program` skill authors version 1 with emphasis
-`hypertrophy`: double progression at RPE 8 on every line, a top set plus back-offs on bench and
-the pull-up; adopt fills 10 sets per muscle, 8 sets per week on bench and the pull-up, a 40 % set
-cut with load held and a test single on both in the light week, and warns
+`hypertrophy`: `double_progression` at the authored RPE 8 on every hypertrophy line, `top_backoff`
+on bench, the `assistance_ladder` on the pull-up while it is assisted (the band's bodyweight
+column); adopt fills 10 sets per muscle, 8 sets per week on bench and the pull-up, and a 40 % set
+cut with load held, under which the light week prescribes a test single on bench alone (the
+pull-up is under neither `top_backoff` nor `wave_531`, `prescription.md`); it warns
 `priority_lift_not_first` if the pull-up sits after rows. At the
 first block boundary `coach progress` shows bench e1RM over the block, the pull-up's best reps,
 dose by muscle, the flat bodyweight trend, and no cadence signal; the `program` skill proposes

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #42 (the rebuild from the export runs only when the database file is missing, never on an export "older than a commit"; each migration freezes the DDL it leaves behind, `docs/spec/schema.md`)
+amended: 2026-10-31 by wayfinder #46 (`coach.toml`, no recipe cards or proposals); 2026-10-31 by wayfinder #42 (the rebuild from the export runs only when the database file is missing, never on an export "older than a commit"; each migration freezes the DDL it leaves behind, `docs/spec/schema.md`)
 ---
 
 # SQLite is the source of truth; git sees only a text export
@@ -41,11 +41,11 @@ foreign keys replace about 7 checks, not 15; per-file atomic writes already exis
 - Workout import is append-only with tombstones; approval binds to an immutable plan row, not a
   hash over a mutable file.
 - The export is output. No code reads it except `import`; the athlete never edits it.
-- Files stay files when they are authored prose: `config.toml`, `profile.md`, `.env`, research
-  notes, recipe cards. The store never caches a copy of `config.toml`.
+- Files stay files when they are authored prose: `coach.toml`, `profile.md`, `.env`, the kit
+  files, research notes in the engine repo. The store never caches a copy of `coach.toml`.
 - Stored data is never edited by hand. The exception is the program, which is authored: an
   `adopt` verb validates a text form and records it as a new program version.
-- Git sees one commit per `publish`; drafts and proposals never reach git.
+- Git sees one commit per `publish`; Drafts never reach git (`.coach/drafts/` is gitignored).
 - Before cutover, a schema change is "drop the database and re-import"; after it, one linear
   `user_version` migration chain over one frozen DDL per schema version, so a rebuild can build
   an export at any version it was written at. Adding a UNIQUE constraint or changing a CHECK

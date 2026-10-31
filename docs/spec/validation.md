@@ -58,9 +58,9 @@ scope (`week`, `session`, `line` on a WeekPlan) leads with the Monday; the calen
 (the same scopes at `program adopt`, and on a Decision, below) drops it:
 
 ```
-stall_streak@line:2026-11-03/upper-a/ohp
+stall_streak@line:2026-11-03/upper-a/bb_overhead_press
 block_ceiling_exceeded@week:2026-11-03
-scheme_off_emphasis@line:b-sat-push/bb_bench_press
+scheme_off_emphasis@line:a-sat-pull/pull_up
 routine_drift@routine:3f9d2c7e-1b44-4a0e-8d55-c6a1e2b7f904
 engine_pin_dev@instance
 ```
@@ -76,11 +76,11 @@ and `warnings[]`, is the same object:
 
 ```json
 {
-  "key": "stall_streak@line:2026-11-03/upper-a/ohp",
+  "key": "stall_streak@line:2026-11-03/upper-a/bb_overhead_press",
   "code": "stall_streak",
   "severity": "warning",
-  "scope": {"kind": "line", "week": "2026-11-03", "session": "upper-a", "exercise": "ohp"},
-  "params": {"streak": 3, "exposures": ["exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/ohp", "exposure:0c4a9e61-2f7b-4d13-b8e0-5a3d7c2f1e88/ohp", "exposure:9a1f6d3b-7e25-4c60-a2d4-e8b5f0c3a716/ohp"]},
+  "scope": {"kind": "line", "week": "2026-11-03", "session": "upper-a", "exercise": "bb_overhead_press"},
+  "params": {"streak": 3, "exposures": ["exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/bb_overhead_press", "exposure:0c4a9e61-2f7b-4d13-b8e0-5a3d7c2f1e88/bb_overhead_press", "exposure:9a1f6d3b-7e25-4c60-a2d4-e8b5f0c3a716/bb_overhead_press"]},
   "params_hash": "sha256:…",
   "rn": "rn:…",
   "message": "OHP has stalled for 3 exposures at 42.5 kg",

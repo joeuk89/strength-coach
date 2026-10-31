@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011)
+amended: 2026-10-31 by wayfinder #46 (the Approval record is `approved_at` and `write_plan_hash` on the `week_plan` row, no route); 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011)
 ---
 
 # Approval is the human's yes to the one gated write, bound by a Write plan hash
@@ -58,9 +58,10 @@ approved inside the `plan apply` transaction.
   last exposure; every override with its kind and reason; warnings; the Hevy actions (folder
   create, routine update, create and retire, template create); then the hash. More is behind
   `--dry-run --full`.
-- **The Approval record** holds the WeekPlan id, timestamp, Write plan hash and route (`prompt`
-  or `terminal`, known by TTY). Not the summary text: it is reproducible from the frozen row.
-  Nothing names the person; one athlete owns the instance.
+- **The Approval record** is the WeekPlan row itself: `approved_at` and `write_plan_hash` on
+  `week_plan` (`docs/spec/schema.md`), no separate table and no route column (the prompt and the
+  TTY are the same yes). Not the summary text: it is reproducible from the frozen row. Nothing
+  names the person; one athlete owns the instance.
 - **WeekPlan status** is `approved | superseded`. There is no stored draft and no editing an
   approved plan: a changed file applied in the same span creates a new WeekPlan that supersedes
   the old, with its own approval and push, and its dry run shows the delta against the

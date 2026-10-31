@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
-amended: 2026-10-31 by wayfinder #41 (adopt fills `[dose]`, `[deload]` and session `minutes` only; scheme, RPE and rest are authored on every line by the `program` skill and adopt warns when they sit outside the emphasis band; cadence signals are defined per scheme)
+amended: 2026-10-31 by wayfinder #41 (adopt fills `[dose]`, `[deload]` and session `minutes` only; scheme, RPE and rest are authored on every line by the `program` skill and adopt warns when they sit outside the emphasis band; cadence signals are defined per scheme); 2026-10-31 by wayfinder #46 (`checkin open` reads the Phase; two violations and seven warnings at adopt)
 ---
 
 # The Goal and the Phase are records, each Program version carries an emphasis, and training level is a derived per-lift signal
@@ -16,8 +16,9 @@ body-composition phase (`deficit`, `maintenance`, `surplus`, with a rate and an 
 is its own record, opened and closed with a reason. Training level is not stored anywhere: code
 derives per-lift cadence signals from resets and e1RM trend and raises them as warnings at the
 block boundary, and a graduation is a new Program version with a Decision citing the signal.
-Code reads the goal and phase at two moments only, adopt and the block boundary; the coach reads
-them at every judgement through a derived progress report. Spec: `docs/spec/goals.md`.
+Code reads the goal at two moments, adopt and the block boundary, and the phase there and at
+every `checkin open` (trend and until condition); the coach reads them at every judgement through
+a derived progress report. Spec: `docs/spec/goals.md`.
 
 ## Context
 
@@ -69,7 +70,8 @@ long term).
   2026-10-31: scheme, RPE and rest are authored on every line by the `program` skill, which
   proposes them from `goals.md`'s bands; adopt fills none of them and warns
   `scheme_off_emphasis` when a scheme sits outside the band). A `strength` version must have priority
-  lifts. One violation (`goal_missing`) and six warnings at adopt (`docs/spec/goals.md`).
+  lifts. Two violations (`goal_missing`, `priority_lifts_required`) and seven warnings at adopt
+  (`docs/spec/goals.md`, Adopt: the goal checks).
 - The weekly rule is unchanged in signature; goal-specific weekly behaviour is a property of
   the scheme the version names.
 - `coach progress` is a read verb (block summary per priority lift, milestones, dose, adherence,

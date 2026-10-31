@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #41 (`prescribe` takes one prescribe request, listed once in `docs/spec/prescription.md`; the request is never a WeekPlan, Goal, Phase, profile or Weigh-in, and is rebuilt on demand, never frozen)
+amended: 2026-10-31 by wayfinder #46 (no draft WeekPlan: the Draft is a file, the row is born approved, ADR 0006); 2026-10-31 by wayfinder #41 (`prescribe` takes one prescribe request, listed once in `docs/spec/prescription.md`; the request is never a WeekPlan, Goal, Phase, profile or Weigh-in, and is rebuilt on demand, never frozen)
 ---
 
 # Prescriptions are derived from rule and history, and frozen only at approval
@@ -27,8 +27,9 @@ recomputed from exposures, and a training max is a recorded Decision.
 
 ## Consequences
 
-- A WeekPlan carries overrides and reasons while a draft, and gains its prescriptions on approval.
-  Re-planning midweek supersedes it and freezes afresh.
+- The plan Draft file carries overrides and reasons; the WeekPlan row is born approved with its
+  prescriptions frozen, there is no draft WeekPlan (ADR 0006). Re-planning midweek supersedes it
+  and freezes afresh.
 - A return cut is measured once from the pre-layoff exposure, never from a frozen prescription
   that already carries the cut.
 - Tests of progression assert `prescribe(request)` against values, the request being the one

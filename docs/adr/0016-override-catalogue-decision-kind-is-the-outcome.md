@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
+amended: 2026-10-31 by wayfinder #46 (`[caps]` is dropped and standing overrides do not migrate, `cutover.md`)
 ---
 
 # A WeekPlan carries twelve override kinds, a Decision's kind is its outcome, an override Decision applies itself, and promotion is a warning the agent acts on
@@ -50,8 +51,9 @@ light-week state machine over `decisions.json`. Niggle constraints already lived
 - The glossary's Decision entry loses "a light week" and "outcome"; `validation.md` gains seven
   codes and loses "a block reset Decision" as a clearer; the check-in and goals specs name the
   block boundary as the check-in whose week kind closes the block, not a Decision.
-- The old `[caps]` and `[cardio]` run caps migrate as `safety_ceiling` and `activity_cap`
-  Decisions; open standing overrides migrate as `override` Decisions.
+- At cutover the old `[caps]` table is dropped (caps derive from kit, ADR 0008) and the one
+  `[cardio]` run cap carries as an `activity_cap` Decision; the old standing overrides carry as
+  nothing, because version 1 is designed fresh (`docs/spec/cutover.md`).
 - Regression tests: an override Decision in force changes a plan the Draft never mentions; a
   plan override on the same line wins for that week; the third consecutive swap raises
   `override_persisting` and the second does not; a `pin_load` above a niggle cap is

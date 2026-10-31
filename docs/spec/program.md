@@ -47,20 +47,16 @@ that anchors the week is just a coach-led session on its weekday in every rotati
 rotation = ["A", "B"]
 
 [schedule.A]
-mon = "a-mon-lower"
-tue = "pt-tuesday"
-wed = "a-wed-lower"
-fri = "a-fri-push"
-sat = "a-sat-pull"
-sun = "a-sun-push"
+mon = "lower-a"
+tue = "coach-led"
+thu = "push-a"
+sat = "pull-a"
 
 [schedule.B]
-mon = "b-mon-pull"
-tue = "pt-tuesday"
-wed = "b-wed-push"
-fri = "b-fri-lower"
-sat = "b-sat-push"
-sun = "b-sun-pull"
+mon = "pull-b"
+tue = "coach-led"
+thu = "lower-b"
+sat = "push-b"
 ```
 
 A session that appears in the schedule has cadence `weekly`. Standing and daily sessions declare
@@ -187,9 +183,9 @@ cannot ride along.
 
 ```toml
 [[acknowledge]]
-flag = "scheme_off_emphasis@line:b-sat-push/bb_bench_press"
+flag = "scheme_off_emphasis@line:a-sat-pull/pull_up"
 because = "coach_judgement"
-text = "Keep the 4×5 linear bench for one more block; the top-and-back-off switch waits for the first test week."
+text = "The pull-up progresses through the assistance ladder; the weekly strict single under hold is the measure, not the progression."
 ```
 
 ## What the form never carries
@@ -233,8 +229,8 @@ policy, not a fourth wave. It is the one v1 scheme that reads a `training_max`, 
 Not in v1, judged against the evidence (`rn:progression-methods §2`): `rpe_anchored` (it is
 `top_backoff` under another name); `fixed_reps_rpe` (straight sets at an RPE-capped load are
 `top_backoff` with `backoff = { sets = n − 1, reps = top.reps, pct_of_top = 100 }`);
-`maintenance` (the emphasis cutting dose, not a scheme). Cluster sets change no outcome for this
-athlete and are not a scheme.
+`maintenance` (the emphasis cutting dose, not a scheme). Cluster sets change no outcome straight
+sets reach (`rn:progression-methods §2`) and are not a scheme.
 
 ### Session schemes, v1
 
@@ -445,7 +441,7 @@ minutes = 90
   ]
   rest_s = 180
   cues = "shoulder blades pinned back and down · feet planted · bar to the lower chest, elbows ~45°"
-  scheme = { name = "linear" }           # registry defaults: misses_before_reset = 2, reset_factor = 0.9
+  scheme = { name = "linear" }           # registry defaults: misses_before_reset = 2, reset_factor = 0.9; inside the priority-lift band (goals.md), so no warning
   start_load = 120
 
   # ... db_incline_bench_press, custom_ring_push_up, db_lateral_raise, custom_dip_negatives,
@@ -491,18 +487,14 @@ minutes = 90
 # Decision recorded at migration, not a field.
 
 [[acknowledge]]
-flag = "scheme_off_emphasis@line:b-sat-push/bb_bench_press"
-because = "coach_judgement"
-text = "Keep the 4×5 linear bench for one more block; top-and-back-off waits for the first test week."
-
-[[acknowledge]]
 flag = "scheme_off_emphasis@line:a-sat-pull/pull_up"
 because = "coach_judgement"
 text = "The pull-up progresses through the assistance ladder and negatives; the weekly single is the measure."
 ```
 
-What the dry run shows for this file: the filled `[dose]` and `[deload]`; two `scheme_off_emphasis`
-warnings, both acknowledged; no `priority_lift_not_first` on `a-sat-pull` (the scapular line
+What the dry run shows for this file: the filled `[dose]` and `[deload]`; one `scheme_off_emphasis`
+warning, on the pull-up's `hold` (a priority lift outside its band), acknowledged; none on the
+bench, whose `linear` sits inside the priority-lift band; no `priority_lift_not_first` on `a-sat-pull` (the scapular line
 ahead of the pull-up is activation only and carries no working group, so the pull-up is first);
 every `start_load` checked against the home rack (`kit/home.achievable.json`, ADR 0021); no violations. The old `increment` params are gone: the
 squat steps by the home rack's next barbell row.

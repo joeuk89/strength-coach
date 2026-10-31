@@ -40,7 +40,7 @@ Hevy's (a UUID, `b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13`) or `w-<n>` for a manual 
 | Kind | Form | Example |
 | --- | --- | --- |
 | `planned_session` | `planned_session:<date>/<session id>`, resolved against the plan in force on that date | `planned_session:2026-11-04/upper-a` |
-| `exposure` | `exposure:<workout id>/<exercise id>` | `exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/ohp` |
+| `exposure` | `exposure:<workout id>/<exercise id>` | `exposure:b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13/bb_overhead_press` |
 | `workout` | `workout:<workout id>` or `workout:<workout id>/<exercise id>` | `workout:w-0002` |
 | `block` | `block:b-<opening date>` (derived, no table) | `block:b-2026-10-05` |
 | `check_in` | `check_in:ci-<date>[-n]` | `check_in:ci-2026-10-24` |

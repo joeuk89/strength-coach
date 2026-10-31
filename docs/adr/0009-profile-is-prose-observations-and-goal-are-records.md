@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-27 by ADR 0014 (the version field is `emphasis`, `experience` leaves `[athlete]`, milestones are typed on the Goal); 2026-10-31 by the final review (birth date and height leave `[athlete]` for the profile prose: no rule reads them)
+amended: 2026-10-27 by ADR 0014 (the version field is `emphasis`, `experience` leaves `[athlete]`, milestones are typed on the Goal); 2026-10-31 by the final review (birth date and height leave `[athlete]` for the profile prose: no rule reads them); 2026-10-31 by wayfinder #46 (Decision kind as outcome, `plan-week`, dose defaults are `goals.md`'s)
 ---
 
 # The profile is prose a coach reads; what code or a check-in needs is a record
@@ -25,8 +25,8 @@ and follow-ups are already records.
   section parsed as data, and a schedule that disagreed with the program. Rejected.
 - **Parse structured sections out of the prose.** Rejected: documents are output, never input,
   and prose-as-data was the single largest source of drift checks in the old system.
-- **Coach observations as a Decision kind.** Rejected: a Decision is a choice with a reason and an
-  outcome; an observation is a pattern with evidence and a lifecycle. Forcing one into the other
+- **Coach observations as a Decision kind.** Rejected: a Decision is a choice with a reason, its
+  kind the outcome (ADR 0016); an observation is a pattern with evidence and a lifecycle. Forcing one into the other
   loses the retire step.
 - **Lifting goal in `[athlete]`.** Rejected: on the athlete it is a label. In the old instance
   `dose_intent` was null and the goal never reached the loop. On the Program version it is a
@@ -40,14 +40,12 @@ and follow-ups are already records.
   Birth date and height were listed here; no rule reads them, so they are profile prose
   (amended 2026-10-31).
 - Program version carries `emphasis` (`hypertrophy`, `strength`, `maintenance`; named `goal`
-  until ADR 0014 moved the athlete's Goal to its own record) and optional explicit
-  per-muscle weekly dose targets. The emphasis sets the default dose target when none is given
-  (hypertrophy: 10 hard sets per primary muscle of core lifts, rising toward 20 with experience,
-  rn:volume-frequency.1; maintenance: about a third, rn:minimum-effective-dose.1; strength: no
-  default, targets must be
-  agreed) and the dose rule warns on a week under or over it. Powerbuilding is `hypertrophy` plus
-  strength schemes on the chosen lifts, stated line by line; ADR 0014 makes those lifts the
-  Goal's priority lifts and has adopt fill the strength scheme on them. How goals reach the
+  until ADR 0014 moved the athlete's Goal to its own record) and a `[dose]` table adopt fills
+  from the emphasis when unsaid; the numbers are `docs/spec/goals.md`'s Defaults per emphasis
+  table (ADR 0014), and the dose rule warns on a week under or over them. Powerbuilding is
+  `hypertrophy` plus strength schemes on the chosen lifts, stated line by line; ADR 0014 makes
+  those lifts the Goal's priority lifts, and the `program` skill proposes the strength scheme on
+  them (adopt fills no scheme). How goals reach the
   agent's judgement and the other formulas is ADR 0014 and `docs/spec/goals.md`.
 - Observation is a ledger record: text, evidence refs, the Check-in that raised it, the Check-in
   and reason that retired it. Observations are raised and retired only inside a `checkin record`
@@ -59,8 +57,8 @@ and follow-ups are already records.
   are coaching preferences in the prose.
 - `profile.md` carries no schedule, no recovery history, no status log, no front matter, no
   rendered regions. The agent changes it only on the athlete's yes in conversation; `publish`
-  commits it. It is read once per session that makes a coaching judgement, by the check-in and
-  plan-draft skills, and named in the generated CLAUDE.md; `coach status` never includes it.
+  commits it. It is read once per session that makes a coaching judgement, by the `check-in` and
+  `plan-week` skills, and named in the generated CLAUDE.md; `coach status` never includes it.
 - One rendered athlete page composes the prose verbatim with sections generated from the store:
   athlete facts, equipment by location, open niggles with constraints, open follow-ups, active
   observations, standing override Decisions, the last three check-in reads. It lives at
