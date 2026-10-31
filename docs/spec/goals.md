@@ -42,8 +42,8 @@ A strength target on one exercise with no date. A dated target is a Follow-up (A
 | `target.value` | load in athlete units; load plus reps; a multiple | A bodyweight multiple is read against the 14-day Weigh-in average on the exposure's date |
 
 **Reached** is derived: the first Exposure whose e1RM (or logged load for reps) meets the
-target, with its date. Never stored. The progress report shows it; the block boundary raises
-`milestone_reached` once. With fewer than two weigh-ins in the 14 days before an exposure, a
+target, with its date. Never stored. The progress report shows it as a figure; there is no
+`milestone_reached` code (`week.md`). With fewer than two weigh-ins in the 14 days before an exposure, a
 bodyweight multiple is "not computable" and shown as such.
 
 ### Emphasis
@@ -187,7 +187,8 @@ its signature (ADR 0003). The goal-specific weekly behaviour is a property of th
 version names:
 
 - the dose check against the version's per-muscle target and, for priority lifts, the per-lift
-  target (ADR 0009, extended);
+  target (ADR 0009, extended): the card's Dose line and the plan warnings `dose_under_target`
+  and `session_dose_high` (`week.md`);
 - no coded RIR walk and no coded set ramp: the authored RPE stands, and sets are added by the
   agent through `restate_sets` or the next version when the dose check shows a muscle under
   target (`prescription.md`);
@@ -201,8 +202,8 @@ place a coach would look for it.
 
 ## The block boundary
 
-The block boundary is the check-in whose closed week ends the Block by its derived kind (a light or
-return week, or under half trained), or the adoption of a `redesign` version (ADR 0015); there is
+The block boundary is the check-in whose closed week ends the Block by its derived kind (`light`,
+`return` or `missed`, `week.md`), or the adoption of a `redesign` version (ADR 0015); there is
 no block reset Decision (`overrides.md`). The `program` skill runs
 then, and a deep check-in reads the same report.
 
@@ -276,7 +277,6 @@ niggle, answered by a swap or a Niggle, never a scheme.
 
 | Code | Raised by | Scope | Params |
 | --- | --- | --- | --- |
-| `milestone_reached` | the block boundary | exercise | milestone, exposure ref, date |
 | `phase_condition_met` | `checkin open`, every check-in | instance | phase id, condition, value |
 | `phase_trend_off` | `checkin open`, every check-in | instance | phase id, target rate, observed rate, window |
 

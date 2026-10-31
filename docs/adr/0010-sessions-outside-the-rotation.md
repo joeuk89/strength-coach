@@ -43,8 +43,9 @@ WeekPlan override, a longer park or resume is a Decision.
 - Adherence counts core-tier planned sessions of any kind. A practice is always optional; a rehab
   session defaults to optional. Their done-counts show in the check-in as a streak the coach
   reads.
-- A light week's RPE ceiling applies to lifting and rehab lines. Each conditioning planned session
-  in a light week is warned; a practice carries no RPE and is untouched.
+- A light week's RPE ceiling applies to lifting and rehab lines. A conditioning planned session
+  in a light week is the coach's call and raises nothing (amended 2026-10-31, `docs/spec/week.md`);
+  a practice carries no RPE and is untouched.
 
 ## Prescription and the drop rule
 
@@ -78,7 +79,8 @@ WeekPlan override, a longer park or resume is a Decision.
 - Routines are created only on `plan apply`. A parked or retired session's routine is retired on
   the next push (Hevy's API has no DELETE; see ADR 0011): routines are projections and only
   workout history is protected.
-- Practice workouts match the practice session by routine id and import as ordinary append-only
+- Practice workouts match the practice session by `docs/spec/week.md`'s one Match rule (the
+  day's window, routine id as a tiebreaker; amended 2026-10-31) and import as ordinary append-only
   Workouts.
 
 ## Consequences

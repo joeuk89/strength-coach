@@ -296,8 +296,9 @@ CREATE TABLE check_in (
   id            TEXT PRIMARY KEY,          -- 'ci-<date>[-n]'
   date          TEXT NOT NULL,
   tier          TEXT NOT NULL CHECK (tier IN ('light','deep')),
-  window_start  TEXT NOT NULL,
+  window_start  TEXT NOT NULL,             -- derived; the record file may set it on the first row only (week.md)
   window_end    TEXT NOT NULL,
+  readiness     TEXT CHECK (readiness IN ('poor','ok','good')),
   read          TEXT NOT NULL,             -- the coach's read, verbatim
   status        TEXT NOT NULL CHECK (status IN ('current','superseded')),
   superseded_by TEXT REFERENCES check_in(id),

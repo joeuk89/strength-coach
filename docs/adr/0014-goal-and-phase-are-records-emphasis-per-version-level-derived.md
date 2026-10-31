@@ -72,8 +72,9 @@ long term).
   phase), rendered to `pages/progress.md`; the `program` skill reads it at the block boundary
   and a deep check-in reads it too.
 - Cadence signals `cadence_slow` and `cadence_fast` per exercise at the block boundary, with
-  cited, opinion-marked thresholds; `milestone_reached`, `phase_condition_met` and
-  `phase_trend_off` join the registry; scope kinds `version` and `exercise` are added.
+  cited, opinion-marked thresholds; `phase_condition_met` and `phase_trend_off` join the
+  registry (a milestone reached is a `progress` figure, not a code, amended 2026-10-31,
+  `docs/spec/week.md`); scope kinds `version` and `exercise` are added.
 - ADR 0009 is amended: the version field is `emphasis`, `experience` leaves `[athlete]`,
   milestones are typed on the Goal. `GLOSSARY.md` replaces Lifting goal with Emphasis and adds
   Goal, Priority lift, Milestone, Phase and Cadence signal.

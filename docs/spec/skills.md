@@ -15,7 +15,7 @@ Four skills, all in the plugin (ADR 0007), none in the instance:
 
 | Skill | Moment | When |
 | --- | --- | --- |
-| `check-in` | The weekly review | A check-in is due, the athlete reports on the week, or the newest check-in is older than a week |
+| `check-in` | The weekly review | `status` says a check-in is due (`week.md`), or the athlete reports on the week |
 | `plan-week` | The week's prescription | A check-in has closed a week, a light or constrained week is agreed, a midweek change is needed |
 | `program` | Authoring or revising a program version | A new program, a block boundary swap, a sustained stall, a parked session promoted (detail: Program authoring). Its Judge answers `cadence_slow` and `cadence_fast` only with a move the flag lists (`may_schemes`, `may`, `never`); the switching table is engine code specified in `goals.md`, and the skill carries none of it (ADR 0020) |
 | `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections) on the athlete's yes and nothing else |
@@ -164,16 +164,19 @@ read or next week's plan. On a deep tier, settle every open niggle and follow-up
 rather than carrying them.
 
 ## Judge
-- **Readiness.** The athlete's own words and their Hevy set notes are the signal; RPE drift
-  (`rpe_drift`) matters on the compound lifts, elsewhere it is a note.
+- **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's
+  Readiness field records it; the RPE drift trigger on the card matters on the compound lifts,
+  elsewhere a rising RPE is a note.
 - **Misses.** A tag per missed core session. Pattern over blame: three weeks of `time` misses is a
   schedule problem for the plan, not a willpower problem.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
   shapes next week's dose; one bad night does not.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain
   changes gait, sleep or daily tasks; never diagnose.
-- **Block and tier.** When the card raises `block_ceiling` or `deep_due`, propose and let the
-  athlete adopt, decline with a reason or defer. The rotation position is confirmed, not asked.
+- **Block and tier.** When the card's Block line carries a proposal or the derived tier is deep,
+  propose and let the athlete adopt, decline with a reason or defer. When adherence is `low`,
+  present a smaller schedule with the same weekly hard sets per muscle. The rotation position is
+  confirmed, not asked.
 - **Patterns.** Raise an Observation when something has held for several weeks; retire one that
   stopped holding. Cite the exposures or notes it rests on.
 

@@ -5,9 +5,9 @@ become records in the tables that already own those facts; the Check-in row is a
 card, the rendered record, deep-tier due and week closure are views of the store at a date.
 
 Decided on wayfinder ticket [Check-in as data](https://github.com/joeuk89/strength-coach/issues/21),
-2026-10-27. The prose rule follows ADR 0005; the Observation lifecycle follows ADR 0009; timing
-rules are in the parity checklist (`parity.md`, "Core loop: check-in, ledger and research
-citations").
+2026-10-27. The prose rule follows ADR 0005; the Observation lifecycle follows ADR 0009; the
+closed week, Match, adherence, the fatigue triggers and the due rules are `week.md`'s
+([The closed week](https://github.com/joeuk89/strength-coach/issues/38), 2026-10-31).
 
 ## The row
 
@@ -15,17 +15,18 @@ citations").
 | --- | --- |
 | `date` | The day the check-in was recorded |
 | `tier` | `light` or `deep` |
-| `window_start`, `window_end` | The span it reviews: the day after the previous check-in's `window_end` to `date`. Derived once by the engine at `checkin record` and then stored, because it is a fact of the event |
+| `window_start`, `window_end` | The span it reviews: the day after the previous `current` check-in's `window_end` to `date`. Derived once by the engine at `checkin record` and then stored, because it is a fact of the event. The first row has no previous one: its `window_start` is the first approved WeekPlan's Monday, or `date` with no plan, and the record file may set it on the first row only (`week.md`, `cutover.md`) |
+| `readiness` | The athlete's reported readiness, `poor`, `ok` or `good`, asked on every card. The one typed input the fatigue triggers need (`week.md`); null when the athlete gave none |
 | `read` | The coach's read, free text, inserted verbatim wherever it is shown |
 | `status` | `current` or `superseded` (see Correcting) |
 
 Nothing else. Adherence, week kind, block count, e1RMs, triggers and the hard-week count are
-views. A declined ceiling or a deferred deep review decided at the check-in is a Decision row
-carrying the check-in reference; a light week taken is the `light_week` override on the next
-WeekPlan, and the block closes by the derived week kind (`overrides.md`).
+views (`week.md`). A declined ceiling or a deferred deep review decided at the check-in is a
+Decision row carrying the check-in reference; a light week taken is the `light_week` override on
+the next WeekPlan, and the Block closes by the derived week kind (`week.md`).
 
-Catch-up is not stored: a check-in whose window is longer than the first return band (10 days) is a
-catch-up by definition, and the deep tier is deferred to the next check-in by the same test.
+Catch-up is not stored: a check-in whose window is longer than 10 days is a catch-up by
+definition, and the deep tier is deferred to the next check-in by the same test (`week.md`).
 
 ## The sourced records
 
@@ -47,12 +48,11 @@ answer lands:
 
 ### Matching a coach-led session
 
-The Match for a coach-led planned session is derived: an imported Hevy workout on that date (or
-inside the slot's window for a standing cadence) that is not matched to another planned session
-fulfils it. Minutes come from the workout's start and end; session RPE is the mean working-set RPE.
-The card prefills "logged in Hevy, 60 min" and asks for the RPE only when the sets carry none. When
-the rule matches wrongly (two workouts on one day, a session logged on the wrong date) the fix is
-an Annotation of kind `match` naming the planned session. Match is never a stored table.
+Match is `week.md`'s rule for every session kind: an imported Hevy workout inside the planned
+session's window, routine id as a tiebreaker, corrected by an Annotation of kind `match`, never
+stored. For a coach-led session the matched workout fulfils it; minutes come from the workout's
+start and end and session RPE is the mean working-set RPE. The card prefills "logged in Hevy,
+60 min" and asks for the RPE only when the sets carry none.
 
 ### Athlete notes
 
@@ -88,21 +88,29 @@ edit in place, no delete.
 
 All of these are pure functions of the store at a date and are never stored:
 
-- **The card**: fields in a fixed order, inapplicable fields dropped; prefill states what the store
-  knows and asks only what it cannot; e1RM rows compounds first; athlete notes verbatim; the deep
-  tier adds misses by tag since the last deep check-in; due follow-ups. The card reads the
-  version's emphasis and priority lifts (`goals.md`, the check-in row of its per-emphasis
-  table, ADR 0020): with priority lifts it leads with them, the top set's load and reps stated
-  and how it moved and felt asked; on a `hypertrophy` version it asks reps and RIR on the lines
-  that moved, pump and soreness as a dose read; on `maintenance` whether the kept lifts held.
-  With an open Phase the card carries a Phase line: kind, target rate, the 14-day bodyweight
-  trend against it and the `until` condition; `phase_trend_off` and `phase_condition_met` are
-  raised here, not at the block boundary (`goals.md`, **What the Phase changes**).
-  The `check-in` skill carries none of this.
-- **Week closure**: a week is closed when a `current` check-in's window covers its Sunday.
-- **Deep due**: 42 days since the newest `current` row with `tier = deep`, or a light week newly
-  proposed, or a restructure, or the previous check-in was a catch-up; suppressed by a Decision of
-  kind `defer_deep_review` until its date. No stored flag, no title.
+- **The card**: the fields below in this order, inapplicable fields dropped; prefill states what
+  the store knows and asks only what it cannot. The `check-in` skill carries none of it.
+
+  | # | Field | Prefill and ask |
+  | --- | --- | --- |
+  | 1 | Header | window, derived tier, catch-up or not, plan in force |
+  | 2 | Sessions | every planned core session in the window: matched (workout, minutes, session RPE), trained-unlogged, cancelled or missed; asks a miss tag per miss and session RPE only where the sets carry none; the against-the-prescription read per session; optional sessions as a done streak |
+  | 3 | Week kind | the closed week's kind, trained fraction, gate passes (`week.md`) |
+  | 4 | Block | hard weeks against the ceiling, triggers fired with evidence refs, the proposal: `deload`, `light`, `none` or `skipped (<n> hard weeks)` |
+  | 5 | Adherence | figure, weeks counted, state (`ok`, `watch`, `low`, `insufficient`) |
+  | 6 | Dose | per muscle, delivered against the version's target, trailing four-ordinary-week mean |
+  | 7 | Lifts | per the version's emphasis and priority lifts (`goals.md`, the check-in row of its per-emphasis table, ADR 0020): with priority lifts it leads with them, the top set's load and reps stated and how it moved and felt asked; on a `hypertrophy` version reps and RIR on the lines that moved, pump and soreness as a dose read; on `maintenance` whether the kept lifts held; e1RM rows compounds first |
+  | 8 | Readiness | asked: `poor`, `ok`, `good` |
+  | 9 | Sleep | nights in the window, short nights, Short-sleep week or not; asks for nights only where none are stored |
+  | 10 | Weight and Phase | weigh-ins in the window, the 14-day average; asks when none stored. With an open Phase, the Phase line: kind, target rate, the 14-day trend against it and the `until` condition; `phase_trend_off` and `phase_condition_met` are raised here, not at the block boundary (`goals.md`, **What the Phase changes**) |
+  | 11 | Activities | runs and conditioning in the window, quality count against the cap, any run spike |
+  | 12 | Niggles | each open one with status and constraints; asks a status |
+  | 13 | Follow-ups | those due; the deep tier lists every open one and asks a disposition each |
+  | 14 | Notes | athlete notes in the window, verbatim |
+  | 15 | Deep tier | misses by tag since the last deep row; open Observations to confirm or retire |
+
+  The outside-plan codes `checkin open` reports are `week.md`'s list.
+- **Week closure**, **due** (light and deep), **catch-up**: `week.md`. No stored flag, no title.
 - **The rendered record**: rendered on demand from the row, its sourced records and the store as it
   stands now, so later annotations and imports improve an old page rather than being hidden from
   it. The read is the only frozen text. The page is committed and regenerated at every publish

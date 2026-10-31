@@ -136,9 +136,11 @@ in one precedence order; the first that holds names the week:
 | 6 | `illness` | an `ill` span since the line's anchor and no exposure since it ended | no cut; RPE 7 on every set of the line (step 6) |
 | 7 | `hard` | otherwise | none |
 
-The week kind for the Block's count (hard, partial, break, paused) is `check-in.md`'s reading of
-the closed week; this table is the prescribing read. `return` and `illness` are per line
-(days off and illness are per lift); the others are per week.
+The closed week's kind for the Block's count (light, return, break, minimum, one_off, hard,
+missed, partial) is `week.md`'s read after the fact; this table is the prescribing read.
+`return` and `illness` are per line here (days off and illness are per lift); the others are per
+week. `week.md`'s `return` is the athlete's whole-week layoff, and illness is no closed-week
+kind at all.
 
 ### The return band
 

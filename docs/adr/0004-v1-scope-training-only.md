@@ -28,9 +28,10 @@ cited only from code.
 
 - Weigh-in, Sleep night and Activity are core tables, entered by hand or derived from Hevy. No
   Apple Health or Health Auto Export importer in v1: it was disabled and no run data ever arrived.
-- The activity rules that stay are the concurrent-training spacing rules, the run-spike review and
-  the two-quality-bouts cap. Cardio identity matching, associations, HR fields and the session-RPE
-  load ladder go.
+- The activity rules that stay are three codes (`docs/spec/week.md`, amended 2026-10-31): the
+  quality-bout cap `activity_cap_exceeded`, the run spike `run_spike`, and the concurrent-training
+  spacing as `session_drop_suggested` with reason `quality_stack`. Cardio identity matching,
+  associations, HR fields and the session-RPE load ladder go.
 - The Short-sleep week trigger stays and reads sleep nights; with no importer it fires only on
   typed-in nights. The nutrition Sleep gate goes.
 - Research notes live in the engine repo only, never imported into the store, never shipped as

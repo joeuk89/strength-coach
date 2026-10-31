@@ -85,7 +85,7 @@ skills" may bring height back if a code rule needs it).
 | `week_starts`, `timezone` | weekday; IANA name | the week, the closed week and every date |
 | `available_days` | list of weekdays | `adopt`: a scheduled weekday outside the list is `session_on_unavailable_day` (`program.md`); the `program` skill designs the split around it |
 | `session_minutes` | integer | `adopt` fills it into a lifting session that states no `minutes`, so `session_over_minutes` reads it (`program.md`) |
-| `checkin_cadence_days` | integer, default 7 | the light-tier due rule (`check-in.md`) |
+| `checkin_cadence_days` | integer, default 7 | the light-tier due rule (`week.md`) |
 
 ## coach init
 

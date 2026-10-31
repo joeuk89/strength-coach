@@ -146,8 +146,8 @@ text = "The hamstring is resolved; the run cap goes with it."
 
 - **Light week versus Decision.** Taking a light week is the `light_week` override on that
   WeekPlan, approved with it. Declining the ceiling's proposal is `decline_ceiling`. There is no
-  block reset Decision: the Block closes by derived week kind (light, return, under half
-  trained) or by a `redesign` version (ADR 0015).
+  block reset Decision: the Block closes by derived week kind (`light`, `return`, `missed`;
+  `week.md`) or by a `redesign` version (ADR 0015).
 - **Niggle constraints.** A niggle's load constraint (a cap, no added load, avoid an exercise or
   pattern) lives on the Niggle record and binds while its status says so (ADR 0010). A limit
   the athlete wants to outlive the niggle is a `safety_ceiling` with that reason, and the niggle

@@ -97,8 +97,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `status` | in order: engine version against the pin; Hevy on or off, age of the last import and of the kit snapshot; plan in force (week, approved date, hash, routines verified or `unverified`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store. No prose line |
 | `schema` | the declaration(s), or the registry rows |
 | `import` | per source: ran or skipped and why; Hevy: workouts new, versioned, tombstoned, window; kit: snapshot date and whether it changed |
-| `checkin open` | the card (`check-in.md`), derived tier, window |
-| `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any |
+| `checkin open` | the card (`check-in.md`), derived tier, window; the outside-plan codes it reports in `warnings[]` (`week.md`) |
+| `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
 | `plan draft` | path, hash, week, superseded plan id if any, line count, every violation and warning, rotation position and its source |
 | `plan apply --dry-run` | ADR 0006's prompt summary: week, routine changes (update, create, retire), templates to create, flags with acknowledgements, the hash |
@@ -114,7 +114,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 
 ## Arguments with rules
 
-- **`checkin open --tier`** only raises the derived tier to `deep`; it never lowers it.
+- **`checkin open --tier`** only raises the derived tier to `deep`; it never lowers it, and it is
+  honoured on a catch-up (`week.md`).
 - **`plan draft --week`** defaults to the next week with no approved plan, or the current week
   while its plan is unapproved. When an approved WeekPlan exists for the week, the Draft is a
   superseding one and the summary names the plan it supersedes.

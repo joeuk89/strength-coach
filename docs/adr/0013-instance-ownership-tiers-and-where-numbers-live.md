@@ -17,8 +17,9 @@ A number has one of three homes, by what it is. A **fact** about the athlete, th
 preferences lives in `coach.toml` (units, available days, session minutes, check-in cadence,
 grid-kit increments; birth date and height are profile prose since no rule reads them, amended
 2026-10-31). A **rule** the coach would apply to anyone is an engine constant
-with its `rn:` citation beside it in code (return bands, adherence floor, light-week RPE ceiling,
-short-sleep hours, run-spike ratio, quality RPE, the 43+ re-test). An **agreement** between the
+with its `rn:` citation beside it in code (return bands, the hard-week fractions, adherence floors
+and lookback, light-week RPE ceiling, short-sleep hours, run-spike ratio, quality RPE;
+`docs/spec/week.md`). An **agreement** between the
 coach and this athlete (a weekly run cap, a Safety ceiling, "box squats only at the gym") is a
 Decision in the store with its reason, never config. In v1 an instance cannot override an engine
 constant: there is no `[thresholds]` table.

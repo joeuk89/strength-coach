@@ -36,8 +36,9 @@ check-in" below; the routines in Hevy and the week-boundary switch are "The swit
 - No old session id becomes a `session` row. `workout.routine_id` stays as inert text (it has no
   foreign key); 29 of the 66 old workouts carry none, and three of the fifteen routine ids it
   names were retired or temporary routines.
-- Pre-cutover workouts have no Match. Match derives from a planned session, and no WeekPlan
-  covers those weeks. There is no second Match rule keyed on routine ids.
+- Pre-cutover workouts have no Match. Match derives from a planned session's window
+  (`week.md`), and no WeekPlan covers those weeks. A routine id is only a tiebreaker inside that
+  window, so there is no second Match rule keyed on routine ids.
 - The imported history still anchors the fresh program: the anchor exposure reads "same session,
   any session, `start_load`" (`prescription.md`), so every exercise the athlete has logged
   anchors on its history and `start_load` is only required for exercises never logged.
@@ -90,8 +91,9 @@ this section pins their content so the agent at cutover only brings niggle statu
 
 It is a check-in file, not a plain `record` file, because Observations are reserved to the
 check-in (ADR 0009) and every carried row should name the check-in that confirmed it. The row is
-ordinary: tier `deep`, window the old instance's final week, read "state carried from the old
-instance" in the coach's words. It is the instance's first deep check-in on record, so the deep
+ordinary: tier `deep`, window the old instance's final week (the file sets `window_start`, which
+the engine accepts on the instance's first row only, `week.md`), read "state carried from the
+old instance" in the coach's words. It is the instance's first deep check-in on record, so the deep
 cadence and `defer_deep_review` count from cutover day. `checkin open` is not run first; nothing
 in the schema marks it special.
 

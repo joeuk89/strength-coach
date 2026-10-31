@@ -191,9 +191,19 @@ why. The ordered list of them is the whole explanation of a prescription.
 _Avoid_: rationale, provenance, reason (which is an override's)
 
 **Week kind**:
-What a closed week counted as: hard, light, return, one-off, minimum, break or partial. Derived by
-one precedence order, never stored.
+What a closed week counted as: light, return, break, minimum, one-off, hard, missed or partial.
+Derived by one precedence order, never stored.
 _Avoid_: week type, week status
+
+**Ordinary week**:
+A closed week the program ran as authored, however it went: hard, partial or missed. The unit
+adherence is counted in.
+_Avoid_: normal week, regular week
+
+**Session gate**:
+Whether a trained core lifting session counted as training stress for the hard-week count: enough
+of its working sets logged, close enough to the prescribed effort. Not a measure of compliance.
+_Avoid_: compliance, completion
 
 **Approval**:
 The athlete's recorded yes to one WeekPlan, by id, given at the prompt for the one write that
@@ -229,8 +239,8 @@ progression and e1RM read from.
 _Avoid_: performance, session log
 
 **Match**:
-The link from a workout to the planned session it fulfilled, or none. Derived from date and
-session kind, corrected by a match annotation, never stored.
+The link from a workout to the planned session it fulfilled, or none. Derived from the session's
+date window with the routine as a tiebreaker, corrected by a match annotation, never stored.
 _Avoid_: mapping, reconciliation
 
 **Miss**:
@@ -322,8 +332,8 @@ thing, a pointer to it. Surfaced where it is next useful, never classified by co
 _Avoid_: free text, comment, feedback
 
 **Block**:
-A run of weeks under one hard-week ceiling, opened at adoption or after a reset and closed by the
-check-in that resets the count.
+A run of weeks under one hard-week ceiling, opened at a redesign or the week after one closed,
+and closed by a light, return or missed week or by a redesign.
 _Avoid_: mesocycle, cycle, phase (which is about bodyweight)
 
 **Phase**:

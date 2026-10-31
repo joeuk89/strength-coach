@@ -117,7 +117,7 @@ replaced with a snooze date), the acknowledgement is a **Decision** of kind `lea
 same `{key, params_hash, because, text, evidence}` plus an until date. The validator treats the
 warning as left while the Decision is in force and the params hash is unchanged.
 
-A Decision names one full key, never a bare code: the coach cannot silence `session_volume_high`
+A Decision names one full key, never a bare code: the coach cannot silence `session_dose_high`
 everywhere for a block. A pattern that holds across lines earns a program change or an override
 Decision, not a blanket silence. Because a Decision outlives any one week, its key uses the
 calendar-free form of the scope: `session` and `line` refs without the Monday date (`session id`,
@@ -144,6 +144,13 @@ bears on a line, and clears only when the fact behind it changes through its own
 | A niggle open with no load constraint | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
 | Engine pin on a `.dev` build (ADR 0007) | pinning a release, or `coach upgrade` |
 | Kit or Hevy snapshot older than its age limit (ADR 0008, ADR 0011) | `coach import` |
+| A cadence signal (`cadence_slow`, `cadence_fast`) | the signal no longer holding, or a version giving the exercise another scheme |
+| A Phase off its trend | the observed rate back inside the band, or the Phase closing |
+| A Phase condition met | the Phase closing (`goal adopt`) |
+| A training max no scheme reads | retiring the Decision, or a version giving the exercise a scheme that reads it |
+| A quality-bout cap exceeded, a run spike | history; the week closing |
+
+Which verb reports each is `week.md`'s table.
 
 ## Violations
 
@@ -211,7 +218,9 @@ is the call of [Research notes on main and every number cited](https://github.co
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts |
 | `rpe_ceiling_unchecked` | line | cap, clipped load, anchor exposure ref |
 | `unexplained_drift` | line | last prescription, this prescription, delta |
-| `session_drop_suggested` | session | reason (sleep debt, status day, quality stack), evidence refs |
+| `session_drop_suggested` | session | reason (`status_day`, `quality_stack`; `week.md` defines the stack), evidence refs |
+| `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) |
+| `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) |
 | `frozen_load_off_snapshot` | session | line, load, snapshot date |
 | `override_persisting` | line | kind, weeks, plan ids |
 | `light_week_type_off_trigger` | week | proposed type, chosen type, triggers |
@@ -236,6 +245,7 @@ is the call of [Research notes on main and every number cited](https://github.co
 | `superset_rest_differs` | session | superset label, rest values |
 | `session_retired` | version | session id, routine id if mapped |
 | `scheme_change_off_signal` | line | previous scheme, new scheme, signal key or none, `may_schemes` (`goals.md`, **Response to a cadence signal**) |
+| `core_session_added_low_adherence` | session | session id, adherence, weeks counted (`week.md`) |
 
 ### Warnings outside a plan (clear by fact)
 
@@ -249,21 +259,23 @@ is the call of [Research notes on main and every number cited](https://github.co
 | `snapshot_stale` | instance | source (plate-pool, hevy), snapshot date, age limit |
 | `cadence_slow` | exercise | resets, scheme, e1RM slope, blocks, `may_schemes`, `may`, `never` (the switching table's row, `goals.md`) |
 | `cadence_fast` | exercise | exposures at top of range, scheme, `may_schemes`, `may`, `never`; never raised on a `linear` line |
-| `milestone_reached` | exercise | milestone, exposure ref, date |
 | `phase_condition_met` | instance | phase id, condition, value |
 | `phase_trend_off` | instance | phase id, target rate, observed rate, window |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes |
+| `run_spike` | workout or activity | run distance, longest in the previous 30 days, ratio; history, clears when the week closes (`week.md`) |
 | `training_max_unused` | exercise | scheme, decision id |
 | `exercise_unmapped` | workout | Hevy template id, title; a view over logged sets whose template id no Exercise carries, so an `[[exercise]]` record mapping or declaring the Exercise clears it for every version at once (`cutover.md`) |
 
 ### Codes pending other tickets
 
-The parity checklist holds further warning conditions whose rule is not yet specified: volume
-undershoot and session volume high, the priority lift floor unplaceable, double-progression
-mismatch, infeasible RPE target, the run spike, same-day lift and quality activity. Each lands
-here as a row when the weekly prescription rule settles its condition and params. The "choose
-the load" state is `start_load_missing` on a swapped line and the cardio cap is
-`activity_cap_exceeded` (`overrides.md`).
+Settled by [The closed week](https://github.com/joeuk89/strength-coach/issues/38): volume
+undershoot is `dose_under_target`, session volume high is `session_dose_high`, the run spike is
+`run_spike`, same-day lift and quality activity is `session_drop_suggested` with reason
+`quality_stack`, and `milestone_reached` is no code but a `progress` figure. The "choose the
+load" state is `start_load_missing` on a swapped line and the cardio cap is
+`activity_cap_exceeded` (`overrides.md`). The priority lift floor unplaceable (`minimum_week_floor`),
+double-progression mismatch (`rep_range_missed`) and infeasible RPE target
+(`rpe_ceiling_unchecked`) already have their rows.
 
 ## Contract tests
 
