@@ -214,7 +214,9 @@ re-run with the same `--expect` prompts again and resumes from the Routine map's
 
 Generated from the declarations, none hand-written per verb:
 
-- Sixteen leaves exist and no more; every leaf a skill names exists (`skills.md`).
+- Sixteen leaves exist and no more; every leaf a skill names exists (`skills.md`). `coach-hook`
+  is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
+  from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
 - Every default envelope is under 3 KB on the fixture instance.
 - Every violation code's clearing verb or record exists (`validation.md`).

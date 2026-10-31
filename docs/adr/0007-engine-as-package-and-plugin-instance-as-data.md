@@ -44,7 +44,8 @@ hosts beyond Claude Code (hooks, cron, a human terminal) that a plugin alone can
   declared as writing, deny non-GET calls to `/v1/workouts*` as a second line behind the hook.
   `coach status` warns on drift between the file and what it would generate; nothing rewrites
   the file outside `upgrade`.
-- **Hooks are declared once**, in the plugin, and call `coach hook <event>`: SessionStart and
+- **Hooks are declared once**, in the plugin, and call `coach-hook <event>` (a second console
+  entry point beside `coach`, not one of its leaves; ADR 0019): SessionStart and
   PreToolUse on Bash, nothing else in v1 (the old PostToolUse hash guard went with the parity
   checklist). If `coach` is not on PATH the hook says so in one line and exits 0, so a missing
   install never blocks a session.
