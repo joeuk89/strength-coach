@@ -197,10 +197,12 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `rehab_in_version` | session | session id | removing it; a rehab session is raised on a niggle | `null` |
 | `practice_not_optional` | session | session id | `tier = "optional"` | `null` |
 | `coach_led_has_lines` | session | session id | removing the lines or the `estimated_sets` | `null` |
-| `start_load_missing` | line | exercise id, days since last exposure | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there | `null` |
+| `start_load_missing` | line | exercise id | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there; raised only with no Exposure of the exercise anywhere, the same rule at adopt and in `prescribe` | `null` |
 | `start_load_off_rack` | line | start load, location, two nearest rows | a start load on a rack row | `null` |
 | `no_working_sets` | line | scheme | a working group, or `hold` | `null` |
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
+| `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
+| `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on | `null` |
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry | `null` |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) | `null` |
 | `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) | `null` |
@@ -236,7 +238,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `emphasis_off_goal` | version | goal kind, emphasis | `null` |
 | `scheme_off_emphasis` | line | line scheme, emphasis, expected band (`goals.md` names the band per emphasis) | rn:goal-programming §4 |
 | `priority_lift_absent` | version | exercise id | `null` |
-| `priority_lift_not_first` | session | exercise id, position | rn:goal-programming §7 |
+| `priority_lift_not_first` | session | exercise id, position among the lines carrying a working group | rn:goal-programming §7 |
 | `dose_off_band` | version | muscle or lift, target, band, phase | rn:goal-programming §3 |
 | `deload_off_emphasis` | version | deload policy, expected shape | rn:goal-programming §6 |
 | `muscle_no_hard_sets` | version | muscle, sessions searched | rn:volume-frequency.1 |
@@ -259,8 +261,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `niggle_unconstrained` | instance | niggle id, opened | `null` |
 | `engine_pin_dev` | instance | pinned version, running version | `null` |
 | `snapshot_stale` | instance | source (plate-pool, hevy), snapshot date, age limit (plate-pool 90 days, Hevy 7 days; opinion, `research-notes.md`) | `null` |
-| `cadence_slow` | exercise | resets, scheme, e1RM slope, blocks, `may_schemes`, `may`, `never` (the switching table's row, `goals.md`) | rn:training-level §2 |
-| `cadence_fast` | exercise | exposures at top of range, scheme, `may_schemes`, `may`, `never`; never raised on a `linear` line | rn:training-level §2 |
+| `cadence_slow` | exercise | scheme, the scheme's metric (resets, stall streak or e1RM slope), blocks, `may_schemes`, `may`, `never` (the per-scheme condition and the switching table's row, `goals.md`) | rn:training-level §2 |
+| `cadence_fast` | exercise | scheme, the scheme's metric (exposures at top of range, or exposures the one-row cap bound), `may_schemes`, `may`, `never`; raised only on `double_progression` and `top_backoff` | rn:training-level §2 |
 | `phase_condition_met` | instance | phase id, condition, value | `null` |
 | `phase_trend_off` | instance | phase id, target rate, observed rate, window | rn:training-level §4 |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes | rn:running-load.5 and .6 |

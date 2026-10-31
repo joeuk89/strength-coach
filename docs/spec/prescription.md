@@ -14,6 +14,32 @@ derives the warm-ups. Each step is recorded as a **derivation step** (step, from
 reads why a line landed where it did instead of a prose rationale. The rule never writes a
 number the agent did not ask for: it holds and warns where the old engine guessed.
 
+## What prescribe is handed
+
+`prescribe` is a pure function of one immutable **prescribe request**, assembled by the shell
+(`plan draft`, `plan apply --dry-run`) from the store for the planned date. This list is the
+only place the request is stated; the ADRs that name `prescribe` point here (ADR 0003, 0005,
+0016, 0017). The request is rebuilt on demand and never stored: the approved WeekPlan freezes
+the prescriptions and their derivation steps, not the inputs (ADR 0003). It is a code type, not
+a glossary noun.
+
+| Input | Read by |
+| --- | --- |
+| the Program version (the form with its filled `[dose]`, `[deload]` and session `minutes`) | every step; the scheme's hit test reads the authored groups |
+| the Exposures | the anchor, e1RM, days off, stalls |
+| the plan's typed overrides | step 2, the week override before any line derives |
+| the Decisions in force on the planned date: `override`, `safety_ceiling`, `training_max` | steps 3, 7 and the `wave_531` scheme |
+| the open Niggles' constraint rows | step 5 |
+| the status spans (`no_training`, `ill`) | which sessions derive; days off; the illness cap |
+| the rack snapshot per location (ADR 0008) | steps 7 and 8, every load step |
+| the Block's hard-week count | the `wave_531` wave |
+| the last matched Activity per conditioning session | the session schemes |
+| the planned date | everything dated |
+
+Never in the request: a WeekPlan (ADR 0005), the Goal or the Phase (ADR 0014), the profile,
+a Weigh-in. The goal reaches the week only through the version it shaped; a bodyweight line
+carries no load, so nothing here reads bodyweight.
+
 ## The anchor exposure
 
 Per line, in this order:
@@ -69,8 +95,8 @@ cut.
 | `double_progression` | reps and RPE per working set | every working set reached the top of its range at or under the authored RPE | load to the next rack row; reps back to the bottom of the range | hold load and range | a set at RPE ≥ authored + 2, or below the bottom of the range: hold and warn `rep_range_missed`. The rule never cuts |
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
-| `assistance_ladder` | reps and RPE per set on the current rung | every set at `reps` at or under `rpe` | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ `rpe` + 2 |
-| `top_backoff` | the exercise's best e1RM in the window | not a hit test: the top load is `load_for(e1RM, top.reps, top.rpe)` rounded down, **capped at one rack row above the anchor's top load**; back-offs are `pct_of_top` of the top, rounded nearest | | no e1RM in the window: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
+| `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
+| `top_backoff` | the exercise's best e1RM in the window | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the anchor's top load**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
 Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
@@ -292,7 +318,7 @@ to 107.5. Steps: `scheme 120 → 107.5 (reset, misses 2)`. Change `reset 120 →
 count restarts when an exposure at 107.5 is logged; a second reset within two blocks is
 `cadence_slow` at the boundary.
 
-**Assisted pull-up, `assistance_ladder`, rungs 60…0, 4×8 @8, on rung 40, after 25 days off.**
+**Assisted pull-up, `assistance_ladder`, rungs 60…0, working group 4×8 @8, on rung 40, after 25 days off.**
 Band 22–42: two rungs back to 60, sets 4 → 3, RPE ≤ 8. Steps: `cut rung 40 → 60 (return
 22–42, 25 days off)`, `cut sets 4 → 3`, `rpe_ceiling 8`. Change `4×8 @8 rung 40 → 3×8 @≤8 rung
 60`. The week after derives from this exposure: a hit at 60 moves to 50, not back to 40.

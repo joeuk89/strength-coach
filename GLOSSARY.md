@@ -24,8 +24,9 @@ _Avoid_: replace, major version, new program
 
 **Emphasis**:
 What a program version optimises for its block: hypertrophy, strength or maintenance. Chosen
-from the goal when the version is authored, it fills every default a line leaves unsaid and sets
-what the week is checked against.
+from the goal when the version is authored, it fills the version's dose and deload when unsaid,
+sets the band each line's scheme, RPE and rest are checked against, and sets what the week is
+checked against.
 _Avoid_: lifting goal, goal (which is the athlete's), training focus, intent
 
 **Session**:

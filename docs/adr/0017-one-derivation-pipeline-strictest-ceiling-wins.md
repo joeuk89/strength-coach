@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
-amended: 2026-10-31 by wayfinder #39 (the one week-level cut is one cut per line, the return band or the light cut, return winning; `minimum_week` and `one_off_week` choose sessions before the pipeline and cut nothing; illness is a ceiling; the light cut's shape is the version's `[deload]` table)
+amended: 2026-10-31 by wayfinder #39 (the one week-level cut is one cut per line, the return band or the light cut, return winning; `minimum_week` and `one_off_week` choose sessions before the pipeline and cut nothing; illness is a ceiling; the light cut's shape is the version's `[deload]` table); 2026-10-31 by wayfinder #41 (the signature is one prescribe request, `docs/spec/prescription.md`)
 ---
 
 # A prescription is derived by one fixed pipeline; exactly one week-level cut applies and ceilings bind by the strictest, never by compounding
@@ -42,8 +42,9 @@ being measured from a number that already carried a cut.
 
 ## Consequences
 
-- `prescribe(program_version, exposures, overrides, date)` keeps its signature; the week kind
-  is derived inside it from the plan's week override, the status spans and the days off.
+- `prescribe` takes the one prescribe request `docs/spec/prescription.md` lists (**What
+  prescribe is handed**), never a WeekPlan, Goal, Phase, profile or Weigh-in; the week kind is
+  derived inside it from the plan's week override, the status spans and the days off.
 - A line carries its derivation steps in every envelope; the dry run and the rendered week
   page show them, and no prose rationale is generated.
 - A held line (`hold`) is still cut by the week transform and still bound by ceilings; `hold`

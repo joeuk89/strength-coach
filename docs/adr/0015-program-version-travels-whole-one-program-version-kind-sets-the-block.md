@@ -7,8 +7,8 @@ date: 2026-10-28
 
 A new Program version is authored as one TOML Draft holding the entire next version, never as a
 patch against the current one. `program show --draft` emits the current version in that form,
-the agent edits it, and `program adopt <file>` validates it, fills every default the emphasis
-owns, computes the diff against the previous version and records the new one. An instance has
+the agent edits it, and `program adopt <file>` validates it, fills the defaults the emphasis
+owns (`[dose]`, `[deload]`, ADR 0014 amended), computes the diff against the previous version and records the new one. An instance has
 exactly one Program in v1, so nothing ever "starts a new Program"; instead every version carries
 a kind, `amend` or `redesign`, and the kind decides what adoption does to the open Block and the
 rotation position. Spec: `docs/spec/program.md`.

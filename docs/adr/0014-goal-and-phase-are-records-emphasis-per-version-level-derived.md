@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
+amended: 2026-10-31 by wayfinder #41 (adopt fills `[dose]`, `[deload]` and session `minutes` only; scheme, RPE and rest are authored on every line by the `program` skill and adopt warns when they sit outside the emphasis band; cadence signals are defined per scheme)
 ---
 
 # The Goal and the Phase are records, each Program version carries an emphasis, and training level is a derived per-lift signal
@@ -8,8 +9,9 @@ date: 2026-10-27
 The athlete's goal is a ledger record with one current row: a kind (`hypertrophy` or
 `strength`), an ordered list of priority lifts, typed milestones with no date, and the why in
 words. Each Program version carries an `emphasis` (`hypertrophy`, `strength`, `maintenance`)
-chosen from the goal; at adoption every default a line leaves unsaid is filled from the emphasis
-and written into the version, so the weekly rule reads the version and never the goal. The
+chosen from the goal; at adoption the version's dose and deload are filled from the emphasis when
+unsaid and written into the version, so the weekly rule reads the version and never the goal
+(amended: scheme, RPE and rest are authored per line and only checked against the emphasis). The
 body-composition phase (`deficit`, `maintenance`, `surplus`, with a rate and an until condition)
 is its own record, opened and closed with a reason. Training level is not stored anywhere: code
 derives per-lift cadence signals from resets and e1RM trend and raises them as warnings at the
@@ -63,8 +65,10 @@ long term).
   `goal adopt` is a plain store write from a Draft; the Phase is opened and closed inside a
   `checkin record` or `goal adopt` draft; no `phase` verb, no `level` anywhere in code.
 - Program version: `goal` becomes `emphasis`; `priority_lifts` come from the Goal; adopt fills
-  scheme, RIR, dose target, progression model, deload policy and rest per line from the
-  emphasis when unsaid and shows them in the diff. A `strength` version must have priority
+  `[dose]` and `[deload]` from the emphasis when unsaid and shows them in the diff (amended
+  2026-10-31: scheme, RPE and rest are authored on every line by the `program` skill, which
+  proposes them from `goals.md`'s bands; adopt fills none of them and warns
+  `scheme_off_emphasis` when a scheme sits outside the band). A `strength` version must have priority
   lifts. One violation (`goal_missing`) and six warnings at adopt (`docs/spec/goals.md`).
 - The weekly rule is unchanged in signature; goal-specific weekly behaviour is a property of
   the scheme the version names.
@@ -72,7 +76,7 @@ long term).
   phase), rendered to `pages/progress.md`; the `program` skill reads it at the block boundary
   and a deep check-in reads it too.
 - Cadence signals `cadence_slow` and `cadence_fast` per exercise at the block boundary, with
-  cited, opinion-marked thresholds; `phase_condition_met` and `phase_trend_off` join the
+  cited, opinion-marked thresholds, each condition stated per scheme (amended 2026-10-31); `phase_condition_met` and `phase_trend_off` join the
   registry (a milestone reached is a `progress` figure, not a code, amended 2026-10-31,
   `docs/spec/week.md`); scope kinds `version` and `exercise` are added.
 - ADR 0009 is amended: the version field is `emphasis`, `experience` leaves `[athlete]`,

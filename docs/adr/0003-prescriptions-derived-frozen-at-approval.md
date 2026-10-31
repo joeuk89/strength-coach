@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
+amended: 2026-10-31 by wayfinder #41 (`prescribe` takes one prescribe request, listed once in `docs/spec/prescription.md`; the request is never a WeekPlan, Goal, Phase, profile or Weigh-in, and is rebuilt on demand, never frozen)
 ---
 
 # Prescriptions are derived from rule and history, and frozen only at approval
@@ -30,7 +31,10 @@ recomputed from exposures, and a training max is a recorded Decision.
   Re-planning midweek supersedes it and freezes afresh.
 - A return cut is measured once from the pre-layoff exposure, never from a frozen prescription
   that already carries the cut.
-- Tests of progression assert `prescribe(program_version, exposures, overrides, date)` against
-  values; nothing reads a stored progression row.
+- Tests of progression assert `prescribe(request)` against values, the request being the one
+  listed in `docs/spec/prescription.md` (**What prescribe is handed**: the version, exposures,
+  plan overrides, Decisions in force, niggle constraints, status spans, racks, Block count,
+  activities, date; never a WeekPlan, Goal, Phase, profile or Weigh-in); nothing reads a stored
+  progression row. The request is not frozen: the prescriptions and their steps are.
 - The schema has no `prescription` table outside the approved WeekPlan, and no
   `progression_state` table.

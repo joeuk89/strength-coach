@@ -2,15 +2,18 @@
 
 Spec for wayfinder #22. The decision is ADR 0015 (one whole-version file, one Program per
 instance, the version kind decides the block). Nouns are in `GLOSSARY.md`; the emphasis
-defaults adopt fills come from `goals.md`; the flag codes raised here are rows in
-`validation.md`.
+defaults adopt fills and the bands it warns against come from `goals.md`; the flag codes raised
+here are rows in `validation.md`.
 
 The shape in one paragraph: the agent writes a TOML Draft holding the **whole** next Program
 version, usually starting from `program show --draft`, and runs `program adopt <file>`. Adopt
-validates it offline (no Hevy call, ADR 0011), fills every default the version's emphasis owns,
-freezes the Acknowledgements the Draft carries, and records an immutable version row. The dry run
-shows the diff against the previous version with the filled defaults in it. The version is then
-the only thing `prescribe` reads (ADR 0003, 0014).
+validates it offline (no Hevy call, ADR 0011), fills the three defaults the version's emphasis
+owns (`[dose]`, `[deload]` and a lifting session's `minutes`; every line's scheme, RPE and rest
+is authored, ADR 0014 amended), freezes the Acknowledgements the Draft carries, and records an
+immutable version row. The dry run shows the diff against the previous version with the filled
+defaults in it. The version is then the program's part of the prescribe request
+(`prescription.md`, **What prescribe is handed**); `prescribe` never reads the Goal or the Phase
+(ADR 0003, 0014).
 
 ## The authored form
 
@@ -87,9 +90,9 @@ No `status`: a parked session is a Decision, not a field (ADR 0010).
 | `exercise` | yes | A library id; once per session at most |
 | `load_mode` | no | Only when it departs from the Exercise's default; the Load type does the conversion |
 | `[[session.line.sets]]` | yes, at least one group | Set groups, below |
-| `rest_s` | yes | Seconds after each set of the line |
+| `rest_s` | yes | Seconds after each set of the line; the `program` skill proposes it from `goals.md`'s band, adopt never fills it |
 | `cues` | no | Free text, the canonical form cues |
-| `scheme` | yes | `{ name = "...", ...params }`; the registry below |
+| `scheme` | yes | `{ name = "...", ...params }`; the registry below. Authored by the `program` skill, never filled: adopt warns `scheme_off_emphasis` when it sits outside the emphasis band (`goals.md`) |
 | `start_load` | load-bearing lines only | Athlete units; per hand for per-hand modes. See **Start loads** |
 | `superset` | no | A label; lines sharing it in one session are performed together |
 
@@ -101,7 +104,7 @@ No `status`: a parked session is a Decision, not a field (ADR 0010).
 | `type` | no, default `working` | `warm_up`, `working`, `activation`, `test` |
 | `reps` | reps-based | An integer, a range `[6, 8]`, or an open top `"8+"` for a rep-out |
 | `duration_s` | duration lines | Instead of `reps` |
-| `rpe` | no | Stored as RPE on every group; a hypertrophy line renders it as RIR (`10 − rpe`) |
+| `rpe` | per the registry | Required on every working group of a scheme whose rule reads it (`double_progression`, `linear`, `assistance_ladder`) and on the top group of `top_backoff`; missing is `rpe_missing`. Optional elsewhere (a back-off, a `hold` line, `wave_531`), where it is rendered and never a ceiling. Stored as RPE; a hypertrophy line renders it as RIR (`10 − rpe`). Never filled: the `program` skill proposes it from `goals.md`'s band |
 
 Set types:
 
@@ -128,9 +131,12 @@ meaning.
 
 ### Dose and deload
 
-Both are version tables so that `prescribe` reads the version only. Absent, adopt fills them
-from the emphasis and the open Phase (`goals.md`, "Defaults per emphasis") and the dry run shows
-the filled values. Present, they stand and may draw `dose_off_band` or `deload_off_emphasis`.
+Both are version tables so that `prescribe` reads the version, never the Goal or the Phase.
+Absent, adopt fills them from the emphasis and the open Phase (`goals.md`, "Defaults per
+emphasis") and the dry run shows the filled values. Present, they stand and may draw
+`dose_off_band` or `deload_off_emphasis`. With a lifting session's `minutes`, these are the only
+things adopt fills: a line's scheme, RPE and rest are coaching judgement the `program` skill
+authors, and adopt warns where they sit outside the emphasis band.
 
 ```toml
 [dose]
@@ -197,23 +203,26 @@ override, and a coach-led session is a session kind.
 ## Schemes
 
 One registry in code. Each scheme declares its name, a typed params table with defaults, the set
-types it may drive, what it reads from history, its stall and reset rule (`prescription.md`)
-and its deload shape. The form names a scheme and params only; `coach schema`
-prints the registry so the agent never guesses a param. Scheme params are only what the rack
-cannot know: the load step is the next row on the session location's rack at a plate-pool
-location and the grid increment at a grid location (ADR 0008 precedence: location, exercise,
-catalogue).
+types it may drive, the shape its set groups must take and which of them carry `rpe`, what it
+reads from history, and its stall and reset rule (`prescription.md`). No scheme declares a deload
+shape: the light cut is one transform from the version's `[deload]` table, and the only
+per-scheme behaviour under a cut is the return band's (`prescription.md`). The form names a
+scheme and params only; `coach schema` prints the registry so the agent never guesses a param.
+Scheme params are only what the set groups and the rack cannot say: a param never repeats a
+group's `count`, `reps` or `rpe`, and the load step is the next row on the session location's
+rack at a plate-pool location and the grid increment at a grid location (ADR 0008 precedence:
+location, exercise, catalogue).
 
 ### Line schemes, v1
 
-| Name | Params | Set types | Reads | Opening position with no history |
-| --- | --- | --- | --- | --- |
-| `double_progression` | none | warm_up, working, activation | reps at target RPE on the line's exposures | `start_load` at the bottom of the rep range |
-| `linear` | `misses_before_reset`, `reset_factor` (registry defaults 2 and 0.9; `prescription.md`, Stalls, says why a coach names 0.95) | warm_up, working, activation | the last exposure's load and whether its sets were made | `start_load`, the authored sets |
-| `hold` | none | warm_up, working, activation | nothing; the authored numbers stand until an override or a new version | the authored sets, `start_load` where load-bearing |
-| `assistance_ladder` | `rungs` (assisted loads, descending), `reps`, `sets`, `rpe` | working | reps at RPE on the current rung | the first rung |
-| `top_backoff` | `top = { reps, rpe }`, `backoff = { sets, reps, pct_of_top }` | warm_up, working | e1RM from the line's exposures, RPE as a cap | `start_load` is the top set; back-offs derive from it |
-| `wave_531` | none; the registry holds the waves `[[65, 75, 85], [70, 80, 90], [75, 85, 95]]` of the training max at `5/3/1` reps, last working set open (`"5+"`, `"3+"`, `"1+"`), the published numbers (rn:progression-training-age.9) | warm_up, working | the current `training_max` Decision on the exercise and the last rep-out | `start_load` is the training max until a Decision exists |
+| Name | Params | Set types | Set groups (`set_groups_off_scheme` otherwise) | `rpe` required on | Reads | Opening position with no history |
+| --- | --- | --- | --- | --- | --- | --- |
+| `double_progression` | none | warm_up, working, activation | any | every working group | reps at the authored RPE on the line's anchor exposures | `start_load` at the bottom of the rep range |
+| `linear` | `misses_before_reset`, `reset_factor` (registry defaults 2 and 0.9; `prescription.md`, Stalls, says why a coach names 0.95) | warm_up, working, activation | any | every working group | the anchor's load and whether its sets were made | `start_load`, the authored sets |
+| `hold` | none | warm_up, working, activation | any | none | the anchor's top load, nothing else; the authored sets stand until an override or a new version | the authored sets, `start_load` where load-bearing |
+| `assistance_ladder` | `rungs` (assisted loads, descending) | working | exactly one working group; its `count`, `reps` and `rpe` are the ladder's | the working group | reps at RPE on the current rung | the first rung |
+| `top_backoff` | `pct_of_top` | warm_up, working | the first working group is the top (`count = 1`, an integer `reps`, `rpe`); at least one later working group, each a back-off at `pct_of_top` | the top group | the exercise-wide e1RM (`prescription.md`), the top group's RPE as a cap | `start_load` is the top set; back-offs derive from it |
+| `wave_531` | none; the registry holds the waves `[[65, 75, 85], [70, 80, 90], [75, 85, 95]]` of the training max at `5/3/1` reps, last working set open (`"5+"`, `"3+"`, `"1+"`), the published numbers (rn:progression-training-age.9) | warm_up, working | one working group carrying `count` only; the wave owns reps and the open last set | none | the current `training_max` Decision on the exercise, the Block's hard-week count and the last rep-out | `start_load` is the training max until a Decision exists |
 
 `wave_531` is the slow strength cadence: the scheme the `program` skill names when `cadence_slow`
 fires on a `top_backoff` lift (`goals.md`, **Response to a cadence signal**). Adopt never fills
@@ -242,9 +251,10 @@ from the last matched Activity; their lines use `hold`.
 `start_load` is in athlete units and, for per-hand modes, per hand. The rules:
 
 - A load-bearing line (`total`, `per_hand_x2`, `single_implement`, `assisted`, `band`) with no
-  `start_load` and no Exposure of that exercise in the last 90 days is `start_load_missing`, a
-  violation. With a recent Exposure the field is optional and history wins; when both exist and
-  differ adopt warns `start_load_ignored`.
+  `start_load` and no Exposure of that exercise anywhere is `start_load_missing`, a violation:
+  the same rule `prescribe` applies at anchor step 3, with no age limit (a stale anchor is the
+  return band's business, `prescription.md`). With an Exposure the field is optional and history
+  wins; when both exist and differ adopt warns `start_load_ignored`.
 - A start load not on the session location's rack for the exercise's equipment kind is
   `start_load_off_rack`, a violation naming the two nearest rows. Adopt never rounds silently.
 - Bodyweight and duration lines take no start load; one present is `unknown_key`.
@@ -295,6 +305,8 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `start_load_off_rack` | line | above |
 | `no_working_sets` | line | zero working sets under a scheme that reads them (every scheme but `hold`) |
 | `set_type_not_allowed` | line | any authored `test` group (the deload policy alone prescribes one), or a type the scheme's row does not permit |
+| `set_groups_off_scheme` | line | the working groups do not fit the scheme's row: a `top_backoff` first working group with `count` other than 1 or a range for `reps`, or no back-off group; more than one working group under `assistance_ladder`; a `wave_531` working group stating `reps` |
+| `rpe_missing` | line | a working group the scheme's row requires `rpe` on has none |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011) |
 | `acknowledgement_unmatched` | version | an `[[acknowledge]]` key adopt did not raise |
 | `goal_missing` | version | no current Goal (`goals.md`) |
@@ -448,7 +460,7 @@ minutes = 90
 
   [[session.line]]
   exercise = "custom_scapular_pull_ups"
-  sets = [{ count = 2, type = "activation", reps = [6, 8], rpe = 5 }]   # was a warm-up with no working sets
+  sets = [{ count = 2, type = "activation", reps = [6, 8], rpe = 5 }]   # was a warm-up with no working sets; carries no working group, so the pull-up below still counts as first
   rest_s = 60
   cues = "neutral grip · elbows stay locked · pull the shoulder blades down and back · 1–2 s pause"
   scheme = { name = "hold" }
@@ -462,10 +474,10 @@ minutes = 90
 
   [[session.line]]
   exercise = "assisted_pull_up"
-  sets = [{ count = 4, reps = [5, 6], rpe = 8 }]
+  sets = [{ count = 4, reps = 8, rpe = 8 }]                              # the ladder's reps, sets and RPE: params never repeat a group
   rest_s = 120
   cues = "neutral grip (parallel handles) · foot in the band · full dead hang each rep · same strict path as an unassisted rep"
-  scheme = { name = "assistance_ladder", rungs = [60, 50, 40, 30, 20, 10, 0], reps = 8, sets = 4, rpe = 8 }
+  scheme = { name = "assistance_ladder", rungs = [60, 50, 40, 30, 20, 10, 0] }
   start_load = 60
 
   # ... custom_negative_pull_up, bb_bent_over_row, db_single_arm_row,
@@ -490,14 +502,14 @@ text = "The pull-up progresses through the assistance ladder and negatives; the 
 ```
 
 What the dry run shows for this file: the filled `[dose]` and `[deload]`; two `scheme_off_emphasis`
-warnings, both acknowledged; `priority_lift_not_first` on `a-sat-pull` (the pull-up sits after
-the scapular activation), left unacknowledged so it still shows; every `start_load` checked
-against the home plate-pool snapshot; no violations. The old `increment` params are gone: the
+warnings, both acknowledged; no `priority_lift_not_first` on `a-sat-pull` (the scapular line
+ahead of the pull-up is activation only and carries no working group, so the pull-up is first);
+every `start_load` checked against the home plate-pool snapshot; no violations. The old `increment` params are gone: the
 squat steps by the home rack's next barbell row.
 
 ## Handed to other tickets
 
-- **Weekly prescription** (#26, settled in `prescription.md`): the stall and reset rule per
+- **Weekly prescription** (#26, settled in `prescription.md`): the prescribe request, the stall and reset rule per
   scheme, the registry defaults for `linear` (2, 0.9), the one-row step cap on `top_backoff`,
   `training_max_due` in place of a rule moving the training max, no coded RIR walk or set ramp,
   the derivation of a conditioning session's dose from its last Activity.

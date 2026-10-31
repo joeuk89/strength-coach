@@ -6,8 +6,10 @@ graduation and plan long term). The decision is ADR 0014; the nouns are in `GLOS
 
 The shape in one paragraph: the athlete has one current **Goal** (a record: kind, priority
 lifts, milestones, the why). Each **Program version** carries an **emphasis** chosen from it,
-and at adoption every default a line leaves unsaid is filled from the emphasis and written into
-the version, so the weekly rule reads the version only. A **Phase** (deficit, maintenance,
+and at adoption the version's `[dose]` and `[deload]` are filled from the emphasis when unsaid
+and written into the version, so the weekly rule reads the version and never the Goal; each
+line's scheme, RPE and rest are the `program` skill's judgement, and adopt warns where they sit
+outside the emphasis band. A **Phase** (deficit, maintenance,
 surplus) is the one long-range structure that outlives a block; it tilts the defaults and sets
 the bodyweight trend the week is checked against. At each block boundary a derived progress
 report shows the coach where the athlete stands against the Goal, with per-lift **cadence
@@ -39,7 +41,8 @@ A strength target on one exercise with no date. A dated target is a Follow-up (A
 | --- | --- | --- |
 | `exercise` | Exercise ref | Need not be a priority lift (the gym-only deadlift) |
 | `target.kind` | `e1rm`, `load_x_reps`, `bodyweight_multiple` | |
-| `target.value` | load in athlete units; load plus reps; a multiple | A bodyweight multiple is read against the 14-day Weigh-in average on the exposure's date (the 14 days are opinion) |
+| `target.value` | `e1rm`: a load in athlete units; `bodyweight_multiple`: a multiple | A bodyweight multiple is read against the 14-day Weigh-in average on the exposure's date (the 14 days are opinion) |
+| `target.load`, `target.reps` | `load_x_reps` only: a load in athlete units (0 for an unassisted bodyweight lift) and a rep count | The example below; `schema.md`'s CHECK follows this shape |
 
 **Reached** is derived: the first Exposure whose e1RM (or logged load for reps) meets the
 target, with its date. Never stored. The progress report shows it as a figure; there is no
@@ -49,8 +52,9 @@ bodyweight multiple is "not computable" and shown as such (two weigh-ins is opin
 ### Emphasis
 
 A field of the Program version, `hypertrophy`, `strength` or `maintenance`, replacing the
-former `goal` field (ADR 0009, amended). It fills every default a line leaves unsaid and sets
-what the week is checked against. `maintenance` keeps the Goal's schemes and intensity and cuts
+former `goal` field (ADR 0009, amended). It fills the version's dose and deload when unsaid, sets
+the band each line's scheme, RPE and rest are checked against, and sets what the week is checked
+against. `maintenance` keeps the Goal's schemes and intensity and cuts
 the dose; it has no schemes of its own, which is why it cannot be a Goal kind.
 
 ### Phase
@@ -109,18 +113,22 @@ and a second open Phase. It records the diff from the previous Goal in the envel
 
 ## Defaults per emphasis
 
-What the `program` skill proposes and `adopt` fills into a line that names nothing. Citations
-are to the research notes (`rn:goal-programming §n`); each number is marked evidence or opinion
-there. A line that names its own scheme, dose or rest keeps it; adopt only warns when it does
-not fit (next section).
+What the emphasis means for a version. Two rows are **filled** by `adopt` when the Draft leaves
+them unsaid, Weekly dose into `[dose]` and Deload into `[deload]`, because each has one
+defensible number. Every other row is a band the `program` skill **proposes** from and `adopt`
+**warns** against: scheme, RPE and rest are authored on every line (`program.md`), never filled,
+because choosing them is coaching judgement with a reason (an assisted lift, a rack too coarse
+for `top_backoff`, one more block of `linear`) and the bands below are ranges, not numbers.
+Citations are to the research notes (`rn:goal-programming §n`); each number is marked evidence
+or opinion there.
 
 | Knob | `hypertrophy` line | priority lift (any goal) and `strength` line | `maintenance` version | Source |
 | --- | --- | --- | --- | --- |
 | Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
 | RIR | stimulus dial: the line's authored RPE stands every week (default 8, 2 RIR); the walk toward failure happens as double progression adds reps at a held load, not as a coded rule (`prescription.md`) | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
 | Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
-| Scheme adopt fills | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods §3` |
-| Stall signal | reps at the target RIR flat across the muscle's lines | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
+| Scheme the skill proposes (`scheme_off_emphasis` band) | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods §3` |
+| Stall signal (per line, `prescription.md`; several stalled lines read as one muscle behind is the `program` skill's judgement from `coach progress`) | reps at the authored RPE flat on the line | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
 | Deload | `set_cut_pct` 40, `load_cut_pct` 0, `rpe_cap` 8: cut sets, hold load | `set_cut_pct` 30, `load_cut_pct` 0, `rpe_cap` 8; `test_priority_lifts` prescribes a **test** single on each priority lift in the light week, whose result may become the next block's training max | no planned deload | §6 and rn:deloads.8 to .10, evidence that intensity is held; the percentages are this framework's defaults (opinion) |
 | Order | free; chosen for fatigue and preference | priority lift first in its session | as the Goal | §7, evidence |
 | Rest | 1.5–3 min | 2–5 min | as the line's load | §9, evidence; rest follows load, not goal |
@@ -129,7 +137,7 @@ Two rules that follow:
 
 - A `hypertrophy` version with priority lifts gets the hypertrophy column everywhere except on
   the priority lifts, which get the middle column, including the test single in the light week.
-- `linear` and `wave_531` are never filled. `linear` is the novice pace and no level is stored
+- `linear` and `wave_531` are never proposed by this table. `linear` is the novice pace and no level is stored
   (ADR 0014); a coach names it, or moves a lift to it on `cadence_fast`. `wave_531` is the
   answer to `cadence_slow` on a `top_backoff` lift. Whether a dumbbell rack's steps are too
   coarse for `top_backoff` is the coach's judgement at authoring, not a check: a priority lift
@@ -174,7 +182,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
 | `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, or `double_progression` with a rep range inside 3–6 |
 | `priority_lift_absent` | warning | version | exercise id | Acknowledgement, or a line for it |
-| `priority_lift_not_first` | warning | session | exercise id, position | Acknowledgement, or reordering |
+| `priority_lift_not_first` | warning | session | exercise id, position among the session's lines that carry a working group (an activation-only or warm-up line never counts) | Acknowledgement, or reordering |
 | `dose_off_band` | warning | version | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
 | `deload_off_emphasis` | warning | version | deload policy, expected shape | Acknowledgement, or the expected shape |
 | `scheme_change_off_signal` | warning | line | previous scheme, new scheme, signal key or none, `may_schemes` | Acknowledgement, or keeping the scheme, or a scheme the signal lists (**Response to a cadence signal**) |
@@ -183,9 +191,9 @@ The filled defaults appear in the adopt diff, so the athlete sees what the empha
 
 ## What reaches the weekly loop
 
-Nothing reads the Goal weekly. `prescribe(program_version, exposures, overrides, date)` keeps
-its signature (ADR 0003). The goal-specific weekly behaviour is a property of the scheme the
-version names:
+Nothing reads the Goal weekly: the prescribe request (`prescription.md`, **What prescribe is
+handed**) carries the version and never the Goal or the Phase (ADR 0003, amended). The
+goal-specific weekly behaviour is a property of the scheme the version names:
 
 - the dose check against the version's per-muscle target and, for priority lifts, the per-lift
   target (ADR 0009, extended): the card's Dose line and the plan warnings `dose_under_target`
@@ -226,12 +234,19 @@ Compact summary by default; `--full` adds per-line history.
 
 The replacement for a stored training level (`rn:training-level §2`, thresholds opinion). Per
 exercise, raised at the block boundary, scope `exercise`, cleared by a new Program version
-or left by a `leave_warning` Decision:
+or left by a `leave_warning` Decision. The condition is per scheme, as the stall metric is
+(`prescription.md`), because each scheme's cadence is read on its own metric: a 12–15-rep
+`double_progression` line never yields an e1RM point and a `top_backoff` line has no rep range.
+Every row requires adherence at or above the floor (`week.md`) over the blocks it reads.
 
-| Code | Condition |
-| --- | --- |
-| `cadence_slow` | two resets on the line under the same scheme within the closed block and the one before, **or** a non-positive e1RM slope across two consecutive closed hard blocks with adherence at or above the floor |
-| `cadence_fast` | every exposure in the closed block hit the top of its rep range at or under the target RIR, with no stall; checked only on `double_progression` and `top_backoff` lines (on `linear` the pace is right and there is nothing to propose) |
+| Code | Line's scheme | Condition over the closed block and the one before |
+| --- | --- | --- |
+| `cadence_slow` | `linear` | two resets on the line under the scheme within the two blocks |
+| `cadence_slow` | `double_progression`, `assistance_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them) |
+| `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks |
+| `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
+| `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
+| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay
@@ -303,11 +318,11 @@ holds.
 ## Worked example: the carried-over athlete
 
 Goal `hypertrophy`, priority lifts bench and strict pull-up, milestones as in the Draft above,
-Phase `maintenance` until coach's call. Program version 1 adopts with emphasis `hypertrophy`;
-adopt fills double progression at RIR 3→1 and 10 sets per muscle on every line, a top set plus
-back-offs and 8 sets per week on bench and the pull-up, a 40 % set cut with load held and a test
-single on both in the light week, and warns `priority_lift_not_first` if the pull-up sits after
-rows. At the
+Phase `maintenance` until coach's call. The `program` skill authors version 1 with emphasis
+`hypertrophy`: double progression at RPE 8 on every line, a top set plus back-offs on bench and
+the pull-up; adopt fills 10 sets per muscle, 8 sets per week on bench and the pull-up, a 40 % set
+cut with load held and a test single on both in the light week, and warns
+`priority_lift_not_first` if the pull-up sits after rows. At the
 first block boundary `coach progress` shows bench e1RM over the block, the pull-up's best reps,
 dose by muscle, the flat bodyweight trend, and no cadence signal; the `program` skill proposes
 block 2. Two blocks later a `cadence_slow` on bench, its `may_schemes` naming `wave_531`, is
@@ -316,7 +331,7 @@ answered by a new version with that scheme on bench, the Decision citing the war
 ## Handed to other tickets
 
 - **Program authoring** (#22): the authored form carries `emphasis`; the defaults table above
-  is what adopt fills; the `test` set type ships; the adopt checks above join its list.
+  is what adopt fills (`[dose]`, `[deload]`) and warns against (the rest); the `test` set type ships; the adopt checks above join its list.
 - **Weekly prescription** (#26, settled in `prescription.md`): the stall and reset per scheme
   that `stall_streak` and `cadence_slow` read; no coded RIR walk or set ramp; the training max
   is never moved by the rule (`training_max_due` asks for a Decision).

@@ -45,7 +45,8 @@ light-week state machine over `decisions.json`. Niggle constraints already lived
 ## Consequences
 
 - `prescribe` reads the version, the exposures, the plan's overrides and the Decisions in
-  force; the signature stays closed to any WeekPlan (ADR 0005).
+  force as part of its request (`docs/spec/prescription.md`, **What prescribe is handed**); the
+  signature stays closed to any WeekPlan (ADR 0005).
 - The glossary's Decision entry loses "a light week" and "outcome"; `validation.md` gains seven
   codes and loses "a block reset Decision" as a clearer; the check-in and goals specs name the
   block boundary as the check-in whose week kind closes the block, not a Decision.

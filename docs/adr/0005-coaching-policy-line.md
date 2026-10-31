@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #39 (the return band is a safety bound with no override route; its fact, days off, moves only through a `trained_unlogged` Annotation or a hand-entered Workout)
+amended: 2026-10-31 by wayfinder #39 (the return band is a safety bound with no override route; its fact, days off, moves only through a `trained_unlogged` Annotation or a hand-entered Workout); 2026-10-31 by wayfinder #41 (what `prescribe` reads is the prescribe request, `docs/spec/prescription.md`)
 ---
 
 # The rule derives every line; the agent departs from it only through typed, reasoned overrides
@@ -59,7 +59,7 @@ open with no constraint); drift from last week's prescription with no override e
 ## Consequences
 
 - The return cut (template #257) is prevented by signature, not by a branch or a stored anchor:
-  `prescribe` reads exposures and overrides and has no access to any WeekPlan, so re-proposing,
+  `prescribe` reads its request (`docs/spec/prescription.md`) and has no access to any WeekPlan, so re-proposing,
   rebuilding or re-planning midweek a 43+ line recomputes the same cut from the same pre-layoff
   exposure. Regression test: propose, approve, rebuild, re-plan midweek; the load is unchanged.
 - The 43+ "re-test" is not a rule. The week after a return week derives from the return

@@ -422,7 +422,9 @@ CREATE TABLE milestone (                   -- a restated milestone on a new Goal
   goal_id     TEXT NOT NULL REFERENCES goal(id),
   exercise_id TEXT NOT NULL REFERENCES exercise(id),
   target_kind TEXT NOT NULL CHECK (target_kind IN ('e1rm','load_x_reps','bodyweight_multiple')),
-  target      TEXT NOT NULL                -- JSON: {value} or {load, reps}
+  target      TEXT NOT NULL,               -- JSON: {value} for e1rm and bodyweight_multiple, {load, reps} for load_x_reps (goals.md)
+  CHECK ((target_kind = 'load_x_reps') = (json_type(target, '$.load') IS NOT NULL AND json_type(target, '$.reps') IS NOT NULL)),
+  CHECK ((target_kind <> 'load_x_reps') = (json_type(target, '$.value') IS NOT NULL))
 );
 
 CREATE TABLE phase (                       -- closed in place; one open at a time
