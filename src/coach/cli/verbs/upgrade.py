@@ -3,7 +3,15 @@ from pathlib import Path
 
 from coach.cli import export_dir as exported
 from coach.cli import git
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.generated import drifted, generated_files
 from coach.cli.instance import CONFIG, refuse_tables_behind_the_export
 from coach.core.engine_pin import notes_between
@@ -14,8 +22,7 @@ from coach.store.chain import engine
 from coach.store.connection import copy_to_memory, open_store_behind, schema_version
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None
+def run(call: InstanceCall) -> Outcome:
     instance = call.instance
     root = instance.root
     running = call.engine_version
@@ -106,7 +113,6 @@ DECLARATION = Declaration(
     summary="Bring the instance up to the installed engine: migrate the store, merge the "
     "catalogue, rewrite the export and the generated files, move the pin, one commit.",
     writes="git",
-    needs_instance=True,
     moves_pin=True,
     arguments=(
         Argument(
@@ -143,7 +149,7 @@ DECLARATION = Declaration(
             "notes",
         ],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("upgrade", "--dry-run"), "What upgrade would migrate and write."),
         Example(("upgrade",), "Upgrade the instance and commit."),

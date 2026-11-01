@@ -1,6 +1,4 @@
-from contextlib import closing
-
-from coach.cli.declaration import Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.instance import open_instance_store
 from coach.core.progress import (
     AdherenceRead,
@@ -15,10 +13,9 @@ from coach.core.progress import (
 from coach.services.progress import progress
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     athlete = call.instance.config.athlete
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         found = progress(
             conn,
             on=call.clock.today(),
@@ -136,7 +133,6 @@ DECLARATION = Declaration(
         "signals come in warnings[], each carrying the moves a version may make."
     ),
     writes="none",
-    needs_instance=True,
     output={
         "type": "object",
         "properties": {
@@ -224,7 +220,7 @@ DECLARATION = Declaration(
             "goal",
         ],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("progress",), "Where the athlete stands against the Goal."),
         Example(("progress", "--full"), "The same with each line's history."),

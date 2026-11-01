@@ -155,7 +155,6 @@ DECLARATION = Declaration(
     summary="Create an instance in this directory: coach.toml, the generated files, an empty "
     "store, one commit.",
     writes="git",
-    needs_instance=False,
     arguments=(
         Argument(
             "--dry-run", "print the tree init would write and touch nothing", takes_value=False

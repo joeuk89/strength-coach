@@ -1,7 +1,15 @@
 import datetime
-from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Call,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
@@ -21,14 +29,13 @@ from coach.services.query import (
 from coach.store.connection import Connection
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     view = str(call.args["view"])
     if view not in VIEWS:
         raise Invalid("invalid_argument", f"no view {view!r}; one of {', '.join(VIEWS.names())}")
     last = None if call.full else call.last
     kind = _text(call, "kind")
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         if view == "exposures":
             result = exposures(
                 conn,
@@ -76,9 +83,8 @@ def run(call: Call) -> Outcome:
     return Outcome(_rows(result))
 
 
-def _draft(call: Call, conn: Connection) -> CheckedPlan | None:
+def _draft(call: InstanceCall, conn: Connection) -> CheckedPlan | None:
     """The named plan Draft validated now, read-only: the check `plan apply --dry-run` runs."""
-    assert call.instance is not None and call.clock is not None
     path = _text(call, "draft")
     if path is None:
         return None
@@ -126,7 +132,6 @@ DECLARATION = Declaration(
     "routines (the Routine map with each routine's folder, status and last verify) or "
     "ledger (one record kind with its withdrawals or event history, or one record by id).",
     writes="none",
-    needs_instance=True,
     arguments=(
         Argument("view", f"one of {', '.join(VIEWS.names())}", required=True),
         Argument(
@@ -156,7 +161,7 @@ DECLARATION = Declaration(
         },
         "required": ["rows", "count", "truncated"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(
             ("query", "exposures", "--exercise", "bb_bench_press", "--last", "5"),

@@ -1,16 +1,13 @@
-from contextlib import closing
-
-from coach.cli.declaration import Argument, Call, Declaration, Example, Outcome
+from coach.cli.declaration import Argument, Declaration, Example, InInstance, InstanceCall, Outcome
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.services.checkin_record import checkin_record
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         result = checkin_record(conn, data, file=path, clock=call.clock)
     return Outcome(
         {
@@ -39,7 +36,6 @@ DECLARATION = Declaration(
         "writes nothing; a changed file for the same date supersedes the row."
     ),
     writes="store",
-    needs_instance=True,
     arguments=(Argument("draft", "path of the TOML check-in file", required=True),),
     output={
         "type": "object",
@@ -85,7 +81,7 @@ DECLARATION = Declaration(
             "phase",
         ],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(
             ("checkin", "record", ".coach/drafts/2026-11-01-checkin.toml"),

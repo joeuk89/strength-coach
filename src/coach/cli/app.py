@@ -9,7 +9,14 @@ from typing import TextIO
 from coach.cli import envelope, registry
 from coach.cli.argv import GLOBAL_OPTIONS, Options, find_leaf, parse_options
 from coach.cli.clock import clock_for
-from coach.cli.declaration import Call, Declaration, Json, MakeClient
+from coach.cli.declaration import (
+    Call,
+    Declaration,
+    InInstance,
+    InstanceCall,
+    Json,
+    MakeClient,
+)
 from coach.cli.instance import (
     find_root,
     load_instance,
@@ -57,32 +64,20 @@ def main(
         elif options.help:
             result = declaration.describe()
         else:
-            running = engine_version()
-            instance = None
-            rebuilt = None
-            if declaration.needs_instance:
-                instance, pin_warning = load_instance(
-                    find_root(Path.cwd()), running, upgrading=declaration.moves_pin
-                )
-                if pin_warning:
-                    warnings.append(pin_warning)
-                clock = clock or clock_for(instance.config.athlete.timezone)
-                rebuilt = rebuild_missing_store(instance)
-                if declaration.writes in STORE_WRITES:
-                    refuse_a_store_behind_the_export(instance)
             call = Call(
                 args=options.args,
                 full=options.full,
                 last=options.last,
-                engine_version=running,
-                instance=instance,
+                engine_version=engine_version(),
                 env=env,
-                clock=clock,
                 make_client=make_client,
                 terminal=Terminal(sys.stdin, stderr),
-                rebuilt=rebuilt,
             )
-            outcome = declaration.run(call)
+            match declaration.run:
+                case InInstance(run=run_in_instance):
+                    outcome = run_in_instance(_in_instance(call, declaration, clock, warnings))
+                case run_anywhere:
+                    outcome = run_anywhere(call)
             warnings.extend(outcome.warnings)
             result = _projected(outcome.result, options)
         document = envelope.success(engine_chain().version, verb, result, warnings)
@@ -99,6 +94,21 @@ def main(
         failed = Message("internal_error", f"{type(error).__name__}: {error}")
         _write(stdout, envelope.failure(engine_chain().version, verb, failed, warnings))
         return 1
+
+
+def _in_instance(
+    call: Call, declaration: Declaration, clock: Clock | None, warnings: list[Message | Flag]
+) -> InstanceCall:
+    instance, pin_warning = load_instance(
+        find_root(Path.cwd()), call.engine_version, upgrading=declaration.moves_pin
+    )
+    if pin_warning:
+        warnings.append(pin_warning)
+    clock = clock or clock_for(instance.config.athlete.timezone)
+    rebuilt = rebuild_missing_store(instance)
+    if declaration.writes in STORE_WRITES:
+        refuse_a_store_behind_the_export(instance)
+    return InstanceCall(**vars(call), instance=instance, clock=clock, rebuilt=rebuilt)
 
 
 def run() -> int:
