@@ -8,14 +8,11 @@ from coach.core.registries.flags import FLAGS, FlagCode
 # fails.
 PENDING_LEAVES = frozenset(
     {
-        "import",
         "checkin open",
         "checkin record",
         "plan draft",
         "plan apply",
-        "goal adopt",
         "progress",
-        "publish",
         "upgrade",
     }
 )

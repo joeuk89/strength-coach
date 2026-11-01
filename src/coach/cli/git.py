@@ -27,6 +27,16 @@ def init(root: Path) -> None:
     _git(root, "init", "--quiet")
 
 
+def changed(root: Path, paths: Sequence[str]) -> bool:
+    """Whether git sees any change, untracked files included, under `paths`."""
+    return bool(_git(root, "status", "--porcelain", "--untracked-files=all", "--", *paths))
+
+
+def tracks(root: Path, path: str) -> bool:
+    """Whether git tracks `path` or any file under it."""
+    return bool(_git(root, "ls-files", "--", path))
+
+
 def commit(root: Path, paths: Sequence[str], message: str) -> str:
     """Commit exactly `paths`, whatever else is staged, and return the commit hash."""
     try:

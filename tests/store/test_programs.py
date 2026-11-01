@@ -3,9 +3,8 @@ import datetime
 from support.ledger import a_hevy_workout, a_store, an_exercise
 from support.program_drafts import a_draft, a_line, a_session, toml
 
-from coach.core.program.checks import Goal
 from coach.core.program.parse import parse_program_draft
-from coach.store import exercises, goals, phases, programs, workouts
+from coach.store import exercises, programs, workouts
 from coach.store.connection import Connection
 
 
@@ -62,38 +61,6 @@ def test_the_block_opens_at_the_latest_redesign() -> None:
     assert programs.block_opened(conn) == "2026-11-01"
     a_version(conn, 3)
     assert programs.block_opened(conn) == "2026-11-03"
-
-
-def test_the_current_goal_carries_its_priority_lifts_in_rank_order() -> None:
-    conn = a_store()
-    an_exercise(conn, "bb_bench_press")
-    an_exercise(conn, "pull_up")
-    assert goals.current(conn) is None
-
-    with conn:
-        goals.insert(
-            conn,
-            id_="g-0001",
-            kind="hypertrophy",
-            priority_lifts=("pull_up", "bb_bench_press"),
-            adopted="2026-11-01",
-            draft_hash="sha256:g",
-            recorded_at="2026-11-01T12:00:00+00:00",
-        )
-
-    assert goals.current(conn) == Goal("hypertrophy", ("pull_up", "bb_bench_press"))
-
-
-def test_the_open_phase_is_read_by_kind() -> None:
-    conn = a_store()
-    assert phases.open_kind(conn) is None
-
-    with conn:
-        phases.insert(
-            conn, id_="ph-0001", kind="surplus", opened="2026-11-01", opened_by="goal:g-0001"
-        )
-
-    assert phases.open_kind(conn) == "surplus"
 
 
 def test_an_exercise_has_an_exposure_when_a_current_workout_logs_its_template() -> None:

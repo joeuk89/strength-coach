@@ -4,7 +4,8 @@ import pytest
 from support.program_drafts import a_draft, a_line, a_session, toml
 
 from coach.core.flag import Flag
-from coach.core.program.checks import AdoptContext, Goal, violations
+from coach.core.goal import Goal
+from coach.core.program.checks import AdoptContext, violations
 from coach.core.program.parse import parse_program_draft
 from coach.core.rack import IncrementRack, ListedRack, RackRow
 
@@ -22,12 +23,16 @@ HOME = {
 }
 
 
+def a_goal(priority_lifts: tuple[str, ...]) -> Goal:
+    return Goal(kind="hypertrophy", because="first goal", priority_lifts=priority_lifts, why="")
+
+
 def a_context(**fields: Any) -> AdoptContext:
     values: dict[str, Any] = {
         "version_id": "pv-1",
         "library": LIBRARY,
         "racks": {"home": HOME, "gym": {}},
-        "goal": Goal("hypertrophy", ("bb_bench_press",)),
+        "goal": a_goal(("bb_bench_press",)),
     }
     values.update(fields)
     return AdoptContext(**values)
@@ -145,7 +150,7 @@ def test_hevy_template_missing_names_the_missing_columns_only_with_hevy_on() -> 
 
 def test_goal_missing_and_priority_lifts_required_read_the_current_goal() -> None:
     assert keyed(a_draft(), a_context(goal=None)) == ["goal_missing@version:pv-1"]
-    assert keyed(a_draft(emphasis="strength"), a_context(goal=Goal("hypertrophy", ()))) == [
+    assert keyed(a_draft(emphasis="strength"), a_context(goal=a_goal(()))) == [
         "priority_lifts_required@version:pv-1"
     ]
 

@@ -1,7 +1,7 @@
 import os
 import sys
 import traceback
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from importlib.metadata import version
 from pathlib import Path
 from typing import TextIO
@@ -9,12 +9,19 @@ from typing import TextIO
 from coach.cli import envelope, registry
 from coach.cli.argv import GLOBAL_OPTIONS, Options, find_leaf, parse_options
 from coach.cli.clock import clock_for
-from coach.cli.declaration import Call, Declaration, Json
-from coach.cli.instance import find_root, load_instance
+from coach.cli.declaration import Call, Declaration, Json, MakeClient
+from coach.cli.instance import (
+    find_root,
+    load_instance,
+    rebuild_missing_store,
+    refuse_a_store_behind_the_export,
+)
 from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
+from coach.core.flag import Flag
 from coach.core.message import Message
+from coach.hevy.client import HevyApiClient
 from coach.store.connection import SCHEMA_VERSION
 
 EXIT_CLASSES: tuple[tuple[type[CoachError], int], ...] = (
@@ -23,6 +30,7 @@ EXIT_CLASSES: tuple[tuple[type[CoachError], int], ...] = (
     (Unreachable, 4),
     (Setup, 5),
 )
+STORE_WRITES = ("store", "hevy")
 
 
 def engine_version() -> str:
@@ -35,11 +43,11 @@ def main(
     stdout: TextIO,
     stderr: TextIO,
     *,
-    make_client: Callable[[], object] | None = None,
+    make_client: MakeClient = HevyApiClient,
     clock: Clock | None = None,
 ) -> int:
     verb: str | None = None
-    warnings: list[Message] = []
+    warnings: list[Message | Flag] = []
     try:
         declaration, tokens = find_leaf(argv, registry.declarations())
         verb = declaration.name if declaration else None
@@ -51,11 +59,15 @@ def main(
         else:
             running = engine_version()
             instance = None
+            rebuilt = None
             if declaration.needs_instance:
                 instance, pin_warning = load_instance(find_root(Path.cwd()), running)
                 if pin_warning:
                     warnings.append(pin_warning)
                 clock = clock or clock_for(instance.config.athlete.timezone)
+                rebuilt = rebuild_missing_store(instance)
+                if declaration.writes in STORE_WRITES:
+                    refuse_a_store_behind_the_export(instance)
             call = Call(
                 args=options.args,
                 full=options.full,
@@ -66,6 +78,7 @@ def main(
                 clock=clock,
                 make_client=make_client,
                 terminal=Terminal(sys.stdin, stderr),
+                rebuilt=rebuilt,
             )
             outcome = declaration.run(call)
             warnings.extend(outcome.warnings)
@@ -74,6 +87,7 @@ def main(
         return 0
     except CoachError as error:
         failed = Message(error.code, error.message, error.details)
+        warnings.extend(error.warnings)
         _write(stdout, envelope.failure(SCHEMA_VERSION, verb, failed, warnings))
         return next(code for kind, code in EXIT_CLASSES if isinstance(error, kind))
     except Exception as error:

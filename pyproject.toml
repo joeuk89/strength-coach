@@ -8,6 +8,7 @@ dependencies = []
 
 [project.scripts]
 coach = "coach.cli.app:run"
+coach-hook = "coach.cli.hook.app:run"
 
 [build-system]
 requires = ["uv_build>=0.7.13,<0.12"]

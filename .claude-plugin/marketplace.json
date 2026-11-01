@@ -1,0 +1,13 @@
+{
+  "name": "strength-coach",
+  "owner": {
+    "name": "Joe Abousselam"
+  },
+  "plugins": [
+    {
+      "name": "coach",
+      "source": "./",
+      "description": "Strength coach engine: the skills and hooks that drive the coach CLI in an instance."
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import sqlite3
 import tomllib
+from contextlib import closing
 from pathlib import Path
 from typing import cast
 
@@ -9,6 +10,8 @@ from coach.core.engine_pin import check_pin
 from coach.core.errors import Setup
 from coach.core.message import Message
 from coach.store.connection import open_store
+from coach.store.export import read_manifest, tables_behind
+from coach.store.rebuild import Rebuilt, rebuild_missing
 
 CONFIG = "coach.toml"
 
@@ -43,3 +46,24 @@ def _pin(document: dict[str, object], path: Path) -> str:
 def open_instance_store(instance: Instance) -> sqlite3.Connection:
     instance.store_path.parent.mkdir(exist_ok=True)
     return open_store(instance.store_path)
+
+
+def rebuild_missing_store(instance: Instance) -> Rebuilt | None:
+    """Rebuild a missing store before any verb opens it (schema.md, "The rebuild")."""
+    instance.store_path.parent.mkdir(exist_ok=True)
+    return rebuild_missing(instance.store_path, instance.export_path)
+
+
+def refuse_a_store_behind_the_export(instance: Instance) -> None:
+    manifest = read_manifest(instance.export_path)
+    if manifest is None:
+        return
+    with closing(open_instance_store(instance)) as conn:
+        behind = tables_behind(conn, manifest)
+    if behind:
+        raise Setup(
+            "store_behind_export",
+            f"export/ holds more rows than the store in {', '.join(behind)}; delete "
+            f"{instance.store_path} so the next verb rebuilds it, or run `coach publish` "
+            "to keep the store as it is",
+        )

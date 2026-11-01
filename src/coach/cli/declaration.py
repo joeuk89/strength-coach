@@ -6,10 +6,15 @@ from typing import Literal
 from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.config import Config
+from coach.core.flag import Flag
 from coach.core.message import Message
+from coach.hevy.protocol import HevyClient
+from coach.store.rebuild import Rebuilt
 
 type Writes = Literal["none", "store", "hevy", "git"]
 type Json = dict[str, object]
+# The real client's wiring: the API key, the Write audit path and the clock (ADR 0019).
+type MakeClient = Callable[[str, Path, Clock], HevyClient]
 
 
 @dataclass(frozen=True)
@@ -49,6 +54,14 @@ class Instance:
     def store_path(self) -> Path:
         return self.root / ".coach" / "coach.db"
 
+    @property
+    def export_path(self) -> Path:
+        return self.root / "export"
+
+    @property
+    def audit_path(self) -> Path:
+        return self.root / "hevy" / "writes.jsonl"
+
 
 @dataclass(frozen=True)
 class Call:
@@ -59,14 +72,15 @@ class Call:
     instance: Instance | None
     env: Mapping[str, str]
     clock: Clock | None
-    make_client: Callable[[], object] | None
+    make_client: MakeClient
     terminal: Terminal
+    rebuilt: Rebuilt | None = None
 
 
 @dataclass(frozen=True)
 class Outcome:
     result: Json
-    warnings: tuple[Message, ...] = ()
+    warnings: tuple[Message | Flag, ...] = ()
 
 
 @dataclass(frozen=True)

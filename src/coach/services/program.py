@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from coach.core.clock import Clock
 from coach.core.config import Config, PlatePoolLocation
 from coach.core.errors import Invalid
+from coach.core.goal import Goal
 from coach.core.kit import KitFiles, location_racks, parse_kit_tables, require_current_tables
 from coach.core.program.checks import AdoptContext, violations
 from coach.core.program.defaults import fill
@@ -71,7 +72,7 @@ def adopt(
         previous = programs.latest(conn)
         version_id = f"pv-{previous.sequence + 1 if previous else 1}"
         start = _position(draft.form, previous, position)
-        goal = goals.current(conn)
+        goal = _current_goal(conn)
         library = {str(row["id"]): row for row in exercises.every(conn)}
         _check_declared(draft.form, library)
         context = AdoptContext(
@@ -92,7 +93,7 @@ def adopt(
         filled = fill(
             draft.form,
             priority_lifts=goal.priority_lifts if goal else (),
-            phase=phases.open_kind(conn),
+            phase=_open_phase_kind(conn),
             session_minutes=config.athlete.session_minutes,
         )
         today = clock.today().isoformat()
@@ -140,6 +141,17 @@ def show(conn: Connection) -> ShowResult:
 
 def show_draft(conn: Connection) -> str:
     return program_draft(_in_force(conn).form)
+
+
+def _current_goal(conn: Connection) -> Goal | None:
+    goal_id = goals.current_id(conn)
+    stored = goals.get(conn, goal_id) if goal_id else None
+    return stored.goal if stored else None
+
+
+def _open_phase_kind(conn: Connection) -> str | None:
+    phase = phases.open_phase(conn)
+    return phase.kind if phase else None
 
 
 def _in_force(conn: Connection) -> programs.VersionRow:

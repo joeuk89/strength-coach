@@ -12,6 +12,7 @@ from support.program_drafts import CUSTOM_EXERCISES, WORKED_DRAFT_COMPLETE, a_dr
 from support.programs import GYM, HOME
 
 from coach.cli import app
+from coach.core.goal import Goal
 from coach.store import exercises, goals
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
@@ -51,8 +52,8 @@ def instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         goals.insert(
             conn,
             id_="g-0001",
-            kind="hypertrophy",
-            priority_lifts=("bb_bench_press", "pull_up"),
+            goal=Goal("hypertrophy", "first goal", ("bb_bench_press", "pull_up"), ""),
+            milestone_ids=(),
             adopted="2026-10-01",
             draft_hash="sha256:g",
             recorded_at="2026-10-01T12:00:00+00:00",

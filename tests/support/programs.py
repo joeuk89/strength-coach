@@ -3,6 +3,8 @@
 from typing import Any
 
 from coach.core.config import Config, parse_config
+from coach.core.goal import Goal, PhaseOpen, Until
+from coach.core.registries.phase import PHASE
 from coach.store import goals, phases
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import Connection
@@ -48,12 +50,13 @@ def a_goal(
     *,
     id_: str = "g-0001",
 ) -> None:
+    goal = Goal(kind=kind, because="first goal", priority_lifts=priority_lifts, why="")
     with conn:
         goals.insert(
             conn,
             id_=id_,
-            kind=kind,
-            priority_lifts=priority_lifts,
+            goal=goal,
+            milestone_ids=(),
             adopted="2026-10-01",
             draft_hash=f"sha256:{id_}",
             recorded_at=RECORDED_AT,
@@ -61,8 +64,19 @@ def a_goal(
 
 
 def a_phase(conn: Connection, kind: str) -> None:
+    phase = PhaseOpen(
+        kind, PHASE.get(kind).default_rate_pct_bw_per_week, Until("coachs_call"), "with the goal"
+    )
     with conn:
-        phases.insert(conn, id_="ph-0001", kind=kind, opened="2026-10-01", opened_by="goal:g-0001")
+        phases.insert(
+            conn,
+            id_="ph-0001",
+            phase=phase,
+            opened="2026-10-01",
+            opened_by="goal:g-0001",
+            draft_hash="sha256:ph-0001",
+            recorded_at=RECORDED_AT,
+        )
 
 
 def the_worked_store() -> Connection:

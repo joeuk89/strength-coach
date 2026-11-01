@@ -7,6 +7,7 @@ from typing import cast
 
 from coach.core.errors import Invalid
 from coach.core.flag import Flag, FlagKey, Scope, raise_flag
+from coach.core.goal import Goal
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
     RACK_MODES,
@@ -27,12 +28,6 @@ ADOPT_WARNING_CODES = frozenset(code.name for code in ADOPT_WARNINGS)
 # The adopt warnings this engine raises; an acknowledgement of any other adopt warning is not
 # judged yet, because adopt cannot tell whether it would have raised it.
 JUDGED_ADOPT_WARNINGS: frozenset[str] = frozenset()
-
-
-@dataclass(frozen=True)
-class Goal:
-    kind: str
-    priority_lifts: tuple[str, ...]
 
 
 @dataclass(frozen=True)

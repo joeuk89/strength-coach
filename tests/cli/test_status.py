@@ -49,10 +49,14 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
         "verb": "status",
         "result": {
             "engine": {"version": RELEASE_ENGINE, "pin": RELEASE_ENGINE},
-            "hevy": {"on": False},
+            "hevy": {"on": False, "last_import": None, "last_import_age_days": None},
+            "workouts": {"hevy": 0, "manual": 0},
             "schema_version": 1,
             "kit": [],
+            "export": {"behind_store": True, "store_behind_export": False},
             "program": None,
+            "goal": None,
+            "phase": None,
         },
         "warnings": [],
     }
@@ -151,7 +155,7 @@ def test_status_reports_hevy_on_when_coach_toml_has_the_hevy_table(
     run = run_coach("status")
 
     assert run.code == 0
-    assert run.envelope["result"]["hevy"] == {"on": True}
+    assert run.envelope["result"]["hevy"]["on"] is True
 
 
 def test_an_unknown_key_in_coach_toml_stops_status_with_config_unknown_key(

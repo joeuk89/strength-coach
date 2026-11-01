@@ -1,0 +1,26 @@
+{
+  "description": "Open each session with coach status; gate the asked coach verbs and raw Hevy calls.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v coach-hook >/dev/null && coach-hook session-start || echo \"coach engine not installed: uv tool install git+https://github.com/joeuk89/strength-coach\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v coach-hook >/dev/null && coach-hook pre-tool-use || echo \"coach engine not installed: uv tool install git+https://github.com/joeuk89/strength-coach\""
+          }
+        ]
+      }
+    ]
+  }
+}
