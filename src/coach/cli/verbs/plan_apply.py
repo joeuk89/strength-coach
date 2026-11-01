@@ -1,6 +1,6 @@
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome, on_dry_run
 from coach.cli.drafts import read_draft
 from coach.cli.hevy_key import api_key
 from coach.cli.instance import open_instance_store
@@ -102,6 +102,7 @@ DECLARATION = Declaration(
     ),
     writes="hevy",
     needs_instance=True,
+    over_budget=on_dry_run,
     arguments=(
         Argument("draft", "path of the TOML plan Draft", required=True),
         Argument(

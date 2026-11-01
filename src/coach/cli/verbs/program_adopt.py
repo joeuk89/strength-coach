@@ -1,6 +1,6 @@
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome, on_dry_run
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
@@ -55,6 +55,7 @@ DECLARATION = Declaration(
     ),
     writes="store",
     needs_instance=True,
+    over_budget=on_dry_run,
     arguments=(
         Argument("draft", "path of the TOML program Draft", required=True),
         Argument(

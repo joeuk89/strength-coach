@@ -14,6 +14,7 @@ from coach.store.rebuild import Rebuilt
 type Writes = Literal["none", "store", "hevy", "git"]
 type Json = dict[str, object]
 type ArgValue = str | bool | tuple[str, ...]
+type OverBudget = Callable[[Mapping[str, ArgValue]], bool]
 # The real client's wiring: the API key, the Write audit path and the clock (ADR 0019).
 type MakeClient = Callable[[str, Path, Clock], HevyClient]
 
@@ -85,6 +86,18 @@ class Outcome:
     warnings: tuple[Message | Flag, ...] = ()
 
 
+def never(args: Mapping[str, ArgValue]) -> bool:
+    return False
+
+
+def always(args: Mapping[str, ArgValue]) -> bool:
+    return True
+
+
+def on_dry_run(args: Mapping[str, ArgValue]) -> bool:
+    return args.get("dry_run") is True
+
+
 @dataclass(frozen=True)
 class Declaration:
     name: str
@@ -97,6 +110,8 @@ class Declaration:
     examples: tuple[Example, ...] = ()
     # The one verb that writes [engine]: it runs on an engine newer than the pin (ADR 0007).
     moves_pin: bool = False
+    # Output the agent must act on in full may run over the 3 KB budget (verbs.md).
+    over_budget: OverBudget = never
 
     def input_schema(self) -> Json:
         properties: Json = {
