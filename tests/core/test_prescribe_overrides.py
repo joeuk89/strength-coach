@@ -101,7 +101,22 @@ def test_a_pin_replaces_the_working_load_and_still_rounds_to_the_rack() -> None:
     )
     assert line.groups[-1].load == Load(100, "total")
     assert line.change == "4×6–8 @8: 120 → 100"
-    assert line.flags == ()
+
+
+def test_a_pin_between_grid_loads_is_load_off_grid_naming_the_rows_either_side() -> None:
+    line = the_line(on_squat("pin_load", load=101))
+
+    assert [(f.code, dict(f.params)) for f in line.flags] == [
+        (
+            "load_off_grid",
+            {
+                "load": 101,
+                "implement": "barbell",
+                "location": "home",
+                "nearest_grid_loads": [100, 105],
+            },
+        )
+    ]
 
 
 def test_a_pin_more_than_one_row_above_the_anchor_warns_increment_over_step() -> None:
@@ -114,6 +129,16 @@ def test_a_pin_more_than_one_row_above_the_anchor_warns_increment_over_step() ->
             {"increment": 10, "scheme_step": 5, "from_exposure": "exposure:h-1/bb_back_squat"},
         )
     ]
+
+
+def test_a_pin_over_the_top_of_the_rack_names_the_top_row_alone() -> None:
+    line = the_line(on_squat("pin_load", load=195))
+
+    [off_grid] = [f for f in line.flags if f.code == "load_off_grid"]
+    assert off_grid.params["nearest_grid_loads"] == [190]
+    assert off_grid.message == (
+        "the pinned 195 is not a row of the barbell rack at home; nearest 190"
+    )
 
 
 def test_a_pin_one_row_above_the_anchor_raises_nothing() -> None:
@@ -178,7 +203,7 @@ def test_a_pin_on_a_line_with_no_exposure_and_no_start_load_sets_the_working_loa
         Step("rack", 101, 100, "row"),
     )
     assert line.groups[-1].load == Load(100, "total")
-    assert line.flags == ()
+    assert [f.code for f in line.flags] == ["load_off_grid"]
 
 
 def test_a_pin_on_a_swap_with_no_history_and_no_start_load_sets_the_working_load() -> None:

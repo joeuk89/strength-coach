@@ -418,6 +418,21 @@ def test_a_pin_load_over_a_safety_ceiling_is_load_off_grid() -> None:
     ]
 
 
+def test_an_off_grid_pin_over_a_safety_ceiling_is_one_flag_naming_the_ceiling() -> None:
+    pin = PlanOverride("pin_load", "lower", "bb_back_squat", params={"load": 121})
+
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        decisions=(SQUAT_CEILING,),
+        overrides=(pin,),
+    )
+
+    assert [(f.code, f.params["nearest_grid_loads"], f.message) for f in line.flags] == [
+        ("load_off_grid", [110], "the pinned 121 is over the safety ceiling of 110")
+    ]
+
+
 def test_a_wave_531_return_line_drops_the_rep_out_and_cuts_the_training_max() -> None:
     wave = a_line("bb_bench_press", SetGroup(3, "working"), scheme="wave_531", start_load=100)
     logged = an_exposure("2026-10-03", (65, 5, None), (75, 5, None), (85, 8, None))

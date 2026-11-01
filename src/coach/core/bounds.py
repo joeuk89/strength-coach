@@ -42,7 +42,7 @@ from coach.core.prescription import (
     StepValue,
 )
 from coach.core.program.form import Line, Number, SetGroup
-from coach.core.rack import Rack, Rounding, round_to_rack
+from coach.core.rack import Rack, Rounding, on_rack, round_to_rack, rows_beside
 
 TEST_SCHEMES = ("top_backoff", "wave_531")
 TEST_RPE = 9
@@ -322,27 +322,50 @@ class _Bounding:
             self.loads = tuple(r.load for r in rounded)
             cause = "rack_top" if any(r.cause == "rack_top" for r in rounded) else "row"
             self.steps.append(Step("rack", before, self._amounts(), cause))
+        pin = self._pin()
         ceiling = safety_ceiling(self.context.request.decisions, self.context.line.exercise)
         if ceiling is None or not self.loads:
+            self._pin_on_rack(pin, rack)
             return
         limit = Load(ceiling, self.loads[0].mode)
         if rack is not None:
             limit = round_to_rack(rack, limit, "cut").load
         self.load_ceilings.append(limit)
-        pin = self._pin()
         if pin is not None and harder(pin, limit):
-            self._raise(
-                "load_off_grid",
-                {
-                    "load": pin.amount,
-                    "implement": self.context.exercise.equipment_kind,
-                    "location": self.context.request.planned.location,
-                    "nearest_grid_loads": [limit.amount],
-                },
+            self._off_grid(
+                pin,
+                [limit.amount],
                 f"the pinned {pin.amount:g} is over the safety ceiling of {ceiling:g}",
             )
+        else:
+            self._pin_on_rack(pin, rack)
         if not self._limit("rack", limit, "safety_ceiling", lowers_rounding=False):
             self.steps.append(Step("rack", ceiling, self._amounts(), "not_binding"))
+
+    def _pin_on_rack(self, pin: Load | None, rack: Rack | None) -> None:
+        if pin is None or rack is None or on_rack(rack, pin.amount):
+            return
+        nearest = list(rows_beside(rack, pin.amount))
+        implement = self.context.exercise.equipment_kind
+        location = self.context.request.planned.location
+        self._off_grid(
+            pin,
+            nearest,
+            f"the pinned {pin.amount:g} is not a row of the {implement} rack at {location}; "
+            f"nearest {', '.join(f'{load:g}' for load in nearest)}",
+        )
+
+    def _off_grid(self, pin: Load, nearest: list[float], message: str) -> None:
+        self._raise(
+            "load_off_grid",
+            {
+                "load": pin.amount,
+                "implement": self.context.exercise.equipment_kind,
+                "location": self.context.request.planned.location,
+                "nearest_grid_loads": nearest,
+            },
+            message,
+        )
 
     def _test(self) -> Load | None:
         request = self.context.request

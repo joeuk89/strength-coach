@@ -19,7 +19,7 @@ from coach.core.program.form import (
     Session,
     SetGroup,
 )
-from coach.core.rack import Rack
+from coach.core.rack import Rack, on_rack, rows_beside
 from coach.core.registries.program import LOAD_MODES
 from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
@@ -340,12 +340,8 @@ class _Checks:
                 f"{location} maps no implement to {kind} in its implements",
             )
             return
-        if line.start_load is not None and not rack.rows_within(line.start_load, line.start_load):
-            nearest = [
-                row.load
-                for row in (rack.row_below(line.start_load), rack.row_above(line.start_load))
-                if row
-            ]
+        if line.start_load is not None and not on_rack(rack, line.start_load):
+            nearest = list(rows_beside(rack, line.start_load))
             self.raise_(
                 "start_load_off_rack",
                 scope,
