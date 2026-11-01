@@ -50,7 +50,7 @@ the instance; the athlete commits two files to their own repo.
   warning lets a plan freeze loads the rack cannot build. `status` reports it. No hash is ever
   stored in the store.
 - **No kit import.** The `kit_snapshot` table, the `ks-` prefix, `import --only kit`, the
-  plate-pool source of `snapshot_stale` and the kit lines of `import` and `status` go. `import`
+  plate-pool source of the import-age warning and the kit lines of `import` and `status` go. `import`
   is Hevy's alone. `core/kit.py` keeps its job; `cli` reads the committed file and hands it to
   the service as a value, so no fetch exists anywhere.
 - **`frozen_load_off_snapshot` becomes `frozen_load_off_rack`, raised by `plan draft`.** With no

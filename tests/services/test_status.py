@@ -106,19 +106,6 @@ def test_status_reports_the_age_of_the_last_import_and_the_workouts_read() -> No
     assert [w.key for w in result.warnings] == [f"exercise_unmapped@workout:{B}"]
 
 
-def test_status_warns_snapshot_stale_past_seven_days_while_hevy_is_on() -> None:
-    conn = open_store(":memory:")
-    clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock), clock, full=True, units="kg")
-    later = FixedClock(clock.moment + datetime.timedelta(days=8))
-
-    on = status_of(conn, clock=later)
-    off = status_of(conn, clock=later, hevy_on=False)
-
-    assert [w.key for w in on.warnings] == ["snapshot_stale@instance"]
-    assert off.warnings == ()
-
-
 def test_status_reports_each_plate_pool_locations_kit_tables_current_or_stale() -> None:
     conn = open_store(":memory:")
     home = KitFiles("home", "home", {"inventory_sha256": "abc"}, "abc")

@@ -223,14 +223,6 @@ def imported(
     import_hevy(conn, FakeHevy(moment, workouts=list(workouts)), moment, full=True, units="lb")
 
 
-def snapshot_stale(_: Path, __: pytest.MonkeyPatch) -> Standing:
-    conn = a_store()
-    imported(conn)
-    raised = status_codes(conn, hevy_on=True)
-    imported(conn, clock=FixedClock(at(TODAY)))
-    return Standing(raised, status_codes(conn, hevy_on=True))
-
-
 def workout_reappeared(_: Path, __: pytest.MonkeyPatch) -> Standing:
     conn = a_store()
     imported(conn, a_workout(WORKOUT))
@@ -331,7 +323,6 @@ def generated_file_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Sta
 SCENARIOS: dict[str, Scenario] = {
     "engine_pin_dev": engine_pin_dev,
     "generated_file_drift": generated_file_drift,
-    "snapshot_stale": snapshot_stale,
     "workout_reappeared": workout_reappeared,
     "exercise_unmapped": exercise_unmapped,
     "routine_drift": routine_drift,

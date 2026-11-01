@@ -1,12 +1,8 @@
-import datetime
 from collections.abc import Collection, Iterable, Sequence
 
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.log import WorkoutVersion
 from coach.core.routine_projection import drift_class
-
-# research-notes.md: a plan reads last week's exposures, so a mirror older than a week is stale.
-SNAPSHOT_AGE_LIMIT_DAYS = 7
 
 
 def workout_reappeared(workout_id: str, noticed_at: str, updated_at: str) -> Flag:
@@ -42,17 +38,6 @@ def exercise_unmapped(
             )
         )
     return tuple(flags)
-
-
-def snapshot_stale(last_import: datetime.datetime | None, now: datetime.datetime) -> Flag | None:
-    if last_import is None or now - last_import <= datetime.timedelta(SNAPSHOT_AGE_LIMIT_DAYS):
-        return None
-    return raise_flag(
-        "snapshot_stale",
-        Scope("instance"),
-        {"last_import": last_import.date().isoformat(), "age_limit_days": SNAPSHOT_AGE_LIMIT_DAYS},
-        f"the last Hevy import was {(now - last_import).days} days ago; run `coach import`",
-    )
 
 
 def routine_drift(routine_id: str, plan_id: str, diff: Sequence[str]) -> Flag:

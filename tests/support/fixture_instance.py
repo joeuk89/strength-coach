@@ -75,14 +75,12 @@ STANDING: tuple[tuple[str, str, float], ...] = (
 def generate(root: Path) -> None:
     """Build the instance in `root`, an empty directory the caller has made the working one, with
     `app.engine_version` reporting PIN and git's identity set."""
-    clock = FixedClock(at(TODAY))
+    clock = FixedClock(at(ADOPTED))
     hevy = FakeHevy(clock)
     coach = _coach(clock, hevy)
     _ok(coach("init", "--defaults", "--timezone", "UTC", "--units", "lb", "--hevy", "yes"))
     _athlete_files(root)
     _library(root)
-    clock.moment = at(ADOPTED)
-    _ok(coach("import"))
     _ok(coach("goal", "adopt", _draft(root, "goal", GOAL)))
     _ok(coach("program", "adopt", _draft(root, "program", toml(_program()).decode())))
     _history(root)

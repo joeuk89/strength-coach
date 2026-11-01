@@ -1,47 +1,24 @@
-from dataclasses import asdict
-
 from coach.cli.declaration import (
     Argument,
     Declaration,
     Example,
     InInstance,
     InstanceCall,
-    Json,
     Outcome,
 )
-from coach.cli.hevy_key import api_key
 from coach.cli.instance import open_instance_store
-from coach.services.hevy_import import ImportResult, import_hevy
+from coach.cli.pull import PULL_PROPERTIES, REBUILT_PROPERTIES, pull, rebuilt_json
 
 
 def run(call: InstanceCall) -> Outcome:
-    instance = call.instance
-    rebuilt: Json | None = (
-        None if call.rebuilt is None else {"schema_version": call.rebuilt.schema_version}
-    )
-    if instance.config.hevy is None:
-        return Outcome({"skipped": True, "rebuilt": rebuilt})
-    key = api_key(call.env, instance.root / ".env")
-    client = call.make_client(key, instance.audit_path, call.clock)
-    with open_instance_store(instance) as conn:
+    rebuilt = rebuilt_json(call.rebuilt)
+    with open_instance_store(call.instance) as conn:
         # The global --full also names the full pull here (verbs.md, `import [--full]`).
-        result = import_hevy(conn, client, call.clock, full=call.full, units=instance.units)
-    return Outcome({"rebuilt": rebuilt, **_summary(result)}, warnings=result.warnings)
+        pulled = pull(call, conn, call.instance, call.clock, full=call.full)
+    if pulled is None:
+        return Outcome({"skipped": True, "rebuilt": rebuilt})
+    return Outcome({"rebuilt": rebuilt, **pulled.summary}, warnings=pulled.warnings)
 
-
-def _summary(result: ImportResult) -> Json:
-    return {
-        "kind": result.kind,
-        "window": {"since": result.since, "until": result.at},
-        "workouts": asdict(result.workouts),
-        "weigh_ins": result.weigh_ins,
-        "routines": result.routines,
-        "folders": result.folders,
-    }
-
-
-_COUNT = {"type": "integer"}
-_NULLABLE_TEXT = {"type": ["string", "null"]}
 
 DECLARATION = Declaration(
     name="import",
@@ -63,20 +40,9 @@ DECLARATION = Declaration(
             "skipped": {"type": "boolean"},
             "rebuilt": {
                 "type": ["object", "null"],
-                "properties": {"schema_version": _COUNT},
+                "properties": REBUILT_PROPERTIES,
             },
-            "kind": {"enum": ["event", "full"]},
-            "window": {
-                "type": "object",
-                "properties": {"since": _NULLABLE_TEXT, "until": {"type": "string"}},
-            },
-            "workouts": {
-                "type": "object",
-                "properties": {k: _COUNT for k in ("new", "versioned", "gone", "back")},
-            },
-            "weigh_ins": _COUNT,
-            "routines": _COUNT,
-            "folders": _COUNT,
+            **PULL_PROPERTIES,
         },
         "required": ["rebuilt"],
     },

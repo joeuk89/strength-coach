@@ -372,7 +372,6 @@ OUTSIDE_WARNINGS = (
     outside_warning(
         "frozen_load_off_rack", ("session",), ("week", "line", "frozen_load", "location")
     ),
-    outside_warning("snapshot_stale", ("instance",), ("last_import", "age_limit_days")),
     outside_warning(
         "cadence_slow",
         ("exercise",),

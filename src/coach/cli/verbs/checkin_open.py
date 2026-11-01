@@ -13,6 +13,7 @@ from coach.cli.declaration import (
     always,
 )
 from coach.cli.instance import open_instance_store
+from coach.cli.pull import PULL_SCHEMA
 from coach.core.check_in_card import CardField
 from coach.core.errors import Invalid
 from coach.core.registries.ledger import READINESS
@@ -91,7 +92,8 @@ DECLARATION = Declaration(
         "prefilled from the store with `asks` for what only the athlete knows; a field with "
         "nothing to say is left out. The outside-plan codes it owns come in warnings[]."
     ),
-    writes="none",
+    writes="store",
+    pulls_first=True,
     over_budget=always,
     arguments=(
         Argument("--date", "the check-in's date (default today)"),
@@ -105,6 +107,7 @@ DECLARATION = Declaration(
     output={
         "type": "object",
         "properties": {
+            "pull": PULL_SCHEMA,
             "tier": {"enum": list(TIERS)},
             "window": {
                 "type": "object",

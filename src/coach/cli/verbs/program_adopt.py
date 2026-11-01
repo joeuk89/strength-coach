@@ -11,6 +11,7 @@ from coach.cli.declaration import (
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
+from coach.cli.pull import PULL_SCHEMA
 from coach.services.program import AdoptResult, adopt
 
 
@@ -60,6 +61,7 @@ DECLARATION = Declaration(
         "Block. The same file again is a no-op with the same version."
     ),
     writes="store",
+    pulls_first=True,
     over_budget=on_dry_run,
     arguments=(
         Argument("draft", "path of the TOML program Draft", required=True),
@@ -75,6 +77,7 @@ DECLARATION = Declaration(
     output={
         "type": "object",
         "properties": {
+            "pull": PULL_SCHEMA,
             "version": {"type": "string"},
             "kind": {"enum": ["amend", "redesign"]},
             "position": {"type": "string"},

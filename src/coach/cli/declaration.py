@@ -17,6 +17,7 @@ type ArgValue = str | bool | tuple[str, ...]
 type OverBudget = Callable[[Mapping[str, ArgValue]], bool]
 # The real client's wiring: the API key, the Write audit path and the clock (ADR 0019).
 type MakeClient = Callable[[str, Path, Clock], HevyClient]
+type MakeClock = Callable[[str], Clock]
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ class Call:
     engine_version: str
     env: Mapping[str, str]
     make_client: MakeClient
+    make_clock: MakeClock
     terminal: Terminal
 
 
@@ -132,6 +134,8 @@ class Declaration:
     examples: tuple[Example, ...] = ()
     # The one verb that writes [engine]: it runs on an engine newer than the pin (ADR 0007).
     moves_pin: bool = False
+    # A verb whose result derives from workouts pulls Hevy before it runs (verbs.md, "The pull").
+    pulls_first: bool = False
     # Output the agent must act on in full may run over the 3 KB budget (verbs.md).
     over_budget: OverBudget = never
 

@@ -7,13 +7,20 @@ from coach.hevy.client import KEY_NAME
 
 def api_key(env: Mapping[str, str], dotenv: Path) -> str:
     """The Hevy API key from the environment, else from `.env` (ADR 0011, "The client")."""
-    for value in (env.get(KEY_NAME), _from_dotenv(dotenv)):
-        if value and value.strip():
-            return value.strip()
+    key = find_key(env, dotenv)
+    if key is not None:
+        return key
     raise Setup(
         "hevy_key_missing",
         f"no {KEY_NAME} in the environment or in {dotenv}; set it to your Hevy API key",
     )
+
+
+def find_key(env: Mapping[str, str], dotenv: Path) -> str | None:
+    for value in (env.get(KEY_NAME), _from_dotenv(dotenv)):
+        if value and value.strip():
+            return value.strip()
+    return None
 
 
 def _from_dotenv(path: Path) -> str | None:

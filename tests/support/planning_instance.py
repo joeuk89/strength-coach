@@ -4,12 +4,14 @@ one-session squat version adopted through `program adopt`."""
 import shutil
 from pathlib import Path
 
+from coach.core.clock import Clock
 from coach.core.goal import Goal
 from coach.store import exercises, goals
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import Connection, open_store
 from support.cli import Run, run_coach
 from support.clock import FixedClock
+from support.fake_hevy import FakeHevy
 from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
 from support.plans import SQUAT_LINE, SQUAT_TEMPLATE
@@ -18,10 +20,17 @@ from support.programs import GYM, HOME
 
 ENGINE = "0.3.0"
 CLOCK = FixedClock()
+KEY = {"HEVY_API_KEY": "a-key"}
 
 
-def coach(*argv: str) -> Run:
-    return run_coach(*argv, clock=CLOCK)
+def coach(*argv: str, hevy: FakeHevy | None = None) -> Run:
+    """Run `coach` with a key and Hevy serving `hevy`, else an empty account."""
+    held = hevy or FakeHevy(CLOCK)
+
+    def serving(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
+        return held
+
+    return run_coach(*argv, env=KEY, clock=CLOCK, make_client=serving)
 
 
 def a_planning_instance(root: Path, *, hevy: bool = False) -> Path:

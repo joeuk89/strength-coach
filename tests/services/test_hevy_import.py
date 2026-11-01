@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 import pytest
-from support.clock import NOON, FixedClock
+from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.hevy_fixtures import hevy_fixture
 from support.hevy_payloads import (
@@ -319,61 +319,6 @@ def test_an_unreachable_hevy_writes_nothing() -> None:
         import_hevy(conn, fake, clock, full=True, units="kg")
 
     assert (current_workouts(conn), routines(conn), last_import_at(conn)) == ((), (), None)
-
-
-EIGHT_DAYS_AGO = NOON - datetime.timedelta(days=8)
-
-
-def test_an_unreachable_hevy_after_a_week_without_an_import_warns_snapshot_stale() -> None:
-    conn = open_store(":memory:")
-    import_hevy(
-        conn,
-        FakeHevy(FixedClock(EIGHT_DAYS_AGO)),
-        FixedClock(EIGHT_DAYS_AGO),
-        full=True,
-        units="kg",
-    )
-    clock = FixedClock()
-    fake = FakeHevy(clock)
-    fake.fail_next_get()
-
-    with pytest.raises(Unreachable) as raised:
-        import_hevy(conn, fake, clock, full=False, units="kg")
-
-    assert raised.value.code == "hevy_unreachable"
-    assert [(w.code, w.params) for w in raised.value.warnings] == [
-        ("snapshot_stale", {"last_import": "2026-10-22", "age_limit_days": 7}),
-    ]
-
-
-def test_an_unreachable_hevy_inside_the_week_raises_no_snapshot_stale() -> None:
-    conn = open_store(":memory:")
-    recent = NOON - datetime.timedelta(days=3)
-    import_hevy(conn, FakeHevy(FixedClock(recent)), FixedClock(recent), full=True, units="kg")
-    clock = FixedClock()
-    fake = FakeHevy(clock)
-    fake.fail_next_get()
-
-    with pytest.raises(Unreachable) as raised:
-        import_hevy(conn, fake, clock, full=False, units="kg")
-
-    assert raised.value.warnings == ()
-
-
-def test_an_import_after_a_week_closes_the_gap_and_raises_no_snapshot_stale() -> None:
-    conn = open_store(":memory:")
-    import_hevy(
-        conn,
-        FakeHevy(FixedClock(EIGHT_DAYS_AGO)),
-        FixedClock(EIGHT_DAYS_AGO),
-        full=True,
-        units="kg",
-    )
-    clock = FixedClock()
-
-    result = import_hevy(conn, FakeHevy(clock), clock, full=False, units="kg")
-
-    assert [w.code for w in result.warnings] == []
 
 
 def test_an_import_records_its_run_with_a_summary() -> None:

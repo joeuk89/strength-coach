@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 from support.cli import run_coach
@@ -45,3 +46,18 @@ def test_every_example_prints_exactly_one_json_document(
     document = json.loads(run.stdout)
     assert document["verb"] == declaration.name
     assert run.stdout.count("\n") == 1
+
+
+PULLING = {"checkin open", "plan draft", "progress", "program adopt"}
+
+
+def test_exactly_the_verbs_that_derive_from_workouts_pull_first() -> None:
+    assert {d.name for d in declarations() if d.pulls_first} == PULLING
+
+
+def test_a_pulling_verb_declares_a_store_write_and_its_pull() -> None:
+    for declaration in (d for d in declarations() if d.pulls_first):
+        properties = cast(dict[str, object], declaration.output["properties"])
+
+        assert (declaration.name, declaration.writes) == (declaration.name, "store")
+        assert "pull" in properties, declaration.name
