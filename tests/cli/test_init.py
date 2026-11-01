@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import tomllib
@@ -12,6 +13,8 @@ from support.instances import an_instance
 
 from coach.cli import app
 from coach.cli.registry import declarations
+from coach.store.catalogue import seed_catalogue
+from coach.store.connection import open_store
 
 RELEASE = "0.3.0"
 DEV = "0.4.0.dev0"
@@ -439,3 +442,23 @@ def test_a_commit_git_refuses_is_a_setup_error_that_says_how_to_finish(
     assert error["code"] == "git_commit_failed"
     assert "hook says no" in error["message"]
     assert f"git commit -m 'coach init v{RELEASE}'" in error["message"]
+
+
+def test_init_seeds_the_store_with_every_catalogue_row(
+    empty_directory: Path, release: None
+) -> None:
+    catalogue = open_store(":memory:")
+    seed_catalogue(catalogue)
+
+    run_coach("init", "--defaults")
+
+    store = sqlite3.connect(empty_directory / ".coach" / "coach.db")
+    seeded = store.execute("SELECT * FROM exercise ORDER BY id").fetchall()
+    sources = store.execute("SELECT DISTINCT source FROM exercise").fetchall()
+    bench = store.execute(
+        "SELECT name, load_mode, equipment_kind FROM exercise WHERE id = 'bb_bench_press'"
+    ).fetchone()
+    store.close()
+    assert seeded == catalogue.execute("SELECT * FROM exercise ORDER BY id").fetchall()
+    assert sources == [("catalogue",)]
+    assert bench == ("Bench Press (Barbell)", "total", "barbell")
