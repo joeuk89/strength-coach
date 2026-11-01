@@ -189,9 +189,22 @@ def apply(
     kits: Sequence[KitFiles],
     clock: Clock,
 ) -> ApplyResult:
-    """The approved push. Guards run before any write; the WeekPlan is frozen before the first
-    Hevy write, so approval survives a failed push and a re-run resumes it. `client` is None
-    without a `[hevy]` table."""
+    """The approved push: `expected`, then `push_approved`."""
+    found = expected(conn, data, file=file, expect=expect, config=config, kits=kits, clock=clock)
+    return push_approved(conn, client, data, found, config=config, clock=clock)
+
+
+def expected(
+    conn: Connection,
+    data: bytes,
+    *,
+    file: str,
+    expect: str | None,
+    config: Config,
+    kits: Sequence[KitFiles],
+    clock: Clock,
+) -> DryRun:
+    """The dry run, refused unless its hash is the one the athlete approved."""
     if expect is None:
         raise Refused(
             "expect_missing",
@@ -205,6 +218,21 @@ def apply(
             f"the Write plan is now {found.write_plan_hash}, not the approved {expect}; run "
             "plan apply --dry-run again for the athlete to approve",
         )
+    return found
+
+
+def push_approved(
+    conn: Connection,
+    client: HevyClient | None,
+    data: bytes,
+    found: DryRun,
+    *,
+    config: Config,
+    clock: Clock,
+) -> ApplyResult:
+    """Guards run before any write; the WeekPlan is frozen before the first Hevy write, so
+    approval survives a failed push and a re-run resumes it. `client` is None without a
+    `[hevy]` table."""
     guarded = None if client is None else guard(conn, client, found.actions)
     now = clock.now()
     plan_id = found.resumes or _approve(conn, found, data, config.athlete.units, now)
