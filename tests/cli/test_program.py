@@ -12,6 +12,7 @@ from support.program_drafts import CUSTOM_EXERCISES, WORKED_DRAFT_COMPLETE, a_dr
 from support.programs import GYM, HOME
 
 from coach.cli import app
+from coach.core.config import WEEKDAYS
 from coach.core.goal import Goal
 from coach.store import exercises, goals
 from coach.store.catalogue import seed_catalogue
@@ -28,6 +29,8 @@ def instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
     root = an_instance(tmp_path / "athlete", pin=ENGINE, location={"home": HOME, "gym": GYM})
     text = (root / "coach.toml").read_text().replace('units = "kg"', 'units = "lb"', 1)
+    every_day = ", ".join(f'"{day}"' for day in WEEKDAYS)
+    text = text.replace('"monday", "wednesday", "friday"', every_day, 1)
     (root / "coach.toml").write_text(text)
     (root / "kit").mkdir()
     shutil.copyfile(INVENTORY, root / "kit" / "home.json")
@@ -94,6 +97,25 @@ def test_program_adopt_records_the_worked_draft(instance: Path) -> None:
     }
 
 
+def test_program_adopt_puts_its_warnings_in_the_envelope_with_their_rn(instance: Path) -> None:
+    run = coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
+
+    [warning] = run.envelope["warnings"]
+    assert warning["key"] == "scheme_off_emphasis@line:a-sat-pull/pull_up"
+    assert warning["severity"] == "warning" and warning["rn"] == "rn:goal-programming §4"
+    assert warning["params"]["scheme"] == "hold"
+    assert warning["left"]["because"] == "coach_judgement"
+
+
+def test_a_stale_acknowledgement_is_exit_1_acknowledgement_unmatched(instance: Path) -> None:
+    stale = WORKED_DRAFT_COMPLETE.replace("a-sat-pull/pull_up", "a-sat-pull/assisted_pull_up")
+
+    run = coach("program", "adopt", a_draft_file(instance, stale))
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == "acknowledgement_unmatched"
+
+
 def test_program_adopt_dry_run_shows_the_diff_and_start_loads_and_writes_nothing(
     instance: Path,
 ) -> None:
@@ -109,7 +131,9 @@ def test_program_adopt_dry_run_shows_the_diff_and_start_loads_and_writes_nothing
         "units": "lb",
         "kg": 54.4311,
     }
-    assert result["violations"] == [] and result["warnings"] == []
+    assert [(w["key"], w["left"]["source"]) for w in run.envelope["warnings"]] == [
+        ("scheme_off_emphasis@line:a-sat-pull/pull_up", "version")
+    ]
     conn = sqlite3.connect(instance / ".coach" / "coach.db")
     assert conn.execute("SELECT count(*) FROM program_version").fetchone() == (0,)
 
