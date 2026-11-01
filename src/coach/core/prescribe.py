@@ -9,6 +9,7 @@ from typing import cast
 
 from coach.core.anchor import StartLoad, anchor
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
+from coach.core.cut import close_rep_outs
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
@@ -23,7 +24,7 @@ from coach.core.prescription import (
     SessionPrescription,
     Step,
 )
-from coach.core.program.form import LOAD_BEARING_MODES, RACK_MODES, Line, Number, SetGroup
+from coach.core.program.form import LOAD_BEARING_MODES, RACK_MODES, Line, Number, Reps, SetGroup
 from coach.core.rack import Rack, next_row_up
 from coach.core.scheme_moves import Move, SchemeInput, SchemeMoves
 from coach.core.top_backoff import back_off_load
@@ -274,6 +275,9 @@ class _Derivation:
             if not group.working:
                 groups.append(_group(group, None))
                 continue
+            if bounded.set_loads:
+                groups.extend(_per_set(group, bounded))
+                continue
             load = working if top else self._back_off(line, rack, working)
             top = False
             groups.append(_group(group, load, rpe_cap=bounded.rpe_cap))
@@ -300,15 +304,28 @@ def _group(
     *,
     count: int | None = None,
     rpe_cap: Number | None = None,
+    reps: Reps | None = None,
 ) -> PrescribedGroup:
     return PrescribedGroup(
         group.type,
         group.count if count is None else count,
         load,
-        group.reps,
+        group.reps if reps is None else reps,
         group.duration_s,
         group.rpe,
         rpe_cap,
+    )
+
+
+def _per_set(group: SetGroup, bounded: Bounded) -> tuple[PrescribedGroup, ...]:
+    """The group as one set per load; every set but the last at the closed reps."""
+    last = len(bounded.set_loads) - 1
+    closed = close_rep_outs((group,))[0].reps
+    return tuple(
+        _group(
+            group, load, count=1, rpe_cap=bounded.rpe_cap, reps=group.reps if i == last else closed
+        )
+        for i, load in enumerate(bounded.set_loads)
     )
 
 

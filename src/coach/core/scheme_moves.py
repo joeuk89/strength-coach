@@ -2,7 +2,7 @@
 with no exposure anywhere (docs/spec/prescription.md, "The move, per scheme" and "Stalls")."""
 
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from coach.core.anchor import StartLoad, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
@@ -18,6 +18,17 @@ from coach.core.program.form import LOAD_BEARING_MODES, Line, SetGroup
 from coach.core.progression import Verdict, judge
 from coach.core.rack import Rack, Rounding, next_row_up
 from coach.core.top_backoff import top_set
+from coach.core.wave_531 import (
+    REP_OUTS,
+    TrainingMax,
+    rep_out,
+    rep_out_target,
+    rep_outs_due,
+    training_max,
+    wave_index,
+    wave_of,
+    wave_targets,
+)
 
 
 @dataclass(frozen=True)
@@ -90,6 +101,8 @@ class SchemeMoves:
             first = Load(rungs(self.line)[0], "assisted")
             self.steps.append(Step("scheme", None, first.amount, "first_rung"))
             return self._held(first)
+        if self.line.scheme.name == "wave_531":
+            return self._wave(None)
         return self._held(self._start_load(found))
 
     def move(self, exposure: Exposure, before: Load | None) -> Move:
@@ -97,6 +110,8 @@ class SchemeMoves:
             return self._climb(exposure, before)
         if self.line.scheme.name == "top_backoff":
             return self._top(before)
+        if self.line.scheme.name == "wave_531":
+            return self._wave(exposure)
         verdict = self._judge(exposure, before)
         rack = self.given.rack
         if verdict.hit and before is not None and rack is not None:
@@ -152,6 +167,51 @@ class SchemeMoves:
         if top.load != before:
             self.steps.append(Step("scheme", before.amount, top.load.amount, top.cause))
         return Move(top.load, "hold", self.given.sets)
+
+    def _wave(self, exposure: Exposure | None) -> Move:
+        tm = training_max(
+            self.given.request.decisions, self.line.exercise, self.line.start_load, self.given.mode
+        )
+        if tm is None:
+            self._start_load(StartLoad(None))
+            return self._held(None)
+        index = wave_index(self.given.request.hard_week_count)
+        count = sum(group.count for group in self.given.sets if group.working)
+        targets = wave_targets(tm.load, index, count)
+        wave = f"wave {index + 1}"
+        self.steps.append(Step("scheme", tm.load.amount, tuple(t.amount for t in targets), wave))
+        if exposure is not None:
+            self._read_rep_outs(exposure, tm)
+        sets = tuple(
+            replace(group, reps=REP_OUTS[index]) if group.working else group
+            for group in self.given.sets
+        )
+        return Move(targets, "cut", sets, f"{wave}: training max {tm.load.amount:g}")
+
+    def _read_rep_outs(self, exposure: Exposure, tm: TrainingMax) -> None:
+        rack = self.given.rack
+        index = wave_of(exposure, tm.load, rack)
+        if index is not None and (reps := rep_out(exposure)) < (target := rep_out_target(index)):
+            self._raise(
+                "rep_range_missed",
+                {
+                    "set_index": len(exposure.working),
+                    "reps": reps,
+                    "range": [target, target],
+                    "logged_rpe": exposure.working[-1].rpe,
+                    "authored_rpe": None,
+                },
+                f"the rep-out logged {reps} reps, short of wave {index + 1}'s {target}",
+            )
+        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        rep_outs = rep_outs_due(history, tm.load, rack)
+        if rep_outs:
+            self._raise(
+                "training_max_due",
+                {"training_max": tm.load.amount, "source": tm.source, "rep_outs": list(rep_outs)},
+                f"all three waves logged at training max {tm.load.amount:g}: rep-outs "
+                f"{', '.join(map(str, rep_outs))}",
+            )
 
     def _reset(self, exposure: Exposure, before: Load) -> Move | None:
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))

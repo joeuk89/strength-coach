@@ -2,7 +2,7 @@ import datetime
 from typing import Any
 
 from support.exposures import an_exposure
-from support.prescribe import a_line, a_request, warm_up, working
+from support.prescribe import a_line, a_rack, a_request, warm_up, working
 
 from coach.core.exposure import Exposure
 from coach.core.load import Load
@@ -418,16 +418,15 @@ def test_a_pin_load_over_a_safety_ceiling_is_load_off_grid() -> None:
     ]
 
 
-def test_a_wave_531_return_line_has_no_rep_out() -> None:
-    wave = a_line(
-        "bb_bench_press",
-        SetGroup(1, "working", 5),
-        SetGroup(1, "working", 5),
-        SetGroup(1, "working", "5+"),
-        scheme="wave_531",
-    )
-    logged = an_exposure("2026-10-03", (100, 5, None), (100, 5, None), (100, 8, None))
+def test_a_wave_531_return_line_drops_the_rep_out_and_cuts_the_training_max() -> None:
+    wave = a_line("bb_bench_press", SetGroup(3, "working"), scheme="wave_531", start_load=100)
+    logged = an_exposure("2026-10-03", (65, 5, None), (75, 5, None), (85, 8, None))
 
-    line = derive(wave, logged)
+    line = derive(wave, logged, racks={"barbell": a_rack(*[50 + 2.5 * i for i in range(21)])})
 
-    assert [g.reps for g in line.groups] == [5, 5]
+    # 30 days off is the 22–42 band: each wave load × 0.90, the last set gone
+    assert Step("cut", (65, 75, 85), (58.5, 67.5, 76.5), "return 22–42, 30 days off") in line.steps
+    assert [(g.count, g.load, g.reps) for g in line.groups] == [
+        (1, Load(57.5, "total"), 5),
+        (1, Load(67.5, "total"), 5),
+    ]
