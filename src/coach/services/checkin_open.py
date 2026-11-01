@@ -7,10 +7,7 @@ from collections.abc import Callable, Sequence
 from typing import cast
 
 from coach.core import check_in_card as card
-from coach.core.activity_rules import (
-    QUALITY_CAP,
-    run_spikes,
-)
+from coach.core.activity_rules import QUALITY_CAP, run_spikes
 from coach.core.check_in import Window, check_in_window
 from coach.core.check_in_card import Card, CardField
 from coach.core.clock import Clock
@@ -19,10 +16,7 @@ from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
-from coach.core.phase_trend import (
-    fourteen_day_average,
-    observed_rate,
-)
+from coach.core.phase_trend import fourteen_day_average, observed_rate
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.units import from_kg
 from coach.services.cadence import cadence_signals
