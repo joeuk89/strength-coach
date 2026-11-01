@@ -12,7 +12,7 @@ from support.program_drafts import a_draft, a_line, a_session, toml
 from support.programs import a_config
 
 from coach.core.errors import Invalid, Refused
-from coach.services.plan_apply import ApplyResult, apply, dry_run
+from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
 from coach.services.program import adopt
 from coach.services.status import status
 from coach.store import exercises, mirrors, routine_map, week_plans
@@ -369,8 +369,8 @@ def test_status_shows_the_plan_in_force_with_its_routines_verified_and_unverifie
     assert (shown.id, shown.week, shown.routines_verified, shown.routines_unverified) == (
         "wp-2026-11-02-2",
         "2026-11-02",
-        1,
-        ("lower",),
+        0,
+        ("lower", "upper"),
     )
 
 
@@ -419,6 +419,48 @@ def test_after_a_failed_verify_the_rerun_sends_only_the_unverified_routine() -> 
     push(conn, hevy, data, digest)
 
     assert requests(hevy)[sent:] == [("PUT", f"/v1/routines/{lower_routine(conn)}")]
+
+
+def a_rerun_dry_run(conn: Connection, data: bytes) -> DryRun:
+    return dry_run(
+        conn,
+        data,
+        file="plan.toml",
+        config=a_config(hevy=True),
+        kits=(kit_files(),),
+        clock=FixedClock(),
+    )
+
+
+def test_the_dry_run_after_a_failed_verify_resumes_the_plan_and_does_not_supersede_it() -> None:
+    conn = a_squat_week()
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = the_hash(conn, data)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        push(conn, hevy, data, digest)
+
+    found = a_rerun_dry_run(conn, data)
+
+    assert (found.resumes, found.checked.draft.supersedes) == ("wp-2026-11-02", None)
+
+
+def test_resuming_a_superseding_plan_keeps_the_plan_it_superseded() -> None:
+    conn = a_squat_week()
+    hevy = FakeHevy(FixedClock())
+    approved(conn, a_plan_draft(conn, hevy=True), hevy)
+    superseding = a_plan_draft(conn, hevy=True, overrides=PIN_115)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        approved(conn, superseding, hevy)
+
+    found = a_rerun_dry_run(conn, superseding)
+
+    assert (found.resumes, found.checked.draft.supersedes) == (
+        "wp-2026-11-02-2",
+        "wp-2026-11-02",
+    )
 
 
 def test_a_superseding_plan_freezes_only_its_own_acknowledgements() -> None:

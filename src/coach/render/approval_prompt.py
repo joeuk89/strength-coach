@@ -23,11 +23,14 @@ def approval_prompt(
     *,
     units: Units,
     full: bool = False,
+    resumes: str | None = None,
 ) -> str:
     draft = checked.draft
     span_end = draft.week + datetime.timedelta(days=6)
     header = f"Plan {draft.week} to {span_end}, rotation week {draft.position.week}"
-    if draft.supersedes is not None:
+    if resumes is not None:
+        header += f", resuming {resumes}"
+    elif draft.supersedes is not None:
         header += f", superseding {draft.supersedes}"
     lines = [header]
     for group in _by_session(draft.sessions):

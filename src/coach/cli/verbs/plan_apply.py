@@ -63,13 +63,16 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Jso
     """The dry run's result: the Write plan, its hash and the approval prompt. By default each
     flag is its key, severity and acknowledgement, since the prompt already carries its text."""
     checked = found.checked
-    prompt = approval_prompt(checked, found.actions, found.write_plan_hash, units=units, full=full)
+    prompt = approval_prompt(
+        checked, found.actions, found.write_plan_hash, units=units, full=full, resumes=found.resumes
+    )
     flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
     kept = flags if full else flags[:last]
     draft = checked.draft
     return {
         "week": draft.week.isoformat(),
         "supersedes": draft.supersedes,
+        "resumes": found.resumes,
         "position": {"week": draft.position.week, "source": draft.position.source},
         **found.actions.to_json(),
         "flags": kept,
@@ -117,6 +120,7 @@ DECLARATION = Declaration(
             "audit_lines": {"type": "integer"},
             "week": {"type": "string", "format": "date"},
             "supersedes": {"type": ["string", "null"]},
+            "resumes": {"type": ["string", "null"]},
             "position": {"type": "object"},
             "folders_to_create": {"type": "array", "items": {"type": "string"}},
             "routines": {

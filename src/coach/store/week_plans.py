@@ -79,6 +79,12 @@ def with_draft(conn: Connection, week: str, draft_hash: str) -> Row | None:
     return found[0] if found else None
 
 
+def superseded(conn: Connection, plan_id: str) -> str | None:
+    """The plan that `plan_id` superseded, if any."""
+    found = conn.execute("SELECT id FROM week_plan WHERE superseded_by = ?", (plan_id,)).fetchone()
+    return None if found is None else str(found[0])
+
+
 def approved_before(conn: Connection, week: str) -> list[Row]:
     """The approved WeekPlans of the weeks before `week`, newest week first."""
     return select(

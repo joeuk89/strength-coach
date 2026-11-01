@@ -144,14 +144,16 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     row = week_plans.in_force(conn, monday.isoformat())
     if row is None:
         return None
-    mapped = routine_map.rows(conn)
+    plan_id = str(row["id"])
+    live = routine_map.live(conn)
+    verified = [m for m in live if m.status == "active" and m.plan_id == plan_id]
     return PlanInForce(
-        str(row["id"]),
+        plan_id,
         str(row["week"]),
         str(row["approved_at"]),
         str(row["write_plan_hash"]),
-        routines_verified=sum(m.status == "active" for m in mapped),
-        routines_unverified=tuple(m.session_id for m in mapped if m.status == "unverified"),
+        routines_verified=len(verified),
+        routines_unverified=tuple(m.session_id for m in live if m not in verified),
     )
 
 

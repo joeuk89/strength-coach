@@ -147,6 +147,28 @@ def test_a_read_back_that_differs_is_exit_1_verify_failed(
     assert [r["status"] for r in routines] == ["unverified"]
 
 
+def test_the_dry_run_after_a_failed_verify_prompts_to_resume_the_approved_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+    with_hevy("plan", "apply", draft, "--expect", digest)
+
+    result = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]
+
+    assert (result["resumes"], result["supersedes"]) == ("wp-2026-11-02", None)
+    assert result["prompt"].splitlines()[0] == (
+        "Plan 2026-11-02 to 2026-11-08, rotation week A, resuming wp-2026-11-02"
+    )
+
+
 def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

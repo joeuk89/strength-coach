@@ -91,3 +91,21 @@ def written(conn: Connection) -> tuple[WrittenRow, ...]:
             " WHERE status IN ('active','unverified') AND plan_id IS NOT NULL ORDER BY session_id"
         )
     )
+
+
+@dataclass(frozen=True)
+class LiveRow:
+    session_id: str
+    status: MapStatus
+    plan_id: str | None
+
+
+def live(conn: Connection) -> tuple[LiveRow, ...]:
+    """Every `active` or `unverified` row with the plan that last wrote it."""
+    return tuple(
+        LiveRow(*row)
+        for row in conn.execute(
+            "SELECT session_id, status, plan_id FROM routine_map"
+            " WHERE status IN ('active','unverified') ORDER BY session_id"
+        )
+    )

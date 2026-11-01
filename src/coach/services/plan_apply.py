@@ -5,7 +5,7 @@ and the push: the WeekPlan born approved, then the Hevy writes, each read back a
 import datetime
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import cast
 
 from coach.core.clock import Clock
@@ -104,8 +104,12 @@ def dry_run(
     approved = week_plans.with_draft(conn, checked.draft.week.isoformat(), draft_hash(data))
     if approved is not None:
         # The same Draft already approved: a re-run resumes its push under the approved hash.
+        resumes = str(approved["id"])
+        draft = replace(checked.draft, supersedes=week_plans.superseded(conn, resumes))
         digest = str(approved["write_plan_hash"])
-        return DryRun(checked, actions, digest, validated.acknowledgements, str(approved["id"]))
+        return DryRun(
+            replace(checked, draft=draft), actions, digest, validated.acknowledgements, resumes
+        )
     digest = write_plan_hash(
         checked.draft,
         acknowledgements=validated.acknowledgements,
