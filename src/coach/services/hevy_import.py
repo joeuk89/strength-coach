@@ -127,13 +127,19 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
             continue
         plan = week_plans.by_id(conn, row.plan_id)
         session = session_facts(conn, plan).get(row.session_id)
-        if session is None:
+        if session is None or not _froze(conn, row.plan_id, row.session_id):
             continue
         body = projection(conn, plan, row.session_id, session, units)
         diff = routine_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))
         if diff:
             flags.append(routine_drift(row.routine_id, row.plan_id, diff))
     return tuple(flags)
+
+
+def _froze(conn: Connection, plan_id: str, session_id: str) -> bool:
+    """A routine its plan retired froze no line to project; its map row can stay live when
+    the retire read back differently."""
+    return any(r["session_id"] == session_id for r in week_plans.prescriptions(conn, plan_id))
 
 
 def _weigh_ins(

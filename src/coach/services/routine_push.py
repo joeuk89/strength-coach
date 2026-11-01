@@ -163,6 +163,8 @@ class Push:
             self.outcomes.append(
                 RoutineOutcome(action.session_id, routine_id, "update", "unchanged")
             )
+            with self.conn:
+                self._map(action.session_id, routine_id, "active", verified=True)
             return
         self._put(action.session_id, routine_id, body, "update")
 
