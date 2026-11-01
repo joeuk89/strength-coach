@@ -227,10 +227,10 @@ def _check_keys(draft: LedgerDraft) -> None:
     keys = draft.keys()
     for ref in local_refs(draft):
         index = keys.get(cast(str, ref.local_key))
-        if index is None or kind_of(draft.records[index]) != ref.record_kind:
+        if index is None or kind_of(draft.records[index]) != ref.kind:
             raise Invalid(
                 "draft_ref_unresolved",
-                f"{draft.file}: {ref} names no [[{ref.record_kind}]] with key = "
+                f"{draft.file}: {ref} names no [[{ref.kind}]] with key = "
                 f"{ref.local_key!r} in the file",
             )
 
@@ -388,7 +388,7 @@ def _observation(f: Fields) -> ObservationRecord:
 
 PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
     "niggle": parse_niggle,
-    "followup": parse_follow_up,
+    "follow_up": parse_follow_up,
     "decision": parse_decision,
     "annotation": parse_annotation,
     "note": _note,
@@ -402,7 +402,7 @@ PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
 }
 KIND_OF: dict[type, str] = {
     NiggleRecord: "niggle",
-    FollowUpRecord: "followup",
+    FollowUpRecord: "follow_up",
     DecisionRecord: "decision",
     AnnotationRecord: "annotation",
     NoteRecord: "note",

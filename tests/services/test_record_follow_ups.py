@@ -13,7 +13,7 @@ from coach.store.connection import Connection
 TODAY = datetime.date(2026, 10, 30)
 
 RAISE = """
-[[followup]]
+[[follow_up]]
 raised = 2026-10-24
 text = "Re-test the deadlift single once the hamstring settles"
 due = 2026-11-14
@@ -25,7 +25,7 @@ def run(conn: Connection, text: str) -> RecordResult:
 
 
 def follow_ups(conn: Connection, *, open_: bool = False) -> list[dict[str, Any]]:
-    return ledger(conn, kind="followup", id_=None, open_=open_, today=TODAY, last=None).rows
+    return ledger(conn, kind="follow_up", id_=None, open_=open_, today=TODAY, last=None).rows
 
 
 def events(row: dict[str, Any]) -> list[dict[str, Any]]:
@@ -34,7 +34,7 @@ def events(row: dict[str, Any]) -> list[dict[str, Any]]:
 
 def an_event(kind: str, date: str, due: str | None = None) -> str:
     due_line = f"due = {due}\n" if due else ""
-    return f'[[followup]]\nfollowup = "f-0001"\nkind = "{kind}"\ndate = {date}\n{due_line}'
+    return f'[[follow_up]]\nfollow_up = "f-0001"\nkind = "{kind}"\ndate = {date}\n{due_line}'
 
 
 def test_raising_a_follow_up_writes_a_kept_event_with_the_first_due_date() -> None:
@@ -42,7 +42,7 @@ def test_raising_a_follow_up_writes_a_kept_event_with_the_first_due_date() -> No
 
     result = run(conn, RAISE)
 
-    assert result.ids == {"followup": ["f-0001"]}
+    assert result.ids == {"follow_up": ["f-0001"]}
     [row] = follow_ups(conn)
     assert (row["id"], row["raised"], row["kind"], row["due"]) == (
         "f-0001",
@@ -150,3 +150,18 @@ def test_re_running_a_follow_up_draft_returns_the_same_ids() -> None:
     first = run(conn, RAISE)
 
     assert run(conn, RAISE) == first
+
+
+def test_a_draft_spelling_the_kind_followup_is_refused() -> None:
+    conn = a_store()
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, RAISE.replace("[[follow_up]]", "[[followup]]"))
+
+    assert "[[followup]] is not a record kind" in raised.value.message
+    assert follow_ups(conn) == []
+
+
+def test_the_ledger_view_refuses_the_kind_followup() -> None:
+    with pytest.raises(Invalid):
+        ledger(a_store(), kind="followup", id_=None, open_=False, today=TODAY, last=None)

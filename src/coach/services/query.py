@@ -230,7 +230,7 @@ def _annotations(conn: Connection, open_: bool, today: datetime.date) -> list[Ro
 # Notes, Activities and Exercises have no lifecycle, so `--open` keeps every row of them.
 LEDGER_READERS: dict[str, Callable[[Connection, bool, datetime.date], list[Row]]] = {
     "niggle": _niggles,
-    "followup": _follow_ups,
+    "follow_up": _follow_ups,
     "decision": _decisions,
     "annotation": _annotations,
     "note": _notes,

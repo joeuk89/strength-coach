@@ -98,7 +98,7 @@ date = 2026-11-03
 status = "reported"
 constraints = [{ kind = "rpe_cap", pattern = "squat", value = 7 }]
 
-[[followup]]
+[[follow_up]]
 raised = 2026-11-01
 text = "retest the bench"
 due = 2026-11-07

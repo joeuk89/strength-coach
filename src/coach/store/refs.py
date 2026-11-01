@@ -23,8 +23,8 @@ def exists(conn: Connection, ref: Ref) -> bool:
 
 
 def _table_of(ref: Ref) -> str | None:
-    if ref.record_kind in RECORD_KINDS:
-        return RECORD_KINDS.get(ref.record_kind).store_table
+    if ref.kind in RECORD_KINDS:
+        return RECORD_KINDS.get(ref.kind).store_table
     return ref.kind if ref.kind in OWN_TABLE else None
 
 

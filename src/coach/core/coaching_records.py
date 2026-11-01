@@ -69,12 +69,12 @@ class NiggleRecord:
 
 @dataclass(frozen=True)
 class FollowUpRecord:
-    """A follow-up event. With `text` and no `followup` it raises one as a `kept` event."""
+    """A follow-up event. With `text` and no `follow_up` it raises one as a `kept` event."""
 
     kind: str
     date: datetime.date
     due: datetime.date | None = None
-    followup: str | None = None
+    follow_up: str | None = None
     raised_text: str | None = None
     about: Ref | None = None
     text: str | None = None
@@ -234,7 +234,7 @@ def _reps(value: object, f: Fields) -> object:
 
 
 def parse_follow_up(f: Fields) -> FollowUpRecord:
-    named = f.text("followup")
+    named = f.text("follow_up")
     if named is None:
         return f.done(
             FollowUpRecord(
@@ -256,7 +256,7 @@ def parse_follow_up(f: Fields) -> FollowUpRecord:
             kind=kind,
             date=required(f.date("date", required=True)),
             due=due,
-            followup=named,
+            follow_up=named,
             text=f.text("text"),
             key=f.key(),
         )

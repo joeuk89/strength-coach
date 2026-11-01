@@ -180,7 +180,7 @@ def _ledger() -> str:
             }
             for n, day in enumerate(days)
         ],
-        "followup": [
+        "follow_up": [
             {"raised": day, "text": f"follow-up {n}", "due": TODAY + datetime.timedelta(weeks=2)}
             for n, day in enumerate(days)
         ],
@@ -245,8 +245,8 @@ def _resolutions() -> str:
     """Most follow-ups closed, so the live list stays an athlete's, not the overflow."""
     return dumps(
         {
-            "followup": [
-                {"followup": f"f-{n:04d}", "kind": "resolved", "date": TODAY}
+            "follow_up": [
+                {"follow_up": f"f-{n:04d}", "kind": "resolved", "date": TODAY}
                 for n in range(OPEN + 1, OVERFLOW + 1)
             ]
         }

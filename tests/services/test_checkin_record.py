@@ -33,7 +33,7 @@ date = 2026-11-01
 status = "easing"
 constraints = [{{ kind = "rpe_cap", pattern = "hinge", value = 7 }}]
 
-[[followup]]
+[[follow_up]]
 text = "retest the pull-up"
 raised = 2026-11-01
 due = 2026-11-29

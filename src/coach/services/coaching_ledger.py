@@ -128,8 +128,8 @@ def _library_exercise(conn: Connection, exercise_id: str, where: str) -> None:
 
 
 def write_follow_up(w: Writing, record: FollowUpRecord, follow_up_id: str) -> None:
-    if record.followup is None:
-        about = w.stored_ref(record.about, "[[followup]] about") if record.about else None
+    if record.follow_up is None:
+        about = w.stored_ref(record.about, "[[follow_up]] about") if record.about else None
         follow_ups.insert_follow_up(
             w.conn,
             w.row(
@@ -141,7 +141,7 @@ def write_follow_up(w: Writing, record: FollowUpRecord, follow_up_id: str) -> No
         )
     elif not follow_ups.exists(w.conn, follow_up_id):
         raise Invalid(
-            "draft_ref_unresolved", f"[[followup]] names {follow_up_id}, which is not stored"
+            "draft_ref_unresolved", f"[[follow_up]] names {follow_up_id}, which is not stored"
         )
     elif record.kind == "deferred":
         _check_deferred(w.conn, follow_up_id, record)
@@ -165,7 +165,7 @@ def _check_deferred(conn: Connection, follow_up_id: str, record: FollowUpRecord)
     if previous is not None and due <= previous:
         raise Invalid(
             "state_conflict",
-            f"[[followup]] deferred {follow_up_id} to {due}, which is not later than its "
+            f"[[follow_up]] deferred {follow_up_id} to {due}, which is not later than its "
             f"due date {previous}; a deferral moves the due date later",
         )
 

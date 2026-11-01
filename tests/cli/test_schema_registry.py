@@ -113,3 +113,10 @@ def test_the_record_kinds_registry_reserves_the_observation_to_the_check_in() ->
     rows = run.envelope["result"]["rows"]
     assert len(rows) == 12
     assert [row["name"] for row in rows if row["check_in_only"]] == ["observation"]
+
+
+def test_the_follow_up_record_kind_is_spelled_as_its_table() -> None:
+    run = run_coach("schema", "--registry", "record-kinds")
+
+    rows = run.envelope["result"]["rows"]
+    assert {"name": "follow_up", "table": "[[follow_up]]", "check_in_only": False} in rows

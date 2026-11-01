@@ -49,8 +49,8 @@ def test_an_open_niggle_with_no_constraint_raises_niggle_unconstrained() -> None
 
 def test_a_follow_up_past_due_raises_followup_due_and_one_not_yet_due_does_not() -> None:
     conn = a_store()
-    recorded(conn, '[[followup]]\nraised = 2026-11-01\ntext = "retest"\ndue = 2026-11-28\n')
-    recorded(conn, '[[followup]]\nraised = 2026-11-01\ntext = "later"\ndue = 2026-12-20\n')
+    recorded(conn, '[[follow_up]]\nraised = 2026-11-01\ntext = "retest"\ndue = 2026-11-28\n')
+    recorded(conn, '[[follow_up]]\nraised = 2026-11-01\ntext = "later"\ndue = 2026-12-20\n')
 
     [flag] = opened(conn, TODAY).warnings
 

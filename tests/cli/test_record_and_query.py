@@ -206,7 +206,7 @@ kind = "rpe_cap"
 pattern = "hinge"
 value = 7
 
-[[followup]]
+[[follow_up]]
 raised = 2026-10-24
 text = "Re-test the hinge"
 due = 2026-11-14
@@ -229,7 +229,7 @@ def test_record_writes_niggles_follow_ups_and_decisions_and_query_reads_them(
     assert run.code == 0
     assert run.envelope["result"]["ids"] == {
         "niggle": ["n-0001"],
-        "followup": ["f-0001"],
+        "follow_up": ["f-0001"],
         "decision": ["d-0001"],
     }
     niggle = coach("query", "ledger", "--id", "n-0001").envelope["result"]["rows"][0]
