@@ -16,8 +16,7 @@ from coach.core.mirror import (
     Workout,
     WorkoutEvent,
 )
-
-type Payload = dict[str, object]
+from coach.hevy.protocol import Payload
 
 
 def parse_workout_page(payload: object) -> Page[Workout]:
