@@ -27,6 +27,7 @@ from coach.core.ledger_draft import (
     kind_of,
 )
 from coach.core.ref import Ref
+from coach.core.withdrawal import withdrawable
 from coach.services.coaching_ledger import (
     Writing,
     write_annotation,
@@ -208,18 +209,12 @@ class _Writer:
         readings.insert(self.conn, "status_span", self._stamped(row))
 
     def _withdraw(self, table: str, id_: str, target: str) -> str:
-        withdrawn = readings.get(self.conn, table, target)
-        if withdrawn is None:
-            raise Invalid(
-                "draft_ref_unresolved", f"[[{table}]] withdraws {target}, which is not stored"
-            )
-        if withdrawn["withdraws"] is not None:
-            raise Invalid(
-                "state_conflict", f"{target} is itself a withdrawal; it cannot be withdrawn"
-            )
-        earlier = readings.withdrawn_by(self.conn, table, target)
-        if earlier:
-            raise Invalid("state_conflict", f"{target} is already withdrawn by {earlier}")
+        withdrawn = withdrawable(
+            table,
+            target,
+            readings.get(self.conn, table, target),
+            readings.withdrawn_by(self.conn, table, target),
+        )
         row: dict[str, object] = {"id": id_, "withdraws": target}
         row.update({column: withdrawn[column] for column in RESTATED[table]})
         readings.insert(self.conn, table, self._stamped(row))
