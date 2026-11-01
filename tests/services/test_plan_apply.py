@@ -136,7 +136,7 @@ def lower_routine(conn: Connection) -> str:
     return routine_map.mapped(conn)["lower"]
 
 
-def test_a_routine_moved_in_hevy_refuses_the_whole_push_before_any_put() -> None:
+def test_a_routine_moved_in_hevy_refuses_the_push_before_any_put_and_approves_the_plan() -> None:
     conn = a_squat_week()
     hevy = pushed(conn)
     hevy.move_routine(lower_routine(conn), "2026-10-31T09:00:00Z")
@@ -149,7 +149,7 @@ def test_a_routine_moved_in_hevy_refuses_the_whole_push_before_any_put() -> None
     assert moved.value.code == "routine_moved"
     assert [method for method, _ in hevy.calls] == ["GET"]
     plan = week_plans.in_force(conn, "2026-11-02")
-    assert plan is not None and plan["id"] == "wp-2026-11-02"
+    assert plan is not None and plan["id"] == "wp-2026-11-02-2"
 
 
 def test_a_corrupted_read_back_leaves_an_unverified_row_and_the_rerun_sends_only_that_routine() -> (

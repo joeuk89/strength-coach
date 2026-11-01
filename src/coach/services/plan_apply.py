@@ -229,15 +229,15 @@ def push_approved(
     config: Config,
     clock: Clock,
 ) -> ApplyResult:
-    """Guards run before any write; the WeekPlan is frozen before the first Hevy write, so
-    approval survives a failed push and a re-run resumes it. `client` is None without a
-    `[hevy]` table."""
-    guarded = None if client is None else guard(conn, client, found.actions)
+    """The WeekPlan is approved and frozen before the first Hevy call, so approval survives an
+    unreachable Hevy, a guard's refusal and a failed push, and a re-run resumes it. The guards
+    run before any write. `client` is None without a `[hevy]` table."""
     now = clock.now()
     plan_id = found.resumes or _approve(conn, found, data, config.athlete.units, now)
     plan = week_plans.by_id(conn, plan_id)
-    if client is None or guarded is None:
+    if client is None:
         return ApplyResult(plan_id, found.write_plan_hash, found.resumes is not None, (), 0)
+    guarded = guard(conn, client, found.actions)
     push = Push(conn, client, plan, session_facts(conn, plan), config.athlete.units, now)
     try:
         push.run(found.actions, guarded)
