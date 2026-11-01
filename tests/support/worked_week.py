@@ -29,8 +29,8 @@ def the_worked_week() -> Connection:
     with conn:
         for n, row in enumerate(exercises.every(conn)):
             if not row["hevy_template_id"]:
-                template = SQUAT_TEMPLATE if row["id"] == "bb_back_squat" else f"T-{n:04d}"
-                exercises.update(conn, str(row["id"]), {"hevy_template_id": template})
+                exercises.update(conn, str(row["id"]), {"hevy_template_id": f"T-{n:04d}"})
+        exercises.update(conn, "bb_back_squat", {"hevy_template_id": SQUAT_TEMPLATE})
     config = a_config(hevy=True)
     adopt(
         conn,

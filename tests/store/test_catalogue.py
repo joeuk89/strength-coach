@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
 from typing import Any
 
 from support.scenarios import a_catalogue_without
 
 from coach.store.catalogue import merge_catalogue, seed_catalogue
 from coach.store.connection import open_store
+
+BUILT_IN_TEMPLATES = Path(__file__).parents[1] / "fixtures/hevy/built_in_exercise_templates.json"
 
 EXERCISE_COLUMNS = [
     "id",
@@ -47,6 +50,20 @@ def test_no_two_rows_share_a_hevy_template_id() -> None:
     template_ids = [row["hevy_template_id"] for row in seeded() if row["hevy_template_id"]]
 
     assert len(template_ids) == len(set(template_ids))
+
+
+def test_every_row_with_a_built_in_equivalent_carries_its_template_id() -> None:
+    template_ids = [row["hevy_template_id"] for row in seeded() if row["hevy_template_id"]]
+
+    assert len(template_ids) == 112
+
+
+def test_each_template_id_is_the_built_in_template_of_the_row_hevy_title() -> None:
+    built_in = {t["id"]: t["title"] for t in json.loads(BUILT_IN_TEMPLATES.read_text())}
+
+    for row in seeded():
+        if row["hevy_template_id"]:
+            assert built_in[row["hevy_template_id"]] == row["hevy_title"], row["id"]
 
 
 def test_a_row_carries_the_library_columns_and_nothing_about_an_athlete() -> None:
