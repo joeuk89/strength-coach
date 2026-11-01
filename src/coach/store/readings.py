@@ -1,12 +1,17 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from coach.core.registries.agent import RECORD_KINDS
 from coach.store.connection import Connection
 from coach.store.rows import Row, select
 
-# The withdrawable tables and the column naming the day a reading is about.
-DAY_COLUMN = {"weigh_in": "date", "sleep_night": "night", "status_span": "from_date"}
-TABLES = ("weigh_in", "sleep_night", "activity", "status_span")
+TABLES = tuple(kind.store_table for kind in RECORD_KINDS.entries if kind.reading)
+# The withdrawable readings and the column naming the day each is about.
+DAY_COLUMN = {
+    kind.store_table: kind.day_column
+    for kind in RECORD_KINDS.entries
+    if kind.reading and kind.day_column is not None
+}
 
 
 @dataclass(frozen=True)
