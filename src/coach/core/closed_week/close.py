@@ -3,13 +3,14 @@ delivered dose (docs/spec/week.md; ADR 0010, "What each kind's workout yields").
 
 import datetime
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
-from coach.core.closed_week.dose import MuscleMap, delivered_dose
+from coach.core.closed_week.dose import HARD_SET_RPE, MuscleMap, delivered_dose
 from coach.core.closed_week.kind import week_kind
 from coach.core.closed_week.match import PlannedRef, WeekWorkout, match_week
 from coach.core.closed_week.sessions import PlannedWork, SessionOutcome, session_outcome
 from coach.core.closed_week.week import ClosedWeek
+from coach.core.exposure import Exposure
 from coach.core.prescription import PlannedSession, StatusSpan
 
 # A matched workout of these kinds yields no Exposures for the dose; coach-led counts its
@@ -69,7 +70,7 @@ def _dose(
 ) -> dict[str, float]:
     kinds = {w: s.kind for w, s in matches.items()}
     exposures = [
-        exposure
+        _rated_only(exposure) if kinds.get(workout.id) == "rehab" else exposure
         for workout in facts.workouts
         if workout.kind == "lifting" and kinds.get(workout.id) not in NO_DOSE_KINDS
         for exposure in workout.exposures
@@ -80,3 +81,13 @@ def _dose(
         if s.session.kind == "coach_led" and s.trained
     ]
     return delivered_dose(exposures, facts.muscles, estimated)
+
+
+def _rated_only(exposure: Exposure) -> Exposure:
+    """A rehab set counts toward the dose only when logged above the hard-set RPE (ADR 0010)."""
+    kept = tuple(
+        s
+        for s in exposure.sets
+        if s.set_type != "working" or (s.rpe is not None and s.rpe > HARD_SET_RPE)
+    )
+    return replace(exposure, sets=kept)

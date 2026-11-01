@@ -47,9 +47,9 @@ def match_week(
     claims: Mapping[str, PlannedRef],
 ) -> dict[str, PlannedSession]:
     """Workout id to the planned session it took. A claim (a `match` Annotation, or a manual
-    coach-led workout naming its session) is honoured first; every other workout takes, in date
-    then start-time order, the session of its routine inside its window or else the first
-    untaken candidate."""
+    coach-led workout naming its session) is honoured first, inside the claimed session's window;
+    every other workout takes, in date then start-time order, the session of its routine inside
+    its window or else the first untaken candidate."""
     ordered = sorted(workouts, key=lambda w: (w.date, w.started, w.id))
     taken: set[int] = set()
     found: dict[str, PlannedSession] = {}
@@ -57,11 +57,12 @@ def match_week(
         claim = claims.get(workout.id)
         if claim is None:
             continue
+        claimed_on, session_id = claim
         index = next(
             (
                 i
                 for i, s in enumerate(planned)
-                if (s.date, s.session_id) == claim and i not in taken
+                if i not in taken and s.session_id == session_id and covers(s, claimed_on)
             ),
             None,
         )

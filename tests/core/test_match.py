@@ -108,3 +108,17 @@ def test_an_unmatched_workout_is_classed_by_its_content() -> None:
 def test_a_conditioning_workout_is_an_activity_rated_7_when_unrated() -> None:
     assert conditioning_activity(MONDAY, 30, []) == Activity(MONDAY, 30, 7.0, True)
     assert conditioning_activity(MONDAY, 40, [5.0, 6.0]) == Activity(MONDAY, 40, 5.5, False)
+
+
+def test_a_claim_takes_a_standing_session_from_any_day_of_its_week() -> None:
+    claims = {"m-1": (day(2), "pt")}
+
+    found = matched([a_planned("pt", 0, "standing")], [a_workout("m-1", 2)], claims=claims)
+
+    assert found == {"m-1": "pt"}
+
+
+def test_a_claim_on_a_weekly_session_holds_only_on_its_date() -> None:
+    claims = {"m-1": (day(2), "push")}
+
+    assert matched([a_planned("push", 0)], [a_workout("m-1", 2)], claims=claims) == {}

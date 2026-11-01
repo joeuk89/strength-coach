@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Mapping
 
 from support.exposures import an_exposure
 
@@ -77,6 +78,34 @@ def test_a_trained_coach_led_session_delivers_its_estimated_sets() -> None:
     week = close_week(facts)
 
     assert (week.kind, week.dose) == ("hard", {"lats": 4})
+
+
+def test_a_manual_coach_led_workout_on_a_wednesday_trains_its_standing_session() -> None:
+    wednesday = MONDAY + datetime.timedelta(days=2)
+    pt = PlannedWork(PlannedSession("pt", MONDAY, "gym", "coach_led", (), "standing"))
+    facts = WeekFacts(
+        MONDAY, (pt,), (WeekWorkout("m-1", wednesday),), claims={"m-1": (wednesday, "pt")}
+    )
+
+    week = close_week(facts)
+
+    assert [(s.trained, s.workout_id) for s in week.sessions] == [(True, "m-1")]
+    assert week.kind == "hard"
+
+
+def test_a_rehab_workout_counts_only_its_sets_logged_above_rpe_5() -> None:
+    def rehab_workout(id_: str, rpe: float | None) -> WeekWorkout:
+        exposure = an_exposure(MONDAY.isoformat(), (20, 15, rpe), (20, 15, None), workout_id=id_)
+        return WeekWorkout(id_, MONDAY, (exposure,))
+
+    def dose(rpe: float | None) -> Mapping[str, float]:
+        facts = WeekFacts(
+            MONDAY, (planned("knee", 0, "rehab"),), (rehab_workout("h-1", rpe),), muscles=MUSCLES
+        )
+        return close_week(facts).dose
+
+    assert dose(None) == {}
+    assert dose(6) == {"chest": 1, "triceps": 0.5}
 
 
 def test_trained_unlogged_and_cancelled_annotations_count_by_their_planned_session() -> None:
