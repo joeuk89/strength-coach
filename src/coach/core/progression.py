@@ -26,9 +26,11 @@ class Missed:
 class Verdict:
     hit: bool
     missed: Missed | None = None
+    incomplete: bool = False
 
 
 HOLD = Verdict(hit=False)
+INCOMPLETE = Verdict(hit=False, incomplete=True)
 
 
 def judge(line: Line, anchor: Exposure, load: Load | None = None) -> Verdict:
@@ -40,7 +42,7 @@ def judge(line: Line, anchor: Exposure, load: Load | None = None) -> Verdict:
     logged = anchor.working[: len(authored)]
     # Fewer working sets logged than authored is not a hit and raises nothing.
     if len(logged) < len(authored) or any(s.reps is None for s in logged):
-        return HOLD
+        return INCOMPLETE
     pairs = list(zip(authored, logged, strict=True))
     at_load = all(_at_load(s, load) for s in logged)
     match line.scheme.name:
@@ -48,8 +50,19 @@ def judge(line: Line, anchor: Exposure, load: Load | None = None) -> Verdict:
             return _double_progression(pairs, at_load)
         case "linear":
             return Verdict(at_load and _all_reached(pairs))
+        case "assistance_ladder":
+            return _assistance_ladder(pairs, at_load)
         case _:
             return HOLD
+
+
+def short(line: Line, anchor: Exposure) -> bool:
+    """A working set logged below the top of its authored reps, whatever its RPE."""
+    authored = [group.reps for group in line.working_groups() for _ in range(group.count)]
+    return any(
+        logged.reps is not None and logged.reps < _top(reps)
+        for reps, logged in zip(authored, anchor.working, strict=False)
+    )
 
 
 type Pair = tuple[tuple[Reps | None, Number | None], ExposureSet]
@@ -62,6 +75,14 @@ def _double_progression(pairs: list[Pair], at_load: bool) -> Verdict:
         over = rpe is not None and logged.rpe is not None and logged.rpe >= rpe + RPE_OVER
         if over or logged.reps < low:
             return Verdict(False, Missed(index, logged.reps, (low, high), logged.rpe, rpe))
+    return Verdict(at_load and _all_reached(pairs))
+
+
+def _assistance_ladder(pairs: list[Pair], at_load: bool) -> Verdict:
+    for index, ((reps, rpe), logged) in enumerate(pairs, start=1):
+        assert logged.reps is not None
+        if rpe is not None and logged.rpe is not None and logged.rpe >= rpe + RPE_OVER:
+            return Verdict(False, Missed(index, logged.reps, _range(reps), logged.rpe, rpe))
     return Verdict(at_load and _all_reached(pairs))
 
 

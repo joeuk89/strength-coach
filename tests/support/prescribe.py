@@ -8,7 +8,13 @@ from coach.core.config import RackImplement
 from coach.core.exposure import Exposure
 from coach.core.kit import parse_kit_tables
 from coach.core.load import LoadMode
-from coach.core.prescription import ExerciseFacts, PlannedSession, PrescribeRequest, ProgramVersion
+from coach.core.prescription import (
+    ExerciseFacts,
+    MatchedActivity,
+    PlannedSession,
+    PrescribeRequest,
+    ProgramVersion,
+)
 from coach.core.program.form import (
     Deload,
     Dose,
@@ -129,4 +135,30 @@ def a_rotation_form(*extra: Session) -> ProgramForm:
             Session("pull-b", "Pull B", "lifting", "core", lines=line),
             *extra,
         ),
+    )
+
+
+def a_conditioning_request(
+    scheme: SchemeRef, *lines: Line, activity: MatchedActivity | None = None
+) -> PrescribeRequest:
+    """One conditioning session, `cond`, at `home` with no rack for its kettlebell."""
+    session = Session(
+        "cond", "Conditioning", "conditioning", "optional", scheme=scheme, lines=lines
+    )
+    form = ProgramForm(
+        name="Test",
+        kind="redesign",
+        because="first program",
+        emphasis="hypertrophy",
+        location="home",
+        schedule=Schedule(("A",), {"A": {"tue": "cond"}}),
+        sessions=(session,),
+    )
+    swing = {"kb_swing": ExerciseFacts("single_implement", "kettlebell", "hinge")}
+    return PrescribeRequest(
+        version=ProgramVersion(form, swing),
+        exposures=(),
+        racks={"home": {}},
+        planned=PlannedSession("cond", PLANNED, "home", "conditioning", lines),
+        activities={} if activity is None else {"cond": activity},
     )

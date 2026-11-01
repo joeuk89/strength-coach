@@ -2,7 +2,7 @@ import datetime
 from typing import Any
 
 from support.exposures import an_exposure
-from support.prescribe import a_line, a_request, warm_up, working
+from support.prescribe import a_line, a_rack, a_request, warm_up, working
 
 from coach.core.exposure import Exposure
 from coach.core.load import Load
@@ -21,10 +21,13 @@ RUNGS = [60, 50, 40, 30, 20, 10, 0]
 PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", rungs=RUNGS)
 
 
-def pull_up_on(on: str, rung: float, *, workout_id: str | None = None) -> Exposure:
+def pull_up_on(
+    on: str, rung: float, *, workout_id: str | None = None, last_reps: int = 8
+) -> Exposure:
     return an_exposure(
         on,
-        *[(rung, 8, 8)] * 4,
+        *[(rung, 8, 8)] * 3,
+        (rung, last_reps, 8),
         workout_id=workout_id,
         exercise_id="assisted_pull_up",
         mode="assisted",
@@ -39,9 +42,9 @@ def derive(line: Line, *exposures: Exposure, **request: Any) -> LinePrescription
 def test_the_assisted_pull_up_after_25_days_off_steps_two_rungs_back_with_one_set_fewer() -> None:
     line = derive(
         PULL_UP,
-        pull_up_on("2026-09-24", 40),
-        pull_up_on("2026-10-01", 40),
-        pull_up_on("2026-10-08", 40),
+        pull_up_on("2026-09-24", 40, last_reps=7),
+        pull_up_on("2026-10-01", 40, last_reps=7),
+        pull_up_on("2026-10-08", 40, last_reps=7),
     )
 
     assert line.steps[:3] == (
@@ -60,7 +63,7 @@ def test_the_assisted_pull_up_after_25_days_off_steps_two_rungs_back_with_one_se
     )
 
 
-def test_the_week_after_a_return_derives_from_the_return_exposure_with_no_band() -> None:
+def test_the_week_after_a_return_climbs_from_the_return_exposure_with_no_band() -> None:
     line = derive(
         PULL_UP,
         pull_up_on("2026-09-24", 40),
@@ -71,7 +74,7 @@ def test_the_week_after_a_return_derives_from_the_return_exposure_with_no_band()
 
     assert line.derived_from == "exposure:h-return/assisted_pull_up"
     assert [s for s in line.steps if s.step in ("cut", "rpe_ceiling")] == []
-    assert [(g.count, g.load, g.rpe_cap) for g in line.groups] == [(4, Load(60, "assisted"), None)]
+    assert [(g.count, g.load, g.rpe_cap) for g in line.groups] == [(4, Load(50, "assisted"), None)]
 
 
 def squat_on(on: str, *sets: tuple[float, int, float], workout_id: str = "h-1") -> Exposure:
@@ -241,11 +244,12 @@ def test_a_priority_lift_under_top_backoff_gets_one_test_single_in_a_light_week(
 
     line = derive(TOP_BACKOFF, logged, overrides=(LIGHT_WEEK,), dose=PRIORITY)
 
-    # e1RM 100 × (1 + 5/30) = 116.67; one rep at RPE 9 is 116.67 / (1 + 2/30) = 109.4, down to 105
+    # e1RM 100 × (1 + 5/30) = 116.67; one rep at RPE 9 is 116.67 / (1 + 2/30) = 109.4, down to 105;
+    # the back-offs are 85 % of the top
     assert [(g.type, g.count, g.load, g.reps, g.rpe) for g in line.groups[1:]] == [
         ("test", 1, Load(105, "total"), 1, 9),
         ("working", 1, Load(100, "total"), 3, 8),
-        ("working", 2, Load(100, "total"), 5, 8),
+        ("working", 2, Load(85, "total"), 5, 8),
     ]
     assert line.groups[0].type == "warm_up"
 
@@ -414,16 +418,28 @@ def test_a_pin_load_over_a_safety_ceiling_is_load_off_grid() -> None:
     ]
 
 
-def test_a_wave_531_return_line_has_no_rep_out() -> None:
-    wave = a_line(
-        "bb_bench_press",
-        SetGroup(1, "working", 5),
-        SetGroup(1, "working", 5),
-        SetGroup(1, "working", "5+"),
-        scheme="wave_531",
-    )
-    logged = an_exposure("2026-10-03", (100, 5, None), (100, 5, None), (100, 8, None))
+def test_a_wave_531_return_line_drops_the_rep_out_and_cuts_the_training_max() -> None:
+    wave = a_line("bb_bench_press", SetGroup(3, "working"), scheme="wave_531", start_load=100)
+    logged = an_exposure("2026-10-03", (65, 5, None), (75, 5, None), (85, 8, None))
 
-    line = derive(wave, logged)
+    line = derive(wave, logged, racks={"barbell": a_rack(*[50 + 2.5 * i for i in range(21)])})
 
-    assert [g.reps for g in line.groups] == [5, 5]
+    # 30 days off is the 22–42 band: each wave load × 0.90, the last set gone
+    assert Step("cut", (65, 75, 85), (58.5, 67.5, 76.5), "return 22–42, 30 days off") in line.steps
+    assert [(g.count, g.load, g.reps) for g in line.groups] == [
+        (1, Load(57.5, "total"), 5),
+        (1, Load(67.5, "total"), 5),
+    ]
+
+
+def test_a_wave_531_return_line_cuts_the_training_max_before_rounding_once() -> None:
+    wave = a_line("bb_bench_press", SetGroup(3, "working"), scheme="wave_531", start_load=107)
+    logged = an_exposure("2026-10-03", (70, 5, None), (80, 5, None), (90, 8, None))
+
+    line = derive(wave, logged, racks={"barbell": a_rack(*[50 + 2.5 * i for i in range(21)])})
+
+    # 107 × 0.65 × 0.90 is 62.6, one row down to 62.5; rounding each wave load first gives 60
+    assert [(g.count, g.load, g.reps) for g in line.groups] == [
+        (1, Load(62.5, "total"), 5),
+        (1, Load(70, "total"), 5),
+    ]
