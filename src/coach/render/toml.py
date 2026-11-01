@@ -29,8 +29,10 @@ def dumps(document: Mapping[str, TomlValue]) -> str:
 def _emit_table(
     table: Mapping[str, object], path: tuple[str, ...], lines: list[str], header: str | None
 ) -> None:
-    nested = [(k, v) for k, v in table.items() if _is_table(v) or _is_array_of_tables(v)]
-    pairs = [(k, v) for k, v in table.items() if not (_is_table(v) or _is_array_of_tables(v))]
+    nested: list[tuple[str, object]] = []
+    pairs: list[tuple[str, object]] = []
+    for item in table.items():
+        (nested if _is_table(item[1]) or _is_array_of_tables(item[1]) else pairs).append(item)
     # A table holding only sub-tables is defined by their headers, so its own is noise.
     if header is not None and (pairs or not nested or header.startswith("[[")):
         if lines:

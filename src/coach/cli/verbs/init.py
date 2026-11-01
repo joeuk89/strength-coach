@@ -32,8 +32,8 @@ NEXT_STEP = (
 def run(call: Call) -> Outcome:
     root = Path.cwd()
     _refuse_an_instance(root)
-    pin = _pin(call.engine_version, call.args.get("pin"))
     args = call.args
+    pin = _pin(call.engine_version, args.get("pin"))
     defaults = args.get("defaults") is True
     missing = init_answers.missing_flags(args)
     if missing and not defaults and not call.terminal.interactive:

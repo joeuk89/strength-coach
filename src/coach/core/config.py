@@ -1,6 +1,6 @@
 """`coach.toml` parsed whole into typed values (docs/spec/instance.md, "coach.toml")."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, cast
 
@@ -98,7 +98,7 @@ def parse_config(document: Mapping[str, object]) -> Config:
         _only(_table(document, "hevy", ()), set(), ("hevy",))
     locations = _optional_table(document, "location", ())
     return Config(
-        engine=Engine(version=_text(engine, "version", ("engine",))),
+        engine=Engine(version=_field(engine, "version", ("engine",), _nonempty_text)),
         athlete=parse_athlete(_table(document, "athlete", ())),
         hevy=Hevy() if hevy is not None else None,
         locations=tuple(
@@ -139,17 +139,13 @@ def athlete_fact(key: str, value: object) -> object:
 def parse_athlete(table: Mapping[str, object]) -> Athlete:
     here = ("athlete",)
     _only(table, set(ATHLETE_FACTS), here)
-
-    def fact(key: str) -> object:
-        return _required(table, key, here)
-
     return Athlete(
-        units=_units(fact("units"), (*here, "units")),
-        bodyweight_units=_units(fact("bodyweight_units"), (*here, "bodyweight_units")),
-        week_starts=_weekday(fact("week_starts"), (*here, "week_starts")),
-        timezone=_nonempty_text(fact("timezone"), (*here, "timezone")),
-        available_days=_weekdays(fact("available_days"), (*here, "available_days")),
-        session_minutes=_positive_int(fact("session_minutes"), (*here, "session_minutes")),
+        units=_field(table, "units", here, _units),
+        bodyweight_units=_field(table, "bodyweight_units", here, _units),
+        week_starts=_field(table, "week_starts", here, _weekday),
+        timezone=_field(table, "timezone", here, _nonempty_text),
+        available_days=_field(table, "available_days", here, _weekdays),
+        session_minutes=_field(table, "session_minutes", here, _positive_int),
         checkin_cadence_days=_positive_int(
             table.get("checkin_cadence_days", DEFAULT_CHECKIN_CADENCE_DAYS),
             (*here, "checkin_cadence_days"),
@@ -165,12 +161,9 @@ def _location(name: str, table: Mapping[str, object]) -> Location:
         _only(table, {"kind", "kit", "collars", "dumbbells", "implements"}, path)
         return PlatePoolLocation(
             name=name,
-            kit=_nonempty_text(_required(table, "kit", path), (*path, "kit")),
-            collars=_nonempty_text(_required(table, "collars", path), (*path, "collars")),
-            dumbbells=cast(
-                Dumbbells,
-                _choice(_required(table, "dumbbells", path), DUMBBELLS, (*path, "dumbbells")),
-            ),
+            kit=_field(table, "kit", path, _nonempty_text),
+            collars=_field(table, "collars", path, _nonempty_text),
+            dumbbells=_field(table, "dumbbells", path, _dumbbells),
             implements=implements,
         )
     _only(table, {"kind", "implements", "implement"}, path)
@@ -245,8 +238,13 @@ def _required(table: Mapping[str, object], key: str, path: tuple[str, ...]) -> o
     return table[key]
 
 
-def _text(table: Mapping[str, object], key: str, path: tuple[str, ...]) -> str:
-    return _nonempty_text(_required(table, key, path), (*path, key))
+def _field[T](
+    table: Mapping[str, object],
+    key: str,
+    path: tuple[str, ...],
+    check: Callable[[object, tuple[str, ...]], T],
+) -> T:
+    return check(_required(table, key, path), (*path, key))
 
 
 def _nonempty_text(value: object, path: tuple[str, ...]) -> str:
@@ -267,6 +265,10 @@ def _units(value: object, path: tuple[str, ...]) -> Units:
 
 def _weekday(value: object, path: tuple[str, ...]) -> Weekday:
     return cast(Weekday, _choice(value, WEEKDAYS, path))
+
+
+def _dumbbells(value: object, path: tuple[str, ...]) -> Dumbbells:
+    return cast(Dumbbells, _choice(value, DUMBBELLS, path))
 
 
 def _weekdays(value: object, path: tuple[str, ...]) -> tuple[Weekday, ...]:
