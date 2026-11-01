@@ -119,6 +119,7 @@ class _Derivation:
             return self._bounded(line, found.derived_from, rack, bounded, change)
         before = schemes.anchor_top(found.exposure)
         move = self._move_or_hold(schemes, found.exposure, before, overrides)
+        schemes.stall(found.exposure)
         line = replace(line, sets=move.sets)
         moved = _first(move.proposal)
         pinned = None if pin is None or moved is None else self._pin(moved, moved.mode, *pin)

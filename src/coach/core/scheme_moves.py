@@ -17,6 +17,7 @@ from coach.core.prescription import PrescribeRequest, Step
 from coach.core.program.form import LOAD_BEARING_MODES, Line, SetGroup
 from coach.core.progression import Verdict, judge
 from coach.core.rack import Rack, Rounding, next_row_up
+from coach.core.stall import stall_streak
 from coach.core.top_backoff import top_set
 from coach.core.wave_531 import (
     REP_OUTS,
@@ -104,6 +105,17 @@ class SchemeMoves:
         if self.line.scheme.name == "wave_531":
             return self._wave(None)
         return self._held(self._start_load(found))
+
+    def stall(self, exposure: Exposure) -> None:
+        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        streak = stall_streak(self.line, history)
+        if streak:
+            self._raise(
+                "stall_streak",
+                {"streak": len(streak), "exposures": [e.ref for e in streak]},
+                f"{len(streak)} exposures in a row with no gain on the "
+                f"{self.line.scheme.name} metric",
+            )
 
     def move(self, exposure: Exposure, before: Load | None) -> Move:
         if self.line.scheme.name == "assistance_ladder":
