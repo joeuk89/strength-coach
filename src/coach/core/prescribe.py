@@ -29,6 +29,16 @@ from coach.core.rack import Rack, Rounding, next_row_up, round_to_rack
 from coach.core.stall import stall_streak
 from coach.core.top_backoff import back_off_load, top_set
 from coach.core.warm_up import warm_up_loads
+from coach.core.wave_531 import (
+    TrainingMax,
+    rep_out,
+    rep_out_target,
+    rep_outs_due,
+    training_max,
+    wave_index,
+    wave_of,
+    wave_sets,
+)
 
 
 def prescribe(request: PrescribeRequest) -> SessionPrescription:
@@ -101,6 +111,8 @@ class _Derivation:
                 return self._ladder(found)
             case "top_backoff":
                 return self._top_backoff(found, rack, mode)
+            case "wave_531":
+                return self._wave(found, rack, mode)
             case _:
                 return self._load_step(found, rack, mode)
 
@@ -171,6 +183,50 @@ class _Derivation:
         working = self._top_then_backoffs(top, rack)
         return _Move(found.derived_from, working, self._change(before, top))
 
+    def _wave(self, found: Found, rack: Rack | None, mode: LoadMode) -> _Move:
+        tm = training_max(self.request.decisions, self.line, mode)
+        if tm is None:
+            self._start_load_missing()
+            return _Move(found.derived_from, self._uniform(None), "held")
+        (group,) = self.line.working_groups()
+        index = wave_index(self.request.hard_week_count)
+        sets = wave_sets(tm.load, index, group.count, rack)
+        loads = tuple(s.load.amount for s in sets)
+        self.steps.append(Step("scheme", tm.load.amount, loads, f"wave_{index + 1}"))
+        if isinstance(found, AnchorExposure):
+            self._read_rep_outs(found.exposure, tm, group.count, rack)
+        working = tuple(PrescribedGroup("working", 1, s.load, s.reps) for s in sets)
+        change = f"wave {index + 1} of training max {_n(tm.load)}"
+        return _Move(found.derived_from, working, change)
+
+    def _read_rep_outs(
+        self, exposure: Exposure, tm: TrainingMax, count: int, rack: Rack | None
+    ) -> None:
+        index = wave_of(exposure, tm.load, count, rack)
+        if index is not None and rep_out(exposure) < rep_out_target(index):
+            target = rep_out_target(index)
+            self._raise(
+                "rep_range_missed",
+                {
+                    "set_index": len(exposure.working),
+                    "reps": rep_out(exposure),
+                    "range": [target, target],
+                    "logged_rpe": exposure.working[-1].rpe,
+                    "authored_rpe": None,
+                },
+                f"the rep-out logged {rep_out(exposure)} reps, short of wave {index + 1}'s "
+                f"{target}",
+            )
+        history = ordinary(line_history(self.request.exposures, exposure, on=self.on))
+        rep_outs = rep_outs_due(history, tm.load, count, rack)
+        if rep_outs is not None:
+            self._raise(
+                "training_max_due",
+                {"training_max": tm.load.amount, "source": tm.source, "rep_outs": list(rep_outs)},
+                f"all three waves logged at training max {_n(tm.load)}: rep-outs "
+                f"{', '.join(map(str, rep_outs))}",
+            )
+
     def _top_then_backoffs(
         self, top: Load | None, rack: Rack | None
     ) -> tuple[PrescribedGroup, ...]:
@@ -216,14 +272,17 @@ class _Derivation:
         if not loaded:
             return None
         if found.load is None:
-            self._raise(
-                "start_load_missing",
-                {"exercise_id": self.line.exercise},
-                f"{self.line.exercise} has no Exposure yet and the line has no start_load",
-            )
+            self._start_load_missing()
             return None
         self.steps.append(Step("scheme", None, found.load.amount, "start_load"))
         return found.load
+
+    def _start_load_missing(self) -> None:
+        self._raise(
+            "start_load_missing",
+            {"exercise_id": self.line.exercise},
+            f"{self.line.exercise} has no Exposure yet and the line has no start_load",
+        )
 
     def _anchor_load(self, exposure: Exposure, rack: Rack | None, mode: LoadMode) -> Load | None:
         if rack is None:
