@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from coach.cli import registry
 from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
 from coach.core import registries
@@ -12,7 +14,7 @@ def run(call: Call) -> Outcome:
             raise Invalid("invalid_argument", "give a verb or --registry, not both")
         return Outcome(_registry(registry_name, call))
     if not isinstance(name, str):
-        return Outcome({"verbs": [d.describe() for d in registry.declarations()]})
+        return Outcome(_rows([d.describe() for d in registry.declarations()], call))
     declaration = registry.find(name)
     if declaration is None:
         raise Invalid("invalid_argument", f"no verb {name!r}; `coach schema` lists them all")
@@ -24,9 +26,12 @@ def _registry(name: str, call: Call) -> Json:
     if found is None:
         known = ", ".join(r.name for r in registries.REGISTRIES)
         raise Invalid("invalid_argument", f"no registry {name!r}; one of {known}")
-    rows = found.rows()
-    kept = rows if call.full else rows[: call.last]
-    return {"registry": name, "rows": kept, "count": len(rows), "truncated": len(kept) < len(rows)}
+    return {"registry": name, **_rows(found.rows(), call)}
+
+
+def _rows(rows: Sequence[Json], call: Call) -> Json:
+    kept = list(rows) if call.full else list(rows[: call.last])
+    return {"rows": kept, "count": len(rows), "truncated": len(kept) < len(rows)}
 
 
 DECLARATION = Declaration(
@@ -40,12 +45,12 @@ DECLARATION = Declaration(
     ),
     output={
         "type": "object",
-        "description": "one declaration, {verbs: [declaration]} without a verb, "
-        "or {registry, rows, count, truncated} with --registry",
+        "description": "one declaration, {rows: [declaration], count, truncated} without a "
+        "verb, or {registry, rows, count, truncated} with --registry",
     },
     run=run,
     examples=(
-        Example(("schema",), "Every verb's declaration."),
+        Example(("schema",), "The verbs' declarations, as many as fit; --full for every one."),
         Example(("schema", "status"), "The declaration of status."),
         Example(("schema", "--registry", "flags"), "Every flag code with its citation."),
     ),

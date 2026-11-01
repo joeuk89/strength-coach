@@ -68,11 +68,23 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 
 
-def test_schema_without_a_verb_gives_every_declaration() -> None:
+def test_schema_without_a_verb_lists_the_declarations_as_rows_under_3_kb() -> None:
     run = run_coach("schema")
 
+    result = run.envelope["result"]
+    names = [d.name for d in declarations()]
     assert run.code == 0
-    assert [v["name"] for v in run.envelope["result"]["verbs"]] == [d.name for d in declarations()]
+    assert len(run.stdout.encode("utf-8")) <= 3 * 1024
+    assert [row["name"] for row in result["rows"]] == names[: len(result["rows"])]
+    assert (result["count"], result["truncated"]) == (16, True)
+
+
+def test_schema_full_gives_every_declaration() -> None:
+    run = run_coach("schema", "--full")
+
+    result = run.envelope["result"]
+    assert [row["name"] for row in result["rows"]] == [d.name for d in declarations()]
+    assert (result["count"], result["truncated"]) == (16, False)
 
 
 def test_schema_of_the_schema_verb_declares_its_optional_verb_argument() -> None:
