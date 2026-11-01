@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from coach.cli.hevy_key import api_key
 from coach.core.errors import Setup
-from coach.hevy.key import api_key
 
 
 def test_the_environment_wins_over_dotenv(tmp_path: Path) -> None:

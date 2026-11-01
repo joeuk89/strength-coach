@@ -2,8 +2,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from coach.core.errors import Setup
-
-KEY_NAME = "HEVY_API_KEY"
+from coach.hevy.client import KEY_NAME
 
 
 def api_key(env: Mapping[str, str], dotenv: Path) -> str:
