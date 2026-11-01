@@ -11,6 +11,7 @@ from coach.core.config import Units
 from coach.core.flag import Acknowledgement
 from coach.core.frozen_prescription import frozen_groups
 from coach.core.hevy_actions import HevyActions
+from coach.core.instant import parse_instant
 from coach.core.plan_draft import PlanDraft
 from coach.core.prescription import PlanOverride
 from coach.core.program.form import SetGroup, group_document
@@ -49,6 +50,40 @@ def write_plan_hash(
         },
     }
     canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), default=str)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def moved_routines(
+    touched: Sequence[str],
+    *,
+    approved_at: str,
+    imports: Mapping[str, str],
+    own_writes: Mapping[str, str],
+) -> tuple[str, ...]:
+    """The touched routines the mirror took in after approval and after the push last wrote or
+    checked them. The push's own read-back stamps `imported_at` and `written_at` alike."""
+    approved = parse_instant(approved_at)
+    return tuple(
+        routine
+        for routine in touched
+        if routine in imports
+        and parse_instant(imports[routine]) > _last_seen(approved, own_writes.get(routine))
+    )
+
+
+def _last_seen(approved: datetime.datetime, written_at: str | None) -> datetime.datetime:
+    return approved if written_at is None else max(approved, parse_instant(written_at))
+
+
+def resumed_write_plan_hash(approved: str, moved_versions: Mapping[str, str | None]) -> str:
+    """The approved hash while no touched routine moved; else one covering the moved versions."""
+    if not moved_versions:
+        return approved
+    canonical = json.dumps(
+        {"approved": approved, "moved": dict(moved_versions)},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 

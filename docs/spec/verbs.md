@@ -234,7 +234,9 @@ Hevy call (approval survives a failed push, ADR 0006), each routine is PUT, read
 `active` or left `unverified`; the client writes the audit's request line before each send and
 its response line when the attempt ends (ADR 0011), so a request with no response line marks
 where a process died. The re-run with the same `--expect` prompts again and resumes from the
-Routine map's statuses.
+Routine map's statuses. If a routine the Write plan touches changed in the mirror after approval,
+other than by this push's own read-back, the dry run prints a new hash covering the changed
+versions, and the re-run refuses `expect_mismatch` until that hash is approved.
 
 ## Exit classes
 

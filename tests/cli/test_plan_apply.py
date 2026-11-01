@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,7 @@ from coach.cli.hook.in_process import run_in_process
 from coach.cli.registry import declarations
 from coach.cli.verbs.plan_apply import dry_run_result
 from coach.core.clock import Clock
+from coach.store import mirrors
 
 PIN_OFF_RACK = """
 [[override]]
@@ -167,6 +169,41 @@ def test_the_dry_run_after_a_failed_verify_prompts_to_resume_the_approved_plan(
     assert result["prompt"].splitlines()[0] == (
         "Plan 2026-11-02 to 2026-11-08, rotation week A, resuming wp-2026-11-02"
     )
+
+
+def test_a_resume_after_a_routine_moved_refuses_the_old_hash_and_pushes_under_the_new_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+    with_hevy("plan", "apply", draft, "--expect", digest)
+    [routine] = [r["routine"] for r in coach("query", "routines").envelope["result"]["rows"]]
+    hevy.move_routine(routine, "2026-10-31T09:00:00Z")
+    conn = the_store(root)
+    [stored] = [r for r in mirrors.routines(conn) if r.hevy_id == routine]
+    with conn:
+        mirrors.upsert_routine(
+            conn, replace(stored, updated_at="2026-10-31T09:00:00Z"), "2026-10-31T10:00:00Z"
+        )
+    conn.close()
+
+    dry = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]
+    stale = with_hevy("plan", "apply", draft, "--expect", digest)
+    fresh = with_hevy("plan", "apply", draft, "--expect", dry["write_plan_hash"])
+
+    assert dry["write_plan_hash"] != digest
+    assert dry["moved_routines"] == [routine]
+    assert f"Changed in Hevy since approval: {routine}" in dry["prompt"].splitlines()
+    assert (stale.code, stale.envelope["error"]["code"]) == (3, "expect_mismatch")
+    assert fresh.code == 0, fresh.stdout
+    assert fresh.envelope["result"]["resumed"] is True
 
 
 def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(

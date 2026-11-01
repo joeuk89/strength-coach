@@ -24,6 +24,7 @@ def approval_prompt(
     units: Units,
     full: bool = False,
     resumes: str | None = None,
+    moved_routines: Sequence[str] = (),
 ) -> str:
     draft = checked.draft
     span_end = draft.week + datetime.timedelta(days=6)
@@ -33,6 +34,8 @@ def approval_prompt(
     elif draft.supersedes is not None:
         header += f", superseding {draft.supersedes}"
     lines = [header]
+    if moved_routines:
+        lines.append(f"Changed in Hevy since approval: {', '.join(moved_routines)}")
     for group in _by_session(draft.sessions):
         lines.extend(_session(group, units))
     left = [f for f in checked.flags if f.left is not None]
