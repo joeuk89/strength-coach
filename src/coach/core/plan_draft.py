@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.planned_week import RotationPosition
-from coach.core.prescription import SessionPrescription
+from coach.core.prescription import PlanOverride, SessionPrescription
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,8 @@ class PlanDraft:
     sessions: tuple[SessionPrescription, ...]
     notes: tuple[AthleteNote, ...] = ()
     supersedes: str | None = None
+    overrides: tuple[PlanOverride, ...] = ()
+    conflicts: tuple[Flag, ...] = ()
 
     @property
     def week_flags(self) -> tuple[Flag, ...]:
@@ -40,7 +42,7 @@ class PlanDraft:
     @property
     def flags(self) -> tuple[Flag, ...]:
         line_flags = (f for s in self.sessions for line in s.lines for f in line.flags)
-        return (*self.week_flags, *line_flags)
+        return (*self.week_flags, *self.conflicts, *line_flags)
 
     @property
     def line_count(self) -> int:

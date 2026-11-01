@@ -226,7 +226,7 @@ def test_show_draft_re_adopts_as_an_amend_with_an_empty_diff() -> None:
     conn = the_worked_store()
     run(conn, WORKED_DRAFT_COMPLETE)
 
-    text = show_draft(conn)
+    text = show_draft(conn).text
     dry = run(conn, text, dry_run=True)
     amend = run(conn, text)
 
@@ -517,7 +517,7 @@ def test_a_stale_acknowledgement_is_refused_as_acknowledgement_unmatched() -> No
 def test_a_carried_acknowledgement_leaves_nothing_once_its_warning_params_change() -> None:
     conn = the_worked_store()
     run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
-    draft = tomllib.loads(show_draft(conn))
+    draft = tomllib.loads(show_draft(conn).text)
     [pull] = [s for s in draft["session"] if s["id"] == "a-sat-pull"]
     [line] = [x for x in pull["line"] if x["exercise"] == "pull_up"]
     line["sets"] = [{"count": 3, "reps": [8, 12], "rpe": 8}]
@@ -538,7 +538,7 @@ def test_a_carried_acknowledgement_still_leaves_its_unchanged_warning() -> None:
     conn = the_worked_store()
     adopted = run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
 
-    again = run(conn, show_draft(conn), available_days=EVERY_DAY)
+    again = run(conn, show_draft(conn).text, available_days=EVERY_DAY)
 
     assert again.version_id == "pv-2"
     assert again.acknowledgements == adopted.acknowledgements
@@ -557,7 +557,7 @@ def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version
     ]
     adopted = run(conn, toml(draft))
 
-    again = run(conn, show_draft(conn))
+    again = run(conn, show_draft(conn).text)
 
     [left] = [f for f in again.warnings if f.code == "emphasis_off_goal"]
     assert left.key == "emphasis_off_goal@version:pv-2"

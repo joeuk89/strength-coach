@@ -3,27 +3,33 @@ from typing import cast
 from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.core.plan_draft import AthleteNote, PlanDraft
-from coach.core.prescription import LinePrescription, PrescribedGroup, SessionPrescription
+from coach.core.prescription import (
+    LinePrescription,
+    PlanOverride,
+    PrescribedGroup,
+    SessionPrescription,
+)
+from coach.core.program.form import SetGroup, group_document
 from coach.render.toml import TomlValue, dumps
 
 type Table = dict[str, object]
 
 
 def plan_draft(draft: PlanDraft, *, units: Units) -> str:
-    """The Draft the agent edits. `override` and `acknowledge` start empty; `plan apply` ignores
-    the notes (docs/spec/overrides.md, "Draft shape")."""
+    """The Draft the agent edits, carrying the overrides it was derived with; `acknowledge`
+    starts empty and `plan apply` ignores the notes (docs/spec/overrides.md, "Draft shape")."""
     document: Table = {"week": draft.week}
     if draft.supersedes is not None:
         document["supersedes"] = draft.supersedes
     document |= {
-        "override": [],
+        "override": [_override(override) for override in draft.overrides],
         "acknowledge": [],
         "position": {
             "week": draft.position.week,
             "source": draft.position.source,
             "confirmed": False,
         },
-        "flag": [_flag(flag) for flag in draft.week_flags],
+        "flag": [_flag(flag) for flag in (*draft.week_flags, *draft.conflicts)],
         "session": [_session(session, draft.notes, units) for session in draft.sessions],
         "note": [_note(note) for note in draft.notes],
     }
@@ -74,6 +80,29 @@ def _group(group: PrescribedGroup, units: Units) -> Table:
         "rpe_cap": group.rpe_cap,
     }
     return table | {key: value for key, value in optional.items() if value is not None}
+
+
+def _override(override: PlanOverride) -> Table:
+    table: Table = {"kind": override.kind}
+    refs = {"session": override.session_id, "exercise": override.exercise_id}
+    table |= {key: value for key, value in refs.items() if value is not None}
+    if override.date is not None:
+        table["date"] = override.date
+    for name, value in override.params.items():
+        table[name] = _param(value)
+    table |= {"because": override.because, "text": override.text}
+    if override.evidence:
+        table["evidence"] = list(override.evidence)
+    return table
+
+
+def _param(value: object) -> object:
+    if isinstance(value, tuple):
+        return [
+            group_document(item) if isinstance(item, SetGroup) else item
+            for item in cast(tuple[object, ...], value)
+        ]
+    return value
 
 
 def _flag(flag: Flag) -> Table:

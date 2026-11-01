@@ -170,7 +170,13 @@ def test_an_override_on_the_same_line_and_kind_supersedes_and_another_kind_does_
 
 @pytest.mark.parametrize(
     "override",
-    ['{ kind = "light_week" }', '{ kind = "hold", load = 20 }', "{ load = 20 }"],
+    [
+        '{ kind = "light_week" }',
+        '{ kind = "hold", load = 20 }',
+        "{ load = 20 }",
+        '{ kind = "pin_load" }',
+        '{ kind = "swap_exercise", start_load = 20 }',
+    ],
 )
 def test_an_override_decision_wraps_one_line_scope_kind_with_its_params(override: str) -> None:
     conn = a_store()

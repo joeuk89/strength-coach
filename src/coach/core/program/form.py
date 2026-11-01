@@ -192,7 +192,7 @@ def line_document(line: Line) -> dict[str, object]:
     document: dict[str, object] = {"exercise": line.exercise}
     if line.load_mode is not None:
         document["load_mode"] = line.load_mode
-    document["sets"] = [_group_document(group) for group in line.sets]
+    document["sets"] = [group_document(group) for group in line.sets]
     document["rest_s"] = line.rest_s
     optional: dict[str, object | None] = {
         "cues": line.cues,
@@ -204,7 +204,7 @@ def line_document(line: Line) -> dict[str, object]:
     return document
 
 
-def _group_document(group: SetGroup) -> dict[str, object]:
+def group_document(group: SetGroup) -> dict[str, object]:
     document: dict[str, object] = {"count": group.count}
     if group.type != "working":
         document["type"] = group.type

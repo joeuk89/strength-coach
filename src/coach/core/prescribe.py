@@ -1,7 +1,9 @@
 """The derivation pipeline (ADR 0017, docs/spec/prescription.md, "The pipeline"): the scheme's
-move from the anchor exposure, the cut, the ceilings and the rack (`bounds`), then the warm-ups.
-Each step that changed something is recorded as `(step, from, to, cause)`."""
+move from the anchor exposure, the plan's line overrides and the override Decisions in force,
+the cut, the ceilings and the rack (`bounds`), then the warm-ups. Each step that changed
+something is recorded as `(step, from, to, cause)`."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import cast
 
@@ -10,10 +12,12 @@ from coach.core.bounds import TEST_RPE, Bounded, LineContext, bound
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
+from coach.core.overrides import line_override
 from coach.core.planned_week import week_monday
 from coach.core.prescription import (
     ExerciseFacts,
     LinePrescription,
+    PlanOverride,
     PrescribedGroup,
     PrescribeRequest,
     SessionPrescription,
@@ -27,9 +31,11 @@ from coach.core.warm_up import warm_up_loads
 
 def prescribe(request: PrescribeRequest) -> SessionPrescription:
     planned = request.planned
-    return SessionPrescription(
-        planned, tuple(_Derivation(request, line).derive() for line in planned.lines)
-    )
+    derived = (_Derivation(request, line).derive() for line in planned.lines)
+    return SessionPrescription(planned, tuple(line for line in derived if line is not None))
+
+
+type Applied = tuple[str, PlanOverride]
 
 
 @dataclass
@@ -49,9 +55,26 @@ class _Derivation:
             exercise_id=self.line.exercise,
         )
 
-    def derive(self) -> LinePrescription:
-        exercise = self.request.version.exercises[self.line.exercise]
-        mode = cast(LoadMode, self.line.load_mode or exercise.load_mode)
+    def derive(self) -> LinePrescription | None:
+        overrides = self._overrides()
+        if "drop_line" in overrides:
+            return None
+        authored = self.line
+        if "swap_exercise" in overrides:
+            authored = self._swap(*overrides["swap_exercise"])
+        exercise = self.request.version.exercises.get(authored.exercise)
+        if exercise is None:
+            self._raise(
+                "unknown_exercise",
+                {"exercise_id": authored.exercise},
+                f"{authored.exercise} is not in the library",
+            )
+            unknown = Bounded(authored.sets, None)
+            return self._prescription(authored, None, self._groups(None, unknown), "held")
+        sets = authored.sets
+        if "restate_sets" in overrides:
+            sets = self._restate(authored, *overrides["restate_sets"])
+        mode = cast(LoadMode, authored.load_mode or exercise.load_mode)
         if not _convertible(exercise.load_mode, mode):
             self._raise(
                 "load_mode_mismatch",
@@ -59,36 +82,129 @@ class _Derivation:
                 f"the line's load mode {mode} cannot be read from the exercise's "
                 f"{exercise.load_mode}",
             )
-            unloaded = Bounded(self.line.sets, None)
-            return self._prescription(None, self._groups(None, unloaded), "held")
+            unloaded = Bounded(sets, None)
+            return self._prescription(authored, None, self._groups(None, unloaded), "held")
         rack = self._rack(exercise, mode)
-        start = None if self.line.start_load is None else Load(self.line.start_load, mode)
+        start = None if authored.start_load is None else Load(authored.start_load, mode)
         found = anchor(
             self.request.exposures,
-            exercise_id=self.line.exercise,
+            exercise_id=authored.exercise,
             session_id=self.request.planned.session_id,
             on=self.request.planned.date,
             start_load=start,
         )
         loaded = mode in LOAD_BEARING_MODES
-        context = LineContext(self.request, self.line, exercise, mode, rack, self.scope)
+        line = replace(authored, sets=sets)
+        context = LineContext(self.request, line, exercise, mode, rack, self.scope)
+        pin = overrides.get("pin_load")
         if isinstance(found, StartLoad):
-            opening = self._opening(found, loaded)
-            bounded = bound(context, opening, "hold", self.steps, self.flags)
-            return self._bounded(found.derived_from, rack, bounded, "first prescription")
+            pinned_only = pin is not None and found.load is None
+            opening = None if pinned_only else self._opening(authored, found, loaded)
+            pinned = self._pin(opening, mode, *pin) if pin is not None and loaded else None
+            context = replace(context, scheme_load=opening, pin=pinned)
+            working = opening if pinned is None else pinned
+            bounded = bound(context, working, "hold", self.steps, self.flags)
+            return self._bounded(authored, found.derived_from, rack, bounded, "first prescription")
         before = self._anchor_load(found.exposure, rack, mode) if loaded else None
-        moved = self._move(found.exposure, before, rack)
-        context = replace(context, anchor=found.exposure, anchor_top=before)
-        rounding = "step_up" if moved != before else "hold"
-        bounded = bound(context, moved, rounding, self.steps, self.flags)
-        return self._bounded(found.derived_from, rack, bounded, _change(self.line, before, bounded))
+        moved = self._move_or_hold(authored, found.exposure, before, rack, overrides)
+        pinned = None if pin is None or moved is None else self._pin(moved, moved.mode, *pin)
+        context = replace(
+            context, anchor=found.exposure, anchor_top=before, scheme_load=moved, pin=pinned
+        )
+        if pinned is not None:
+            bounded = bound(context, pinned, "hold", self.steps, self.flags)
+        else:
+            rounding = "hold" if moved == before else "step_up"
+            bounded = bound(context, moved, rounding, self.steps, self.flags)
+        if pin is not None:
+            self._check_increment(found.exposure, rack, before, bounded.load)
+        change = _change(line, before, bounded)
+        return self._bounded(authored, found.derived_from, rack, bounded, change)
 
     def _bounded(
-        self, derived_from: str, rack: Rack | None, bounded: Bounded, change: str
+        self, authored: Line, derived_from: str, rack: Rack | None, bounded: Bounded, change: str
     ) -> LinePrescription:
         if bounded.dropped:
-            return self._prescription(derived_from, (), "dropped")
-        return self._prescription(derived_from, self._groups(rack, bounded), change)
+            return self._prescription(authored, derived_from, (), "dropped")
+        return self._prescription(authored, derived_from, self._groups(rack, bounded), change)
+
+    def _move_or_hold(
+        self,
+        authored: Line,
+        exposure: Exposure,
+        before: Load | None,
+        rack: Rack | None,
+        overrides: Mapping[str, Applied],
+    ) -> Load | None:
+        if "hold" not in overrides:
+            return self._move(authored, exposure, before, rack)
+        step, _ = overrides["hold"]
+        self.steps.append(Step(step, None, _amount(before), "hold"))
+        return before
+
+    def _overrides(self) -> dict[str, Applied]:
+        """The line's override Decisions in force, then the plan's own: the plan wins on the same
+        kind (docs/spec/overrides.md, "Precedence and conflicts")."""
+        session_id = self.request.planned.session_id
+        found: dict[str, Applied] = {}
+        for decision in self.request.decisions:
+            if (decision.kind, decision.session_id, decision.exercise_id) == (
+                "override",
+                session_id,
+                self.line.exercise,
+            ):
+                params = cast(Mapping[str, object], decision.params["override"])
+                override = line_override(params, where=f"decision {decision.id}")
+                found[override.kind] = ("decision", override)
+        for override in self.request.overrides:
+            if (override.session_id, override.exercise_id) == (session_id, self.line.exercise):
+                found[override.kind] = ("override", override)
+        return found
+
+    def _swap(self, step: str, swap: PlanOverride) -> Line:
+        """The other exercise under the line's scheme and sets, with the swap's own start load
+        and load mode: nothing of the swapped-out exercise carries."""
+        to = str(swap.params["to"])
+        self.steps.append(Step(step, self.line.exercise, to, "swap_exercise"))
+        start = cast(float | None, swap.params.get("start_load"))
+        return replace(
+            self.line,
+            exercise=to,
+            load_mode=cast(str | None, swap.params.get("load_mode")),
+            start_load=start,
+        )
+
+    def _restate(self, authored: Line, step: str, restate: PlanOverride) -> tuple[SetGroup, ...]:
+        sets = cast(tuple[SetGroup, ...], restate.params["sets"])
+        before = sum(group.count for group in authored.working_groups())
+        after = sum(group.count for group in sets if group.working)
+        self.steps.append(Step(step, before, after, "restate_sets"))
+        return sets
+
+    def _pin(self, working: Load | None, mode: LoadMode, step: str, pin: PlanOverride) -> Load:
+        pinned = Load(cast(float, pin.params["load"]), mode)
+        self.steps.append(Step(step, _amount(working), pinned.amount, "pin_load"))
+        return pinned
+
+    def _check_increment(
+        self, exposure: Exposure, rack: Rack | None, before: Load | None, pinned: Load | None
+    ) -> None:
+        """Every scheme steps at most one rack row, so only a pin can step further."""
+        if rack is None or before is None or pinned is None:
+            return
+        one_row = next_row_up(rack, before).load
+        if pinned.amount <= one_row.amount:
+            return
+        self._raise(
+            "increment_over_step",
+            {
+                "increment": pinned.amount - before.amount,
+                "scheme_step": one_row.amount - before.amount,
+                "from_exposure": exposure.ref,
+            },
+            f"the pinned {pinned.amount:g} is more than one rack row above the anchor's "
+            f"{before.amount:g}",
+        )
 
     def _rack(self, exercise: ExerciseFacts, mode: LoadMode) -> Rack | None:
         if mode not in RACK_MODES:
@@ -96,15 +212,15 @@ class _Derivation:
         racks = self.request.racks.get(self.request.planned.location, {})
         return racks.get(exercise.equipment_kind)
 
-    def _opening(self, found: StartLoad, loaded: bool) -> Load | None:
+    def _opening(self, authored: Line, found: StartLoad, loaded: bool) -> Load | None:
         """No exposure anywhere: the start load at the scheme's opening position."""
         if not loaded:
             return None
         if found.load is None:
             self._raise(
                 "start_load_missing",
-                {"exercise_id": self.line.exercise},
-                f"{self.line.exercise} has no Exposure yet and the line has no start_load",
+                {"exercise_id": authored.exercise},
+                f"{authored.exercise} has no Exposure yet and the line has no start_load",
             )
             return None
         self.steps.append(Step("scheme", None, found.load.amount, "start_load"))
@@ -125,8 +241,10 @@ class _Derivation:
             self.flags.append(offgrid)
         return load
 
-    def _move(self, exposure: Exposure, before: Load | None, rack: Rack | None) -> Load | None:
-        verdict = judge(self.line, exposure, before)
+    def _move(
+        self, authored: Line, exposure: Exposure, before: Load | None, rack: Rack | None
+    ) -> Load | None:
+        verdict = judge(authored, exposure, before)
         if verdict.missed is not None:
             missed = verdict.missed
             self._raise(
@@ -149,11 +267,15 @@ class _Derivation:
         return moved.load
 
     def _prescription(
-        self, derived_from: str | None, groups: tuple[PrescribedGroup, ...], change: str
+        self,
+        authored: Line,
+        derived_from: str | None,
+        groups: tuple[PrescribedGroup, ...],
+        change: str,
     ) -> LinePrescription:
         return LinePrescription(
-            exercise_id=self.line.exercise,
-            scheme=self.line.scheme.name,
+            exercise_id=authored.exercise,
+            scheme=authored.scheme.name,
             groups=groups,
             derived_from=derived_from,
             steps=tuple(self.steps),
@@ -244,3 +366,7 @@ def _describe(group: SetGroup, rpe_cap: Number | None) -> str:
     else:
         rpe = "" if group.rpe is None else f" @{group.rpe:g}"
     return f"{group.count}×{dose}{rpe}"
+
+
+def _amount(load: Load | None) -> float | None:
+    return None if load is None else load.amount

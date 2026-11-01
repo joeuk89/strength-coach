@@ -1,5 +1,7 @@
 """WeekPlans as rows, read only: `plan apply` writes them (schema.md, "Week")."""
 
+import json
+
 from coach.store.connection import Connection
 from coach.store.rows import Row, select
 
@@ -31,3 +33,12 @@ def last_approved(conn: Connection) -> Row | None:
     """The WeekPlan approved most recently, whatever its status now."""
     found = select(conn, f"{READ} ORDER BY approved_at DESC LIMIT 1")
     return found[0] if found else None
+
+
+def overrides(conn: Connection, plan_id: str) -> list[Row]:
+    """The plan's override rows, params and evidence decoded, in the order they were written."""
+    found = select(conn, "SELECT * FROM override WHERE plan_id = ? ORDER BY id", (plan_id,))
+    for row in found:
+        row["params"] = json.loads(str(row["params"]))
+        row["evidence"] = json.loads(str(row["evidence"])) if row["evidence"] else []
+    return found
