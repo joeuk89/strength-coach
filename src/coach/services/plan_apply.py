@@ -109,7 +109,8 @@ def dry_run(
     actions = _actions(conn, checked, validated.templates)
     approved = week_plans.with_draft(conn, checked.draft.week.isoformat(), draft_hash(data))
     if approved is not None:
-        # The same Draft already approved: a re-run resumes its push under the approved hash.
+        # The same Draft already approved: a re-run resumes its push under the approved hash,
+        # or a new one when a touched routine moved in Hevy since approval.
         resumes = str(approved["id"])
         draft = replace(checked.draft, supersedes=week_plans.superseded(conn, resumes))
         moved = moved_routines(
