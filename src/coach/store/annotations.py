@@ -1,6 +1,8 @@
 import json
 from collections.abc import Mapping
+from typing import cast
 
+from coach.core.exposure import Annotation
 from coach.store.connection import Connection
 from coach.store.rows import Row, insert, select
 
@@ -32,3 +34,14 @@ def every(conn: Connection) -> list[Row]:
     for row in rows:
         row["params"] = json.loads(str(row["params"])) if row["params"] else None
     return rows
+
+
+def live(conn: Connection) -> tuple[Annotation, ...]:
+    """`annotation_current` without the withdrawing rows, which are never read."""
+    found = conn.execute(
+        "SELECT id, kind, target, params FROM annotation_current WHERE withdraws IS NULL"
+    ).fetchall()
+    return tuple(
+        Annotation(id_, kind, target, cast(dict[str, object], json.loads(params or "{}")))
+        for id_, kind, target, params in found
+    )

@@ -1,6 +1,9 @@
 import json
 from collections.abc import Mapping
+from typing import cast
 
+from coach.core.exposure import LibraryEntry
+from coach.core.load import LoadMode
 from coach.store.connection import Connection
 from coach.store.rows import Row, select
 
@@ -58,3 +61,14 @@ def every(conn: Connection) -> list[Row]:
 
 def _decoded(row: Row) -> Row:
     return {**row, "muscles": json.loads(str(row["muscles"]))}
+
+
+def library(conn: Connection) -> dict[str, LibraryEntry]:
+    """Each Exercise by the Hevy template id it carries."""
+    found = conn.execute(
+        "SELECT hevy_template_id, id, load_mode FROM exercise WHERE hevy_template_id IS NOT NULL"
+    )
+    return {
+        template_id: LibraryEntry(id_, cast(LoadMode, load_mode))
+        for template_id, id_, load_mode in found
+    }

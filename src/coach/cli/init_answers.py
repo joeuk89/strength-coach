@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from coach.cli.clock import clock_for, machine_timezone
+from coach.cli.declaration import ArgValue
 from coach.cli.terminal import Terminal
 from coach.core.config import (
     DEFAULT_CHECKIN_CADENCE_DAYS,
@@ -14,7 +15,7 @@ from coach.core.config import (
 )
 from coach.core.errors import CoachError, Invalid
 
-type Args = Mapping[str, str | bool]
+type Args = Mapping[str, ArgValue]
 type Env = Mapping[str, str]
 
 
