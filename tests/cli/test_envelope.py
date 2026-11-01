@@ -6,7 +6,9 @@ import pytest
 from support.cli import run_coach
 from support.instances import an_instance
 
-from coach.cli import app
+from coach.cli import app, registry
+from coach.cli.declaration import Call, Declaration, Outcome
+from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 
 
 class Terminal(io.StringIO):
@@ -107,3 +109,26 @@ def test_an_unexpected_failure_still_prints_one_envelope(
     assert run.code == 1
     assert run.envelope["error"]["code"] == "internal_error"
     assert "RuntimeError" in run.stderr
+
+
+@pytest.mark.parametrize(
+    ("kind", "code"), [(Invalid, 1), (Refused, 3), (Unreachable, 4), (Setup, 5)]
+)
+def test_each_typed_error_exits_with_its_class(
+    monkeypatch: pytest.MonkeyPatch, kind: type[CoachError], code: int
+) -> None:
+    def fail(call: Call) -> Outcome:
+        raise kind("some_code", "it failed")
+
+    failing = Declaration(
+        name="fail", summary="Fails.", writes="none", needs_instance=False, output={}, run=fail
+    )
+    monkeypatch.setattr(registry, "declarations", lambda: (failing,))
+
+    run = run_coach("fail")
+
+    assert run.code == code
+    assert run.stdout.count("\n") == 1
+    assert run.envelope["ok"] is False
+    assert run.envelope["verb"] == "fail"
+    assert run.envelope["error"]["code"] == "some_code"
