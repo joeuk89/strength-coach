@@ -180,8 +180,7 @@ def _row_on_or_below(rack: Rack, amount: float) -> RackRow | None:
 
 def _row_on_or_above(rack: Rack, amount: float) -> RackRow:
     exact = rack.rows_within(amount, amount)
-    above = rack.row_above(amount)
-    row = exact[0] if exact else above
+    row = exact[0] if exact else rack.row_above(amount)
     assert row is not None, "a load at or under the top row has a row on or above it"
     return row
 
