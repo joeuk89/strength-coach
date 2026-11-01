@@ -7,7 +7,7 @@ from coach.core.flag import Flag
 from coach.core.import_flags import snapshot_stale
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
-from coach.core.planned_week import RotationPosition
+from coach.core.planned_week import RotationPosition, week_monday
 from coach.services.rotation import rotation_position
 from coach.store import goals, phases, programs, week_plans
 from coach.store.connection import Connection, schema_version
@@ -92,6 +92,7 @@ def status(
     now = clock.now()
     last = last_import_at(conn)
     stale = snapshot_stale(last, now) if hevy_on else None
+    monday = week_monday(clock.today())
     return StatusResult(
         engine_version=engine_version,
         pin=pin,
@@ -106,8 +107,8 @@ def status(
         goal=_current_goal(conn),
         phase=phases.open_phase(conn),
         warnings=(stale,) if stale else (),
-        plan=_plan_in_force(conn, _monday(clock.today())),
-        rotation=_rotation(conn, _monday(clock.today())),
+        plan=_plan_in_force(conn, monday),
+        rotation=_rotation(conn, monday),
     )
 
 
@@ -135,10 +136,6 @@ def _program(conn: Connection) -> ProgramInForce | None:
         return None
     form = version.form
     return ProgramInForce(version.id, form.kind, form.emphasis, version.adopted)
-
-
-def _monday(today: datetime.date) -> datetime.date:
-    return today - datetime.timedelta(days=today.weekday())
 
 
 def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | None:

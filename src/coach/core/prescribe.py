@@ -2,7 +2,6 @@
 move from the anchor exposure, rack rounding, then the warm-ups. Each step that changed a load is
 recorded as `(step, from, to, cause)`."""
 
-import datetime
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -10,6 +9,7 @@ from coach.core.anchor import StartLoad, anchor, anchor_load
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
+from coach.core.planned_week import week_monday
 from coach.core.prescription import (
     ExerciseFacts,
     LinePrescription,
@@ -41,8 +41,12 @@ class _Derivation:
     @property
     def scope(self) -> Scope:
         planned = self.request.planned
-        monday = planned.date - datetime.timedelta(days=planned.date.weekday())
-        return Scope("line", monday, session_id=planned.session_id, exercise_id=self.line.exercise)
+        return Scope(
+            "line",
+            week_monday(planned.date),
+            session_id=planned.session_id,
+            exercise_id=self.line.exercise,
+        )
 
     def derive(self) -> LinePrescription:
         exercise = self.request.version.exercises[self.line.exercise]

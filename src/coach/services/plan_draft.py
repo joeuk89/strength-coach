@@ -9,6 +9,7 @@ from typing import cast
 from coach.core.clock import Clock
 from coach.core.config import Config
 from coach.core.errors import Invalid
+from coach.core.instant import parse_instant
 from coach.core.kit import KitFiles
 from coach.core.load import LoadMode
 from coach.core.plan_draft import AthleteNote, PlanDraft
@@ -135,7 +136,7 @@ def _notes_since_last_approved(conn: Connection) -> tuple[AthleteNote, ...]:
     """Every Athlete note recorded after the last WeekPlan was approved (check-in.md,
     "Athlete notes")."""
     last = week_plans.last_approved(conn)
-    since = None if last is None else _instant(str(last["approved_at"]))
+    since = None if last is None else parse_instant(str(last["approved_at"]))
     return tuple(
         AthleteNote(
             datetime.date.fromisoformat(str(row["date"])),
@@ -143,9 +144,5 @@ def _notes_since_last_approved(conn: Connection) -> tuple[AthleteNote, ...]:
             cast(str | None, row["about"]),
         )
         for row in notes.every(conn)
-        if since is None or _instant(str(row["recorded_at"])) > since
+        if since is None or parse_instant(str(row["recorded_at"])) > since
     )
-
-
-def _instant(text: str) -> datetime.datetime:
-    return datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))

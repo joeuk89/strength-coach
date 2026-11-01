@@ -20,6 +20,10 @@ class RotationPosition:
     source: PositionSource
 
 
+def week_monday(day: datetime.date) -> datetime.date:
+    return day - datetime.timedelta(days=day.weekday())
+
+
 def infer_position(
     rotation: Sequence[str],
     *,

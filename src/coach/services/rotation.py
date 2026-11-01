@@ -2,7 +2,7 @@
 
 import datetime
 
-from coach.core.planned_week import RotationPosition, infer_position
+from coach.core.planned_week import RotationPosition, infer_position, week_monday
 from coach.store import programs, week_plans
 from coach.store.connection import Connection
 
@@ -11,7 +11,7 @@ def default_week(conn: Connection, today: datetime.date) -> datetime.date:
     """The first week from this one on with no approved WeekPlan (verbs.md, "Arguments with
     rules")."""
     approved = week_plans.approved_weeks(conn)
-    monday = today - datetime.timedelta(days=today.weekday())
+    monday = week_monday(today)
     while monday.isoformat() in approved:
         monday += datetime.timedelta(weeks=1)
     return monday
@@ -34,5 +34,4 @@ def _block_monday(conn: Connection) -> str | None:
     opened = programs.block_opened(conn)
     if opened is None:
         return None
-    day = datetime.date.fromisoformat(opened)
-    return (day - datetime.timedelta(days=day.weekday())).isoformat()
+    return week_monday(datetime.date.fromisoformat(opened)).isoformat()
