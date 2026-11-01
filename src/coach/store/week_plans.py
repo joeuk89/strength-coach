@@ -165,10 +165,10 @@ def first_week(conn: Connection) -> datetime.date | None:
 
 
 def light_week_approvals(conn: Connection) -> list[tuple[str, datetime.date]]:
-    """The week and the approval day of each WeekPlan carrying a `light_week` override."""
+    """The week and the approval day of each WeekPlan in force carrying a `light_week` override."""
     found = conn.execute(
         "SELECT DISTINCT p.week, p.approved_at FROM week_plan p "
         "JOIN override o ON o.plan_id = p.id "
-        "WHERE o.kind = 'light_week' AND p.approved_at IS NOT NULL ORDER BY p.approved_at"
+        "WHERE o.kind = 'light_week' AND p.status = 'approved' ORDER BY p.approved_at"
     )
     return [(week, datetime.date.fromisoformat(at[:10])) for week, at in found]

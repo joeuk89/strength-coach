@@ -14,6 +14,7 @@ from support.plans import (
 
 from coach.services.record import record
 from coach.services.status import StatusResult, status
+from coach.store import week_plans
 from coach.store.connection import Connection
 
 FOURTH_SUNDAY = datetime.date(2026, 11, 29)
@@ -113,6 +114,31 @@ def test_a_plan_carrying_light_week_clears_the_proposal() -> None:
 
     assert "standing_from" not in block
     assert not light_week_pending(conn, datetime.date(2026, 12, 1))
+
+
+def test_a_light_week_plan_superseded_by_one_without_it_leaves_the_proposal_standing() -> None:
+    conn = proposed_and_recorded()
+    plan_id = an_approved_plan(conn, monday(5), approved_at="2026-11-30T09:00:00+00:00")
+    a_plan_override(conn, plan_id, "light_week", None, None)
+    at = "2026-12-01T09:00:00+00:00"
+    plan = {
+        "id": "wp-2",
+        "week": monday(5),
+        "position": "A",
+        "approved_at": at,
+        "write_plan_hash": "sha256:w",
+        "draft_hash": "sha256:d2",
+        "recorded_at": at,
+    }
+    with conn:
+        week_plans.approve(
+            conn, plan, supersedes=plan_id, overrides=[], prescriptions=[], acknowledgements=[]
+        )
+
+    block = block_of(conn, datetime.date(2026, 12, 6))
+
+    assert block["standing_from"] == "ci-2026-11-29"
+    assert light_week_pending(conn, datetime.date(2026, 12, 2))
 
 
 def drifting_squat(*, last_reps: int = 8) -> Connection:
