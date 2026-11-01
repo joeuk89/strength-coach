@@ -8,10 +8,11 @@ from typing import TextIO
 
 from coach.cli import envelope, registry
 from coach.cli.argv import GLOBAL_OPTIONS, Options, find_leaf, parse_options
-from coach.cli.declaration import Call, Declaration, Instance, Json
-from coach.cli.instance import find_root, read_pin
+from coach.cli.clock import clock_for
+from coach.cli.declaration import Call, Declaration, Json
+from coach.cli.instance import find_root, load_instance
+from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
-from coach.core.engine_pin import check_pin
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 from coach.core.message import Message
 from coach.store.connection import SCHEMA_VERSION
@@ -51,9 +52,10 @@ def main(
             running = engine_version()
             instance = None
             if declaration.needs_instance:
-                instance, pin_warning = _instance(running)
+                instance, pin_warning = load_instance(find_root(Path.cwd()), running)
                 if pin_warning:
                     warnings.append(pin_warning)
+                clock = clock or clock_for(instance.config.athlete.timezone)
             call = Call(
                 args=options.args,
                 full=options.full,
@@ -63,6 +65,7 @@ def main(
                 env=env,
                 clock=clock,
                 make_client=make_client,
+                terminal=Terminal(sys.stdin, stderr),
             )
             outcome = declaration.run(call)
             warnings.extend(outcome.warnings)
@@ -82,13 +85,6 @@ def main(
 
 def run() -> int:
     return main(sys.argv[1:], os.environ, sys.stdout, sys.stderr)
-
-
-def _instance(running: str) -> tuple[Instance, Message | None]:
-    root = find_root(Path.cwd())
-    pin = read_pin(root)
-    pin_warning = check_pin(running, pin)
-    return Instance(root=root, pin=pin), pin_warning
 
 
 def _projected(result: Json, options: Options) -> Json:

@@ -21,7 +21,6 @@ PENDING_LEAVES = frozenset(
         "query",
         "publish",
         "upgrade",
-        "init",
     }
 )
 
