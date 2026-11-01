@@ -11,6 +11,7 @@ import shlex
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote
 
 from coach.core.hevy_api import HEVY_HOST
 
@@ -39,14 +40,19 @@ MAX_DEPTH = 4
 PUNCTUATION = "();<>|&\n"
 SEPARATORS = set(";|&()\n")
 SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
-WRAPPERS = frozenset({"env", "command", "exec", "nohup", "time", "sudo"})
+RESERVED_WORDS = frozenset(
+    {"if", "then", "elif", "else", "fi", "do", "done", "while", "until", "for", "case", "esac"}
+    | {"select", "function", "time", "{", "}", "!", "[[", "]]"}
+)
 HTTP_CLIENTS = frozenset({"curl", "wget", "http", "https", "xh", "xhs"})
 INTERPRETER = re.compile(r"^(python[\d.]*|node|ruby|perl|php|deno|bun)$")
 PYTHON = re.compile(r"^python[\d.]*$")
 PYTHON_OPTIONS_WITH_VALUE = frozenset({"-X", "-W", "--check-hash-based-pycs"})
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=", re.S)
 FD_BEFORE_REDIRECT = re.compile(r"(?<![\w-])\d+(?=[<>])")
-HEVY_URL = re.compile(re.escape(HEVY_HOST) + r"(?::\d+)?(?P<path>/[^\s'\"`;|&()<>]*)?")
+HEVY_URL = re.compile(
+    re.escape(HEVY_HOST) + r"\.?(?::\d+)?(?P<path>/[^\s'\"`;|&()<>]*)?", re.IGNORECASE
+)
 SUBSTITUTED = "__coach_hook_substituted__"
 
 
@@ -72,30 +78,50 @@ def _scan(text: str, cwd: Path, depth: int) -> Iterator[Finding]:
         words = _unwrapped(words)
         if not words:
             continue
-        program = os.path.basename(words[0])
-        if program in ("cd", "pushd"):
+        if os.path.basename(words[0]) in ("cd", "pushd"):
             cwd = _changed_dir(cwd, words[1:])
             continue
-        nested = _nested_script(words)
+        yield from _command(words, text, cwd, depth)
+
+
+def _command(words: list[str], text: str, cwd: Path, depth: int) -> Iterator[Finding]:
+    """What one simple command runs, wherever in it a wrapper such as `timeout 5` puts it."""
+    for position in range(len(words)):
+        rest = words[position:]
+        program = os.path.basename(rest[0])
+        nested = _nested_script(rest)
         if nested is not None:
             yield from _scan(nested, cwd, depth + 1)
+            return
+        argv = _coach_argv(rest)
+        if argv and os.path.basename(argv[0]) == "coach":
             continue
-        argv = _coach_argv(words)
         if argv is not None:
-            opaque = any("$" in word or SUBSTITUTED in word for word in argv)
-            yield CoachCall(tuple(argv), cwd, opaque)
-        elif program in HTTP_CLIENTS or INTERPRETER.match(program):
-            for match in HEVY_URL.finditer(" ".join(words[1:])):
+            yield CoachCall(tuple(argv), cwd, any(_opaque(word) for word in argv))
+            return
+        if program in HTTP_CLIENTS or INTERPRETER.match(program):
+            for match in HEVY_URL.finditer(" ".join(rest[1:])):
                 yield HevyCall(_normalised(match.group("path") or "/"))
+            if HEVY_HOST in text.lower() and any(_opaque(word) for word in rest[1:]):
+                yield Unreadable("a URL in it is only known when the shell runs it")
+            return
+    if _opaque(words[0]) and _mentions(text):
+        yield Unreadable("the program it runs is only known when the shell runs it")
+
+
+def _opaque(word: str) -> bool:
+    return "$" in word or SUBSTITUTED in word
 
 
 def _mentions(text: str) -> bool:
-    return "coach" in text or HEVY_HOST in text
+    return "coach" in text or HEVY_HOST in text.lower()
 
 
 def _tokens(text: str) -> list[str]:
     lexer = shlex.shlex(FD_BEFORE_REDIRECT.sub("", text), posix=True, punctuation_chars=PUNCTUATION)
     lexer.whitespace = " \t\r"
+    # Bash keeps `#` inside a word; reading a comment as words can only add an answer.
+    lexer.commenters = ""
     lexer.whitespace_split = True
     return list(lexer)
 
@@ -178,19 +204,10 @@ def _simple_commands(tokens: list[str]) -> Iterator[list[str]]:
 
 
 def _unwrapped(words: list[str]) -> list[str]:
-    """`words` without leading assignments and plain wrappers such as `env` or `uv run`."""
+    """`words` without leading assignments and reserved words such as `if` or `{`."""
     index = 0
-    while index < len(words):
-        word = words[index]
-        name = os.path.basename(word)
-        if ASSIGNMENT.match(word) or name in WRAPPERS:
-            index += 1
-        elif name == "uv" and words[index + 1 : index + 2] == ["run"]:
-            index += 2
-        elif index > 0 and word.startswith("-"):
-            index += 1
-        else:
-            break
+    while index < len(words) and (ASSIGNMENT.match(words[index]) or words[index] in RESERVED_WORDS):
+        index += 1
     return words[index:]
 
 
@@ -240,4 +257,7 @@ def _coach_argv(words: list[str]) -> list[str] | None:
 
 
 def _normalised(path: str) -> str:
-    return posixpath.normpath(re.sub("/+", "/", path.split("?")[0].split("#")[0])).lower()
+    path = path.split("?")[0].split("#")[0]
+    while unquote(path) != path:
+        path = unquote(path)
+    return posixpath.normpath(re.sub("/+", "/", path)).lower()

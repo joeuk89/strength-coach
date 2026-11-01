@@ -86,10 +86,10 @@ def _review(
     return _coach(found, declarations, dry_run)
 
 
-# ADR 0011: the client's allow-list has no workout write, so no method on workouts passes.
+# ADR 0011: the client's allow-list has no workout write, so no method on /v1/workouts* passes.
 def _raw_hevy(found: HevyCall) -> Answer:
     url = f"{HEVY_HOST}{found.path}"
-    if found.path == WORKOUTS_PATH or found.path.startswith(f"{WORKOUTS_PATH}/"):
+    if found.path.startswith(WORKOUTS_PATH):
         return Answer(
             "deny",
             f"{url} is Hevy workout history, which no command may touch by any method; "

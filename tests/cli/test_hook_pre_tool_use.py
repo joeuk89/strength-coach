@@ -27,11 +27,23 @@ def test_plan_apply_with_a_current_expect_is_denied_in_bypass_permissions_mode()
     assert "bypassPermissions" in run.reason
 
 
+STALE_APPLY = "coach plan apply x.toml --expect wp-old"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        STALE_APPLY,
+        f"if true; then {STALE_APPLY}; fi",
+        f"nice {STALE_APPLY}",
+        f"timeout 5 {STALE_APPLY}",
+        f"sudo -u me {STALE_APPLY}",
+        f"{{ {STALE_APPLY}; }}",
+    ],
+)
 @pytest.mark.parametrize("mode", EVERY_MODE)
-def test_a_stale_expect_is_denied_in_every_mode(mode: str | None) -> None:
-    run = run_hook(
-        "pre-tool-use", a_bash_call("coach plan apply x.toml --expect wp-old", mode=mode)
-    )
+def test_a_stale_expect_is_denied_in_every_mode(command: str, mode: str | None) -> None:
+    run = run_hook("pre-tool-use", a_bash_call(command, mode=mode))
 
     assert run.decision == "deny"
     assert "wp-old" in run.reason
@@ -145,6 +157,14 @@ def test_a_command_that_writes_nothing_gated_gets_no_answer(command: str) -> Non
         "wget -qO- https://api.hevyapp.com/v1/workouts/count",
         "http PUT api.hevyapp.com/v1/workouts/abc title=x",
         "python3 -c \"import urllib.request as u; u.urlopen('https://api.hevyapp.com/v1/workouts')\"",
+        "curl https://API.HEVYAPP.COM/v1/workouts -X DELETE",
+        "curl https://Api.HevyApp.com/v1/workouts",
+        "curl https://api.hevyapp.com./v1/workouts",
+        "curl https://api.hevyapp.com/v1/workouts%2Fabc",
+        "curl https://api.hevyapp.com/v1/%77orkouts",
+        "curl https://api.hevyapp.com/v1/workoutsX",
+        "timeout 5 curl https://api.hevyapp.com/v1/workouts",
+        "if true; then curl -X DELETE https://api.hevyapp.com/v1/workouts/abc; fi",
     ],
 )
 @pytest.mark.parametrize("mode", EVERY_MODE)
@@ -195,6 +215,27 @@ def test_a_raw_hevy_call_is_denied_where_no_prompt_exists() -> None:
         "echo `coach publish`",
         "(coach publish)",
         "sh -c \"bash -c 'coach publish'\"",
+        "if true; then coach publish; fi",
+        "for i in 1; do coach publish; done",
+        "while true; do coach publish; done",
+        "{ coach publish; }",
+        "! coach publish",
+        "f() { coach publish; }",
+        "case x in x) coach publish;; esac",
+        "nice coach publish",
+        "nice -n 5 coach publish",
+        "timeout 60 coach publish",
+        "xargs coach publish",
+        "nohup coach publish",
+        "stdbuf -oL coach publish",
+        "uvx coach publish",
+        "uvx --from coach coach publish",
+        "sudo -u me coach publish",
+        "env -C /x coach publish",
+        "uv run --with x coach publish",
+        "timeout 5 python3 -m coach publish",
+        "echo a#b; coach publish",
+        "echo x # note\ncoach publish",
     ],
 )
 def test_the_hook_finds_a_gated_verb_wherever_the_shell_runs_it(command: str) -> None:
@@ -233,6 +274,22 @@ def test_an_unreadable_command_asks_with_the_reason(command: str, why: str) -> N
 
     assert run.decision == "ask"
     assert why in run.reason
+    assert run.dry_runs == []
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "H=api.hevyapp.com; curl https://$H/v1/workouts",
+        "curl $(cat hevy-url)  # api.hevyapp.com",
+        '"$(which coach)" publish',
+    ],
+)
+def test_a_program_or_hevy_url_known_only_when_the_shell_runs_asks(command: str) -> None:
+    run = run_hook("pre-tool-use", a_bash_call(command))
+
+    assert run.decision == "ask"
+    assert "cannot read" in run.reason
     assert run.dry_runs == []
 
 
