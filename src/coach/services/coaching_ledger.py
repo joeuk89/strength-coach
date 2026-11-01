@@ -13,6 +13,7 @@ from coach.core.coaching_records import (
 from coach.core.draft_fields import required
 from coach.core.errors import Invalid
 from coach.core.ref import Ref
+from coach.core.withdrawal import withdrawable
 from coach.store import annotations, decisions, exercises, follow_ups, niggles, refs, sessions
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
@@ -278,16 +279,12 @@ def write_annotation(w: Writing, record: AnnotationRecord, annotation_id: str) -
 
 
 def _withdraw_annotation(w: Writing, annotation_id: str, target: str) -> None:
-    withdrawn = annotations.get(w.conn, target)
-    if withdrawn is None:
-        raise Invalid(
-            "draft_ref_unresolved", f"[[annotation]] withdraws {target}, which is not stored"
-        )
-    if withdrawn["withdraws"] is not None:
-        raise Invalid("state_conflict", f"{target} is itself a withdrawal; it cannot be withdrawn")
-    earlier = annotations.withdrawn_by(w.conn, target)
-    if earlier:
-        raise Invalid("state_conflict", f"{target} is already withdrawn by {earlier}")
+    withdrawn = withdrawable(
+        "annotation",
+        target,
+        annotations.get(w.conn, target),
+        annotations.withdrawn_by(w.conn, target),
+    )
     # schema.md, "Views": a withdrawing row restates the withdrawn row's required columns.
     annotations.insert_annotation(
         w.conn,
