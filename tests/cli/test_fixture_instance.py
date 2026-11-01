@@ -44,6 +44,30 @@ def test_exit_0_status_reads_the_fixture_instance(instance: Path) -> None:
     assert result["workouts"] == {"hevy": 357, "manual": 11}
 
 
+def test_status_keys_follow_the_order_where_we_stand_is_read_in(instance: Path) -> None:
+    result = coach("status").envelope["result"]
+
+    assert list(result) == [
+        "engine",
+        "hevy",
+        "workouts",
+        "schema_version",
+        "kit",
+        "plan",
+        "rotation",
+        "program",
+        "goal",
+        "phase",
+        "block",
+        "check_in",
+        "niggles",
+        "follow_ups_due",
+        "decisions",
+        "observations",
+        "export",
+    ]
+
+
 def test_exit_1_an_unknown_view(instance: Path) -> None:
     run = coach("query", "colours")
 
