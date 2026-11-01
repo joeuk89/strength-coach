@@ -1,3 +1,4 @@
+import importlib.metadata
 import sqlite3
 from pathlib import Path
 
@@ -78,15 +79,8 @@ def test_a_dev_engine_against_a_release_pin_runs_with_engine_pin_dev(
     assert run.envelope["result"]["engine"] == {"version": DEV_ENGINE, "pin": "0.2.0"}
 
 
-def test_the_installed_dev_build_runs_against_a_release_pin(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.chdir(an_instance(tmp_path, pin="0.0.1"))
-
-    run = run_coach("status")
-
-    assert run.code == 0
-    assert [w["code"] for w in run.envelope["warnings"]] == ["engine_pin_dev"]
+def test_the_engine_version_is_the_installed_package_version() -> None:
+    assert app.engine_version() == importlib.metadata.version("coach")
 
 
 def test_a_release_engine_against_a_different_pin_stops_with_engine_pin_mismatch(
