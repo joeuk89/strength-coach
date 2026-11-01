@@ -607,7 +607,7 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 | Kind | Writes |
 | --- | --- |
 | `[[niggle]]` | `niggle` (first event only), `niggle_event`, its `niggle_constraint` rows, `session` + `rehab_session` when it carries one |
-| `[[followup]]` | `follow_up` (first event only), `follow_up_event` |
+| `[[follow_up]]` | `follow_up` (first event only), `follow_up_event` |
 | `[[decision]]` | `decision`; a `retire` kind also sets `retired_by` on its target |
 | `[[annotation]]` | `annotation` |
 | `[[note]]` | `athlete_note` |

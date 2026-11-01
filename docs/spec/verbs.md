@@ -169,7 +169,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | Kind | Table | Writes | Reserved to the check-in |
 | --- | --- | --- | --- |
 | niggle | `[[niggle]]` | a Niggle status event, with its load constraint and rehab session link (ADR 0010) | |
-| followup | `[[followup]]` | a Follow-up event: deferred, kept, resolved, dropped | |
+| follow_up | `[[follow_up]]` | a Follow-up event: deferred, kept, resolved, dropped | |
 | decision | `[[decision]]` | a Decision of any of the ten kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`), or a `retire` of one | |
 | annotation | `[[annotation]]` | an Annotation, or the withdrawal of one | |
 | note | `[[note]]` | an Athlete note with its optional `about` ref | |
