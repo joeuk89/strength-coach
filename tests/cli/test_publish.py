@@ -10,7 +10,7 @@ from support.cli import run_coach
 from support.clock import FixedClock, at
 from support.git import commit_subjects, committed_files, isolate_git
 from support.plans import a_mapped_routine, an_approved_plan
-from support.scenarios import a_check_in, a_history, a_session
+from support.scenarios import a_check_in, a_history_on_the_catalogue, a_session
 
 from coach.cli import app
 from coach.store import routine_map, rows
@@ -31,8 +31,7 @@ def initialised(tmp_path_factory: pytest.TempPathFactory) -> Path:
         patch.chdir(root)
         assert run_coach("init", "--defaults").code == 0
     with open_store(root / ".coach" / "coach.db") as conn:
-        conn.execute("DELETE FROM exercise")
-        a_history(conn)
+        a_history_on_the_catalogue(conn)
     conn.close()
     return root
 
