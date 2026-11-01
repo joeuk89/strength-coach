@@ -7,7 +7,6 @@ from typing import cast
 
 from coach.core.closed_week.adherence import Adherence
 from coach.core.config import WEEKDAYS, Weekday
-from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.goal import Goal
