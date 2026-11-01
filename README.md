@@ -45,13 +45,12 @@ command you run yourself:
 
 ```
 mkdir ~/training && cd ~/training
-coach init --pin 0.1.0
+coach init
 ```
 
 `init` asks a few questions: kg or lb, the day your week starts, your timezone, the days you can
 train, how long a usual session is, how often you want to check in, and whether you use Hevy. If
-you do, have your Hevy API key ready; it's saved in a file git ignores. `--pin 0.1.0` is needed
-until the engine's first release.
+you do, have your Hevy API key ready; it's saved in a file git ignores.
 
 The folder is a git repository. Push it to a private remote if you want a backup.
 
