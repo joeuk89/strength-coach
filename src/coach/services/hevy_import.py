@@ -4,12 +4,10 @@ from dataclasses import dataclass
 
 from coach.core.clock import Clock
 from coach.core.config import Units
-from coach.core.errors import Unreachable
 from coach.core.flag import Flag
 from coach.core.import_flags import (
     exercise_unmapped,
     routine_drift,
-    snapshot_stale,
     workout_reappeared,
 )
 from coach.core.instant import utc_instant
@@ -18,7 +16,7 @@ from coach.core.routine_projection import routine_diff
 from coach.core.workout_import import Changes, event_pull_changes, event_since, full_pull_changes
 from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
-from coach.services.projections import projection, session_facts
+from coach.services.projections import folder_role, projection, session_facts
 from coach.store import mirrors, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.import_runs import last_import_at, record_import_run
@@ -66,18 +64,13 @@ def import_hevy(
     last = last_import_at(conn)
     stored = hevy_presence(conn)
     kind, since = ("full", None) if full or last is None else ("event", event_since(last))
-    try:
-        if since is None:
-            changes = full_pull_changes(stored, client.workouts(), now, zone)
-        else:
-            changes = event_pull_changes(stored, client.workout_events(since), now, zone)
-        pulled_routines = client.routines()
-        pulled_folders = engine_folders(client.folders())
-        measurements = client.body_measurements()
-    except Unreachable as error:
-        # A successful pull closes the gap, so only a failed one can leave the snapshot stale.
-        stale = snapshot_stale(last, now)
-        raise Unreachable(error.code, error.message, warnings=(stale,) if stale else ()) from error
+    if since is None:
+        changes = full_pull_changes(stored, client.workouts(), now, zone)
+    else:
+        changes = event_pull_changes(stored, client.workout_events(since), now, zone)
+    pulled_routines = client.routines()
+    pulled_folders = engine_folders(client.folders())
+    measurements = client.body_measurements()
     at = utc_instant(now)
     since_text = utc_instant(since) if since else None
     with conn:
@@ -120,6 +113,8 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
     """Each live mapped routine against the projection of the WeekPlan that wrote it: the
     mirror is what Hevy returned at the last import or read-back (ADR 0011, "Import")."""
     live = {r.hevy_id: r for r in mirrors.routines(conn)}
+    # With no engine folder mirrored for the role, `plan apply` refuses or creates it first.
+    roles = {f.role for f in mirrors.folders(conn)}
     flags: list[Flag] = []
     for row in routine_map.written(conn):
         mirrored = live.get(row.routine_id)
@@ -127,7 +122,11 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
             continue
         plan = week_plans.by_id(conn, row.plan_id)
         session = session_facts(conn, plan).get(row.session_id)
-        if session is None or not _froze(conn, row.plan_id, row.session_id):
+        if (
+            session is None
+            or folder_role(session) not in roles
+            or not _froze(conn, row.plan_id, row.session_id)
+        ):
             continue
         body = projection(conn, plan, row.session_id, session, units)
         diff = routine_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))

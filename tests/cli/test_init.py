@@ -9,16 +9,22 @@ from pathlib import Path
 
 import pytest
 from support.cli import run_coach
+from support.clock import FixedClock
+from support.fake_hevy import FakeHevy
+from support.hevy_payloads import a_workout
 from support.instances import an_instance
 from support.terminal import typed
 
 from coach.cli import app
+from coach.cli.declaration import MakeClient
 from coach.cli.registry import declarations
+from coach.core.clock import Clock
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
 
 RELEASE = "0.3.0"
 DEV = "0.4.0.dev0"
+WORKOUT = "10000000-0000-4000-8000-00000000000a"
 
 INIT_TREE = {
     ".claude",
@@ -142,10 +148,19 @@ def test_every_answer_has_a_flag(empty_directory: Path, release: None) -> None:
     }
 
 
+def serving(hevy: FakeHevy) -> MakeClient:
+    def make_client(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
+        return hevy
+
+    return make_client
+
+
 def test_a_hevy_key_turns_hevy_on_and_lands_in_the_gitignored_env(
     empty_directory: Path, release: None
 ) -> None:
-    run = run_coach("init", "--defaults", "--hevy-key", "test-key-not-real")
+    hevy = serving(FakeHevy(FixedClock()))
+
+    run = run_coach("init", "--defaults", "--hevy-key", "test-key-not-real", make_client=hevy)
 
     assert run.code == 0, run.stdout
     assert coach_toml(empty_directory)["hevy"] == {}
@@ -154,6 +169,40 @@ def test_a_hevy_key_turns_hevy_on_and_lands_in_the_gitignored_env(
     assert ".env" not in run.envelope["result"]["committed"]
     assert "test-key-not-real" not in run.stdout
     assert run_coach("status").envelope["result"]["hevy"]["on"] is True
+
+
+def test_init_with_a_hevy_key_pulls_the_whole_history_into_the_store(
+    empty_directory: Path, release: None
+) -> None:
+    clock = FixedClock()
+    hevy = FakeHevy(clock, workouts=[a_workout(WORKOUT)])
+
+    run = run_coach("init", "--defaults", "--hevy-key", "k", clock=clock, make_client=serving(hevy))
+
+    assert run.code == 0, run.stdout
+    pull = run.envelope["result"]["pull"]
+    assert (pull["kind"], pull["workouts"]["new"]) == ("full", 1)
+    status = run_coach("status", clock=clock).envelope["result"]
+    assert status["workouts"] == {"hevy": 1, "manual": 0}
+
+
+def test_init_with_hevy_unreachable_leaves_the_instance_written_and_exits_4(
+    empty_directory: Path, release: None
+) -> None:
+    clock = FixedClock()
+    down = FakeHevy(clock, workouts=[a_workout(WORKOUT)])
+    down.fail_next_get()
+
+    run = run_coach("init", "--defaults", "--hevy-key", "k", clock=clock, make_client=serving(down))
+
+    assert (run.code, run.envelope["error"]["code"]) == (4, "hevy_unreachable")
+    assert "the instance is written and committed" in run.envelope["error"]["message"]
+    assert tree(empty_directory) == INIT_TREE | {".env"}
+    assert len(commit_log(empty_directory)) == 1
+    up = FakeHevy(clock, workouts=[a_workout(WORKOUT)])
+    checkin = run_coach("checkin", "open", clock=clock, make_client=serving(up))
+    pull = checkin.envelope["result"]["pull"]
+    assert (pull["kind"], pull["workouts"]["new"]) == ("full", 1)
 
 
 def test_a_hevy_key_beside_an_existing_env_stops_before_a_file_is_written(
@@ -176,6 +225,7 @@ def test_hevy_without_a_key_writes_the_table_and_no_env(
     assert run.code == 0, run.stdout
     assert coach_toml(empty_directory)["hevy"] == {}
     assert not (empty_directory / ".env").exists()
+    assert "pull" not in run.envelope["result"]
 
 
 def test_the_generated_settings_ask_on_exactly_the_verbs_declared_hevy_or_git(

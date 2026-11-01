@@ -31,21 +31,21 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `status` | read | where we stand and what needs attention; what the SessionStart hook shows |
 | `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
 | `import [--full]` | store write | Hevy workouts append-only with tombstones (ADR 0011); kit is a committed file, never imported (ADR 0021); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
-| `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | read | the check-in card (`check-in.md`) |
+| `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | store write (the pull) | the check-in card (`check-in.md`) |
 | `checkin record <draft>` | store write | the Check-in row plus every record the file carries |
 | `record <draft>` | store write | ledger writes outside a check-in, any mix of record kinds |
-| `plan draft [--week <monday>] [--out <path>]` | read, writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context), returns its path and summary |
+| `plan draft [--week <monday>] [--out <path>]` | store write (the pull), writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context), returns its path and summary |
 | `plan apply <draft> [--dry-run] [--expect <hash>]` | Writing verb (Hevy) | the one Hevy write (ADR 0006, 0011) |
 | `program show [--draft [--apply-plan <week>]]` | read, may write a Draft file | the version in force, or the current version as a Draft to edit |
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
 | `goal adopt <draft>` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
-| `progress` | read | the progress view (`goals.md`) |
+| `progress` | store write (the pull) | the progress view (`goals.md`) |
 | `query <view> [params]` | read | one of the six read views below |
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
-| `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`) |
+| `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`), then the full pull when Hevy is on and a key is set |
 
-Kinds: a **read** changes nothing (two reads write a Draft file, below). A **store write** changes
+Kinds: a **read** changes nothing (`program show` may write a Draft file, below). A **store write** changes
 only the engine's own store and is allowed without a prompt. A **Writing verb** changes Hevy or
 git and is asked (ADR 0006). The kind is one declaration field, `writes: none | store | hevy |
 git`, and nothing else separates them: the permission rules ask on `hevy` and `git`, the hook
@@ -54,7 +54,22 @@ four asked verbs are the four Writing verbs: `plan apply` (`hevy`), `publish`, `
 `init` (`git`). Every one declares `--dry-run`, which is what the hook's prompt shows: `plan
 apply` the Hevy actions and the hash (ADR 0006), `publish` the files it would write, the
 athlete-authored files it would commit and the export row counts per table, `upgrade` the migrations it would run and the files it would
-regenerate, `init` the tree it would write. A dry run opens no transaction and touches no file.
+regenerate, `init` the tree it would write. A Writing verb's dry run opens no transaction and
+touches no file.
+
+**The pull.** A verb whose result derives from workouts pulls Hevy first, through the same
+service function `import` runs, when `[hevy]` is on: `checkin open`, `plan draft`, `progress`,
+`program adopt` (its dry run included, since the warnings read the last exposures) and `init`,
+which runs it last, after its commit. With no previous import the pull is full. It runs every
+time; there is no freshness window and no offline flag. Hevy unreachable refuses the verb (exit
+4, `hevy_unreachable`) with nothing written; `init`'s tree stands and the next pulling verb runs
+the full pull. The verb's `result` carries the `pull` object `import` returns (`kind`, `window`,
+`workouts` new, versioned, gone, back, `weigh_ins`, `routines`, `folders`, and `rebuilt` when the
+store was rebuilt first), and `import`'s standing warnings ride in its `warnings[]`. With no
+`[hevy]` table the verb runs as it would without the pull and carries no `pull`. `status`,
+`query` and `program show` do not pull: the SessionStart hook runs `status`, and the others read
+records rather than derive from workouts. Not a skill step, since a skill never orders commands
+(`skills.md`), and not a hook.
 
 Not leaves, and why:
 
@@ -64,7 +79,7 @@ Not leaves, and why:
 - **`explain`**: the plan Draft already carries evidence and constraints per line (ADR 0005);
   `--full` on a line and the `query` views cover the rest.
 - **`sync`, `log add`, `niggle`, `followup`, `annotate`, `decide`, `observation`, `phase`**:
-  `import` is the pull; everything the agent records between check-ins goes through `record`;
+  `import` is the pull by hand, and every verb that reads workouts pulls first; everything the agent records between check-ins goes through `record`;
   Observations and Phases ride in the files that already carry the athlete's yes (ADR 0009,
   `goals.md`).
 - **An exercise verb**: an Exercise edit is a record kind (below), not a verb and not a version.
@@ -123,20 +138,20 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified`); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
 | `schema` | the declaration(s), or the registry rows |
 | `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
-| `checkin open` | the card (`check-in.md`), derived tier, window; the outside-plan codes it reports in `warnings[]` (`week.md`) |
+| `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
-| `plan draft` | path, hash, week, superseded plan id if any, line count, every violation and warning, rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`) |
+| `plan draft` | path, hash, week, superseded plan id if any, line count, every violation and warning, rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`), `pull` |
 | `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, flags with acknowledgements, the hash |
 | `plan apply` | WeekPlan id, hash, per-routine outcome (written, verified, unverified), audit lines appended |
 | `program show` | version number, kind, emphasis, adopted date, `because`, sessions with line counts; with `--draft`: path and hash |
-| `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`) |
-| `program adopt` | version number, kind, Block reset or kept, acknowledgements frozen |
+| `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`), `pull` |
+| `program adopt` | version number, kind, Block reset or kept, acknowledgements frozen, `pull` |
 | `goal adopt` | goal id, kind, priority lifts, phase opened or closed |
-| `progress` | `goals.md`'s view: per priority lift e1RM trend and cadence signal, milestones, Phase status, Block |
+| `progress` | `goals.md`'s view: per priority lift e1RM trend and cadence signal, milestones, Phase status, Block, `pull` |
 | `query` | `rows[]`, `count`, `truncated` |
 | `publish` | commit hash, files written and deleted, export rows per table; with `--dry-run` the same with no commit hash |
-| `upgrade`, `init` | ADR 0007 and `instance.md`; with `--dry-run`, the migrations and files `upgrade` would touch, the tree `init` would write |
+| `upgrade`, `init` | ADR 0007 and `instance.md`, and `init`'s `pull`; with `--dry-run`, the migrations and files `upgrade` would touch, the tree `init` would write |
 
 ## Arguments with rules
 
@@ -208,7 +223,8 @@ Every verb does a whole job and is safe to run twice (review principle 3).
 
 **Same Draft, same answer.** Every verb that takes a Draft hashes the file and stores the hash
 with what it wrote. A second call with an identical hash finds those rows and returns them with
-`ok` and the same ids, writing nothing. A differing hash does what the record's spec says:
+`ok` and the same ids, writing nothing of its own; a verb that pulls first still records its
+pull ("The pull"). A differing hash does what the record's spec says:
 
 | Leaf | Identical hash | Different hash, same subject |
 | --- | --- | --- |
@@ -248,8 +264,8 @@ change the numbers, draft a superseding plan.
 | 0 | ok, including every no-op above |
 | 1 | a Draft with any violation on `plan apply --dry-run`, `program adopt`, `checkin record`, `record`, `goal adopt`; `draft_exists` on an explicit `--out`; an unknown view or record kind; a routine read-back that differs (`verify_failed`, ADR 0011); malformed input: an unknown or ill-typed argument, a Draft field that does not parse, an id in the wrong form, a file argument that cannot be read (`invalid_argument`); well-formed input that stored state or a rule forbids, the message naming the rule and the fact (`state_conflict`); a goal naming a priority lift twice (`priority_lift_duplicate`) or a milestone with no target (`milestone_target_missing`); a `[phase]` opening while another is open (`phase_already_open`) |
 | 3 | a guard refuses a write: `plan apply` without `--expect` (`expect_missing`), with a changed hash (`expect_mismatch`), with a routine moved in Hevy since the import (`routine_moved`, ADR 0011), with two Hevy folders sharing the title of a folder it must adopt (`folder_title_shared`, ADR 0011), or when the write audit cannot be opened for append (`audit_unwritable`, ADR 0011). Whether a permission mode allows the prompt is the hook's answer, never the verb's |
-| 4 | Hevy unreachable or answering with a payload the client cannot read, on `import` and `plan apply` (`hevy_unreachable`) |
-| 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), `init` where git is not on the PATH (`git_unavailable`) or knows no committer (`git_identity_missing`), both before a file is written, `init` where a `.env` already exists (`env_file_exists`), before a file is written; `upgrade` on a git tree with uncommitted changes (`git_tree_dirty`), or git refuses the commit (`git_commit_failed`, naming the command that finishes it), or another git step fails (`git_failed`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import` and `plan apply`), an unknown table or key in `coach.toml`, or an `implements` value naming no implement of its location (`config_unknown_key`, on every verb; `instance.md`), a plate-pool location whose `kit/<name>.achievable.json` is missing or carries an `inventory_sha256` other than the hash of `kit/<name>.json` (`kit_tables_stale`, naming the location and the generator command, on `plan draft` and `program adopt`; ADR 0021); on the rebuild, `export_newer_than_engine`, or an export row that does not parse (`jsonl_row_malformed`); on any store write, `store_behind_export` (`schema.md`, "The rebuild") |
+| 4 | Hevy unreachable or answering with a payload the client cannot read, on `import`, `plan apply` and every pulling verb (`hevy_unreachable`); `init` exits 4 with its tree written and committed |
+| 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), `init` where git is not on the PATH (`git_unavailable`) or knows no committer (`git_identity_missing`), both before a file is written, `init` where a `.env` already exists (`env_file_exists`), before a file is written; `upgrade` on a git tree with uncommitted changes (`git_tree_dirty`), or git refuses the commit (`git_commit_failed`, naming the command that finishes it), or another git step fails (`git_failed`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import`, `plan apply` and every pulling verb but `init`, which leaves the pull to the next verb when no key is set yet), an unknown table or key in `coach.toml`, or an `implements` value naming no implement of its location (`config_unknown_key`, on every verb; `instance.md`), a plate-pool location whose `kit/<name>.achievable.json` is missing or carries an `inventory_sha256` other than the hash of `kit/<name>.json` (`kit_tables_stale`, naming the location and the generator command, on `plan draft` and `program adopt`; ADR 0021); on the rebuild, `export_newer_than_engine`, or an export row that does not parse (`jsonl_row_malformed`); on any store write, `store_behind_export` (`schema.md`, "The rebuild") |
 
 `error.code` carries the flag code or the refusal reason named above. Nothing else refuses. A
 refusal reason is not a flag: it has no scope, no registry row and no `rn`.

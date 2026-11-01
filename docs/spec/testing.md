@@ -173,8 +173,8 @@ service test hands it the fixture file.
 
 The entry point is `main(argv, env, stdout, stderr, *, make_client=..., clock=None) -> int`.
 The keyword-only arguments default to the real client factory and the system clock; `tests/cli/`
-passes a `FakeHevy` factory and a fixed clock, so a CLI test can run `import` and `plan apply`
-with Hevy on.
+passes a `FakeHevy` factory and a fixed clock, so a CLI test can run `import`, `plan apply`
+and every pulling verb with Hevy on.
 
 ## The test pyramid
 

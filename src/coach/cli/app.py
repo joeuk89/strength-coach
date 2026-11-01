@@ -16,13 +16,16 @@ from coach.cli.declaration import (
     InstanceCall,
     Json,
     MakeClient,
+    MakeClock,
 )
 from coach.cli.instance import (
     find_root,
     load_instance,
+    open_instance_store,
     rebuild_missing_store,
     refuse_a_store_behind_the_export,
 )
+from coach.cli.pull import Pulled, pull, with_pull
 from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
@@ -71,11 +74,14 @@ def main(
                 engine_version=engine_version(),
                 env=env,
                 make_client=make_client,
+                make_clock=_fixed(clock) if clock else clock_for,
                 terminal=Terminal(sys.stdin, stderr),
             )
             match declaration.run:
                 case InInstance(run=run_in_instance):
-                    outcome = run_in_instance(_in_instance(call, declaration, clock, warnings))
+                    in_instance = _in_instance(call, declaration, warnings)
+                    pulled = _pull_first(in_instance) if declaration.pulls_first else None
+                    outcome = with_pull(run_in_instance(in_instance), pulled)
                 case run_anywhere:
                     outcome = run_anywhere(call)
             warnings.extend(outcome.warnings)
@@ -97,18 +103,27 @@ def main(
 
 
 def _in_instance(
-    call: Call, declaration: Declaration, clock: Clock | None, warnings: list[Message | Flag]
+    call: Call, declaration: Declaration, warnings: list[Message | Flag]
 ) -> InstanceCall:
     instance, pin_warning = load_instance(
         find_root(Path.cwd()), call.engine_version, upgrading=declaration.moves_pin
     )
     if pin_warning:
         warnings.append(pin_warning)
-    clock = clock or clock_for(instance.config.athlete.timezone)
+    clock = call.make_clock(instance.config.athlete.timezone)
     rebuilt = rebuild_missing_store(instance)
     if declaration.writes in STORE_WRITES:
         refuse_a_store_behind_the_export(instance)
     return InstanceCall(**vars(call), instance=instance, clock=clock, rebuilt=rebuilt)
+
+
+def _pull_first(call: InstanceCall) -> Pulled | None:
+    with open_instance_store(call.instance) as conn:
+        return pull(call, conn, call.instance, call.clock, rebuilt=call.rebuilt)
+
+
+def _fixed(clock: Clock) -> MakeClock:
+    return lambda zone: clock
 
 
 def run() -> int:

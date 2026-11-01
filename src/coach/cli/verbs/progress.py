@@ -1,5 +1,6 @@
 from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.instance import open_instance_store
+from coach.cli.pull import PULL_SCHEMA
 from coach.core.progress import (
     AdherenceRead,
     BestSet,
@@ -131,10 +132,12 @@ DECLARATION = Declaration(
         "verbatim. --full adds each line's history since the closed Block opened. Open cadence "
         "signals come in warnings[], each carrying the moves a version may make."
     ),
-    writes="none",
+    writes="store",
+    pulls_first=True,
     output={
         "type": "object",
         "properties": {
+            "pull": PULL_SCHEMA,
             "block": {
                 "description": "the newest closed Block, or null before one closes",
                 "type": ["object", "null"],

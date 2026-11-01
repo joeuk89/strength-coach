@@ -1,9 +1,8 @@
-import datetime
 from pathlib import Path
 
 import pytest
 from support.cli import run_coach
-from support.clock import NOON, FixedClock
+from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.hevy_payloads import a_workout, an_exercise
 from support.instances import an_instance
@@ -59,21 +58,6 @@ def test_an_unreachable_hevy_is_exit_4(instance: Path) -> None:
 
     assert run.code == 4
     assert run.envelope["error"]["code"] == "hevy_unreachable"
-
-
-def test_an_unreachable_hevy_a_week_after_the_last_import_warns_snapshot_stale(
-    instance: Path,
-) -> None:
-    then = FixedClock(NOON - datetime.timedelta(days=8))
-    run_coach("import", env=KEY, clock=then, make_client=serving(FakeHevy(then)))
-    fake = FakeHevy(FixedClock())
-    fake.fail_next_get()
-
-    run = run_coach("import", env=KEY, clock=FixedClock(), make_client=serving(fake))
-
-    assert run.code == 4
-    assert run.envelope["error"]["code"] == "hevy_unreachable"
-    assert [w["key"] for w in run.envelope["warnings"]] == ["snapshot_stale@instance"]
 
 
 def test_a_full_import_reports_its_counts_and_warnings_as_flags(instance: Path) -> None:

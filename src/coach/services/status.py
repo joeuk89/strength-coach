@@ -13,7 +13,6 @@ from coach.core.check_in import (
 from coach.core.clock import Clock
 from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Location, Units
 from coach.core.flag import Flag
-from coach.core.import_flags import snapshot_stale
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.planned_week import RotationPosition, week_monday
@@ -141,7 +140,6 @@ def status(
     today = clock.today()
     open_niggles = [n for n in niggles.every(conn) if n["status"] != "resolved"]
     last = last_import_at(conn)
-    stale = snapshot_stale(last, now) if hevy_on else None
     monday = week_monday(today)
     log = WeekLog(conn, units)
     fatigue = Fatigue(conn, log)
@@ -166,7 +164,6 @@ def status(
         decisions=_decisions_in_force(conn, today),
         observations=tuple(observations.current(conn)),
         warnings=(
-            *((stale,) if stale else ()),
             *standing_warnings(conn, units),
             *frozen_loads_off_rack(
                 conn,

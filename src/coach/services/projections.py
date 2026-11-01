@@ -51,11 +51,10 @@ def projection(
         r for r in week_plans.prescriptions(conn, str(plan["id"])) if r["session_id"] == session_id
     ]
     first = min(str(r["date"]) for r in rows)
-    role: FolderRole = "standing" if facts.standing else "program"
     folders = {f.role: f.hevy_id for f in mirrors.folders(conn)}
     session = SessionRoutine(
         title=facts.session.title,
-        folder_id=folders[role],
+        folder_id=folders[folder_role(facts)],
         week_line=f"Week of {plan['week']}, rotation week {plan['position']}",
         authored=facts.session.lines,
         lines=[_frozen(r) for r in rows if r["date"] == first],
@@ -66,6 +65,10 @@ def projection(
         if row["hevy_template_id"]
     }
     return project_routine(session, templates, units)
+
+
+def folder_role(facts: SessionFacts) -> FolderRole:
+    return "standing" if facts.standing else "program"
 
 
 def _frozen(row: Row) -> FrozenLine:

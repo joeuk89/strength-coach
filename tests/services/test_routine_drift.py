@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import pytest
 from support.clock import FixedClock
@@ -18,6 +19,7 @@ from coach.services.record import record
 from coach.store import mirrors, routine_map, week_plans
 from coach.store.connection import Connection
 
+AT = "2026-10-25T12:00:00+00:00"
 LATER = FixedClock(datetime.datetime(2026, 10, 31, 9, 0, tzinfo=datetime.UTC))
 PIN_115 = """
 [[override]]
@@ -152,3 +154,19 @@ def test_a_retired_rehab_routine_whose_read_back_differed_raises_no_drift_on_imp
 
     assert ("shoulder_rehab", rehab, "unverified") in held
     assert drift_keys(conn, hevy) == []
+
+
+def test_a_shared_program_folder_title_skips_drift_rather_than_failing_the_pull() -> None:
+    """Two Hevy folders titled Program mirror neither; `plan apply` refuses that state."""
+    conn, hevy, routine = a_pushed_week()
+    hevy.edit_in_app(routine, 70.0, "2026-10-31T08:00:00Z")
+    with conn:
+        conn.execute("DELETE FROM folder")
+    shared = [
+        {"id": 7000 + n, "index": n, "title": "Program", "updated_at": AT, "created_at": AT}
+        for n in range(2)
+    ]
+    held = [json.loads(r.raw) for r in hevy.routines()]
+
+    assert drift_keys(conn, FakeHevy(LATER, routines=held, folders=shared)) == []
+    assert mirrors.folders(conn) == ()

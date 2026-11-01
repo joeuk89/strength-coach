@@ -12,6 +12,7 @@ from coach.cli.declaration import (
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files, require_current_kit
+from coach.cli.pull import PULL_SCHEMA
 from coach.core.draft_fields import draft_hash
 from coach.core.errors import Invalid
 from coach.core.plan_draft import PlanDraft
@@ -83,7 +84,8 @@ DECLARATION = Declaration(
         "path, hash, week, the plan it supersedes, the line count, every violation and "
         "warning, the rotation position with its source and the notes."
     ),
-    writes="none",
+    writes="store",
+    pulls_first=True,
     arguments=(
         Argument(
             "--week",
@@ -95,6 +97,7 @@ DECLARATION = Declaration(
     output={
         "type": "object",
         "properties": {
+            "pull": PULL_SCHEMA,
             "path": {"type": "string"},
             "hash": {"type": "string"},
             "week": {"type": "string", "format": "date"},

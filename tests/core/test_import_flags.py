@@ -1,6 +1,6 @@
 import datetime
 
-from coach.core.import_flags import exercise_unmapped, snapshot_stale
+from coach.core.import_flags import exercise_unmapped
 from coach.core.log import StoredSet, WorkoutVersion
 
 NOW = datetime.datetime(2026, 10, 30, 12, 0, tzinfo=datetime.UTC)
@@ -29,16 +29,3 @@ def test_a_mapping_heals_every_workout_carrying_the_template() -> None:
 
 def test_a_set_with_no_template_id_is_not_unmapped() -> None:
     assert exercise_unmapped([a_version("w1", a_set(None, "Walk"))], frozenset()) == ()
-
-
-def test_the_snapshot_is_stale_only_past_seven_days() -> None:
-    week = datetime.timedelta(days=7)
-
-    assert snapshot_stale(None, NOW) is None
-    assert snapshot_stale(NOW - week, NOW) is None
-    flag = snapshot_stale(NOW - week - datetime.timedelta(minutes=1), NOW)
-    assert flag is not None
-    assert (flag.key, dict(flag.params)) == (
-        "snapshot_stale@instance",
-        {"last_import": "2026-10-23", "age_limit_days": 7},
-    )

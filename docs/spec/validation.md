@@ -14,9 +14,12 @@ warnings are ADR 0010's; the frozen-load warning is ADR 0008's as ADR 0021 resta
 `generated_file_drift`, `draft_ref_unresolved` and `niggle_constraint_on_resolved` registered,
 every outside-plan code given its raising verb and clearing fact, and a Decision's calendar-free
 scopes widened to `exercise` and `version`. Amended again the same day by
-[Who owns the athlete's kit](https://github.com/joeuk89/strength-coach/issues/49): `snapshot_stale`
-is Hevy's alone, `frozen_load_off_snapshot` is `frozen_load_off_rack` raised by `plan draft`, and
-stale kit tables are the setup refusal `kit_tables_stale`, not a flag (ADR 0021).
+[Who owns the athlete's kit](https://github.com/joeuk89/strength-coach/issues/49): the import-age
+warning is Hevy's alone, `frozen_load_off_snapshot` is `frozen_load_off_rack` raised by `plan draft`, and
+stale kit tables are the setup refusal `kit_tables_stale`, not a flag (ADR 0021). Amended
+2026-11-01 by [Pull before the check-in](https://github.com/joeuk89/strength-coach/issues/169):
+the import-age warning goes, since every verb that reads workouts pulls first (ADR 0011), and
+the three import codes are raised by every pulling verb as well as `import`.
 
 ## Severity
 
@@ -156,10 +159,9 @@ verbs:
 
 | Code | Raised by | Clears by |
 | --- | --- | --- |
-| `routine_drift` (ADR 0011) | `import` | an override on the next WeekPlan, or the next push overwriting it |
-| `workout_reappeared` (ADR 0011) | `import` | a `match` or `void` Annotation on the new version |
-| `exercise_unmapped` (`cutover.md`) | `import` | an `[[exercise]]` record that maps or declares the Exercise |
-| `snapshot_stale` (ADR 0011) | `import` | `coach import` pulling Hevy again |
+| `routine_drift` (ADR 0011) | `import` and every pulling verb (`verbs.md`) | an override on the next WeekPlan, or the next push overwriting it |
+| `workout_reappeared` (ADR 0011) | `import` and every pulling verb | a `match` or `void` Annotation on the new version |
+| `exercise_unmapped` (`cutover.md`) | `import` and every pulling verb | an `[[exercise]]` record that maps or declares the Exercise |
 | `frozen_load_off_rack` (ADR 0021) | `plan draft` | the next WeekPlan, whose loads freeze on the current rack (`plan apply`); a frozen load never re-rounds (ADR 0008) |
 | `followup_due` | `checkin open` | a Follow-up event (kept, deferred, resolved, dropped) |
 | `niggle_unconstrained` | `checkin open` | a Niggle constraint or close, through a `[[niggle]]` record (`verbs.md`) |
@@ -284,7 +286,6 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `engine_pin_dev` | instance | pinned version, running version | `null` |
 | `generated_file_drift` | instance | file (`CLAUDE.md` or `.claude/settings.json`), engine version that generated it | `null` |
 | `frozen_load_off_rack` | session | week, line, frozen load, location | `null` |
-| `snapshot_stale` | instance | last import date, age limit (7 days; opinion, `research-notes.md`) | `null` |
 | `cadence_slow` | exercise | scheme, the scheme's metric (resets, stall streak or e1RM slope), blocks, `may_schemes`, `may`, `never` (the per-scheme condition and the switching table's row, `goals.md`) | rn:training-level §2 |
 | `cadence_fast` | exercise | scheme, the scheme's metric (exposures at top of range, or exposures the one-row cap bound), `may_schemes`, `may`, `never`; raised only on `double_progression` and `top_backoff` | rn:training-level §2 |
 | `phase_condition_met` | instance | phase id, condition, value | `null` |

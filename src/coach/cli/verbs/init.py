@@ -9,13 +9,16 @@ from coach.cli.declaration import (
     Call,
     Declaration,
     Example,
+    Instance,
     Json,
     Outcome,
 )
 from coach.cli.generated import generated_files
+from coach.cli.hevy_key import find_key
+from coach.cli.pull import PULL_SCHEMA, Pulled, pull, with_pull
 from coach.core.config import Config, Engine, Hevy
 from coach.core.engine_pin import is_release
-from coach.core.errors import Invalid, Setup
+from coach.core.errors import Invalid, Setup, Unreachable
 from coach.render.instance_files import GITIGNORE, coach_toml
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
@@ -62,7 +65,9 @@ def run(call: Call) -> Outcome:
         return Outcome({"dry_run": True, **summary, "git_init": git_init})
     git.check_can_commit(root)
     if call.terminal.interactive:
-        call.terminal.say("coach init will write:\n" + "\n".join(f"  {f}" for f in files))
+        keyed = hevy.key or find_key(call.env, root / ".env")
+        pulls = " and then pull the Hevy history" if hevy.on and keyed else ""
+        call.terminal.say(f"coach init will write{pulls}:\n" + "\n".join(f"  {f}" for f in files))
         if not call.terminal.confirm("Write these files and commit them?"):
             return Outcome({"declined": True, **summary})
     if git_init:
@@ -70,15 +75,32 @@ def run(call: Call) -> Outcome:
     _write(root, texts)
     committed = [path for path in texts if path != ".env"]
     commit = git.commit(root, committed, f"coach init v{pin}")
-    return Outcome(
-        {
-            **summary,
-            "git_init": git_init,
-            "commit": commit,
-            "committed": committed,
-            "next": NEXT_STEP,
-        }
-    )
+    pulled = _first_pull(call, Instance(root, config))
+    result: Json = {
+        **summary,
+        "git_init": git_init,
+        "commit": commit,
+        "committed": committed,
+        "next": NEXT_STEP,
+    }
+    return with_pull(Outcome(result), pulled)
+
+
+def _first_pull(call: Call, instance: Instance) -> Pulled | None:
+    """The full pull of the Hevy history, run after the commit so a failed one leaves the
+    instance written for the next pulling verb to complete. With no key yet, that verb pulls."""
+    if instance.config.hevy is None or find_key(call.env, instance.root / ".env") is None:
+        return None
+    clock = call.make_clock(instance.config.athlete.timezone)
+    try:
+        with closing(open_store(instance.store_path)) as conn:
+            return pull(call, conn, instance, clock)
+    except Unreachable as error:
+        raise Unreachable(
+            error.code,
+            f"{error.message}; the instance is written and committed, and the next verb that "
+            "reads workouts pulls the history",
+        ) from error
 
 
 def _refuse_an_instance(root: Path) -> None:
@@ -152,8 +174,8 @@ ANSWER_ARGUMENTS = tuple(
 
 DECLARATION = Declaration(
     name="init",
-    summary="Create an instance in this directory: coach.toml, the generated files, an empty "
-    "store, one commit.",
+    summary="Create an instance in this directory: coach.toml, the generated files, the store, "
+    "one commit; with Hevy on and a key, then pull the whole Hevy history into the store.",
     writes="git",
     arguments=(
         Argument(
@@ -179,6 +201,7 @@ DECLARATION = Declaration(
             "commit": {"type": "string"},
             "committed": {"type": "array", "items": {"type": "string"}},
             "next": {"type": "string"},
+            "pull": PULL_SCHEMA,
         },
         "required": ["pin", "hevy", "files"],
     },

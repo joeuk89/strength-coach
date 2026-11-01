@@ -707,7 +707,7 @@ source, or `sleep_night` for one night and source; cleared by withdrawing one of
 ## Settles for later tickets
 
 - **Cutover and history import** (settled in `cutover.md`): no old session id becomes a `session`
-  row, version 1 is designed fresh; old workouts arrive through the ordinary `import --full`
+  row, version 1 is designed fresh; old workouts arrive through `init`'s pull, full
   with `since` NULL and resolve their Exercise on read through `hevy_template_id`.
 - **Migration of carried-over state** (settled in `cutover.md`, "The cutover check-in"): one
   hand-written check-in Draft carries the niggles, follow-ups, observations, goal, phase, custom

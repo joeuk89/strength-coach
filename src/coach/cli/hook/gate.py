@@ -93,7 +93,7 @@ def _raw_hevy(found: HevyCall) -> Answer:
         return Answer(
             "deny",
             f"{url} is Hevy workout history, which no command may touch by any method; "
-            "`coach import` is the one reader of it",
+            "only `coach` reads it, through its pull",
         )
     if found.pattern:
         return Answer(

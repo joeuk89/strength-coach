@@ -114,6 +114,17 @@ def test_exit_3_two_hevy_folders_share_an_engine_title(instance: Path) -> None:
     assert [call for call in hevy.calls if call[0] != "GET"] == []
 
 
+def test_a_pull_past_a_shared_engine_folder_title_still_opens_the_check_in(
+    instance: Path,
+) -> None:
+    hevy = hevy_holding(instance, CLOCK, more_folders=("Program",))
+
+    run = coach("checkin", "open", hevy=hevy)
+
+    assert run.code == 0, run.stdout
+    assert run.envelope["result"]["pull"]["folders"] == 0
+
+
 def test_exit_4_hevy_unreachable_on_import(instance: Path) -> None:
     hevy = hevy_holding(instance, CLOCK)
     hevy.fail_next_get()
