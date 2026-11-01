@@ -254,6 +254,39 @@ def test_a_priority_lift_under_top_backoff_gets_one_test_single_in_a_light_week(
     assert line.groups[0].type == "warm_up"
 
 
+def test_a_return_band_inside_a_light_week_prescribes_no_test_single_and_says_why() -> None:
+    logged = an_exposure("2026-10-01", (100, 3, 8), (85, 5, 6), (85, 5, 6), (85, 5, 6))
+
+    line = derive(TOP_BACKOFF, logged, overrides=(LIGHT_WEEK,), dose=PRIORITY)
+
+    assert "test" not in [g.type for g in line.groups]
+    assert Step("test", None, None, "return_band") in line.steps
+
+
+def test_illness_inside_a_light_week_prescribes_no_test_single_and_says_why() -> None:
+    logged = an_exposure("2026-10-26", (100, 3, 8), (85, 5, 6), (85, 5, 6), (85, 5, 6))
+
+    line = derive(
+        TOP_BACKOFF,
+        logged,
+        overrides=(LIGHT_WEEK,),
+        dose=PRIORITY,
+        status_spans=(ill("2026-10-28", "2026-10-30"),),
+    )
+
+    assert "test" not in [g.type for g in line.groups]
+    assert Step("test", None, None, "illness") in line.steps
+
+
+def test_a_light_week_alone_records_no_test_step() -> None:
+    logged = an_exposure("2026-10-26", (100, 3, 8), (85, 5, 6), (85, 5, 6), (85, 5, 6))
+
+    line = derive(TOP_BACKOFF, logged, overrides=(LIGHT_WEEK,), dose=PRIORITY)
+
+    assert [g.type for g in line.groups].count("test") == 1
+    assert [s for s in line.steps if s.step == "test"] == []
+
+
 def test_the_assisted_pull_up_under_the_ladder_gets_no_test_single() -> None:
     line = derive(PULL_UP, pull_up_on("2026-10-26", 40), overrides=(LIGHT_WEEK,), dose=PRIORITY)
 
