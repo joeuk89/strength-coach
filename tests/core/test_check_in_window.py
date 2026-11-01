@@ -36,17 +36,21 @@ def test_a_later_row_setting_window_start_is_refused() -> None:
     with pytest.raises(Invalid) as raised:
         check_in_window(D(2026, 11, 8), previous_end=D(2026, 11, 1), file_start=D(2026, 11, 2))
 
-    assert raised.value.code == "invalid_argument"
+    assert raised.value.code == "state_conflict"
 
 
 def test_a_date_inside_the_previous_window_is_refused() -> None:
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         check_in_window(D(2026, 11, 1), previous_end=D(2026, 11, 1))
+
+    assert raised.value.code == "state_conflict"
 
 
 def test_a_window_start_after_the_date_is_refused() -> None:
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         check_in_window(D(2026, 11, 1), file_start=D(2026, 11, 2))
+
+    assert raised.value.code == "state_conflict"
 
 
 @pytest.mark.parametrize(("days", "catch_up"), [(10, False), (11, True)])

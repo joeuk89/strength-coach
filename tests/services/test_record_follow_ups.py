@@ -75,6 +75,7 @@ def test_a_deferred_event_with_a_due_date_not_later_than_the_previous_is_refused
         run(conn, an_event("deferred", "2026-11-10", due))
 
     assert "2026-11-14" in raised.value.message
+    assert raised.value.code == "state_conflict"
     assert len(events(follow_ups(conn)[0])) == 1
 
 

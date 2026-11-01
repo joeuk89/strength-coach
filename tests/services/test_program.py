@@ -211,15 +211,30 @@ def test_an_amend_with_no_version_and_a_position_outside_the_rotation_are_invali
     with pytest.raises(Invalid) as refused:
         run(the_worked_store(), draft, position=position)
 
-    assert refused.value.code == "invalid_argument"
+    assert refused.value.code == "state_conflict"
 
 
 def test_position_on_an_amend_is_invalid() -> None:
     conn = the_worked_store()
     run(conn, rotation_draft())
 
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as refused:
         run(conn, rotation_draft(kind="amend", because="swap"), position="B")
+
+    assert refused.value.code == "state_conflict"
+
+
+def test_an_amend_whose_rotation_drops_the_position_is_refused() -> None:
+    conn = the_worked_store()
+    run(conn, rotation_draft(), position="B")
+    draft = a_draft(a_session("push"), kind="amend", because="one week")
+    draft["schedule"] = {"rotation": ["A"], "A": {"mon": "push"}}
+
+    with pytest.raises(Invalid) as refused:
+        run(conn, toml(draft))
+
+    assert "'B'" in refused.value.message
+    assert refused.value.code == "state_conflict"
 
 
 def test_show_draft_re_adopts_as_an_amend_with_an_empty_diff() -> None:
@@ -251,8 +266,10 @@ def test_show_reads_the_version_in_force() -> None:
 
 
 def test_show_with_no_version_is_invalid() -> None:
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as refused:
         show(a_library_store())
+
+    assert refused.value.code == "state_conflict"
 
 
 def test_a_stale_kit_at_a_location_the_draft_names_is_kit_tables_stale() -> None:

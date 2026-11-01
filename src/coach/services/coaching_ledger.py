@@ -163,7 +163,7 @@ def _check_deferred(conn: Connection, follow_up_id: str, record: FollowUpRecord)
     due = record.due.isoformat() if record.due else ""
     if previous is not None and due <= previous:
         raise Invalid(
-            "invalid_argument",
+            "state_conflict",
             f"[[followup]] deferred {follow_up_id} to {due}, which is not later than its "
             f"due date {previous}; a deferral moves the due date later",
         )
@@ -219,7 +219,7 @@ def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None
         latest = today + datetime.timedelta(days=OVERRIDE_DECISION_DAYS)
         if record.until and record.until > latest:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[decision]] override until {record.until} is more than eight weeks out; "
                 f"the latest is {latest}",
             )
@@ -227,7 +227,7 @@ def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None
         sunday = today + datetime.timedelta(days=6 - today.weekday())
         if record.until and record.until != sunday:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[decision]] decline_ceiling lasts to the Sunday of the week it is made in, "
                 f"{sunday}; drop until or give that date",
             )
@@ -243,11 +243,11 @@ def _retired_target(conn: Connection, record: DecisionRecord) -> str:
             "draft_ref_unresolved", f"[[decision]] retire names {target}, no stored Decision"
         )
     if stored["kind"] == "retire":
-        raise Invalid("invalid_argument", f"[[decision]] retire names {target}, a retire row")
+        raise Invalid("state_conflict", f"[[decision]] retire names {target}, a retire row")
     ended = stored["superseded_by"] or stored["retired_by"]
     if ended:
         raise Invalid(
-            "invalid_argument", f"[[decision]] retire names {target}, already ended by {ended}"
+            "state_conflict", f"[[decision]] retire names {target}, already ended by {ended}"
         )
     return target
 
@@ -284,12 +284,10 @@ def _withdraw_annotation(w: Writing, annotation_id: str, target: str) -> None:
             "draft_ref_unresolved", f"[[annotation]] withdraws {target}, which is not stored"
         )
     if withdrawn["withdraws"] is not None:
-        raise Invalid(
-            "invalid_argument", f"{target} is itself a withdrawal; it cannot be withdrawn"
-        )
+        raise Invalid("state_conflict", f"{target} is itself a withdrawal; it cannot be withdrawn")
     earlier = annotations.withdrawn_by(w.conn, target)
     if earlier:
-        raise Invalid("invalid_argument", f"{target} is already withdrawn by {earlier}")
+        raise Invalid("state_conflict", f"{target} is already withdrawn by {earlier}")
     # schema.md, "Views": a withdrawing row restates the withdrawn row's required columns.
     annotations.insert_annotation(
         w.conn,

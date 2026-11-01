@@ -35,7 +35,7 @@ def check_in_window(
     if previous_end is not None:
         if file_start is not None:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 "window_start is set only on the instance's first check-in; this window starts "
                 f"the day after the previous one's window_end, {previous_end}",
             )
@@ -45,7 +45,7 @@ def check_in_window(
         start = file_start or planned or date
     if start > date:
         raise Invalid(
-            "invalid_argument",
+            "state_conflict",
             f"the check-in on {date} would review a window starting {start}, after its date",
         )
     return Window(start, date)

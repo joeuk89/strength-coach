@@ -115,12 +115,12 @@ def _check_targets(
         targets = planned_ids if override.exercise_id is None else every_ids
         if session not in targets:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"the {override.kind} override names {session}, which is not planned this week",
             )
         if override.exercise_id is not None and (session, override.exercise_id) not in lines:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"the {override.kind} override names {override.exercise_id}, which is not a "
                 f"line of {session}",
             )
@@ -166,7 +166,7 @@ def _added(
     on = cast(datetime.date, override.date)
     if not _in_week(on, monday):
         raise Invalid(
-            "invalid_argument",
+            "state_conflict",
             f"add_session dates {session_id} on {on.isoformat()}, outside the week of "
             f"{monday.isoformat()}",
         )

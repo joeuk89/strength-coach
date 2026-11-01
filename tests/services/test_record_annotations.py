@@ -78,8 +78,17 @@ def test_an_annotation_withdrawn_by_a_later_row_leaves_annotation_current() -> N
     assert annotations(conn, open_=True) == []
 
 
-@pytest.mark.parametrize("target", ["a-0009", "a-0002", "a-0001"])
-def test_withdrawing_a_missing_withdrawing_or_withdrawn_annotation_is_refused(target: str) -> None:
+@pytest.mark.parametrize(
+    ("target", "code"),
+    [
+        ("a-0009", "draft_ref_unresolved"),
+        ("a-0002", "state_conflict"),
+        ("a-0001", "state_conflict"),
+    ],
+)
+def test_withdrawing_a_missing_withdrawing_or_withdrawn_annotation_is_refused(
+    target: str, code: str
+) -> None:
     conn = a_store_with_a_workout()
     run(conn, DISCOUNT)
     run(conn, '[[annotation]]\nwithdraws = "a-0001"\n')
@@ -88,6 +97,7 @@ def test_withdrawing_a_missing_withdrawing_or_withdrawn_annotation_is_refused(ta
         run(conn, f'[[annotation]]\nwithdraws = "{target}"\n# again\n')
 
     assert target in raised.value.message
+    assert raised.value.code == code
 
 
 def test_an_annotation_on_a_workout_that_is_not_stored_is_refused() -> None:

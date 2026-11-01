@@ -86,7 +86,7 @@ def _phase(conn: Connection, checkin: CheckInFile, check_in: str, recorded_at: s
     match checkin.phase:
         case PhaseClose(because=because):
             if open_ is None:
-                raise Invalid("invalid_argument", f"{checkin.draft.file}: [phase] closes none open")
+                raise Invalid("state_conflict", f"{checkin.draft.file}: [phase] closes none open")
             phases.close(conn, open_.id, closed=day, closed_by=ref, because=because)
         case PhaseOpen() as phase:
             if open_ is not None:

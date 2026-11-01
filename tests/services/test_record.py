@@ -168,7 +168,18 @@ def test_withdrawing_a_row_twice_is_refused() -> None:
     with pytest.raises(Invalid) as raised:
         run(conn, '[[weigh_in]]\nwithdraws = "wi-0001"\n# again\n')
 
-    assert raised.value.code == "invalid_argument"
+    assert raised.value.code == "state_conflict"
+
+
+def test_withdrawing_a_withdrawal_is_refused() -> None:
+    conn = a_store()
+    a_weigh_in(conn, "2026-10-29", 82.0, id_="wi-0001")
+    run(conn, '[[weigh_in]]\nwithdraws = "wi-0001"\n')
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, '[[weigh_in]]\nwithdraws = "wi-0002"\n')
+
+    assert raised.value.code == "state_conflict"
 
 
 def test_withdrawing_a_status_span_copies_its_columns() -> None:
@@ -213,8 +224,10 @@ def test_an_exercise_edit_may_not_rename_an_existing_exercise() -> None:
     conn = a_store()
     an_exercise(conn, "custom_arch_hold")
 
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         run(conn, '[[exercise]]\nid = "custom_arch_hold"\nname = "Arch"\n')
+
+    assert raised.value.code == "state_conflict"
 
 
 def test_a_new_exercise_must_declare_every_library_column() -> None:
@@ -235,6 +248,7 @@ def test_a_template_id_another_exercise_carries_is_refused() -> None:
         run(conn, '[[exercise]]\nid = "b"\nhevy_template_id = "T1"\n')
 
     assert "a" in raised.value.message
+    assert raised.value.code == "state_conflict"
 
 
 def test_an_exercise_only_draft_re_runs_as_a_no_op() -> None:

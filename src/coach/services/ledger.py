@@ -215,11 +215,11 @@ class _Writer:
             )
         if withdrawn["withdraws"] is not None:
             raise Invalid(
-                "invalid_argument", f"{target} is itself a withdrawal; it cannot be withdrawn"
+                "state_conflict", f"{target} is itself a withdrawal; it cannot be withdrawn"
             )
         earlier = readings.withdrawn_by(self.conn, table, target)
         if earlier:
-            raise Invalid("invalid_argument", f"{target} is already withdrawn by {earlier}")
+            raise Invalid("state_conflict", f"{target} is already withdrawn by {earlier}")
         row: dict[str, object] = {"id": id_, "withdraws": target}
         row.update({column: withdrawn[column] for column in RESTATED[table]})
         readings.insert(self.conn, table, self._stamped(row))
@@ -283,7 +283,7 @@ class _Writer:
             holder = exercises.carrying_template(self.conn, template)
             if holder and holder != record.id:
                 raise Invalid(
-                    "invalid_argument",
+                    "state_conflict",
                     f"[[exercise]] {record.id}: hevy_template_id {template} is already {holder}'s",
                 )
         stored = exercises.get(self.conn, record.id)
@@ -302,7 +302,7 @@ class _Writer:
         ]
         if renamed:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[exercise]] {record.id}: {', '.join(renamed)} stay as the library has them",
             )
         changed = {
@@ -326,7 +326,7 @@ class _Writer:
             raise Invalid("draft_ref_unresolved", f"[[observation]] retires {target}, not stored")
         if stored["retired_at"] is not None:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[observation]] retires {target}, already retired at "
                 f"{stored['retired_check_in']}",
             )

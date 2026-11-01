@@ -79,8 +79,25 @@ def test_a_week_that_is_not_a_monday_is_refused() -> None:
 
 
 def test_with_no_version_adopted_there_is_nothing_to_draft() -> None:
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         drafted(the_worked_store())
+
+    assert raised.value.code == "state_conflict"
+
+
+def test_a_position_outside_the_rotation_is_refused() -> None:
+    with pytest.raises(Invalid) as raised:
+        plan_draft(
+            a_squat_program(),
+            config=a_config(),
+            kits=(kit_files(),),
+            clock=FixedClock(),
+            week=NEXT_MONDAY,
+            position="Z",
+        )
+
+    assert "'Z'" in raised.value.message
+    assert raised.value.code == "state_conflict"
 
 
 def test_stale_kit_tables_stop_the_draft() -> None:
