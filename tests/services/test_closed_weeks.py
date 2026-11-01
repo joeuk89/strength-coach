@@ -39,6 +39,23 @@ def test_a_match_annotation_moves_a_workout_logged_on_the_wrong_date() -> None:
     assert kinds(conn) == [("2026-11-02", "hard")]
 
 
+def test_a_match_annotation_moves_a_workout_into_the_week_before_its_date() -> None:
+    conn = a_squat_program()
+    a_planned_squat_week(conn, monday(0))
+    a_planned_squat_week(conn, monday(1))
+    squat_logged(conn, "h-1", monday(1), *[(120, 8, 8)] * 4)
+    an_annotation(
+        conn, "a-0001", "match", "workout:h-1", planned_session="planned_session:2026-11-02/lower"
+    )
+    closed_through(conn, 2)
+
+    first, second = closed_weeks(conn).weeks
+
+    assert (first.kind, second.kind) == ("hard", "missed")
+    assert first.dose
+    assert second.dose == {}
+
+
 def test_a_light_week_closes_the_block_and_the_next_hard_week_counts_1_in_a_new_one() -> None:
     conn = a_squat_program()
     a_hard_squat_week(conn, monday(0))

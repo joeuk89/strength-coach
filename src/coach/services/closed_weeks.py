@@ -138,7 +138,7 @@ class _Log:
         return WeekFacts(
             monday,
             planned=self._planned(plan, form, overrides, monday) if plan and form else (),
-            workouts=tuple(w for w in self.workouts if monday <= w.date <= sunday),
+            workouts=tuple(w for w in self.workouts if self._week_of(w) == monday),
             routines=self.routines,
             claims=self.claims,
             trained_unlogged=self.trained_unlogged,
@@ -152,6 +152,11 @@ class _Log:
             else {},
             dose_target=form.dose.per_muscle if form and form.dose else None,
         )
+
+    def _week_of(self, workout: WeekWorkout) -> datetime.date:
+        """A claimed workout belongs to the week of the session it claims, not of its date."""
+        claim = self.claims.get(workout.id)
+        return week_monday(claim[0] if claim else workout.date)
 
     def _planned(
         self,
