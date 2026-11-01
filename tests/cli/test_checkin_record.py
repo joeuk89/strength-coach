@@ -52,7 +52,7 @@ def test_a_second_file_setting_window_start_is_exit_1(instance: Path) -> None:
     run = coach("checkin", "record", "b.toml")
 
     assert run.code == 1
-    assert run.envelope["error"]["code"] == "invalid_argument"
+    assert run.envelope["error"]["code"] == "state_conflict"
 
 
 def test_status_shows_the_check_in_due_and_the_ledger_counts(instance: Path) -> None:

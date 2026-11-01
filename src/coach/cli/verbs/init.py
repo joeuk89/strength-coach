@@ -118,7 +118,7 @@ def _texts(root: Path, config: Config, pin: str, key: str | None) -> dict[str, s
     }
     if key is not None:
         if (root / ".env").exists():
-            raise Invalid("invalid_argument", f"{root / '.env'} exists; drop --hevy-key or it")
+            raise Setup("env_file_exists", f"{root / '.env'} exists; drop --hevy-key or it")
         texts[".env"] = f"HEVY_API_KEY={key}\n"
     return texts
 

@@ -89,7 +89,7 @@ def plan_draft(
         raise Invalid("invalid_argument", f"--week {monday} is not a Monday")
     inferred = rotation_position(conn, version, monday)
     if position is not None and position not in version.form.schedule.rotation:
-        raise Invalid("invalid_argument", f"rotation week {position!r} is not in the rotation")
+        raise Invalid("state_conflict", f"rotation week {position!r} is not in the rotation")
     rotation = inferred if position is None else RotationPosition(position, inferred.source)
     rehab = niggles.open_rehab_sessions(conn)
     spans = status_spans(conn)
@@ -179,7 +179,7 @@ def plan_draft(
 def _in_force(conn: Connection) -> programs.VersionRow:
     version = programs.latest(conn)
     if version is None:
-        raise Invalid("invalid_argument", "no Program version is adopted yet; run program adopt")
+        raise Invalid("state_conflict", "no Program version is adopted yet; run program adopt")
     return version
 
 

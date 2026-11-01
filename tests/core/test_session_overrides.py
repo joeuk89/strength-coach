@@ -79,6 +79,7 @@ def test_an_add_session_names_a_session_the_version_or_a_niggle_carries() -> Non
         chosen(PlanOverride("add_session", "yoga", date=day(1)))
 
     assert "yoga" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 @pytest.mark.parametrize("offset", [-1, 7, 18])
@@ -86,7 +87,7 @@ def test_an_add_session_dated_outside_the_week_is_refused(offset: int) -> None:
     with pytest.raises(Invalid) as raised:
         chosen(PlanOverride("add_session", "pull-b", date=day(offset)))
 
-    assert raised.value.code == "invalid_argument"
+    assert raised.value.code == "state_conflict"
     assert day(offset).isoformat() in raised.value.message
 
 
@@ -95,6 +96,15 @@ def test_an_override_on_a_session_not_planned_this_week_is_refused() -> None:
         chosen(PlanOverride("hold", "pull-b", "bb_back_squat"))
 
     assert "pull-b" in raised.value.message
+    assert raised.value.code == "state_conflict"
+
+
+def test_an_override_on_a_line_the_session_lacks_is_refused() -> None:
+    with pytest.raises(Invalid) as raised:
+        chosen(PlanOverride("hold", "lower-a", "bb_bench_press"))
+
+    assert "bb_bench_press" in raised.value.message
+    assert raised.value.code == "state_conflict"
 
 
 def test_a_line_override_on_an_added_session_is_admitted() -> None:

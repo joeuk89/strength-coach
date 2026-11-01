@@ -297,8 +297,10 @@ def test_opening_a_phase_beside_an_open_one_is_refused() -> None:
 
 
 def test_closing_with_no_open_phase_is_refused() -> None:
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         run(a_store(), header() + '[phase]\nclose = true\nbecause = "done"\n')
+
+    assert raised.value.code == "state_conflict"
 
 
 def test_an_observation_is_retired_in_place_by_a_later_check_in() -> None:
@@ -315,14 +317,18 @@ def test_an_observation_is_retired_in_place_by_a_later_check_in() -> None:
     ).fetchone() == ("2026-11-08", "it stopped", "ci-2026-11-08")
 
 
-@pytest.mark.parametrize("target", ["o-0009", "o-0001"])
-def test_retiring_an_unknown_or_retired_observation_is_refused(target: str) -> None:
+@pytest.mark.parametrize(
+    ("target", "code"), [("o-0009", "draft_ref_unresolved"), ("o-0001", "state_conflict")]
+)
+def test_retiring_an_unknown_or_retired_observation_is_refused(target: str, code: str) -> None:
     conn = a_store()
     run(conn, header() + '[[observation]]\ntext = "drift adds volume"\n')
     run(conn, header("2026-11-08") + '[[observation]]\nretire = "o-0001"\nbecause = "gone"\n')
 
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         run(conn, header("2026-11-15") + f'[[observation]]\nretire = "{target}"\nbecause = "x"\n')
+
+    assert raised.value.code == code
 
 
 def test_a_date_inside_the_previous_window_is_refused() -> None:
@@ -331,3 +337,10 @@ def test_a_date_inside_the_previous_window_is_refused() -> None:
 
     with pytest.raises(Invalid):
         run(conn, header("2026-11-05"))
+
+
+def test_retiring_an_observation_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), header() + '[[observation]]\nretire = "o-0009"\nbecause = "x"\n')
+
+    assert raised.value.code == "draft_ref_unresolved"

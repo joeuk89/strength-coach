@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from coach.core.errors import Invalid
+from coach.core.errors import Setup
 from coach.store.connection import open_store
 from coach.store.jsonl import load_rows
 
@@ -46,7 +46,7 @@ def test_a_row_whose_keys_are_out_of_column_order_is_refused() -> None:
         '{"name": "Back Squat (Barbell)", "id": "bb_back_squat", ',
     )
 
-    with pytest.raises(Invalid) as raised:
+    with pytest.raises(Setup) as raised:
         load_rows(conn, "exercise", reordered)
 
     assert raised.value.code == "jsonl_row_malformed"
@@ -56,7 +56,7 @@ def test_a_row_with_an_extra_column_is_refused() -> None:
     conn = open_store(":memory:")
     with_increment = SQUAT.replace('"source"', '"increment": 2.5, "source"')
 
-    with pytest.raises(Invalid) as raised:
+    with pytest.raises(Setup) as raised:
         load_rows(conn, "exercise", with_increment)
 
     assert raised.value.code == "jsonl_row_malformed"

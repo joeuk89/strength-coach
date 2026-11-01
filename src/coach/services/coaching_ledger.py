@@ -42,7 +42,7 @@ class Writing:
             return resolved
         if not refs.exists(self.conn, resolved):
             raise Invalid(
-                "invalid_argument", f"{where} cites {resolved}, which names no stored row"
+                "draft_ref_unresolved", f"{where} cites {resolved}, which names no stored row"
             )
         return resolved
 
@@ -51,7 +51,7 @@ def write_niggle(w: Writing, record: NiggleRecord, niggle_id: str) -> None:
     if record.niggle is None:
         _raise_niggle(w, record, niggle_id)
     elif not niggles.exists(w.conn, niggle_id):
-        raise Invalid("invalid_argument", f"[[niggle]] names {niggle_id}, which is not stored")
+        raise Invalid("draft_ref_unresolved", f"[[niggle]] names {niggle_id}, which is not stored")
     for constraint in record.constraints:
         if constraint.exercise:
             _library_exercise(w.conn, constraint.exercise, "[[niggle]] constraint")
@@ -84,7 +84,7 @@ def _raise_niggle(w: Writing, record: NiggleRecord, niggle_id: str) -> None:
     if rehab is not None:
         if sessions.exists(w.conn, rehab.session):
             raise Invalid(
-                "invalid_argument",
+                "duplicate_id",
                 f"[[niggle]] rehab session {rehab.session!r} is already a session id",
             )
         for line in rehab.lines:
@@ -121,7 +121,7 @@ def _raise_niggle(w: Writing, record: NiggleRecord, niggle_id: str) -> None:
 def _library_exercise(conn: Connection, exercise_id: str, where: str) -> None:
     if exercises.get(conn, exercise_id) is None:
         raise Invalid(
-            "invalid_argument",
+            "unknown_exercise",
             f"{where} names exercise {exercise_id!r}, which is not in the library",
         )
 
@@ -139,7 +139,9 @@ def write_follow_up(w: Writing, record: FollowUpRecord, follow_up_id: str) -> No
             ),
         )
     elif not follow_ups.exists(w.conn, follow_up_id):
-        raise Invalid("invalid_argument", f"[[followup]] names {follow_up_id}, which is not stored")
+        raise Invalid(
+            "draft_ref_unresolved", f"[[followup]] names {follow_up_id}, which is not stored"
+        )
     elif record.kind == "deferred":
         _check_deferred(w.conn, follow_up_id, record)
     (event_id,) = next_ids(w.conn, "follow_up_event", "fe-", 1)
@@ -161,7 +163,7 @@ def _check_deferred(conn: Connection, follow_up_id: str, record: FollowUpRecord)
     due = record.due.isoformat() if record.due else ""
     if previous is not None and due <= previous:
         raise Invalid(
-            "invalid_argument",
+            "state_conflict",
             f"[[followup]] deferred {follow_up_id} to {due}, which is not later than its "
             f"due date {previous}; a deferral moves the due date later",
         )
@@ -170,7 +172,7 @@ def _check_deferred(conn: Connection, follow_up_id: str, record: FollowUpRecord)
 def write_decision(w: Writing, record: DecisionRecord, decision_id: str) -> None:
     if record.session and not sessions.exists(w.conn, record.session):
         raise Invalid(
-            "invalid_argument",
+            "draft_ref_unresolved",
             f"[[decision]] names session {record.session!r}, "
             "which no program version or niggle has raised",
         )
@@ -217,7 +219,7 @@ def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None
         latest = today + datetime.timedelta(days=OVERRIDE_DECISION_DAYS)
         if record.until and record.until > latest:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[decision]] override until {record.until} is more than eight weeks out; "
                 f"the latest is {latest}",
             )
@@ -225,7 +227,7 @@ def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None
         sunday = today + datetime.timedelta(days=6 - today.weekday())
         if record.until and record.until != sunday:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[decision]] decline_ceiling lasts to the Sunday of the week it is made in, "
                 f"{sunday}; drop until or give that date",
             )
@@ -236,12 +238,16 @@ def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None
 def _retired_target(conn: Connection, record: DecisionRecord) -> str:
     target = str(record.params["decision"])
     stored = decisions.get(conn, target)
-    if stored is None or stored["kind"] == "retire":
-        raise Invalid("invalid_argument", f"[[decision]] retire names {target}, no stored Decision")
+    if stored is None:
+        raise Invalid(
+            "draft_ref_unresolved", f"[[decision]] retire names {target}, no stored Decision"
+        )
+    if stored["kind"] == "retire":
+        raise Invalid("state_conflict", f"[[decision]] retire names {target}, a retire row")
     ended = stored["superseded_by"] or stored["retired_by"]
     if ended:
         raise Invalid(
-            "invalid_argument", f"[[decision]] retire names {target}, already ended by {ended}"
+            "state_conflict", f"[[decision]] retire names {target}, already ended by {ended}"
         )
     return target
 
@@ -274,14 +280,14 @@ def write_annotation(w: Writing, record: AnnotationRecord, annotation_id: str) -
 def _withdraw_annotation(w: Writing, annotation_id: str, target: str) -> None:
     withdrawn = annotations.get(w.conn, target)
     if withdrawn is None:
-        raise Invalid("invalid_argument", f"[[annotation]] withdraws {target}, which is not stored")
-    if withdrawn["withdraws"] is not None:
         raise Invalid(
-            "invalid_argument", f"{target} is itself a withdrawal; it cannot be withdrawn"
+            "draft_ref_unresolved", f"[[annotation]] withdraws {target}, which is not stored"
         )
+    if withdrawn["withdraws"] is not None:
+        raise Invalid("state_conflict", f"{target} is itself a withdrawal; it cannot be withdrawn")
     earlier = annotations.withdrawn_by(w.conn, target)
     if earlier:
-        raise Invalid("invalid_argument", f"{target} is already withdrawn by {earlier}")
+        raise Invalid("state_conflict", f"{target} is already withdrawn by {earlier}")
     # schema.md, "Views": a withdrawing row restates the withdrawn row's required columns.
     annotations.insert_annotation(
         w.conn,

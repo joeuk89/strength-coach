@@ -191,7 +191,7 @@ def show_draft(conn: Connection, *, apply_plan: datetime.date | None = None) -> 
         return ShownDraft(program_draft(form))
     plan = week_plans.in_force(conn, apply_plan.isoformat())
     if plan is None:
-        raise Invalid("invalid_argument", f"the week of {apply_plan} has no approved WeekPlan")
+        raise Invalid("state_conflict", f"the week of {apply_plan} has no approved WeekPlan")
     folded = fold_overrides(form, week_plans.stored_overrides(conn, str(plan["id"])))
     return ShownDraft(program_draft(folded.form, folded_pins=folded.pins), folded.folded)
 
@@ -217,7 +217,7 @@ def _open_phase_kind(conn: Connection) -> str | None:
 def _in_force(conn: Connection) -> programs.VersionRow:
     version = programs.latest(conn)
     if version is None:
-        raise Invalid("invalid_argument", "no Program version is adopted yet; run program adopt")
+        raise Invalid("state_conflict", "no Program version is adopted yet; run program adopt")
     return version
 
 
@@ -259,23 +259,21 @@ def _position(form: ProgramForm, previous: programs.VersionRow | None, asked: st
     rotation = form.schedule.rotation
     if form.kind == "amend":
         if asked is not None:
-            raise Invalid(
-                "invalid_argument", "an amend keeps the rotation position; drop --position"
-            )
+            raise Invalid("state_conflict", "an amend keeps the rotation position; drop --position")
         if previous is None:
             raise Invalid(
-                "invalid_argument", "an amend continues a Block; the first version is a redesign"
+                "state_conflict", "an amend continues a Block; the first version is a redesign"
             )
         if previous.position not in rotation:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"the rotation position {previous.position!r} is not in the new rotation; "
                 "keep the week or adopt a redesign",
             )
         return previous.position
     start = asked or rotation[0]
     if start not in rotation:
-        raise Invalid("invalid_argument", f"--position {start!r} is not a rotation week")
+        raise Invalid("state_conflict", f"--position {start!r} is not a rotation week")
     return start
 
 

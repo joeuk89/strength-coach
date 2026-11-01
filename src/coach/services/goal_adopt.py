@@ -43,7 +43,7 @@ def _write(conn: Connection, draft: GoalDraft, clock: Clock) -> str:
     open_ = phases.open_phase(conn)
     if draft.close:
         if open_ is None:
-            raise Invalid("invalid_argument", f"{draft.file}: [phase] closes, but no Phase is open")
+            raise Invalid("state_conflict", f"{draft.file}: [phase] closes, but no Phase is open")
         phases.close(conn, open_.id, closed=today, closed_by=ref, because=draft.close.because)
         open_ = None
     if draft.open and open_:

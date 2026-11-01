@@ -175,7 +175,7 @@ class _Writer:
     def _note(self, record: NoteRecord, id_: str) -> None:
         about = self._resolve(record.about) if record.about else None
         if about and not refs.exists(self.conn, about):
-            raise Invalid("invalid_argument", f"[[note]] about {about} names no stored record")
+            raise Invalid("draft_ref_unresolved", f"[[note]] about {about} names no stored record")
         row = {"id": id_, "date": _iso(record.date), "text": record.text, "about": _text(about)}
         notes.insert(self.conn, self._stamped(row))
 
@@ -211,15 +211,15 @@ class _Writer:
         withdrawn = readings.get(self.conn, table, target)
         if withdrawn is None:
             raise Invalid(
-                "invalid_argument", f"[[{table}]] withdraws {target}, which is not stored"
+                "draft_ref_unresolved", f"[[{table}]] withdraws {target}, which is not stored"
             )
         if withdrawn["withdraws"] is not None:
             raise Invalid(
-                "invalid_argument", f"{target} is itself a withdrawal; it cannot be withdrawn"
+                "state_conflict", f"{target} is itself a withdrawal; it cannot be withdrawn"
             )
         earlier = readings.withdrawn_by(self.conn, table, target)
         if earlier:
-            raise Invalid("invalid_argument", f"{target} is already withdrawn by {earlier}")
+            raise Invalid("state_conflict", f"{target} is already withdrawn by {earlier}")
         row: dict[str, object] = {"id": id_, "withdraws": target}
         row.update({column: withdrawn[column] for column in RESTATED[table]})
         readings.insert(self.conn, table, self._stamped(row))
@@ -228,7 +228,7 @@ class _Writer:
     def _workout(self, record: WorkoutRecord, id_: str) -> None:
         if record.session_id and not workouts.session_exists(self.conn, record.session_id):
             raise Invalid(
-                "invalid_argument",
+                "draft_ref_unresolved",
                 f"[[workout]] names session {record.session_id!r}, "
                 "which no program version or niggle has raised",
             )
@@ -255,12 +255,12 @@ class _Writer:
         exercise = exercises.get(self.conn, record.exercise)
         if exercise is None:
             raise Invalid(
-                "invalid_argument",
+                "unknown_exercise",
                 f"[[workout]] set names exercise {record.exercise!r}, which is not in the library",
             )
         if exercise["hevy_template_id"] is None:
             raise Invalid(
-                "invalid_argument",
+                "hevy_template_missing",
                 f"exercise {record.exercise!r} has no hevy_template_id, so a logged set cannot "
                 "resolve to it; give it one with an [[exercise]] row first",
             )
@@ -283,7 +283,7 @@ class _Writer:
             holder = exercises.carrying_template(self.conn, template)
             if holder and holder != record.id:
                 raise Invalid(
-                    "invalid_argument",
+                    "state_conflict",
                     f"[[exercise]] {record.id}: hevy_template_id {template} is already {holder}'s",
                 )
         stored = exercises.get(self.conn, record.id)
@@ -302,7 +302,7 @@ class _Writer:
         ]
         if renamed:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[exercise]] {record.id}: {', '.join(renamed)} stay as the library has them",
             )
         changed = {
@@ -323,10 +323,10 @@ class _Writer:
     def _retire_observation(self, target: str, record: ObservationRecord) -> None:
         stored = observations.get(self.conn, target)
         if stored is None:
-            raise Invalid("invalid_argument", f"[[observation]] retires {target}, not stored")
+            raise Invalid("draft_ref_unresolved", f"[[observation]] retires {target}, not stored")
         if stored["retired_at"] is not None:
             raise Invalid(
-                "invalid_argument",
+                "state_conflict",
                 f"[[observation]] retires {target}, already retired at "
                 f"{stored['retired_check_in']}",
             )

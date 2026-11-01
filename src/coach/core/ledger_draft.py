@@ -211,10 +211,7 @@ def _parser(name: str, verb: str) -> "Callable[[Fields], LedgerRecord]":
             "record_kind_not_allowed",
             f"[[{name}]] is recorded only in a check-in file, not by `coach {verb}`",
         )
-    parser = PARSERS.get(name)
-    if parser is None:
-        raise Invalid("invalid_argument", f"this engine does not record [[{name}]] yet")
-    return parser
+    return PARSERS[name]
 
 
 def _check_keys(draft: LedgerDraft) -> None:

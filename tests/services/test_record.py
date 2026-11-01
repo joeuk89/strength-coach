@@ -168,7 +168,18 @@ def test_withdrawing_a_row_twice_is_refused() -> None:
     with pytest.raises(Invalid) as raised:
         run(conn, '[[weigh_in]]\nwithdraws = "wi-0001"\n# again\n')
 
-    assert raised.value.code == "invalid_argument"
+    assert raised.value.code == "state_conflict"
+
+
+def test_withdrawing_a_withdrawal_is_refused() -> None:
+    conn = a_store()
+    a_weigh_in(conn, "2026-10-29", 82.0, id_="wi-0001")
+    run(conn, '[[weigh_in]]\nwithdraws = "wi-0001"\n')
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, '[[weigh_in]]\nwithdraws = "wi-0002"\n')
+
+    assert raised.value.code == "state_conflict"
 
 
 def test_withdrawing_a_status_span_copies_its_columns() -> None:
@@ -213,8 +224,10 @@ def test_an_exercise_edit_may_not_rename_an_existing_exercise() -> None:
     conn = a_store()
     an_exercise(conn, "custom_arch_hold")
 
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         run(conn, '[[exercise]]\nid = "custom_arch_hold"\nname = "Arch"\n')
+
+    assert raised.value.code == "state_conflict"
 
 
 def test_a_new_exercise_must_declare_every_library_column() -> None:
@@ -235,6 +248,7 @@ def test_a_template_id_another_exercise_carries_is_refused() -> None:
         run(conn, '[[exercise]]\nid = "b"\nhevy_template_id = "T1"\n')
 
     assert "a" in raised.value.message
+    assert raised.value.code == "state_conflict"
 
 
 def test_an_exercise_only_draft_re_runs_as_a_no_op() -> None:
@@ -268,8 +282,17 @@ def test_a_manual_set_on_an_exercise_with_no_template_is_refused() -> None:
     conn = a_store()
     an_exercise(conn, "custom_thing")
 
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         run(conn, '[[workout]]\ndate = 2026-10-06\n[[workout.sets]]\nexercise = "custom_thing"\n')
+
+    assert raised.value.code == "hevy_template_missing"
+
+
+def test_a_manual_set_on_an_exercise_the_library_lacks_is_an_unknown_exercise() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), '[[workout]]\ndate = 2026-10-06\n[[workout.sets]]\nexercise = "nope"\n')
+
+    assert raised.value.code == "unknown_exercise"
 
 
 def test_a_note_about_an_exercise_the_library_lacks_is_refused() -> None:
@@ -297,3 +320,24 @@ def test_ids_are_four_digits_after_the_highest_stored() -> None:
     result = run(conn, "[[weigh_in]]\ndate = 2026-10-29\nkg = 82.4\n")
 
     assert result.ids == {"weigh_in": ["wi-0042"]}
+
+
+def test_withdrawing_a_reading_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), '[[weigh_in]]\nwithdraws = "wi-0009"\n')
+
+    assert raised.value.code == "draft_ref_unresolved"
+
+
+def test_a_note_about_a_record_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), '[[note]]\ndate = 2026-10-29\ntext = "x"\nabout = "exercise:nope"\n')
+
+    assert raised.value.code == "draft_ref_unresolved"
+
+
+def test_a_manual_workout_on_a_session_no_version_or_niggle_raised_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), '[[workout]]\ndate = 2026-10-06\nsession_id = "nope"\nminutes = 10\n')
+
+    assert raised.value.code == "draft_ref_unresolved"

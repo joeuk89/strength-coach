@@ -164,10 +164,10 @@ def test_closing_the_open_phase_and_opening_one_in_the_same_draft_succeeds(
     ]
 
 
-def test_closing_with_no_open_phase_is_invalid_argument(conn: Connection) -> None:
+def test_closing_with_no_open_phase_is_state_conflict(conn: Connection) -> None:
     error = refused(conn, with_phase(STRENGTH, 'close = { because = "done" }'))
 
-    assert error.code == "invalid_argument"
+    assert error.code == "state_conflict"
 
 
 @pytest.mark.parametrize(

@@ -295,6 +295,7 @@ def test_apply_plan_on_a_week_with_no_approved_plan_is_refused(instance: Path) -
 
     assert run.code == 1
     assert "2026-10-26" in run.envelope["error"]["message"]
+    assert run.envelope["error"]["code"] == "state_conflict"
 
 
 def test_apply_plan_needs_draft(instance: Path) -> None:

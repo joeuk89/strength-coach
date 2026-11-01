@@ -111,8 +111,10 @@ def test_a_retire_row_sets_retired_by_and_the_retired_decision_leaves_in_force()
     assert rows["d-0002"]["params"] == {"decision": "d-0001"}
 
 
-@pytest.mark.parametrize("target", ["d-0009", "d-0001"])
-def test_retiring_a_decision_that_is_not_in_force_is_refused(target: str) -> None:
+@pytest.mark.parametrize(
+    ("target", "code"), [("d-0009", "draft_ref_unresolved"), ("d-0001", "state_conflict")]
+)
+def test_retiring_a_decision_that_is_not_in_force_is_refused(target: str, code: str) -> None:
     conn = a_store_with_bench()
     run(conn, training_max(100))
     run(conn, training_max(105))
@@ -121,6 +123,19 @@ def test_retiring_a_decision_that_is_not_in_force_is_refused(target: str) -> Non
         run(conn, a_decision("retire", f'decision = "{target}"\n'))
 
     assert target in raised.value.message
+    assert raised.value.code == code
+
+
+def test_retiring_a_retire_row_is_refused() -> None:
+    conn = a_store_with_bench()
+    run(conn, training_max(100))
+    run(conn, a_decision("retire", 'decision = "d-0001"\n'))
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, a_decision("retire", 'decision = "d-0002"\n'))
+
+    assert "d-0002" in raised.value.message
+    assert raised.value.code == "state_conflict"
 
 
 OVERRIDE = """
@@ -149,6 +164,7 @@ def test_an_override_decision_lasts_at_most_eight_weeks(until: str, admitted: bo
         with pytest.raises(Invalid) as raised:
             run(conn, text)
         assert "2026-12-25" in raised.value.message
+        assert raised.value.code == "state_conflict"
 
 
 def test_an_override_on_the_same_line_and_kind_supersedes_and_another_kind_does_not() -> None:
@@ -202,6 +218,7 @@ def test_a_decision_on_a_session_no_version_or_niggle_raised_is_refused() -> Non
         run(a_store(), a_decision("park_session", 'session = "nope"\n'))
 
     assert "nope" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_a_decline_ceiling_lasts_to_the_sunday_of_the_week_it_is_made_in() -> None:
@@ -220,6 +237,7 @@ def test_a_decline_ceiling_with_another_until_is_refused() -> None:
         )
 
     assert "2026-11-01" in raised.value.message
+    assert raised.value.code == "state_conflict"
 
 
 def test_a_later_defer_deep_review_wins() -> None:
@@ -283,6 +301,7 @@ def test_evidence_naming_no_stored_record_is_refused() -> None:
         )
 
     assert "niggle:n-0004" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_evidence_may_cite_an_exposure_on_a_stored_workout() -> None:
@@ -303,6 +322,7 @@ def test_evidence_citing_an_exposure_on_an_unstored_workout_is_refused() -> None
         )
 
     assert EXPOSURE in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_ledger_open_keeps_decisions_in_force_today() -> None:
@@ -325,3 +345,17 @@ def test_re_running_a_decision_draft_returns_the_same_ids() -> None:
 
     assert run(conn, training_max(100)) == first
     assert in_force(conn) == ["d-0001"]
+
+
+def test_retiring_a_decision_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), a_decision("retire", 'decision = "d-0009"\n'))
+
+    assert raised.value.code == "draft_ref_unresolved"
+
+
+def test_a_decision_on_an_exercise_the_library_lacks_is_an_unknown_exercise() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), training_max(100))
+
+    assert raised.value.code == "unknown_exercise"
