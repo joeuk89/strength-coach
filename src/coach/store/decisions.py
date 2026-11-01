@@ -1,6 +1,7 @@
 import json
 from collections.abc import Mapping
 
+from coach.store import rows
 from coach.store.connection import Connection
 from coach.store.rows import Row, insert, select
 
@@ -36,9 +37,8 @@ def every(conn: Connection) -> list[Row]:
 
 
 def supersede(conn: Connection, decision_ids: list[str], by: str) -> None:
-    conn.executemany(
-        "UPDATE decision SET superseded_by = ? WHERE id = ?", [(by, id_) for id_ in decision_ids]
-    )
+    for decision_id in decision_ids:
+        rows.supersede(conn, "decision", decision_id, by)
 
 
 def retire(conn: Connection, decision_id: str, by: str) -> None:
@@ -49,8 +49,8 @@ def _json_or_null(value: object) -> str | None:
     return json.dumps(value) if value else None
 
 
-def _decoded(rows: list[Row]) -> list[Row]:
-    for row in rows:
+def _decoded(found: list[Row]) -> list[Row]:
+    for row in found:
         row["params"] = json.loads(str(row["params"]))
         row["evidence"] = json.loads(str(row["evidence"])) if row["evidence"] else []
-    return rows
+    return found
