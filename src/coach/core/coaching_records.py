@@ -16,6 +16,7 @@ from coach.core.registries.ledger import (
     NIGGLE_STATUSES,
     REASONS,
 )
+from coach.core.registries.log import ANNOTATION_KINDS
 from coach.core.registries.program import LOAD_MODES, SET_TYPES
 from coach.core.registries.week import OVERRIDE_KINDS
 
@@ -26,6 +27,8 @@ TIERS = ("core", "optional")
 OPEN_REPS = re.compile(r"[1-9][0-9]*\+")
 BLOCK_ID = re.compile(r"b-\d{4}-\d{2}-\d{2}")
 DECISION_ID = re.compile(r"d-\d+")
+# check-in.md, "The sourced records": what each annotation kind is about.
+ON_PLANNED_SESSION = ("trained_unlogged", "cancelled", "miss_tag")
 ACTIVITY_CAPS = (("weekly_distance", "weekly_minutes"), ("single_distance", "single_minutes"))
 
 
@@ -91,6 +94,20 @@ class DecisionRecord:
     exercise: str | None = None
     until: datetime.date | None = None
     evidence: tuple[Ref, ...] = ()
+    key: str | None = None
+
+
+@dataclass(frozen=True)
+class AnnotationRecord:
+    """An annotation, or with `withdraws` the withdrawal of one: the writer copies its columns.
+    A miss_tag's `because` is the miss tag."""
+
+    kind: str | None = None
+    target: Ref | None = None
+    because: str | None = None
+    params: Json | None = None
+    text: str | None = None
+    withdraws: str | None = None
     key: str | None = None
 
 
@@ -365,3 +382,45 @@ def supersede_subject(
             return (kind,)
         case _:
             return None
+
+
+def parse_annotation(f: Fields) -> AnnotationRecord:
+    if f.has("withdraws"):
+        f.only("withdraws", "key")
+        return f.done(AnnotationRecord(withdraws=f.text("withdraws"), key=f.key()))
+    kind = required(f.term("kind", ANNOTATION_KINDS, required=True))
+    target = required(f.ref("target", ("workout", "planned_session")) or _missing(f, "target"))
+    wanted = "planned_session" if kind in ON_PLANNED_SESSION else "workout"
+    if target.kind != wanted:
+        raise f.wrong("target", f"a {wanted} ref for a {kind} annotation")
+    params = f.raw("params")
+    if params is not None and not isinstance(params, dict):
+        raise f.wrong("params", "a table")
+    values = cast(Json, params) if params else None
+    if kind == "match":
+        values = _match_params(f, values)
+    return f.done(
+        AnnotationRecord(
+            kind=kind,
+            target=target,
+            because=f.term("because", REASONS, required=True),
+            params=values,
+            text=f.text("text"),
+            key=f.key(),
+        )
+    )
+
+
+def _match_params(f: Fields, params: Json | None) -> Json:
+    planned = (params or {}).get("planned_session")
+    if not isinstance(planned, str) or Ref.parse(planned).kind != "planned_session":
+        raise f.wrong("params", "a table naming the planned_session the workout matches")
+    return {**(params or {}), "planned_session": planned}
+
+
+def annotation_refs(record: AnnotationRecord) -> tuple[Ref, ...]:
+    """The refs an annotation cites: its target, and a match's planned session."""
+    if record.target is None:
+        return ()
+    planned = (record.params or {}).get("planned_session") if record.kind == "match" else None
+    return (record.target, *([Ref.parse(planned)] if isinstance(planned, str) else []))

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from coach.core.errors import Invalid
 from coach.core.registries.agent import RECORD_KINDS
 from coach.services.ledger import ID_PREFIX
-from coach.store import decisions, exercises, follow_ups, niggles, notes, workouts
+from coach.store import annotations, decisions, exercises, follow_ups, niggles, notes, workouts
 from coach.store import readings as stored
 from coach.store.connection import Connection
 from coach.store.rows import Row
@@ -145,11 +145,19 @@ def _decisions(conn: Connection, open_: bool, today: datetime.date) -> list[Row]
     return sorted(rows, key=lambda r: str(r["id"]), reverse=True)
 
 
+def _annotations(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = annotations.every(conn)
+    if open_:
+        rows = [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
+    return sorted(rows, key=lambda r: str(r["id"]), reverse=True)
+
+
 # Notes, Activities and Exercises have no lifecycle, so `--open` keeps every row of them.
 LEDGER_READERS: dict[str, Callable[[Connection, bool, datetime.date], list[Row]]] = {
     "niggle": _niggles,
     "followup": _follow_ups,
     "decision": _decisions,
+    "annotation": _annotations,
     "note": _notes,
     "weigh_in": _withdrawable("weigh_in", "date"),
     "sleep_night": _withdrawable("sleep_night", "night"),

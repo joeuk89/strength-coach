@@ -4,14 +4,16 @@ from dataclasses import dataclass
 from typing import cast
 
 from coach.core.coaching_records import (
+    AnnotationRecord,
     DecisionRecord,
     FollowUpRecord,
     NiggleRecord,
     supersede_subject,
 )
+from coach.core.draft_fields import required
 from coach.core.errors import Invalid
 from coach.core.ref import Ref
-from coach.store import decisions, exercises, follow_ups, niggles, refs, sessions
+from coach.store import annotations, decisions, exercises, follow_ups, niggles, refs, sessions
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 
@@ -242,3 +244,52 @@ def _retired_target(conn: Connection, record: DecisionRecord) -> str:
             "invalid_argument", f"[[decision]] retire names {target}, already ended by {ended}"
         )
     return target
+
+
+def write_annotation(w: Writing, record: AnnotationRecord, annotation_id: str) -> str | None:
+    """Write the annotation; return the id it withdraws, if it is a withdrawal."""
+    if record.withdraws is not None:
+        _withdraw_annotation(w, annotation_id, record.withdraws)
+        return record.withdraws
+    target = w.stored_ref(required(record.target), "[[annotation]] target")
+    params = dict(record.params) if record.params else None
+    if params and record.kind == "match":
+        planned = Ref.parse(str(params["planned_session"]))
+        params["planned_session"] = str(w.stored_ref(planned, "[[annotation]] match"))
+    annotations.insert_annotation(
+        w.conn,
+        w.row(
+            id=annotation_id,
+            kind=record.kind,
+            target=str(target),
+            params=params,
+            because=record.because,
+            text=record.text,
+            withdraws=None,
+        ),
+    )
+    return None
+
+
+def _withdraw_annotation(w: Writing, annotation_id: str, target: str) -> None:
+    withdrawn = annotations.get(w.conn, target)
+    if withdrawn is None:
+        raise Invalid("invalid_argument", f"[[annotation]] withdraws {target}, which is not stored")
+    if withdrawn["withdraws"] is not None:
+        raise Invalid(
+            "invalid_argument", f"{target} is itself a withdrawal; it cannot be withdrawn"
+        )
+    earlier = annotations.withdrawn_by(w.conn, target)
+    if earlier:
+        raise Invalid("invalid_argument", f"{target} is already withdrawn by {earlier}")
+    # schema.md, "Views": a withdrawing row restates the withdrawn row's required columns.
+    annotations.insert_annotation(
+        w.conn,
+        w.row(
+            id=annotation_id,
+            kind=withdrawn["kind"],
+            target=withdrawn["target"],
+            because=withdrawn["because"],
+            withdraws=target,
+        ),
+    )

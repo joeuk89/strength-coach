@@ -5,9 +5,12 @@ from dataclasses import dataclass, field
 from typing import cast
 
 from coach.core.coaching_records import (
+    AnnotationRecord,
     DecisionRecord,
     FollowUpRecord,
     NiggleRecord,
+    annotation_refs,
+    parse_annotation,
     parse_decision,
     parse_follow_up,
     parse_niggle,
@@ -125,6 +128,7 @@ type LedgerRecord = (
     NiggleRecord
     | FollowUpRecord
     | DecisionRecord
+    | AnnotationRecord
     | NoteRecord
     | WeighInRecord
     | SleepNightRecord
@@ -221,6 +225,8 @@ def refs_of(record: LedgerRecord) -> tuple[Ref, ...]:
             return (about,)
         case DecisionRecord():
             return record.evidence
+        case AnnotationRecord():
+            return annotation_refs(record)
         case _:
             return ()
 
@@ -361,6 +367,7 @@ PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
     "niggle": parse_niggle,
     "followup": parse_follow_up,
     "decision": parse_decision,
+    "annotation": parse_annotation,
     "note": _note,
     "weigh_in": _weigh_in,
     "sleep_night": _sleep_night,
@@ -373,6 +380,7 @@ KIND_OF: dict[type, str] = {
     NiggleRecord: "niggle",
     FollowUpRecord: "followup",
     DecisionRecord: "decision",
+    AnnotationRecord: "annotation",
     NoteRecord: "note",
     WeighInRecord: "weigh_in",
     SleepNightRecord: "sleep_night",

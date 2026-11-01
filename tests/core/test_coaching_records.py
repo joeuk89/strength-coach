@@ -54,3 +54,20 @@ def test_a_decision_off_its_kind_s_shape_is_refused(body: str) -> None:
 def test_a_decision_carries_the_reason_triple(reason: str) -> None:
     with pytest.raises(Invalid):
         parse(f'[[decision]]\nkind = "defer_deep_review"\nuntil = 2026-11-07\n{reason}')
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        'kind = "miss_tag"\ntarget = "workout:w-0001"\nbecause = "schedule"\n',
+        'kind = "discount"\ntarget = "planned_session:2026-11-04/upper-a"\nbecause = "pain"\n',
+        'kind = "miss_tag"\ntarget = "planned_session:2026-11-04/upper-a"\nbecause = "sick"\n',
+        'kind = "match"\ntarget = "workout:w-0001"\nbecause = "coach_judgement"\n',
+        'kind = "repair"\ntarget = "exercise:bb_bench_press"\nbecause = "kit"\n',
+        'kind = "erase"\ntarget = "workout:w-0001"\nbecause = "kit"\n',
+        'withdraws = "a-0001"\ntext = "wrong"\n',
+    ],
+)
+def test_an_annotation_off_its_shape_is_refused(body: str) -> None:
+    with pytest.raises(Invalid):
+        parse(f"[[annotation]]\n{body}")

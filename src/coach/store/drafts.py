@@ -2,6 +2,7 @@ from coach.store.connection import Connection
 
 # Each ledger table a Draft verb writes, by record kind.
 TABLES = {
+    "annotation": "annotation",
     "decision": "decision",
     "note": "athlete_note",
     "weigh_in": "weigh_in",
@@ -15,7 +16,7 @@ EVENTS = {
     "niggle": ("niggle_event", "niggle_id"),
     "followup": ("follow_up_event", "follow_up_id"),
 }
-WITHDRAWABLE = ("weigh_in", "sleep_night", "status_span")
+WITHDRAWABLE = ("weigh_in", "sleep_night", "status_span", "annotation")
 
 
 def written_by(conn: Connection, draft_hash: str) -> dict[str, list[str]]:

@@ -2,7 +2,12 @@ import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from coach.core.coaching_records import DecisionRecord, FollowUpRecord, NiggleRecord
+from coach.core.coaching_records import (
+    AnnotationRecord,
+    DecisionRecord,
+    FollowUpRecord,
+    NiggleRecord,
+)
 from coach.core.errors import Invalid
 from coach.core.ledger_draft import (
     EXERCISE_EDITABLE,
@@ -23,6 +28,7 @@ from coach.core.ledger_draft import (
 from coach.core.ref import Ref
 from coach.services.coaching_ledger import (
     Writing,
+    write_annotation,
     write_decision,
     write_follow_up,
     write_niggle,
@@ -36,6 +42,7 @@ ID_PREFIX = {
     "niggle": ("niggle", "n-"),
     "followup": ("follow_up", "f-"),
     "decision": ("decision", "d-"),
+    "annotation": ("annotation", "a-"),
     "note": ("athlete_note", "an-"),
     "weigh_in": ("weigh_in", "wi-"),
     "sleep_night": ("sleep_night", "sn-"),
@@ -139,6 +146,8 @@ class _Writer:
                 write_follow_up(self.writing, record, id_)
             case DecisionRecord():
                 write_decision(self.writing, record, id_)
+            case AnnotationRecord():
+                return write_annotation(self.writing, record, id_)
             case NoteRecord():
                 self._note(record, id_)
             case WeighInRecord():
@@ -320,8 +329,8 @@ def _named_id(record: LedgerRecord) -> str | None:
 
 
 def _write_order(record: LedgerRecord) -> int:
-    """Exercises, then niggles and follow-ups, so records later in the order can name them."""
-    return {"exercise": 0, "niggle": 1, "followup": 1}.get(kind_of(record), 2)
+    """Exercises, then niggles, follow-ups and workouts: the records later ones may cite."""
+    return {"exercise": 0, "niggle": 1, "followup": 1, "workout": 1}.get(kind_of(record), 2)
 
 
 def _iso(day: datetime.date | None) -> str | None:
