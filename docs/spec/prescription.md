@@ -257,8 +257,9 @@ is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`.
 
 In a `light_week`, when the version's deload policy has `test_priority_lifts`, a priority lift
 under `top_backoff` or `wave_531` is prescribed one `test` single at `load_for(e1RM, 1, 9)`
-rounded down (RPE 9 is opinion), before its working groups under the light cut. This is the only `test` set there
-is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
+rounded down (RPE 9 is opinion), before its working groups under the light cut. No test single
+is prescribed on a line a return band or the illness RPE cap binds; the step records which
+(`cause = return_band` or `illness`). This is the only `test` set there is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
 `working` single. The rule writes nothing from the result; the agent reads it at the block
 boundary and records a `training_max` Decision if the lift moves to `wave_531`.
 

@@ -103,7 +103,6 @@ class _Bounding:
     flags: list[Flag]
     sets: tuple[SetGroup, ...]
     rpe_caps: list[tuple[Number, str]] = field(default_factory=list[tuple[Number, str]])
-    light: bool = False
     load_ceilings: list[Load] = field(default_factory=list[Load])
 
     def run(self) -> Bounded:
@@ -193,7 +192,6 @@ class _Bounding:
 
     def _light_cut(self, light_week: PlanOverride) -> None:
         shape = light_shape(self.context.request.version.form.deload, light_week.params)
-        self.light = True
         if self.loads and shape.load_cut_pct and self.loads[0].mode != "assisted":
             factor = 1 - shape.load_cut_pct / 100
             cut = tuple(replace(load, amount=round(load.amount * factor, 4)) for load in self.loads)
@@ -372,11 +370,15 @@ class _Bounding:
         form = request.version.form
         deload = form.deload
         priority = form.dose is not None and self.context.line.exercise in form.dose.lift
-        if not (self.light and deload is not None and deload.test_priority_lifts and priority):
+        light_week = self._override("light_week") is not None
+        if not (light_week and deload is not None and deload.test_priority_lifts and priority):
             return None
         if self.context.line.scheme.name not in TEST_SCHEMES:
             return None
-        if any(cause != "light_week" for _, cause in self.rpe_caps):
+        other_caps = [(cap, cause) for cap, cause in self.rpe_caps if cause != "light_week"]
+        if other_caps:
+            _, cause = min(other_caps, key=lambda c: c[0])
+            self.steps.append(Step("test", None, None, cause))
             return None
         found = best_e1rm(request.exposures, self.context.line.exercise, request.planned.date)
         if found is None:
