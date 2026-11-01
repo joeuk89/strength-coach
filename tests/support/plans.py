@@ -96,8 +96,8 @@ def a_plan_override(
     conn: Connection,
     plan_id: str,
     kind: str,
-    session: str,
-    exercise: str,
+    session: str | None,
+    exercise: str | None,
     **params: object,
 ) -> None:
     """An override row on an approved WeekPlan, as `plan apply` freezes it."""
@@ -181,6 +181,7 @@ def a_frozen_prescription(
     change: str,
     flags: Sequence[Mapping[str, object]] = (),
     derived_from: str = "start_load",
+    steps: Sequence[Mapping[str, object]] = (),
 ) -> None:
     """A prescription row as `plan apply` freezes it on an approved WeekPlan."""
     with conn:
@@ -196,7 +197,7 @@ def a_frozen_prescription(
                 "exercise_id": exercise,
                 "set_groups": json.dumps(list(set_groups)),
                 "derived_from": derived_from,
-                "steps": "[]",
+                "steps": json.dumps(list(steps)),
                 "flags": json.dumps(list(flags)),
                 "change": change,
             },

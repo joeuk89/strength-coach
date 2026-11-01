@@ -2,13 +2,15 @@
 
 import datetime
 from dataclasses import dataclass
+from typing import cast
 
 from coach.core.config import Units
 from coach.core.days_off import DaysOff, SessionTrained, line_days_off
 from coach.core.exposure import Annotation, Exposure, LoggedWorkout, Matched, resolve
 from coach.core.log import WorkoutVersion
+from coach.core.planned_week import week_monday
 from coach.core.ref import Ref
-from coach.store import annotations, exercises, workouts
+from coach.store import annotations, exercises, week_plans, workouts
 from coach.store.connection import Connection
 
 
@@ -23,7 +25,8 @@ def read_history(conn: Connection, units: Units) -> History:
     current = workouts.current_workouts(conn)
     live = annotations.live(conn)
     logged = [
-        LoggedWorkout(v.id, _day(v.date), v.sets, _match(sessions.get(v.id))) for v in current
+        LoggedWorkout(v.id, _day(v.date), v.sets, _match(conn, sessions.get(v.id), _day(v.date)))
+        for v in current
     ]
     exposures = resolve(logged, exercises.library(conn), live, units)
     return History(exposures, (*_trained_unlogged(live), *_without_sets(current, sessions)))
@@ -42,12 +45,30 @@ def days_off_for_line(
     )
 
 
-def _match(session_id: str | None) -> Matched | None:
+def _match(conn: Connection, session_id: str | None, on: datetime.date) -> Matched | None:
     """The Match seam: a manual coach-led workout names its session; nothing here derives a
-    Hevy workout's Match."""
+    Hevy workout's Match. The plan in force on the date tells a light week and the lines that
+    took the return band in it (prescription.md, "The anchor exposure")."""
     if session_id is None:
         return None
-    return Matched(session_id)
+    plan = week_plans.in_force(conn, week_monday(on).isoformat())
+    if plan is None:
+        return Matched(session_id)
+    plan_id = str(plan["id"])
+    light = any(row["kind"] == "light_week" for row in week_plans.overrides(conn, plan_id))
+    returned = frozenset(
+        str(row["exercise_id"])
+        for row in week_plans.prescriptions(conn, plan_id)
+        if row["session_id"] == session_id and _took_return_band(row["steps"])
+    )
+    return Matched(session_id, light, returned)
+
+
+def _took_return_band(steps: object) -> bool:
+    return any(
+        str(step.get("cause", "")).startswith("return")
+        for step in cast(list[dict[str, object]], steps)
+    )
 
 
 def _trained_unlogged(live: tuple[Annotation, ...]) -> list[SessionTrained]:
