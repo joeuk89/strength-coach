@@ -7,8 +7,9 @@ from support.ledger import a_weigh_in
 from support.program_drafts import a_draft, a_line, a_session, toml
 from support.programs import a_config
 
+from coach.core.progress import LiftProgress, Progress
 from coach.services.program import adopt
-from coach.services.progress import LiftProgress, Progress, progress
+from coach.services.progress import progress
 from coach.store.connection import Connection
 
 RISING = (100, 105, 105, 110, 115, 115)

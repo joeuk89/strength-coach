@@ -4,7 +4,6 @@
 import datetime
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
 
 from coach.core.cadence import BlockSpan
 from coach.core.clock import Clock
@@ -13,13 +12,23 @@ from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag
 from coach.core.line_history import newest_first, ordinary
 from coach.core.linear import resets
 from coach.core.phase_trend import observed_rate, phase_condition_met
 from coach.core.planned_week import DAYS_IN_WEEK
 from coach.core.program.form import Line, ProgramForm
-from coach.core.progress import PRECISION, BestSet, MilestoneRead, best_set, milestone_read
+from coach.core.progress import (
+    PRECISION,
+    AdherenceRead,
+    DoseWeek,
+    GoalRead,
+    LiftProgress,
+    LineHistory,
+    PhaseRead,
+    Progress,
+    best_set,
+    milestone_read,
+)
 from coach.core.stall import stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
@@ -29,81 +38,6 @@ from coach.store.connection import Connection
 
 BLOCKS_READ = 3
 _DAY = datetime.timedelta(days=1)
-
-
-@dataclass(frozen=True)
-class LiftProgress:
-    """`e1rm_by_block` is the e1RM at the end of each of the last three closed Blocks, oldest
-    first; the changes run over the closed Block and over those three."""
-
-    exercise_id: str
-    scheme: str | None
-    e1rm_now: float | None
-    e1rm_by_block: tuple[tuple[str, float | None], ...]
-    change_over_block: float | None
-    change_over_three: float | None
-    best: BestSet | None
-    stall_streak: int
-    resets: int
-    signal: str | None
-
-
-@dataclass(frozen=True)
-class DoseWeek:
-    """Hard sets delivered: fractional per muscle, whole per priority lift."""
-
-    monday: datetime.date
-    kind: str
-    muscles: Mapping[str, float]
-    lifts: Mapping[str, int]
-
-
-@dataclass(frozen=True)
-class AdherenceRead:
-    """Core sessions over the closed Block's ordinary weeks, optional sessions trained, and the
-    misses by tag inside it."""
-
-    core_planned: int
-    core_trained: int
-    optional_trained: int
-    misses: Mapping[str, int]
-
-
-@dataclass(frozen=True)
-class PhaseRead:
-    kind: str
-    target_rate: float
-    observed_rate: float | None
-    until: Mapping[str, object]
-    met: bool
-
-
-@dataclass(frozen=True)
-class GoalRead:
-    kind: str
-    adopted: str
-    why: str
-
-
-@dataclass(frozen=True)
-class LineHistory:
-    exercise_id: str
-    session_id: str
-    exposures: tuple[tuple[datetime.date, tuple[tuple[float | None, int | None], ...]], ...]
-
-
-@dataclass(frozen=True)
-class Progress:
-    block: BlockSpan | None
-    lifts: tuple[LiftProgress, ...] = ()
-    milestones: tuple[MilestoneRead, ...] = ()
-    dose: tuple[DoseWeek, ...] = ()
-    dose_target: Mapping[str, int] = field(default_factory=dict[str, int])
-    adherence: AdherenceRead | None = None
-    phase: PhaseRead | None = None
-    goal: GoalRead | None = None
-    history: tuple[LineHistory, ...] = ()
-    signals: tuple[Flag, ...] = ()
 
 
 def progress(
