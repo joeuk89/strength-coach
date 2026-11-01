@@ -46,6 +46,7 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
         "verb": "status",
         "result": {
             "engine": {"version": RELEASE_ENGINE, "pin": RELEASE_ENGINE},
+            "hevy": {"on": False},
             "schema_version": 1,
         },
         "warnings": [],
@@ -135,3 +136,60 @@ def test_a_coach_toml_without_an_engine_pin_stops_with_engine_pin_mismatch(
 
     assert run.code == 5
     assert run.envelope["error"]["code"] == "engine_pin_mismatch"
+
+
+def test_status_reports_hevy_on_when_coach_toml_has_the_hevy_table(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(an_instance(tmp_path, pin=RELEASE_ENGINE, hevy=True))
+
+    run = run_coach("status")
+
+    assert run.code == 0
+    assert run.envelope["result"]["hevy"] == {"on": True}
+
+
+def test_an_unknown_key_in_coach_toml_stops_status_with_config_unknown_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    root = an_instance(tmp_path, pin=RELEASE_ENGINE, caps={"squat": 100})
+    monkeypatch.chdir(root)
+
+    run = run_coach("status")
+
+    assert run.code == 5
+    assert run.envelope["error"]["code"] == "config_unknown_key"
+    assert "caps" in run.envelope["error"]["message"]
+    assert not (root / ".coach").exists()
+
+
+def test_an_implements_value_naming_no_implement_stops_status_with_config_unknown_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    gym = {
+        "kind": "grid",
+        "implements": {"barbell": "trap_bar"},
+        "implement": {"bar": {"increment": 2.5}},
+    }
+    monkeypatch.chdir(an_instance(tmp_path, pin=RELEASE_ENGINE, location={"gym": gym}))
+
+    run = run_coach("status")
+
+    assert run.code == 5
+    assert run.envelope["error"]["code"] == "config_unknown_key"
+    assert "location.gym.implements.barbell" in run.envelope["error"]["message"]
+
+
+def test_an_unknown_timezone_stops_status_with_config_unknown_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    root = an_instance(tmp_path, pin=RELEASE_ENGINE)
+    text = (root / "coach.toml").read_text(encoding="utf-8")
+    (root / "coach.toml").write_text(text.replace("Europe/London", "Mars/Olympus"))
+    monkeypatch.chdir(root)
+
+    run = run_coach("status")
+
+    assert run.code == 5
+    assert run.envelope["error"]["code"] == "config_unknown_key"
+    assert "athlete.timezone" in run.envelope["error"]["message"]

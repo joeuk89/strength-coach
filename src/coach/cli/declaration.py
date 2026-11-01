@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 from coach.core.clock import Clock
+from coach.core.config import Config
 from coach.core.message import Message
 
 type Writes = Literal["none", "store", "hevy", "git"]
@@ -37,7 +38,11 @@ class Example:
 @dataclass(frozen=True)
 class Instance:
     root: Path
-    pin: str
+    config: Config
+
+    @property
+    def pin(self) -> str:
+        return self.config.engine.version
 
     @property
     def store_path(self) -> Path:
