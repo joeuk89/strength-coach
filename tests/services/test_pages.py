@@ -1,8 +1,7 @@
 import datetime
 import re
 
-from support.blocks import BOUNDARY, two_closed_blocks
-from support.clock import FixedClock, at
+from support.blocks import two_closed_blocks
 from support.closed_weeks import a_check_in, a_planned_squat_week, monday
 from support.kit_fixtures import kit_files
 from support.pages import the_pages
@@ -68,6 +67,20 @@ def test_a_routine_page_at_a_plate_pool_location_links_each_loaded_line_with_the
         f"?dumbbells=175lb&kit={short}",
     ]
     assert len(re.findall(r"\?kit=", page)) == 1
+
+
+def test_a_routine_page_at_a_grid_location_has_no_plate_pool_link_even_with_a_kit_file() -> None:
+    conn = a_squat_program(location="gym")
+    plan_id = a_planned_squat_week(conn, monday(1))
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(1), "bb_front_squat", set_groups=[AT_175], change="held"
+    )
+    a_routine_written(conn, "lower", plan_id)
+
+    page = the_pages(conn, kits=(kit_files(), kit_files("gym")))["pages/routines/lower.md"]
+
+    assert "plate-pool" not in page
+    assert "4×6–8 @8 at 175 lb" in page
 
 
 def test_a_retired_session_has_no_routine_page() -> None:
@@ -136,9 +149,9 @@ def test_the_athlete_page_carries_the_profile_verbatim_and_the_last_three_reads(
 def test_the_progress_page_shows_each_priority_lifts_e1rm_now() -> None:
     conn = two_closed_blocks(bench_tops=(100, 105, 105, 110, 115, 115), pull_up_reps=(6,) * 6)
 
-    page = render_pages(
-        page_facts(conn, FixedClock(at(BOUNDARY)), config=a_config(), kits=(), profile=None)
-    )["pages/progress.md"]
+    page = render_pages(page_facts(conn, config=a_config(), kits=(), profile=None))[
+        "pages/progress.md"
+    ]
 
     bench = next(line for line in page.splitlines() if line.startswith("| bb_bench_press"))
     assert bench.split(" | ")[2] == "141.83"

@@ -1,4 +1,3 @@
-from support.clock import FixedClock
 from support.programs import a_config
 from support.scenarios import a_session
 
@@ -10,7 +9,7 @@ def test_publish_returns_the_export_files_and_the_rows_per_table() -> None:
     conn = open_store(":memory:")
     a_session(conn, "push_a")
 
-    publication = publish(conn, FixedClock(), engine_version="0.4.0", config=a_config())
+    publication = publish(conn, engine_version="0.4.0", config=a_config())
 
     exported = publication.export
     assert exported.rows["session"] == 1
@@ -20,9 +19,7 @@ def test_publish_returns_the_export_files_and_the_rows_per_table() -> None:
 
 
 def test_publish_renders_every_page_beside_the_export() -> None:
-    publication = publish(
-        open_store(":memory:"), FixedClock(), engine_version="0.4.0", config=a_config()
-    )
+    publication = publish(open_store(":memory:"), engine_version="0.4.0", config=a_config())
 
     assert set(publication.pages) == {
         "README.md",

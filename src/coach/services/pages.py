@@ -4,7 +4,6 @@ import datetime
 from collections.abc import Mapping, Sequence
 from typing import cast
 
-from coach.core.clock import Clock
 from coach.core.config import Config, PlatePoolLocation, Units
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles
 from coach.core.pages import (
@@ -22,7 +21,7 @@ from coach.core.pages import (
 )
 from coach.core.program.form import Session
 from coach.services.checkin_open import record_card
-from coach.services.progress import progress
+from coach.services.progress import newest_day, progress
 from coach.store import (
     check_ins,
     decisions,
@@ -38,13 +37,15 @@ from coach.store.connection import Connection
 from coach.store.rows import Row
 
 ATHLETE_READS = 3
+# The progress page reads as of the store's newest day, not the clock, so an unchanged store
+# renders an unchanged page; a store recording no day reads the same on any day.
+_ANY_DAY = datetime.date(2000, 1, 1)
 
 type Json = Mapping[str, object]
 
 
 def page_facts(
     conn: Connection,
-    clock: Clock,
     *,
     config: Config,
     kits: Sequence[KitFiles],
@@ -60,7 +61,12 @@ def page_facts(
         bodyweight_units=bodyweight_units,
         pin=config.engine.version,
         athlete=_athlete(conn, config, profile, records),
-        progress=progress(conn, clock, units=units, bodyweight_units=bodyweight_units),
+        progress=progress(
+            conn,
+            on=newest_day(conn, units) or _ANY_DAY,
+            units=units,
+            bodyweight_units=bodyweight_units,
+        ),
         week=_week(conn, names),
         routines=_routines(conn, config, kits, names),
         check_ins=records,

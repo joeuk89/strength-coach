@@ -6,7 +6,6 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 
 from coach.core.cadence import BlockSpan
-from coach.core.clock import Clock
 from coach.core.closed_week.dose import is_hard
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
@@ -33,7 +32,7 @@ from coach.core.stall import stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
-from coach.store import annotations, goals, phases, programs, readings
+from coach.store import annotations, check_ins, goals, phases, programs, readings
 from coach.store.connection import Connection
 
 BLOCKS_READ = 3
@@ -42,13 +41,13 @@ _DAY = datetime.timedelta(days=1)
 
 def progress(
     conn: Connection,
-    clock: Clock,
     *,
+    on: datetime.date,
     units: Units,
     bodyweight_units: Units,
     full: bool = False,
 ) -> Progress:
-    today = clock.today()
+    today = on
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
@@ -89,6 +88,19 @@ def progress(
         history=_history(form, exposures, block) if full and form else (),
         signals=signals,
     )
+
+
+def newest_day(conn: Connection, units: Units) -> datetime.date | None:
+    """The newest day the store records a logged exposure, a live weigh-in, a current
+    Check-in's window end or the open Phase's start."""
+    phase = phases.in_force(conn)
+    days = [
+        *(e.date for e in read_history(conn, units).exposures),
+        *(datetime.date.fromisoformat(str(r["date"])) for r in readings.live(conn, "weigh_in")),
+        *(end for _, end in check_ins.current_windows(conn)),
+        *((phase.opened,) if phase else ()),
+    ]
+    return max(days, default=None)
 
 
 def _goal(conn: Connection) -> goals.StoredGoal | None:

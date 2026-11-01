@@ -21,7 +21,7 @@ def run(call: Call) -> Outcome:
     with closing(open_instance_store(call.instance)) as conn:
         found = progress(
             conn,
-            call.clock,
+            on=call.clock.today(),
             units=athlete.units,
             bodyweight_units=athlete.bodyweight_units,
             full=call.full,

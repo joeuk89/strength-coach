@@ -1,5 +1,5 @@
 """Links into plate-pool's web app: one per loaded line, carrying the kit's short hash, and the
-set-up link carrying the inventory inline (ADR 0021, "Routine pages"; plate-pool issue 52)."""
+set-up link carrying the inventory inline (ADR 0021, "Routine pages")."""
 
 import base64
 import zlib

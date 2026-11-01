@@ -1,8 +1,13 @@
+import datetime
 import shutil
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
+from support.blocks import BOUNDARY, two_closed_blocks
 from support.cli import run_coach
+from support.clock import FixedClock, at
 from support.git import commit_subjects, committed_files, isolate_git
 from support.plans import a_mapped_routine, an_approved_plan
 from support.scenarios import a_check_in, a_history, a_session
@@ -277,3 +282,23 @@ def test_publish_prints_no_page_to_stdout(instance: Path) -> None:
 
     assert "hand edits are overwritten" not in run.stdout
     assert "Training went well." not in run.stdout
+
+
+def test_a_publish_weeks_later_on_an_unchanged_store_writes_the_same_pages(
+    instance: Path,
+) -> None:
+    store = instance / ".coach" / "coach.db"
+    store.unlink()
+    with (
+        closing(two_closed_blocks(pull_up_reps=(6, 6, 7, 7, 8, 8))) as built,
+        closing(sqlite3.connect(store)) as target,
+    ):
+        built.backup(target)
+    run_coach("publish", clock=FixedClock(at(BOUNDARY)))
+    first = pages_on_disk(instance)
+
+    later = run_coach("publish", clock=FixedClock(at(BOUNDARY + datetime.timedelta(days=60))))
+
+    assert later.code == 0, later.stdout
+    assert pages_on_disk(instance) == first
+    assert later.envelope["result"]["commit"] is None

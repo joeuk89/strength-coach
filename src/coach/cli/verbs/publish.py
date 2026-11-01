@@ -18,13 +18,12 @@ MESSAGE = "coach publish"
 
 
 def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+    assert call.instance is not None
     root = call.instance.root
     profile = root / PROFILE
     with closing(open_instance_store(call.instance)) as conn:
         publication = publish(
             conn,
-            call.clock,
             engine_version=call.engine_version,
             config=call.instance.config,
             kits=read_kit_files(call.instance),

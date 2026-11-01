@@ -16,7 +16,7 @@ RISING = (100, 105, 105, 110, 115, 115)
 
 
 def report(conn: Connection, *, full: bool = False) -> Progress:
-    return progress(conn, FixedClock(at(BOUNDARY)), units="lb", bodyweight_units="kg", full=full)
+    return progress(conn, on=BOUNDARY, units="lb", bodyweight_units="kg", full=full)
 
 
 def a_store() -> Connection:

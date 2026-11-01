@@ -1,7 +1,6 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from coach.core.clock import Clock
 from coach.core.config import Config
 from coach.core.kit import KitFiles
 from coach.render.pages import render_pages
@@ -20,7 +19,6 @@ class Publication:
 
 def publish(
     conn: Connection,
-    clock: Clock,
     *,
     engine_version: str,
     config: Config,
@@ -29,5 +27,5 @@ def publish(
 ) -> Publication:
     """What `publish` writes from the store: the export (schema.md, "Export") and the pages
     (ADR 0012)."""
-    facts = page_facts(conn, clock, config=config, kits=kits, profile=profile)
+    facts = page_facts(conn, config=config, kits=kits, profile=profile)
     return Publication(export(conn, engine_version), render_pages(facts))
