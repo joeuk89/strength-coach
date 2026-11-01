@@ -126,17 +126,13 @@ class _Bounding:
 
     def _return_band(self, band: Band, days: int) -> None:
         cause = f"return {band.label}, {days} days off"
-        line = self.context.line
         base = self.load
         if base is not None and self.context.anchor_top is not None:
             base = easier(base, self.context.anchor_top)
         if base is not None:
             target = self._band_load(band, base)
             if target != self.load:
-                assert self.load is not None
-                self.steps.append(Step("cut", self.load.amount, target.amount, cause))
-                self.load = target
-                self.rounding = "cut"
+                self._lower("cut", target, cause)
             pin = self._pin()
             if pin is not None and harder(pin, target):
                 self._raise(
@@ -152,7 +148,7 @@ class _Bounding:
                     "no override waives the band",
                 )
         self._set_count(one_working_set_fewer(self.sets))
-        if line.scheme.name == "wave_531":
+        if self.context.line.scheme.name == "wave_531":
             self.sets = close_rep_outs(self.sets)
         self.rpe_caps.append((band.rpe_cap, "return_band"))
 
@@ -169,12 +165,10 @@ class _Bounding:
         shape = light_shape(self.context.request.version.form.deload, light_week.params)
         self.light = True
         if self.load is not None and shape.load_cut_pct and self.load.mode != "assisted":
-            cut = replace(
-                self.load, amount=round(self.load.amount * (1 - shape.load_cut_pct / 100), 4)
+            factor = 1 - shape.load_cut_pct / 100
+            self._lower(
+                "cut", replace(self.load, amount=round(self.load.amount * factor, 4)), "light"
             )
-            self.steps.append(Step("cut", self.load.amount, cut.amount, "light"))
-            self.load = cut
-            self.rounding = "cut"
         self._set_count(cut_each_working_group(self.sets, shape.set_cut_pct))
         self.sets = close_rep_outs(self.sets)
         if shape.rpe_cap is not None:
@@ -213,13 +207,7 @@ class _Bounding:
         if self.load is None:
             return
         if harder(self.load, strictest):
-            self.steps.append(
-                Step(
-                    "niggle", self.load.amount, strictest.amount, f"{by.kind} niggle:{by.niggle_id}"
-                )
-            )
-            self.load = strictest
-            self.rounding = "cut"
+            self._lower("niggle", strictest, f"{by.kind} niggle:{by.niggle_id}")
         else:
             self.steps.append(Step("niggle", strictest.amount, self.load.amount, "not_binding"))
 
@@ -271,9 +259,7 @@ class _Bounding:
             return
         limit = model_load(found.load, reps, cap).as_mode(self.load.mode)
         if harder(self.load, limit):
-            self.steps.append(Step("rpe_ceiling", self.load.amount, limit.amount, "e1rm"))
-            self.load = limit
-            self.rounding = "cut"
+            self._lower("rpe_ceiling", limit, "e1rm")
 
     def _limiting_reps(self) -> int | None:
         """Every working group carries the line's load, so the group with the most reps limits
@@ -288,9 +274,7 @@ class _Bounding:
         assert self.load is not None
         top = self.context.anchor_top
         if top is not None and harder(self.load, top):
-            self.steps.append(Step("rpe_ceiling", self.load.amount, top.amount, "anchor"))
-            self.load = top
-            self.rounding = "cut"
+            self._lower("rpe_ceiling", top, "anchor")
         anchor = self.context.anchor
         self._raise(
             "rpe_ceiling_unchecked",
@@ -352,6 +336,12 @@ class _Bounding:
             single = easier(single, ceiling)
         rack = self.context.rack
         return single if rack is None else round_to_rack(rack, single, "cut").load
+
+    def _lower(self, step: str, to: Load, cause: str) -> None:
+        assert self.load is not None
+        self.steps.append(Step(step, self.load.amount, to.amount, cause))
+        self.load = to
+        self.rounding = "cut"
 
     def _override(self, kind: str) -> PlanOverride | None:
         planned = self.context.request.planned
