@@ -47,9 +47,7 @@ def anchor(
         (
             e
             for e in exposures
-            if e.exercise_id == exercise_id
-            and e.date < on
-            and not (e.match is not None and e.match.light_week)
+            if e.exercise_id == exercise_id and e.date < on and not _deload_log(e)
         ),
         key=lambda e: (e.date, e.workout_id),
         reverse=True,
@@ -63,6 +61,15 @@ def anchor(
     if candidates:
         return AnchorExposure(candidates[0], "any_session")
     return StartLoad(start_load)
+
+
+def _deload_log(exposure: Exposure) -> bool:
+    match = exposure.match
+    return (
+        match is not None
+        and match.light_week
+        and exposure.exercise_id not in match.return_band_lines
+    )
 
 
 def anchor_load(

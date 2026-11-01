@@ -75,6 +75,32 @@ def test_a_light_week_exposure_is_skipped_in_any_session_too() -> None:
     assert anchored(deload) == StartLoad(START)
 
 
+def test_a_light_week_exposure_whose_line_took_the_return_band_is_the_anchor() -> None:
+    before = an_exposure("2026-10-12", (100, 5, 8), session_id="push_a")
+    returned = an_exposure(
+        "2026-10-19",
+        (85, 5, 7),
+        session_id="push_a",
+        light_week=True,
+        return_band_lines=frozenset({"bb_bench_press"}),
+    )
+    deload = an_exposure("2026-10-26", (80, 3, 6), session_id="push_a", light_week=True)
+
+    assert anchored(before, returned, deload) == AnchorExposure(returned, "same_session")
+
+
+def test_another_line_taking_the_return_band_keeps_no_light_week_exposure() -> None:
+    deload = an_exposure(
+        "2026-10-26",
+        (80, 3, 6),
+        session_id="push_a",
+        light_week=True,
+        return_band_lines=frozenset({"bb_back_squat"}),
+    )
+
+    assert anchored(deload) == StartLoad(START)
+
+
 RACK = grid_rack(RackImplement(rack=(95, 100, 102.5, 105)))
 
 

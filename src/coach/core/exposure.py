@@ -17,10 +17,12 @@ REPAIRABLE = ("reps", "rpe", "weight_kg", "set_type")
 
 @dataclass(frozen=True)
 class Matched:
-    """The planned session a workout fulfilled, and whether its week was a light week."""
+    """The planned session a workout fulfilled, whether its week was a light week, and the
+    exercise ids of the lines that took the return band in it."""
 
     session_id: str
     light_week: bool = False
+    return_band_lines: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)

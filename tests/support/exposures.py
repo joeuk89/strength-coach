@@ -16,6 +16,7 @@ def an_exposure(
     mode: LoadMode = "total",
     session_id: str | None = None,
     light_week: bool = False,
+    return_band_lines: frozenset[str] = frozenset(),
 ) -> Exposure:
     return Exposure(
         workout_id=workout_id or f"w-{on}",
@@ -31,5 +32,5 @@ def an_exposure(
             )
             for i, (load, reps, rpe) in enumerate(sets)
         ),
-        match=None if session_id is None else Matched(session_id, light_week),
+        match=None if session_id is None else Matched(session_id, light_week, return_band_lines),
     )
