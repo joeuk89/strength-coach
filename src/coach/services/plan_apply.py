@@ -21,7 +21,12 @@ from coach.core.plan_check import CheckedPlan, TemplateFacts, check_plan
 from coach.core.plan_input import parse_plan_input
 from coach.core.prescription import PlanOverride
 from coach.core.program.checks import TEMPLATE_COLUMNS
-from coach.core.write_plan import override_params, write_plan_hash
+from coach.core.write_plan import (
+    moved_routines,
+    override_params,
+    resumed_write_plan_hash,
+    write_plan_hash,
+)
 from coach.hevy.protocol import HevyClient
 from coach.services.leave_warning import leave_warning_decisions
 from coach.services.plan_draft import plan_draft
@@ -46,6 +51,7 @@ class DryRun:
     write_plan_hash: str
     acknowledgements: tuple[Acknowledgement, ...] = ()
     resumes: str | None = None
+    moved_routines: tuple[str, ...] = ()
 
     @property
     def flags(self) -> tuple[Flag, ...]:
@@ -106,9 +112,23 @@ def dry_run(
         # The same Draft already approved: a re-run resumes its push under the approved hash.
         resumes = str(approved["id"])
         draft = replace(checked.draft, supersedes=week_plans.superseded(conn, resumes))
-        digest = str(approved["write_plan_hash"])
+        moved = moved_routines(
+            actions.touched_routines,
+            approved_at=str(approved["approved_at"]),
+            imports=mirrors.routine_imports(conn),
+            own_writes=routine_map.written_by(conn, resumes),
+        )
+        versions = {r.hevy_id: r.updated_at for r in mirrors.routines(conn)}
+        digest = resumed_write_plan_hash(
+            str(approved["write_plan_hash"]), {routine: versions[routine] for routine in moved}
+        )
         return DryRun(
-            replace(checked, draft=draft), actions, digest, validated.acknowledgements, resumes
+            replace(checked, draft=draft),
+            actions,
+            digest,
+            validated.acknowledgements,
+            resumes,
+            moved,
         )
     digest = write_plan_hash(
         checked.draft,

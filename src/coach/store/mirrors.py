@@ -58,6 +58,11 @@ def routines(conn: sqlite3.Connection) -> tuple[MirroredRoutine, ...]:
     )
 
 
+def routine_imports(conn: sqlite3.Connection) -> dict[str, str]:
+    """Each mirrored routine's `imported_at`: when its stored version last changed."""
+    return dict(conn.execute("SELECT hevy_id, imported_at FROM routine"))
+
+
 def folders(conn: sqlite3.Connection) -> tuple[MirroredFolder, ...]:
     rows: list[tuple[FolderRole, str, str]] = conn.execute(
         "SELECT role, hevy_id, title FROM folder ORDER BY role"

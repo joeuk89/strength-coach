@@ -1,5 +1,6 @@
 import datetime
 from collections import Counter
+from dataclasses import replace
 from typing import Any, cast
 
 import pytest
@@ -45,6 +46,7 @@ def push(
     hevy: FakeHevy | None,
     data: bytes,
     expect: str | None,
+    clock: FixedClock | None = None,
 ) -> ApplyResult:
     return apply(
         conn,
@@ -54,7 +56,7 @@ def push(
         expect=expect,
         config=a_config(hevy=hevy is not None),
         kits=(kit_files(),),
-        clock=FixedClock(),
+        clock=clock or FixedClock(),
     )
 
 
@@ -522,3 +524,62 @@ def test_a_superseding_plan_freezes_only_its_own_acknowledgements() -> None:
     assert week_plans.acknowledgements(conn, later.week_plan_id) == []
     [row] = week_plans.prescriptions(conn, later.week_plan_id)
     assert [f["left"] for f in cast(list[dict[str, Any]], row["flags"])] == [None]
+
+
+def moved_in_hevy_and_imported(conn: Connection, hevy: FakeHevy, routine_id: str) -> None:
+    """The athlete edits the routine in the app after approval, then an import mirrors it."""
+    moved_at = "2026-10-31T09:00:00Z"
+    hevy.move_routine(routine_id, moved_at)
+    [stored] = [r for r in mirrors.routines(conn) if r.hevy_id == routine_id]
+    with conn:
+        mirrors.upsert_routine(conn, replace(stored, updated_at=moved_at), "2026-10-31T10:00:00Z")
+
+
+def test_a_routine_changed_in_the_mirror_after_approval_gives_the_resume_a_new_hash() -> None:
+    conn = a_squat_week(a_session("lower", a_line("bb_back_squat")), a_session("upper"))
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = the_hash(conn, data)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        push(conn, hevy, data, digest)
+    moved_in_hevy_and_imported(conn, hevy, lower_routine(conn))
+    sent = len(requests(hevy))
+
+    found = a_rerun_dry_run(conn, data)
+    with pytest.raises(Refused) as stale:
+        push(conn, hevy, data, digest)
+    refused_sent = len(requests(hevy))
+    resumed = push(conn, hevy, data, found.write_plan_hash)
+
+    assert found.write_plan_hash != digest
+    assert found.moved_routines == (lower_routine(conn),)
+    assert stale.value.code == "expect_mismatch"
+    assert refused_sent == sent
+    assert resumed.resumed
+    assert [(o.session_id, o.outcome) for o in resumed.routines] == [
+        ("lower", "verified"),
+        ("upper", "verified"),
+    ]
+
+
+def test_resumes_after_approval_keep_the_approved_hash_while_only_the_push_wrote_the_routines() -> (
+    None
+):
+    conn = a_squat_week(a_session("lower", a_line("bb_back_squat")), a_session("upper"))
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = the_hash(conn, data)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        push(conn, hevy, data, digest)
+    next_day = FixedClock(datetime.datetime(2026, 10, 31, 12, 0, tzinfo=datetime.UTC))
+    resumed = push(conn, hevy, data, digest, next_day)
+
+    found = a_rerun_dry_run(conn, data)
+    settled = push(conn, hevy, data, digest, next_day)
+
+    assert [o.outcome for o in resumed.routines] == ["verified", "verified"]
+    assert (found.write_plan_hash, found.moved_routines) == (digest, ())
+    assert settled.resumed
+    assert [o.outcome for o in settled.routines] == ["unchanged", "unchanged"]
