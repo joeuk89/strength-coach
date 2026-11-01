@@ -74,7 +74,7 @@ def _fold(line: Line, override: PlanOverride) -> Line | None:
             return replace(
                 line,
                 exercise=str(params["to"]),
-                load_mode=cast(str | None, params.get("load_mode")),
+                load_mode=cast(str | None, params.get("load_mode", line.load_mode)),
                 start_load=_load(params.get("start_load")),
             )
         case "restate_sets":
