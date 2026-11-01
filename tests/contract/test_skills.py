@@ -8,7 +8,7 @@ from support.skills import TOKEN_BUDGET, skill_files, tokens, undeclared_verbs
 
 from coach.cli.registry import declarations
 
-SKILLS = Path(__file__).resolve().parents[2] / "skills"
+SKILL_FILES = skill_files(Path(__file__).resolve().parents[2] / "skills")
 LEAVES = frozenset(d.name for d in declarations())
 
 SKILL = """---
@@ -25,7 +25,7 @@ The card from `coach checkin open`.
 
 
 def test_the_plugin_ships_the_five_skills() -> None:
-    assert sorted(path.parent.name for path in skill_files(SKILLS)) == [
+    assert sorted(path.parent.name for path in SKILL_FILES) == [
         "check-in",
         "kit",
         "onboard",
@@ -34,12 +34,12 @@ def test_the_plugin_ships_the_five_skills() -> None:
     ]
 
 
-@pytest.mark.parametrize("path", skill_files(SKILLS), ids=lambda p: p.parent.name)
+@pytest.mark.parametrize("path", SKILL_FILES, ids=lambda p: p.parent.name)
 def test_every_verb_a_skill_names_is_a_declared_leaf(path: Path) -> None:
     assert undeclared_verbs(path.read_text(encoding="utf-8"), LEAVES) == []
 
 
-@pytest.mark.parametrize("path", skill_files(SKILLS), ids=lambda p: p.parent.name)
+@pytest.mark.parametrize("path", SKILL_FILES, ids=lambda p: p.parent.name)
 def test_every_skill_is_within_its_token_budget(path: Path) -> None:
     assert tokens(path.read_text(encoding="utf-8")) <= TOKEN_BUDGET
 

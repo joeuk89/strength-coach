@@ -29,7 +29,7 @@ def undeclared_verbs(text: str, leaves: Set[str]) -> list[str]:
     if not entries:
         problems.append("no Verbs list")
     for entry in entries:
-        if entry.removeprefix("coach ") not in leaves or not entry.startswith("coach "):
+        if not entry.startswith("coach ") or entry.removeprefix("coach ") not in leaves:
             problems.append(entry)
 
     return list(dict.fromkeys(problems))
