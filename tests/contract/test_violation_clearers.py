@@ -10,7 +10,6 @@ PENDING_LEAVES = frozenset(
     {
         "checkin open",
         "checkin record",
-        "plan draft",
         "plan apply",
         "progress",
     }

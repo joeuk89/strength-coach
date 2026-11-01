@@ -54,6 +54,8 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
             "schema_version": 1,
             "kit": [],
             "export": {"behind_store": True, "store_behind_export": False},
+            "plan": None,
+            "rotation": None,
             "program": None,
             "goal": None,
             "phase": None,
