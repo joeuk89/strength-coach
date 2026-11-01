@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from coach.store.catalogue import seed_catalogue
+from coach.store.catalogue import merge_catalogue, seed_catalogue
 from coach.store.connection import open_store
 
 EXERCISE_COLUMNS = [
@@ -89,3 +89,34 @@ def test_known_lifts_carry_their_load_mode_equipment_kind_and_pattern() -> None:
         "trap_bar_deadlift": ("total", "barbell", "hinge"),
         "plank": ("duration", "bodyweight", "core"),
     }
+
+
+def row(conn: Any, exercise_id: str) -> tuple[Any, ...]:
+    return conn.execute("SELECT * FROM exercise WHERE id = ?", (exercise_id,)).fetchone()
+
+
+def test_the_merge_inserts_a_catalogue_id_the_store_lacks_and_leaves_an_edited_row_as_it_is() -> (
+    None
+):
+    conn = open_store(":memory:")
+    seed_catalogue(conn)
+    conn.execute(
+        "UPDATE exercise SET name = 'Rollout, kneeling', hevy_template_id = 'A1B2C3D4',"
+        " source = 'record' WHERE id = 'ab_wheel'"
+    )
+    edited = row(conn, "ab_wheel")
+    shipped = row(conn, "assisted_dip")
+    conn.execute("DELETE FROM exercise WHERE id = 'assisted_dip'")
+
+    inserted = merge_catalogue(conn)
+
+    assert inserted == ("assisted_dip",)
+    assert row(conn, "ab_wheel") == edited
+    assert row(conn, "assisted_dip") == shipped
+
+
+def test_the_merge_on_a_store_holding_every_catalogue_id_inserts_nothing() -> None:
+    conn = open_store(":memory:")
+    seed_catalogue(conn)
+
+    assert merge_catalogue(conn) == ()
