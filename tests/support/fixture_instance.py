@@ -9,7 +9,7 @@ import json
 import os
 import shutil
 import sys
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any
@@ -108,19 +108,24 @@ def a_fixture_instance(target: Path) -> Path:
     return target
 
 
-def hevy_holding(root: Path, clock: Clock) -> FakeHevy:
-    """A FakeHevy holding the routines and folders the instance's mirror says Hevy holds."""
+def hevy_holding(root: Path, clock: Clock, *, more_folders: Sequence[str] = ()) -> FakeHevy:
+    """A FakeHevy holding the routines and folders the instance's mirror says Hevy holds, and a
+    folder for each title in `more_folders`."""
     export = root / "export"
     routines = [json.loads(str(row["raw"])) for row in _rows(export / "routine.jsonl")]
+    mirrored = [
+        (int(str(row["hevy_id"])), str(row["title"])) for row in _rows(export / "folder.jsonl")
+    ]
+    more = [(8000 + n, title) for n, title in enumerate(more_folders)]
     folders = [
         {
-            "id": int(str(row["hevy_id"])),
+            "id": id_,
             "index": n,
-            "title": row["title"],
+            "title": title,
             "updated_at": "2026-10-25T12:00:00+00:00",
             "created_at": "2026-10-25T12:00:00+00:00",
         }
-        for n, row in enumerate(_rows(export / "folder.jsonl"))
+        for n, (id_, title) in enumerate([*mirrored, *more])
     ]
     return FakeHevy(clock, routines=routines, folders=folders)
 
