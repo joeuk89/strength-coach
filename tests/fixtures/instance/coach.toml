@@ -1,0 +1,70 @@
+[engine]
+version = "1.0.0"
+
+[athlete]
+units = "lb"
+bodyweight_units = "kg"
+week_starts = "monday"
+timezone = "UTC"
+available_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+session_minutes = 60
+checkin_cadence_days = 7
+
+[hevy]
+
+## Locations: the kit skill writes them. One example of each kind, loads in the
+## athlete's units.
+# [location.home]
+# kind = "plate-pool"
+# kit = "home"
+# collars = "clamp"
+# dumbbells = "pair"
+#
+# [location.home.implements]
+# barbell = "barbell"
+# dumbbell = "dumbbell"
+#
+# [location.gym]
+# kind = "grid"
+#
+# [location.gym.implements]
+# barbell = "bar"
+# machine = "stack"
+# cable = "stack"
+#
+# [location.gym.implement.bar]
+# increment = 2.5
+# base = 20
+# max = 180
+#
+# [location.gym.implement.stack]
+# increment = 5
+
+[location.gym]
+kind = "grid"
+
+[location.gym.implements]
+barbell = "bar"
+dumbbell = "rack"
+cable = "stack"
+machine = "stack"
+
+[location.gym.implement.bar]
+increment = 5
+base = 45
+
+[location.gym.implement.rack]
+rack = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+
+[location.gym.implement.stack]
+increment = 10
+
+[location.home]
+kind = "plate-pool"
+kit = "home"
+collars = "clamp"
+dumbbells = "pair"
+
+[location.home.implements]
+barbell = "barbell"
+dumbbell = "dumbbell"

@@ -96,7 +96,7 @@ cut.
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
 | `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
-| `top_backoff` | the exercise's best e1RM in the window | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the anchor's top load**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
+| `top_backoff` | the exercise's best e1RM in the window | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
 Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
@@ -135,7 +135,7 @@ count (rn:progression-methods §4). The metric per scheme:
 | `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`, Starting Strength's "the 2nd time in a row", rn:training-level §2) sets the load to `reset_factor` × the anchor load, rounded **down** to the rack. Both are `linear` params (`program.md`); the registry default `reset_factor = 0.9` is the over-40 reset (5 % under 40, 10 % over 40, rn:training-level §2), so a coach names `reset_factor = 0.95` on the line for a younger athlete. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
 | `assistance_ladder` | the rung | hold the rung |
 | `top_backoff` | e1RM | none: the model holds the top set |
-| `wave_531` | the rep-out count | none: `training_max_due` or `rep_range_missed` says what happened |
+| `wave_531` | the rep-out's e1RM (counts fall wave to wave by design) | none: `training_max_due` or `rep_range_missed` says what happened |
 
 A stall is a warning the agent judges within the block; the scheme may change only at the block
 boundary (`goals.md`, **Response to a cadence signal**). RPE rising at a held load on many lines
@@ -257,8 +257,9 @@ is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`.
 
 In a `light_week`, when the version's deload policy has `test_priority_lifts`, a priority lift
 under `top_backoff` or `wave_531` is prescribed one `test` single at `load_for(e1RM, 1, 9)`
-rounded down (RPE 9 is opinion), before its working groups under the light cut. This is the only `test` set there
-is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
+rounded down (RPE 9 is opinion), before its working groups under the light cut. No test single
+is prescribed on a line a return band or the illness RPE cap binds; the step records which
+(`cause = return_band` or `illness`). This is the only `test` set there is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
 `working` single. The rule writes nothing from the result; the agent reads it at the block
 boundary and records a `training_max` Decision if the lift moves to `wave_531`.
 

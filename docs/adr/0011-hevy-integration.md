@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
-amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code); 2026-10-31 by wayfinder #44 (the Write audit is written by the client behind the `HevyClient` protocol, two lines per request; one test double, `FakeHevy`, and the real client tested with a recording opener; the 429 retry below the protocol); 2026-10-31 by wayfinder #45 (a push projects the WeekPlan's planned sessions, not every session in force; folder creates are Hevy actions in the dry run, the prompt and the Write plan hash)
+amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code); 2026-10-31 by wayfinder #44 (the Write audit is written by the client behind the `HevyClient` protocol, two lines per request; one test double, `FakeHevy`, and the real client tested with a recording opener; the 429 retry below the protocol); 2026-10-31 by wayfinder #45 (a push projects the WeekPlan's planned sessions, not every session in force; folder creates are Hevy actions in the dry run, the prompt and the Write plan hash); 2026-11-01 by issue #169 (every verb whose result derives from workouts pulls first, the age warning on the last import goes)
 ---
 
 # Hevy is a projection target: allow-listed writes, append-only import, retire not delete
@@ -40,7 +40,13 @@ reused, a folder is forever.
 
 ## Import
 
-- One verb pulls workouts (events since the last import minus a 10-minute overlap; `--full`
+- `import` pulls by hand, and every verb whose result derives from workouts runs the same pull
+  first when `[hevy]` is on (amended 2026-11-01; the verbs are `verbs.md`'s, "The pull"). With
+  no previous import the pull is full. An unreachable Hevy refuses the verb, exit 4, so nothing
+  is built on figures the pull could not confirm. A store is therefore never older than the
+  verb reading it, and no warning on the age of the last import exists; `status` reports the
+  age as a plain line.
+- The pull fetches workouts (events since the last import minus a 10-minute overlap; `--full`
   re-lists everything), routines, folders, exercise templates and body measurements, and stores
   normalised rows with the raw payload kept on the row. No cache directory. Exposure, Match, e1RM
   and the Activity of a conditioning workout stay views; the `activity` table holds hand-entered bouts only (ADR 0018).

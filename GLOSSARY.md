@@ -591,6 +591,12 @@ templates), upserted at import, never deleted and never edited. What every Hevy-
 built on.
 _Avoid_: cache, snapshot, sync table
 
+**Pull**:
+The fetch of Hevy's workouts, routines, folders and body measurements into the store. `import`
+does it by hand, and every verb whose result derives from workouts does it first; with no
+previous import it is a full pull.
+_Avoid_: sync, refresh, snapshot
+
 **Tombstone**:
 The record that Hevy stopped returning a workout (`gone`) or returned it again (`back`). The
 workout and its sets stay; reads skip it while its latest tombstone is `gone`. Never withdrawn.
@@ -657,7 +663,7 @@ The agent filters by naming the view and its parameters, never by reshaping anot
 _Avoid_: query (the verb that runs one), report, filter
 
 **Record kind**:
-One typed table a ledger Draft may carry, twelve in v1: niggle, followup, decision, annotation,
+One typed table a ledger Draft may carry, twelve in v1: niggle, follow_up, decision, annotation,
 note, workout, weigh_in, sleep_night, activity, status_span, exercise and observation. One
 registry of kinds serves every verb that records.
 _Avoid_: entry type, event type, table

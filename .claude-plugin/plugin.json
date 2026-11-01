@@ -1,0 +1,8 @@
+{
+  "name": "coach",
+  "description": "Strength coach engine: the skills and hooks that drive the coach CLI in an instance.",
+  "author": {
+    "name": "Joe Abousselam"
+  },
+  "repository": "https://github.com/joeuk89/strength-coach"
+}

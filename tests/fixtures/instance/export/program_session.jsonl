@@ -1,0 +1,11 @@
+{"version_id":"pv-1","session_id":"arms","title":"Arms","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"calves","title":"Calves","kind":"lifting","tier":"optional","cadence":"standing","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"core-a","title":"Core-A","kind":"lifting","tier":"optional","cadence":"standing","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"core-b","title":"Core-B","kind":"lifting","tier":"optional","cadence":"standing","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"lower-a","title":"Lower-A","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"lower-b","title":"Lower-B","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"lower-c","title":"Lower-C","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"shoulders","title":"Shoulders","kind":"lifting","tier":"optional","cadence":"standing","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"upper-a","title":"Upper-A","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"upper-b","title":"Upper-B","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}
+{"version_id":"pv-1","session_id":"upper-c","title":"Upper-C","kind":"lifting","tier":"core","cadence":"weekly","location":null,"minutes":60,"scheme":null,"estimated_sets":null}

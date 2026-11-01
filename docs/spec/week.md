@@ -139,7 +139,7 @@ Four triggers, read over the check-in's window:
 
 | Trigger | Holds when | Source |
 | --- | --- | --- |
-| readiness | the check-in's `readiness` is `poor` | the Check-in row (`check-in.md`) |
+| readiness | the check-in's `readiness` is `poor`, given at `checkin open`; with none given the trigger does not hold | the Check-in row (`check-in.md`) |
 | RPE drift | a compound lift's logged RPE was 1 or more over target on 2 or more working sets in each of two consecutive exposures, each set against its own prescription with none extra, heavier, longer or with more reps, after an earlier steady exposure at the prescription, outside deload, light and return work | rn:autoregulation.4 |
 | niggle | a Niggle status event `aggravated` inside the window, or a niggle still `aggravated` on the window's first day | Niggle events |
 | Short-sleep week | at least 4 of the 7 calendar nights ending the day before the check-in measured under 7 hours, with at least 4 of those nights measured | Sleep nights; 7 hours is rn:sleep-dieting.1, 4 of 7 and the 4-night floor are opinion |
@@ -208,6 +208,6 @@ A week is **closed** when a `current` Check-in's window covers its Sunday.
 | Verb | Codes |
 | --- | --- |
 | `checkin open` | `phase_trend_off`, `phase_condition_met`, `followup_due`, `niggle_unconstrained`, `cadence_slow`, `cadence_fast`, `training_max_unused`, `activity_cap_exceeded`, `run_spike` |
-| `import` | `routine_drift`, `workout_reappeared`, `exercise_unmapped`, `snapshot_stale` |
+| `import`, and every verb that pulls first (`verbs.md`, "The pull") | `routine_drift`, `workout_reappeared`, `exercise_unmapped` |
 | `status` | `engine_pin_dev`, `generated_file_drift`, and every code standing |
 | `plan draft` | `frozen_load_off_rack` (ADR 0021), and any of the above that bears on a line (`validation.md`) |

@@ -59,7 +59,7 @@ run, not the file (ADR 0006), so the directory need not be visible.
 `.env` at the instance root holds exactly `HEVY_API_KEY`, gitignored, written by `init` when a
 key is given; the environment variable overrides it (ADR 0011). Whether Hevy is used is the
 presence of the `[hevy]` table in `coach.toml`, which is committed: a table with no key stops
-`import` and `plan apply` with exit 5, `error.code = hevy_key_missing` (`verbs.md`), so a second
+`import`, `plan apply` and every verb that pulls first with exit 5, `error.code = hevy_key_missing` (`verbs.md`), so a second
 machine that clones without `.env` fails loudly instead of planning without Hevy. No `enabled`
 flag, no `.env.example`. Without the table, `hevy_template_missing` is never raised and a
 `[[workout]]` record is the only way a workout enters the store (ADR 0006).
@@ -108,6 +108,9 @@ not a repo and, after a final TTY confirmation listing the files, makes one comm
 tree it would write. On a `.dev` build it refuses without `--pin X.Y.Z`, the release the
 instance will run, so `[engine]` never holds a `.dev` version (ADR 0007, `verbs.md`). Creating
 the remote repository and pushing are the human's job and are printed as the next step.
+With Hevy on and a key set, `init` then runs the full pull into the store (`verbs.md`, "The
+pull"); Hevy unreachable exits 4 with the tree written and committed, and with no key yet the
+next pulling verb runs it.
 
 ## Locations
 

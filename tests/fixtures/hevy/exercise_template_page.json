@@ -1,0 +1,7 @@
+{
+  "page": 1,
+  "page_count": 1,
+  "exercise_templates": [
+    {"id": "F0000001", "title": "Squat (Barbell)", "type": "weight_reps", "primary_muscle_group": "quadriceps", "secondary_muscle_groups": ["glutes", "hamstrings"], "equipment": "barbell", "is_custom": false}
+  ]
+}
