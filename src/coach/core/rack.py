@@ -132,6 +132,15 @@ def grid_rack(implement: GridImplement) -> Rack:
     return ListedRack(tuple(RackRow(load) for load in implement.rack))
 
 
+def on_rack(rack: Rack, amount: float) -> bool:
+    return bool(rack.rows_within(amount, amount))
+
+
+def rows_beside(rack: Rack, amount: float) -> tuple[float, ...]:
+    """The row below `amount` and the row above it, whichever exist."""
+    return tuple(row.load for row in (rack.row_below(amount), rack.row_above(amount)) if row)
+
+
 def _above(load: float, other: float) -> bool:
     return round(load - other, PRECISION) > 0
 
