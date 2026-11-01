@@ -11,6 +11,7 @@ from coach.cli.argv import GLOBAL_OPTIONS, Options, find_leaf, parse_options
 from coach.cli.clock import clock_for
 from coach.cli.declaration import Call, Declaration, Json
 from coach.cli.instance import find_root, load_instance
+from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 from coach.core.message import Message
@@ -64,6 +65,7 @@ def main(
                 env=env,
                 clock=clock,
                 make_client=make_client,
+                terminal=Terminal(sys.stdin, stderr),
             )
             outcome = declaration.run(call)
             warnings.extend(outcome.warnings)

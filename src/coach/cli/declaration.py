@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.config import Config
 from coach.core.message import Message
@@ -59,6 +60,7 @@ class Call:
     env: Mapping[str, str]
     clock: Clock | None
     make_client: Callable[[], object] | None
+    terminal: Terminal
 
 
 @dataclass(frozen=True)

@@ -99,7 +99,7 @@ def parse_config(document: Mapping[str, object]) -> Config:
     locations = _optional_table(document, "location", ())
     return Config(
         engine=Engine(version=_text(engine, "version", ("engine",))),
-        athlete=_athlete(_table(document, "athlete", ())),
+        athlete=parse_athlete(_table(document, "athlete", ())),
         hevy=Hevy() if hevy is not None else None,
         locations=tuple(
             _location(name, _table(locations, name, ("location",))) for name in locations
@@ -136,7 +136,7 @@ def athlete_fact(key: str, value: object) -> object:
             raise _refuse(path, "is not an [athlete] fact")
 
 
-def _athlete(table: Mapping[str, object]) -> Athlete:
+def parse_athlete(table: Mapping[str, object]) -> Athlete:
     here = ("athlete",)
     _only(table, set(ATHLETE_FACTS), here)
 
@@ -298,7 +298,7 @@ def _positive_number(value: object, path: tuple[str, ...]) -> float:
 
 
 def _is_list(value: object) -> bool:
-    return isinstance(value, list)
+    return isinstance(value, list | tuple)
 
 
 def _refuse(path: tuple[str, ...], why: str) -> Setup:
