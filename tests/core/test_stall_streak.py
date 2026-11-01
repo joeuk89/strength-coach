@@ -124,3 +124,35 @@ def test_a_lighter_double_progression_load_starts_a_new_run() -> None:
         stalls(squat_on("2026-10-12"), squat_on("2026-10-19"), squat_on("2026-10-26", *lighter))
         == []
     )
+
+
+def test_an_older_best_does_not_pull_three_rising_exposures_into_a_stall() -> None:
+    best = ((120, 9, 8),) * 4
+    rising = [((120, reps, 8),) * 4 for reps in (6, 7, 8)]
+
+    found = stalls(
+        squat_on("2026-10-05", *best),
+        *(
+            squat_on(on, *sets)
+            for on, sets in zip(("2026-10-12", "2026-10-19", "2026-10-26"), rising, strict=True)
+        ),
+    )
+
+    assert found == []
+
+
+def test_a_top_backoff_line_rising_back_toward_an_old_best_e1rm_is_not_a_stall() -> None:
+    line = a_line(
+        "bb_bench_press", working(1, 3, 8), working(3, 5, 8), scheme="top_backoff", pct_of_top=85
+    )
+    old_best = an_exposure("2026-09-28", (150, 3, 8), (125, 5, 7), workout_id="w-0")
+    rising = [
+        an_exposure(on, (top, 3, 8), (top - 20, 5, 7), workout_id=f"w-{i}")
+        for i, (on, top) in enumerate(
+            (("2026-10-12", 120), ("2026-10-19", 125), ("2026-10-26", 130)), 1
+        )
+    ]
+
+    flags = prescribe(a_request(line, exposures=(old_best, *rising))).lines[0].flags
+
+    assert [f.code for f in flags if f.code == "stall_streak"] == []

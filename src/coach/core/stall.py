@@ -26,14 +26,11 @@ def stall_streak(line: Line, history: Sequence[Exposure]) -> tuple[Exposure, ...
 
 
 def _no_gain(metric: Metric) -> Run:
-    """The longest newest run whose values never exceed its oldest."""
+    """The newest run in which no exposure gains on the one before it."""
 
     def run(line: Line, history: Sequence[Exposure]) -> int:
         values = [metric(line, exposure) for exposure in history]
-        return max(
-            (k for k in range(1, len(values) + 1) if all(v <= values[k - 1] for v in values[:k])),
-            default=0,
-        )
+        return next((i for i in range(1, len(values)) if values[i] < values[i - 1]), len(values))
 
     return run
 
