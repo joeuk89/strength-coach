@@ -75,8 +75,9 @@ def run_spikes(activities: Sequence[LoggedActivity], *, since: datetime.date) ->
         )
         if not longest:
             continue
-        ratio = round((run.distance_km or 0) / longest, 2)
-        if ratio > SPIKE_RATIO:
+        exact = (run.distance_km or 0) / longest
+        if exact > SPIKE_RATIO:
+            ratio = round(exact, 2)
             found.append(
                 raise_flag(
                     "run_spike",

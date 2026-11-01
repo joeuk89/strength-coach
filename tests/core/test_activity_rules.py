@@ -92,6 +92,14 @@ def test_a_run_1_1_times_the_longest_is_no_spike() -> None:
     )
 
 
+def test_a_run_just_over_1_1_times_the_longest_spikes_before_rounding() -> None:
+    run = an_activity("ac-0003", day(1), distance_km=11.04)
+
+    [flag] = run_spikes([*HISTORY, run], since=MONDAY)
+
+    assert flag.params["ratio"] == 1.1
+
+
 def a_line(exercise: str, groups: tuple[PrescribedGroup, ...]) -> LinePrescription:
     return LinePrescription(exercise, "top_backoff", groups, None, (), (), "")
 
