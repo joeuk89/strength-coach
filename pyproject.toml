@@ -19,7 +19,7 @@ dev = ["pytest", "ruff", "pyright"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["tests"]
-addopts = ["--import-mode=importlib", "-p", "pytester", "-p", "support.wall_time"]
+addopts = ["--import-mode=importlib", "-p", "pytester", "-p", "support.wall_time", "-p", "support.no_network"]
 
 [tool.ruff]
 target-version = "py312"
