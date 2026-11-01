@@ -24,7 +24,7 @@ RECORD_KINDS = Registry(
     "record-kinds",
     (
         RecordKind("niggle", "niggle", "n-", event_table="niggle_event"),
-        RecordKind("followup", "follow_up", "f-", event_table="follow_up_event"),
+        RecordKind("follow_up", "follow_up", "f-", event_table="follow_up_event"),
         RecordKind("decision", "decision", "d-"),
         RecordKind("annotation", "annotation", "a-"),
         RecordKind("note", "athlete_note", "an-"),

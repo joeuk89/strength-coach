@@ -22,8 +22,6 @@ REF_KINDS = (
 )
 LOCAL = "@"
 KEY = re.compile(r"[A-Za-z0-9_-]+")
-# A ref kind names its record kind, except where the two spellings differ.
-RECORD_KIND_OF = {"follow_up": "followup"}
 
 
 @dataclass(frozen=True)
@@ -39,10 +37,6 @@ class Ref:
     @property
     def local_key(self) -> str | None:
         return self.id.removeprefix(LOCAL) if self.id.startswith(LOCAL) else None
-
-    @property
-    def record_kind(self) -> str:
-        return RECORD_KIND_OF.get(self.kind, self.kind)
 
     @classmethod
     def parse(cls, text: str) -> "Ref":

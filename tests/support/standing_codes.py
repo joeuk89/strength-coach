@@ -77,9 +77,9 @@ def recorded(conn: Connection, text: str) -> None:
 
 def followup_due(_: Path, __: pytest.MonkeyPatch) -> Standing:
     conn = a_store()
-    recorded(conn, '[[followup]]\nraised = 2026-11-01\ntext = "retest"\ndue = 2026-11-28\n')
+    recorded(conn, '[[follow_up]]\nraised = 2026-11-01\ntext = "retest"\ndue = 2026-11-28\n')
     raised = status_codes(conn)
-    recorded(conn, '[[followup]]\nfollowup = "f-0001"\nkind = "resolved"\ndate = 2026-11-29\n')
+    recorded(conn, '[[follow_up]]\nfollow_up = "f-0001"\nkind = "resolved"\ndate = 2026-11-29\n')
     return Standing(raised, status_codes(conn))
 
 

@@ -97,8 +97,8 @@ def test_status_counts_open_niggles_due_follow_ups_decisions_and_observations() 
         "2026-11-01",
         extra='[[niggle]]\nsite = "knee"\ndate = 2026-11-01\nstatus = "reported"\n'
         '[[niggle]]\nsite = "wrist"\ndate = 2026-11-01\nstatus = "resolved"\n'
-        '[[followup]]\ntext = "retest"\nraised = 2026-11-01\ndue = 2026-11-03\n'
-        '[[followup]]\ntext = "later"\nraised = 2026-11-01\ndue = 2026-12-01\n'
+        '[[follow_up]]\ntext = "retest"\nraised = 2026-11-01\ndue = 2026-11-03\n'
+        '[[follow_up]]\ntext = "later"\nraised = 2026-11-01\ndue = 2026-12-01\n'
         '[[decision]]\nkind = "defer_deep_review"\nuntil = 2026-11-02\n'
         'because = "schedule"\ntext = "x"\n'
         '[[decision]]\nkind = "training_max"\nexercise = "bb_bench_press"\nload = 100\n'

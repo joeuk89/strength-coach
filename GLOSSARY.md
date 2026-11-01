@@ -657,7 +657,7 @@ The agent filters by naming the view and its parameters, never by reshaping anot
 _Avoid_: query (the verb that runs one), report, filter
 
 **Record kind**:
-One typed table a ledger Draft may carry, twelve in v1: niggle, followup, decision, annotation,
+One typed table a ledger Draft may carry, twelve in v1: niggle, follow_up, decision, annotation,
 note, workout, weigh_in, sleep_night, activity, status_span, exercise and observation. One
 registry of kinds serves every verb that records.
 _Avoid_: entry type, event type, table

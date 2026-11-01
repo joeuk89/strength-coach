@@ -339,7 +339,7 @@ def _named_id(record: LedgerRecord) -> str | None:
             return record.id
         case (
             NiggleRecord(niggle=str(named))
-            | FollowUpRecord(followup=str(named))
+            | FollowUpRecord(follow_up=str(named))
             | ObservationRecord(retire=str(named))
         ):
             return named
@@ -348,7 +348,7 @@ def _named_id(record: LedgerRecord) -> str | None:
 
 
 # Exercises, then niggles, follow-ups and workouts: the records later ones may cite.
-WRITE_ORDER = {"exercise": 0, "niggle": 1, "followup": 1, "workout": 1}
+WRITE_ORDER = {"exercise": 0, "niggle": 1, "follow_up": 1, "workout": 1}
 
 
 def _write_order(record: LedgerRecord) -> int:
