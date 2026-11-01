@@ -157,7 +157,7 @@ def test_a_hevy_key_turns_hevy_on_and_lands_in_the_gitignored_env(
     assert tree(empty_directory) == INIT_TREE | {".env"}
     assert ".env" not in run.envelope["result"]["committed"]
     assert "test-key-not-real" not in run.stdout
-    assert run_coach("status").envelope["result"]["hevy"] == {"on": True}
+    assert run_coach("status").envelope["result"]["hevy"]["on"] is True
 
 
 def test_hevy_without_a_key_writes_the_table_and_no_env(

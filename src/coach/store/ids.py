@@ -9,3 +9,7 @@ def next_ids(conn: Connection, table: str, prefix: str, count: int) -> list[str]
     ).fetchone()
     start = (highest or 0) + 1
     return [f"{prefix}{n:04d}" for n in range(start, start + count)]
+
+
+def next_id(conn: Connection, table: str, prefix: str) -> str:
+    return next_ids(conn, table, prefix, 1)[0]

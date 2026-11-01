@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -104,3 +105,41 @@ class BodyMeasurement:
     weight_kg: float | None
     lean_mass_kg: float | None
     fat_percent: float | None
+
+
+type FolderRole = Literal["program", "standing", "retired"]
+
+# ADR 0011, "Routines and folders": the three folders the engine keeps, by exact title.
+ENGINE_FOLDER_TITLES: dict[FolderRole, str] = {
+    "program": "Program",
+    "standing": "Standing",
+    "retired": "Retired",
+}
+
+
+@dataclass(frozen=True)
+class MirroredRoutine:
+    hevy_id: str
+    updated_at: str
+    title: str
+    folder_id: str | None
+    raw: str
+
+
+@dataclass(frozen=True)
+class MirroredFolder:
+    role: FolderRole
+    hevy_id: str
+    title: str
+
+
+def engine_folders(folders: Iterable[Folder]) -> tuple[MirroredFolder, ...]:
+    """The Hevy folders that hold an engine title alone; a title two folders share is left for
+    `plan apply` to refuse."""
+    found = list(folders)
+    mirrored: list[MirroredFolder] = []
+    for role, title in ENGINE_FOLDER_TITLES.items():
+        matches = [f for f in found if f.title == title]
+        if len(matches) == 1:
+            mirrored.append(MirroredFolder(role, matches[0].id, title))
+    return tuple(mirrored)
