@@ -249,9 +249,9 @@ class _Warnings:
 
     def _start_load(self, session: Session, line: Line) -> None:
         exposure = self.context.last_exposures.get(line.exercise)
-        load = exposure.top_load if exposure else None
-        if line.start_load is None or exposure is None or load is None:
+        if line.start_load is None or exposure is None or exposure.top_load is None:
             return
+        load = exposure.top_load
         if load.amount != line.start_load:
             self.raise_(
                 "start_load_ignored",

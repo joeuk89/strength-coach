@@ -12,10 +12,6 @@ PRIORITY_SCHEMES = ("top_backoff", "wave_531", "linear", "assistance_ladder")
 PRIORITY_REPS = (3, 6)
 PRIORITY_DOUBLE_PROGRESSION = "double_progression in 3-6 reps"
 
-PER_MUSCLE_BAND = (10, 20)
-PER_LIFT_BAND = (5, 15)
-UPPER_HALF_BANDS = {"per_muscle": (15, 20), "per_lift": (10, 15)}
-
 
 def scheme_band(priority: bool) -> tuple[str, ...]:
     """A priority lift takes the priority column under every emphasis; every other line the
@@ -49,12 +45,16 @@ class DoseBands:
     per_lift: tuple[int, int]
 
 
+FULL_BANDS = DoseBands(per_muscle=(10, 20), per_lift=(5, 15))
+UPPER_HALF_BANDS = DoseBands(per_muscle=(15, 20), per_lift=(10, 15))
+
+
 def dose_bands(emphasis: Emphasis, phase: str | None) -> DoseBands:
     if emphasis == "maintenance":
-        return DoseBands(_third(PER_MUSCLE_BAND), _third(PER_LIFT_BAND))
+        return DoseBands(_third(FULL_BANDS.per_muscle), _third(FULL_BANDS.per_lift))
     if phase is not None and PHASE.get(phase).dose_default == "upper_half_of_band":
-        return DoseBands(UPPER_HALF_BANDS["per_muscle"], UPPER_HALF_BANDS["per_lift"])
-    return DoseBands(PER_MUSCLE_BAND, PER_LIFT_BAND)
+        return UPPER_HALF_BANDS
+    return FULL_BANDS
 
 
 def _third(band: tuple[int, int]) -> tuple[int, int]:
