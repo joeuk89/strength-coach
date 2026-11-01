@@ -1,5 +1,6 @@
 import io
 import json
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,17 @@ from support.cli import run_coach
 from support.instances import an_instance
 
 from coach.cli import app, registry
-from coach.cli.declaration import Call, Declaration, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    ArgValue,
+    Call,
+    Declaration,
+    Json,
+    Outcome,
+    always,
+    never,
+    on_dry_run,
+)
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 
 
@@ -134,7 +145,9 @@ def test_each_typed_error_exits_with_its_class(
     assert run.envelope["error"]["code"] == "some_code"
 
 
-def a_listing(rows: int, *, width: int = 100) -> Declaration:
+def a_listing(
+    rows: int, *, width: int = 100, over_budget: Callable[[Mapping[str, ArgValue]], bool] = never
+) -> Declaration:
     def listing(call: Call) -> Outcome:
         kept = [{"id": n, "text": "x" * width} for n in range(rows)][: call.last]
         return Outcome({"rows": kept, "count": rows, "truncated": len(kept) < rows})
@@ -146,6 +159,8 @@ def a_listing(rows: int, *, width: int = 100) -> Declaration:
         needs_instance=False,
         output={},
         run=listing,
+        arguments=(Argument("--dry-run", "validate only", takes_value=False),),
+        over_budget=over_budget,
     )
 
 
@@ -178,6 +193,32 @@ def test_full_lifts_the_3_kb_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     result = run_coach("listing", "--full").envelope["result"]
 
     assert len(result["rows"]) == 10
+
+
+def test_a_verb_declared_over_budget_keeps_every_row_past_3_kb(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = a_listing(10, width=500, over_budget=always)
+    monkeypatch.setattr(registry, "declarations", lambda: (listing,))
+
+    run = run_coach("listing")
+
+    assert len(run.stdout.encode("utf-8")) > 3 * 1024
+    assert (len(run.envelope["result"]["rows"]), run.envelope["result"]["truncated"]) == (10, False)
+
+
+def test_a_verb_over_budget_on_its_dry_run_fits_3_kb_without_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = a_listing(10, width=500, over_budget=on_dry_run)
+    monkeypatch.setattr(registry, "declarations", lambda: (listing,))
+
+    dry_run = run_coach("listing", "--dry-run").envelope["result"]
+    real = run_coach("listing")
+
+    assert len(dry_run["rows"]) == 10
+    assert len(real.stdout.encode("utf-8")) <= 3 * 1024
+    assert (len(real.envelope["result"]["rows"]), real.envelope["result"]["truncated"]) == (5, True)
 
 
 def test_the_largest_row_list_is_cut_first(monkeypatch: pytest.MonkeyPatch) -> None:
