@@ -5,6 +5,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import cast
 
+from coach.core.closed_week.dose import is_hard
 from coach.core.config import WEEKDAYS
 from coach.core.flag import Acknowledgement, Flag, FlagKey, Scope, leave, raise_flag
 from coach.core.muscles import DOSED_MUSCLES
@@ -20,8 +21,6 @@ from coach.core.program.form import WEEKDAYS as SCHEDULE_DAYS
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm, Session
 from coach.core.registries.ledger import Reason
 
-# A hard set is a working set above RPE 5 (docs/spec/week.md, "Dose"); an unstated RPE counts.
-HARD_SET_RPE = 5
 # The time one set takes before its rest, when it states no duration_s; an opinion.
 SET_WORK_S = 40
 
@@ -292,4 +291,4 @@ class _Warnings:
 
 
 def _hard(line: Line) -> bool:
-    return any(group.rpe is None or group.rpe > HARD_SET_RPE for group in line.working_groups())
+    return any(is_hard(group.rpe) for group in line.working_groups())
