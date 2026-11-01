@@ -6,6 +6,7 @@ from coach.cli.declaration import Argument, ArgValue, Call, Declaration, Example
 from coach.cli.instance import open_instance_store
 from coach.core.check_in_card import CardField
 from coach.core.errors import Invalid
+from coach.core.registries.ledger import READINESS
 from coach.services.checkin_open import checkin_open
 
 TIERS = ("light", "deep")
@@ -17,6 +18,12 @@ def run(call: Call) -> Outcome:
     tier = call.args.get("tier")
     if tier is not None and tier not in TIERS:
         raise Invalid("invalid_argument", f"--tier {tier!r} is not one of {', '.join(TIERS)}")
+    readiness = call.args.get("readiness")
+    if readiness is not None and readiness not in READINESS:
+        raise Invalid(
+            "invalid_argument",
+            f"--readiness {readiness!r} is not one of {', '.join(READINESS.names())}",
+        )
     with closing(open_instance_store(call.instance)) as conn:
         card = checkin_open(
             conn,
@@ -25,6 +32,7 @@ def run(call: Call) -> Outcome:
             bodyweight_units=athlete.bodyweight_units,
             date=_date(call.args.get("date")),
             tier=None if tier is None else str(tier),
+            readiness=None if readiness is None else str(readiness),
             cadence_days=athlete.checkin_cadence_days,
         )
     return Outcome(
@@ -81,6 +89,11 @@ DECLARATION = Declaration(
     arguments=(
         Argument("--date", "the check-in's date (default today)"),
         Argument("--tier", "deep raises the derived tier; it never lowers it"),
+        Argument(
+            "--readiness",
+            "the athlete's readiness, poor, ok or good, asked before the card; the readiness "
+            "trigger reads it, and with none given it does not hold",
+        ),
     ),
     output={
         "type": "object",

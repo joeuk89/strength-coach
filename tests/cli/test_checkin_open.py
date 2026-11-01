@@ -62,3 +62,15 @@ def test_a_tier_other_than_light_or_deep_is_exit_1(instance: Path) -> None:
     run = coach("checkin", "open", "--tier", "heavy")
 
     assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
+
+
+def test_readiness_given_at_open_is_accepted(instance: Path) -> None:
+    run = coach("checkin", "open", "--readiness", "poor")
+
+    assert run.code == 0
+
+
+def test_a_readiness_other_than_poor_ok_or_good_is_exit_1(instance: Path) -> None:
+    run = coach("checkin", "open", "--readiness", "tired")
+
+    assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
