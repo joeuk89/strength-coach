@@ -26,11 +26,13 @@ def require_current_kit(instance: Instance) -> None:
 
 
 def _read(kit_dir: Path, location: PlatePoolLocation) -> KitFiles:
+    inventory = _bytes(kit_dir / f"{location.kit}.json")
     return KitFiles(
         location=location.name,
         kit=location.kit,
         tables=_tables(kit_dir / f"{location.kit}.achievable.json"),
-        inventory_sha256=_sha256(kit_dir / f"{location.kit}.json"),
+        inventory_sha256=None if inventory is None else hashlib.sha256(inventory).hexdigest(),
+        inventory=inventory,
     )
 
 
@@ -42,8 +44,8 @@ def _tables(path: Path) -> Mapping[str, object] | None:
     return cast(Mapping[str, object], document) if isinstance(document, dict) else None
 
 
-def _sha256(path: Path) -> str | None:
+def _bytes(path: Path) -> bytes | None:
     try:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
+        return path.read_bytes()
     except OSError:
         return None

@@ -2,16 +2,17 @@ from contextlib import closing
 
 from coach.cli.declaration import Call, Declaration, Example, Json, Outcome
 from coach.cli.instance import open_instance_store
-from coach.core.progress import BestSet, MilestoneRead
-from coach.services.progress import (
+from coach.core.progress import (
     AdherenceRead,
+    BestSet,
     DoseWeek,
     GoalRead,
     LiftProgress,
     LineHistory,
+    MilestoneRead,
     PhaseRead,
-    progress,
 )
+from coach.services.progress import progress
 
 
 def run(call: Call) -> Outcome:
@@ -20,7 +21,7 @@ def run(call: Call) -> Outcome:
     with closing(open_instance_store(call.instance)) as conn:
         found = progress(
             conn,
-            call.clock,
+            on=call.clock.today(),
             units=athlete.units,
             bodyweight_units=athlete.bodyweight_units,
             full=call.full,

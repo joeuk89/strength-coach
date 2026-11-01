@@ -99,3 +99,8 @@ def current_windows(conn: Connection) -> list[tuple[datetime.date, datetime.date
         (datetime.date.fromisoformat(start), datetime.date.fromisoformat(end))
         for start, end in found
     ]
+
+
+def read_of(conn: Connection, check_in: str) -> str:
+    (read,) = conn.execute("SELECT read FROM check_in WHERE id = ?", (check_in,)).fetchone()
+    return str(read)

@@ -20,6 +20,12 @@ def in_force(conn: Connection, week: str) -> Row | None:
     return found[0] if found else None
 
 
+def latest_week(conn: Connection) -> Row | None:
+    """The approved WeekPlan of the latest planned week."""
+    found = select(conn, f"{READ} WHERE status = 'approved' ORDER BY week DESC LIMIT 1")
+    return found[0] if found else None
+
+
 def approved_weeks(conn: Connection) -> frozenset[str]:
     found = conn.execute("SELECT week FROM week_plan WHERE status = 'approved'")
     return frozenset(week for (week,) in found)

@@ -19,6 +19,8 @@ def kit_tables() -> dict[str, Any]:
 
 
 def kit_files(location: str = "home", **tables: Any) -> KitFiles:
-    """The fixture kit as `cli` reads it: the tables document and the inventory's hash."""
+    """The fixture kit as `cli` reads it: the tables document, the inventory's hash and its
+    bytes."""
     document = kit_tables() | tables
-    return KitFiles(location, KIT, document, hashlib.sha256(INVENTORY.read_bytes()).hexdigest())
+    inventory = INVENTORY.read_bytes()
+    return KitFiles(location, KIT, document, hashlib.sha256(inventory).hexdigest(), inventory)

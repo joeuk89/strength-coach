@@ -4,117 +4,49 @@
 import datetime
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
 
 from coach.core.cadence import BlockSpan
-from coach.core.clock import Clock
 from coach.core.closed_week.dose import is_hard
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag
 from coach.core.line_history import newest_first, ordinary
 from coach.core.linear import resets
 from coach.core.phase_trend import observed_rate, phase_condition_met
 from coach.core.planned_week import DAYS_IN_WEEK
 from coach.core.program.form import Line, ProgramForm
-from coach.core.progress import PRECISION, BestSet, MilestoneRead, best_set, milestone_read
+from coach.core.progress import (
+    PRECISION,
+    AdherenceRead,
+    DoseWeek,
+    GoalRead,
+    LiftProgress,
+    LineHistory,
+    PhaseRead,
+    Progress,
+    best_set,
+    milestone_read,
+)
 from coach.core.stall import stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
-from coach.store import annotations, goals, phases, programs, readings
+from coach.store import annotations, check_ins, goals, phases, programs, readings
 from coach.store.connection import Connection
 
 BLOCKS_READ = 3
 _DAY = datetime.timedelta(days=1)
 
 
-@dataclass(frozen=True)
-class LiftProgress:
-    """`e1rm_by_block` is the e1RM at the end of each of the last three closed Blocks, oldest
-    first; the changes run over the closed Block and over those three."""
-
-    exercise_id: str
-    scheme: str | None
-    e1rm_now: float | None
-    e1rm_by_block: tuple[tuple[str, float | None], ...]
-    change_over_block: float | None
-    change_over_three: float | None
-    best: BestSet | None
-    stall_streak: int
-    resets: int
-    signal: str | None
-
-
-@dataclass(frozen=True)
-class DoseWeek:
-    """Hard sets delivered: fractional per muscle, whole per priority lift."""
-
-    monday: datetime.date
-    kind: str
-    muscles: Mapping[str, float]
-    lifts: Mapping[str, int]
-
-
-@dataclass(frozen=True)
-class AdherenceRead:
-    """Core sessions over the closed Block's ordinary weeks, optional sessions trained, and the
-    misses by tag inside it."""
-
-    core_planned: int
-    core_trained: int
-    optional_trained: int
-    misses: Mapping[str, int]
-
-
-@dataclass(frozen=True)
-class PhaseRead:
-    kind: str
-    target_rate: float
-    observed_rate: float | None
-    until: Mapping[str, object]
-    met: bool
-
-
-@dataclass(frozen=True)
-class GoalRead:
-    kind: str
-    adopted: str
-    why: str
-
-
-@dataclass(frozen=True)
-class LineHistory:
-    exercise_id: str
-    session_id: str
-    exposures: tuple[tuple[datetime.date, tuple[tuple[float | None, int | None], ...]], ...]
-
-
-@dataclass(frozen=True)
-class Progress:
-    block: BlockSpan | None
-    lifts: tuple[LiftProgress, ...] = ()
-    milestones: tuple[MilestoneRead, ...] = ()
-    dose: tuple[DoseWeek, ...] = ()
-    dose_target: Mapping[str, int] = field(default_factory=dict[str, int])
-    adherence: AdherenceRead | None = None
-    phase: PhaseRead | None = None
-    goal: GoalRead | None = None
-    history: tuple[LineHistory, ...] = ()
-    signals: tuple[Flag, ...] = ()
-
-
 def progress(
     conn: Connection,
-    clock: Clock,
     *,
+    on: datetime.date,
     units: Units,
     bodyweight_units: Units,
     full: bool = False,
 ) -> Progress:
-    today = clock.today()
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
@@ -123,7 +55,7 @@ def progress(
     form = versions[0].form if versions else None
     stored = _goal(conn)
     priority = stored.goal.priority_lifts if stored else ()
-    signals = cadence_signals(conn, closed, units=units, on=today)
+    signals = cadence_signals(conn, closed, units=units, on=on)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
     weigh_ins = {
         datetime.date.fromisoformat(str(r["date"])): float(str(r["kg"]))
@@ -138,7 +70,7 @@ def progress(
                 exposures,
                 spans,
                 _scheme_since(versions, exercise),
-                today,
+                on,
                 by_exercise.get(exercise),
             )
             for exercise in priority
@@ -150,11 +82,24 @@ def progress(
         dose=_dose(closed, block, exposures, priority),
         dose_target=_dose_target(form, priority),
         adherence=_adherence(conn, closed, block),
-        phase=_phase(conn, weigh_ins, today, bodyweight_units),
+        phase=_phase(conn, weigh_ins, on, bodyweight_units),
         goal=GoalRead(stored.goal.kind, stored.adopted, stored.goal.why) if stored else None,
         history=_history(form, exposures, block) if full and form else (),
         signals=signals,
     )
+
+
+def newest_day(conn: Connection, units: Units) -> datetime.date | None:
+    """The newest day the store records a logged exposure, a live weigh-in, a current
+    Check-in's window end or the open Phase's start."""
+    phase = phases.in_force(conn)
+    days = [
+        *(e.date for e in read_history(conn, units).exposures),
+        *(datetime.date.fromisoformat(str(r["date"])) for r in readings.live(conn, "weigh_in")),
+        *(end for _, end in check_ins.current_windows(conn)),
+        *((phase.opened,) if phase else ()),
+    ]
+    return max(days, default=None)
 
 
 def _goal(conn: Connection) -> goals.StoredGoal | None:

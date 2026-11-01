@@ -1,12 +1,19 @@
+import datetime
 import shutil
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
+from support.blocks import BOUNDARY, two_closed_blocks
 from support.cli import run_coach
+from support.clock import FixedClock, at
 from support.git import commit_subjects, committed_files, isolate_git
-from support.scenarios import a_history, a_session
+from support.plans import a_mapped_routine, an_approved_plan
+from support.scenarios import a_check_in, a_history, a_session
 
 from coach.cli import app
+from coach.store import routine_map, rows
 from coach.store.connection import open_store
 
 ENGINE = "0.3.0"
@@ -87,8 +94,11 @@ def test_an_athlete_edit_alone_is_committed_by_the_next_publish(instance: Path) 
     run = run_coach("publish")
 
     assert run.envelope["result"]["commit"] is not None
-    assert run.envelope["result"]["written"] == []
+    assert run.envelope["result"]["written"] == ["pages/athlete.md"]
     assert "profile.md" in committed_files(instance)
+    assert "## Profile\n\n# Athlete\n" in (instance / "pages" / "athlete.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_a_dry_run_lists_files_and_row_counts_and_writes_and_commits_nothing(
@@ -176,3 +186,119 @@ def test_a_deleted_profile_is_removed_by_the_next_publish(instance: Path) -> Non
 
     assert run.envelope["result"]["commit"] is not None
     assert "profile.md" not in committed_files(instance)
+
+
+def pages_on_disk(root: Path) -> dict[str, bytes]:
+    found = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.glob("pages/**/*.md")}
+    return found | {"README.md": (root / "README.md").read_bytes()}
+
+
+def test_publish_writes_the_pages_and_the_readme_and_commits_them(instance: Path) -> None:
+    run = run_coach("publish")
+
+    assert run.code == 0, run.stdout
+    written = run.envelope["result"]["written"]
+    assert {
+        "README.md",
+        "pages/week.md",
+        "pages/athlete.md",
+        "pages/progress.md",
+        "pages/check-ins/2026-11-01.md",
+    } <= set(written)
+    assert {"README.md", "pages/week.md", "pages/check-ins/2026-11-01.md"} <= committed_files(
+        instance
+    )
+
+
+def test_two_publishes_of_an_unchanged_store_write_byte_identical_pages(instance: Path) -> None:
+    run_coach("publish")
+    first = pages_on_disk(instance)
+
+    second = run_coach("publish")
+
+    assert pages_on_disk(instance) == first
+    assert second.envelope["result"]["commit"] is None
+    assert second.envelope["result"]["written"] == []
+
+
+def test_a_retired_sessions_page_and_a_superseded_check_ins_page_go_at_the_next_publish(
+    instance: Path,
+) -> None:
+    store = instance / ".coach" / "coach.db"
+    with open_store(store) as conn:
+        a_mapped_routine(conn, "upper_a", "r-upper", updated_at="2026-11-01T08:00:00+00:00")
+    conn.close()
+    run_coach("publish")
+    assert (instance / "pages" / "routines" / "upper_a.md").is_file()
+    with open_store(store) as conn:
+        plan_id = an_approved_plan(conn, "2026-11-02")
+        routine_map.record(
+            conn,
+            "upper_a",
+            "r-upper",
+            "retired",
+            plan_id=plan_id,
+            at="2026-11-02T08:00:00+00:00",
+            verified=True,
+        )
+        a_check_in(conn, "ci-2026-11-08")
+        rows.supersede(conn, "check_in", "ci-2026-11-01-2", "ci-2026-11-08")
+    conn.close()
+
+    run = run_coach("publish")
+
+    assert set(run.envelope["result"]["deleted"]) == {
+        "pages/routines/upper_a.md",
+        "pages/check-ins/2026-11-01.md",
+    }
+    assert not (instance / "pages" / "routines" / "upper_a.md").exists()
+    assert "pages/check-ins/2026-11-01.md" not in committed_files(instance)
+    assert "pages/check-ins/2026-11-08.md" in committed_files(instance)
+
+
+def test_a_hand_edit_to_a_page_is_overwritten_by_the_next_publish(instance: Path) -> None:
+    run_coach("publish")
+    first = (instance / "pages" / "week.md").read_bytes()
+    (instance / "pages" / "week.md").write_text("mine\n", encoding="utf-8")
+    (instance / "pages" / "notes.md").write_text("mine\n", encoding="utf-8")
+
+    run = run_coach("publish")
+
+    assert (instance / "pages" / "week.md").read_bytes() == first
+    assert not (instance / "pages" / "notes.md").exists()
+    assert run.envelope["result"]["written"] == ["pages/week.md"]
+
+
+def test_a_dry_run_lists_the_pages_and_writes_none(instance: Path) -> None:
+    run = run_coach("publish", "--dry-run")
+
+    assert "pages/week.md" in run.envelope["result"]["written"]
+    assert not (instance / "pages").exists()
+    assert not (instance / "README.md").exists()
+
+
+def test_publish_prints_no_page_to_stdout(instance: Path) -> None:
+    run = run_coach("publish")
+
+    assert "hand edits are overwritten" not in run.stdout
+    assert "Training went well." not in run.stdout
+
+
+def test_a_publish_weeks_later_on_an_unchanged_store_writes_the_same_pages(
+    instance: Path,
+) -> None:
+    store = instance / ".coach" / "coach.db"
+    store.unlink()
+    with (
+        closing(two_closed_blocks(pull_up_reps=(6, 6, 7, 7, 8, 8))) as built,
+        closing(sqlite3.connect(store)) as target,
+    ):
+        built.backup(target)
+    run_coach("publish", clock=FixedClock(at(BOUNDARY)))
+    first = pages_on_disk(instance)
+
+    later = run_coach("publish", clock=FixedClock(at(BOUNDARY + datetime.timedelta(days=60))))
+
+    assert later.code == 0, later.stdout
+    assert pages_on_disk(instance) == first
+    assert later.envelope["result"]["commit"] is None

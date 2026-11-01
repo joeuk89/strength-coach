@@ -3,7 +3,7 @@ check-in.md, "Views"; docs/spec/week.md, "Which verb reports which outside-plan 
 
 import datetime
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import cast
 
 from coach.core import check_in_card as card
@@ -79,16 +79,48 @@ def checkin_open(
         previous_end=previous.window.end if previous else None,
         first_plan_monday=week_plans.first_week(conn),
     )
+
+    def chosen(proposed: bool) -> str:
+        due = check_in_due_on(conn, on, cadence_days, light_week_proposed=proposed)
+        derived = "light" if window.catch_up else due.tier
+        return "deep" if tier == "deep" else derived
+
+    return _card(conn, on, window, previous, chosen, units=units, bodyweight_units=bodyweight_units)
+
+
+def record_card(
+    conn: Connection, row: check_ins.StoredCheckIn, *, units: Units, bodyweight_units: Units
+) -> Card:
+    """The card over a recorded Check-in's own window and tier, from the store as it stands now:
+    what its rendered record shows (check-in.md, "Views")."""
+    return _card(
+        conn,
+        row.date,
+        row.window,
+        check_ins.newest_current(conn, before=row.date),
+        lambda _: row.tier,
+        units=units,
+        bodyweight_units=bodyweight_units,
+    )
+
+
+def _card(
+    conn: Connection,
+    on: datetime.date,
+    window: Window,
+    previous: check_ins.StoredCheckIn | None,
+    tier_of: Callable[[bool], str],
+    *,
+    units: Units,
+    bodyweight_units: Units,
+) -> Card:
     log = WeekLog(conn, units)
     fatigue = Fatigue(conn, log)
     earlier = [r for r in fatigue.check_ins if r.date < on]
     windows = [*((r.window.start, r.window.end) for r in earlier), (window.start, window.end)]
     opened = fatigue.opened(window, previous.readiness if previous else None, windows)
     standing = fatigue.standing(before=on)
-    proposed = opened.proposal.state == "propose"
-    due = check_in_due_on(conn, on, cadence_days, light_week_proposed=proposed)
-    derived = "light" if window.catch_up else due.tier
-    chosen = "deep" if tier == "deep" else derived
+    chosen = tier_of(opened.proposal.state == "propose")
     closed = log.closed_by(windows)
     closing = [w for w in closed.weeks if window.start <= w.monday + WEEK - _DAY <= window.end]
     plan = week_plans.in_force(conn, week_monday(on).isoformat())

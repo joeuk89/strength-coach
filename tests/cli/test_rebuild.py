@@ -64,7 +64,8 @@ def test_deleting_the_database_then_any_verb_rebuilds_it_and_re_exports_byte_ide
     assert run_coach("status").code == 0
     dry_run = run_coach("publish", "--dry-run")
 
-    assert dry_run.envelope["result"]["written"] == []
+    written = dry_run.envelope["result"]["written"]
+    assert [path for path in written if path.startswith("export/")] == []
     with open_store(instance / ".coach" / "coach.db") as conn:
         again = export(conn, ENGINE).files
     conn.close()
