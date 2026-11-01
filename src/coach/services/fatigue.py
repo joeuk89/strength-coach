@@ -1,7 +1,7 @@
 """The light-week proposal as a view of the store (docs/spec/week.md, "Fatigue triggers and the
 light-week proposal"). Nothing is stored: the proposal at each recorded check-in is derived
-again the way `checkin open` derived it, from its window, the readiness on the row before it
-and the Block count its window closes."""
+again the way `checkin open` derived it, from its window, its own readiness and the Block count
+its window closes."""
 
 import datetime
 from dataclasses import dataclass
@@ -103,10 +103,11 @@ class Fatigue:
         return Opened(proposal, block)
 
     def opened_on(self, window: Window, on: datetime.date) -> Opened:
-        """What a check-in dated `on` and reviewing `window` opens, after the rows before it."""
+        """What a check-in dated `on` and reviewing `window` opens, after the rows before it, before
+        the athlete gives a readiness."""
         earlier = [r for r in self.check_ins if r.date < on]
         windows = [*((r.window.start, r.window.end) for r in earlier), (window.start, window.end)]
-        return self.opened(window, earlier[-1].readiness if earlier else None, windows)
+        return self.opened(window, None, windows)
 
     def standing(
         self, before: datetime.date | None = None, *, superseding: datetime.date | None = None
@@ -125,8 +126,7 @@ class Fatigue:
             row = rows[i]
             if cleared_on is not None and cleared_on >= row.date:
                 return None
-            readiness = rows[i - 1].readiness if i else None
-            proposal = self.opened(row.window, readiness, windows[: i + 1]).proposal
+            proposal = self.opened(row.window, row.readiness, windows[: i + 1]).proposal
             if proposal.state == "propose":
                 return Standing(proposal, row.id)
         return None

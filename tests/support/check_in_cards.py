@@ -43,11 +43,18 @@ def opened(
     on: datetime.date = FIRST_SUNDAY,
     *,
     tier: str | None = None,
+    readiness: str | None = None,
     bodyweight_units: Units = "kg",
 ) -> Card:
     """Lift loads in lb and bodyweight in kg, so a test catches either read in the other's units."""
     return checkin_open(
-        conn, FixedClock(), date=on, tier=tier, units="lb", bodyweight_units=bodyweight_units
+        conn,
+        FixedClock(),
+        date=on,
+        tier=tier,
+        readiness=readiness,
+        units="lb",
+        bodyweight_units=bodyweight_units,
     )
 
 

@@ -69,9 +69,11 @@ def checkin_open(
     bodyweight_units: Units,
     date: datetime.date | None = None,
     tier: str | None = None,
+    readiness: str | None = None,
     cadence_days: int = DEFAULT_CHECKIN_CADENCE_DAYS,
 ) -> Card:
-    """`tier` only raises the derived tier to `deep`, and is honoured on a catch-up."""
+    """`tier` only raises the derived tier to `deep`, and is honoured on a catch-up. `readiness`
+    is the athlete's answer for this check-in, asked before the card."""
     on = date or clock.today()
     previous = check_ins.newest_current(conn, before=on)
     window = check_in_window(
@@ -85,7 +87,16 @@ def checkin_open(
         derived = "light" if window.catch_up else due.tier
         return "deep" if tier == "deep" else derived
 
-    return _card(conn, on, window, previous, chosen, units=units, bodyweight_units=bodyweight_units)
+    return _card(
+        conn,
+        on,
+        window,
+        previous,
+        readiness,
+        chosen,
+        units=units,
+        bodyweight_units=bodyweight_units,
+    )
 
 
 def record_card(
@@ -98,6 +109,7 @@ def record_card(
         row.date,
         row.window,
         check_ins.newest_current(conn, before=row.date),
+        row.readiness,
         lambda _: row.tier,
         units=units,
         bodyweight_units=bodyweight_units,
@@ -109,6 +121,7 @@ def _card(
     on: datetime.date,
     window: Window,
     previous: check_ins.StoredCheckIn | None,
+    readiness: str | None,
     tier_of: Callable[[bool], str],
     *,
     units: Units,
@@ -118,7 +131,7 @@ def _card(
     fatigue = Fatigue(conn, log)
     earlier = [r for r in fatigue.check_ins if r.date < on]
     windows = [*((r.window.start, r.window.end) for r in earlier), (window.start, window.end)]
-    opened = fatigue.opened(window, previous.readiness if previous else None, windows)
+    opened = fatigue.opened(window, readiness, windows)
     standing = fatigue.standing(before=on)
     chosen = tier_of(opened.proposal.state == "propose")
     closed = log.closed_by(windows)
