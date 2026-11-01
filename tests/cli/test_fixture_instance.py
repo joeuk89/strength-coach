@@ -66,13 +66,14 @@ def test_exit_3_a_routine_moved_in_hevy_since_the_import(instance: Path) -> None
 
 def a_mirror_without_the_folder(root: Path, title: str) -> None:
     """Rebuild the store from an export that holds no folder titled `title`."""
-    export = root / "export"
-    rows = (export / "folder.jsonl").read_text().splitlines(keepends=True)
+    folders = root / "export" / "folder.jsonl"
+    rows = folders.read_text().splitlines(keepends=True)
     kept = [row for row in rows if json.loads(row)["title"] != title]
-    (export / "folder.jsonl").write_text("".join(kept))
-    manifest = json.loads((export / "manifest.json").read_text())
+    folders.write_text("".join(kept))
+    manifest_path = root / "export" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
     manifest["tables"]["folder"] = len(kept)
-    (export / "manifest.json").write_text(json.dumps(manifest))
+    manifest_path.write_text(json.dumps(manifest))
     (root / ".coach" / "coach.db").unlink()
 
 
