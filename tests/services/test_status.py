@@ -103,7 +103,7 @@ def test_status_reports_the_age_of_the_last_import_and_the_workouts_read() -> No
 
     assert (result.last_import, result.last_import_age_days) == ("2026-10-30T12:00:00Z", 3)
     assert result.workouts == {"hevy": 1, "manual": 0}
-    assert result.warnings == ()
+    assert [w.key for w in result.warnings] == [f"exercise_unmapped@workout:{B}"]
 
 
 def test_status_warns_snapshot_stale_past_seven_days_while_hevy_is_on() -> None:

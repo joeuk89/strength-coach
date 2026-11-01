@@ -21,7 +21,10 @@ from coach.services.cadence import cadence_signals
 from coach.services.check_in_warnings import check_in_warnings
 from coach.services.closed_weeks import ClosedWeeks, WeekLog
 from coach.services.fatigue import Fatigue
-from coach.services.rotation import rotation_position
+from coach.services.hevy_import import standing_warnings
+from coach.services.previous_plans import frozen_loads_off_rack
+from coach.services.racks import current_racks
+from coach.services.rotation import default_week, rotation_position
 from coach.store import (
     check_ins,
     decisions,
@@ -164,6 +167,12 @@ def status(
         observations=tuple(observations.current(conn)),
         warnings=(
             *((stale,) if stale else ()),
+            *standing_warnings(conn, units),
+            *frozen_loads_off_rack(
+                conn,
+                current_racks(locations, kits, units),
+                monday=default_week(conn, today),
+            ),
             *check_in_warnings(
                 conn,
                 log,
