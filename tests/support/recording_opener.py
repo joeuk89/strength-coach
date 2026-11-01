@@ -25,7 +25,7 @@ class Sent:
 class ScriptedResponse:
     def __init__(self, reply: Reply) -> None:
         self.status = reply.status
-        self._bytes = b"" if reply.body is None else json.dumps(reply.body).encode()
+        self._bytes = _encoded(reply.body)
         self._read_error = reply.read_error
 
     def read(self) -> bytes:
@@ -63,8 +63,8 @@ class RecordingOpener:
         if isinstance(reply, Exception):
             raise reply
         if reply.status >= 400:
-            payload = b"" if reply.body is None else json.dumps(reply.body).encode()
-            raise HTTPError(request.full_url, reply.status, "error", Message(), io.BytesIO(payload))
+            body = io.BytesIO(_encoded(reply.body))
+            raise HTTPError(request.full_url, reply.status, "error", Message(), body)
         return ScriptedResponse(reply)
 
 
@@ -74,3 +74,7 @@ class RecordingSleeper:
 
     def __call__(self, seconds: float) -> None:
         self.slept.append(seconds)
+
+
+def _encoded(body: object) -> bytes:
+    return b"" if body is None else json.dumps(body).encode()

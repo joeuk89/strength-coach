@@ -127,14 +127,14 @@ class HevyApiClient:
         raise Unreachable("hevy_unreachable", "Hevy created an exercise template and sent no id")
 
     def workouts(self) -> tuple[Workout, ...]:
-        return tuple(self._pages("/v1/workouts", parse_workout_page, 10))
+        return tuple(self._pages("/v1/workouts", parse_workout_page))
 
     def workout_events(self, since: datetime.datetime) -> tuple[WorkoutEvent, ...]:
         query = {"since": since.isoformat()}
-        return tuple(self._pages("/v1/workouts/events", parse_workout_events_page, 10, query))
+        return tuple(self._pages("/v1/workouts/events", parse_workout_events_page, query=query))
 
     def routines(self) -> tuple[Routine, ...]:
-        return tuple(self._pages("/v1/routines", parse_routine_page, 10))
+        return tuple(self._pages("/v1/routines", parse_routine_page))
 
     def routine(self, routine_id: str) -> Routine:
         return parse_routine(self.request("GET", _routine_path(routine_id)))
@@ -146,13 +146,15 @@ class HevyApiClient:
         return ReadBack(routine=routine, diff=found)
 
     def folders(self) -> tuple[Folder, ...]:
-        return tuple(self._pages("/v1/routine_folders", parse_folder_page, 10))
+        return tuple(self._pages("/v1/routine_folders", parse_folder_page))
 
     def exercise_templates(self) -> tuple[ExerciseTemplate, ...]:
-        return tuple(self._pages("/v1/exercise_templates", parse_exercise_template_page, 100))
+        return tuple(
+            self._pages("/v1/exercise_templates", parse_exercise_template_page, page_size=100)
+        )
 
     def body_measurements(self) -> tuple[BodyMeasurement, ...]:
-        return tuple(self._pages("/v1/body_measurements", parse_body_measurement_page, 10))
+        return tuple(self._pages("/v1/body_measurements", parse_body_measurement_page))
 
     def request(
         self,
@@ -198,7 +200,7 @@ class HevyApiClient:
         self,
         path: str,
         parse: Callable[[object], Page[T]],
-        page_size: int,
+        page_size: int = 10,
         query: Mapping[str, str | int] | None = None,
     ) -> Iterator[T]:
         number = 1

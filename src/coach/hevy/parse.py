@@ -181,7 +181,6 @@ def _body_measurement(payload: object) -> BodyMeasurement:
 
 
 def _set_type(raw_type: str) -> SetType:
-    # schema.md, logged_set.set_type: Hevy's warmup is warm_up, every other Hevy type is working.
     return "warm_up" if raw_type == "warmup" else "working"
 
 

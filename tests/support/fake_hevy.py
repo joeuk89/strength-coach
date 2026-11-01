@@ -78,8 +78,7 @@ class FakeHevy:
         return self._write("POST", "/v1/routines", body, context, routine_id)
 
     def update_routine(self, routine_id: str, body: Payload, context: WriteContext) -> Routine:
-        if routine_id not in self._routines:
-            raise Unreachable("hevy_unreachable", f"Hevy has no routine {routine_id}")
+        self._require(routine_id)
         sent = _routine_body(body)
         self._routines[routine_id] = self._stored_routine(routine_id, sent, keep_notes=False)
         return self._write("PUT", f"/v1/routines/{routine_id}", body, context, routine_id)
@@ -126,8 +125,7 @@ class FakeHevy:
 
     def routine(self, routine_id: str) -> Routine:
         self._get()
-        if routine_id not in self._routines:
-            raise Unreachable("hevy_unreachable", f"Hevy has no routine {routine_id}")
+        self._require(routine_id)
         return parse_routine({"routine": self._routines[routine_id]})
 
     def read_back(self, routine_id: str, context: WriteContext, diff: RoutineDiff) -> ReadBack:
@@ -148,6 +146,10 @@ class FakeHevy:
     def body_measurements(self) -> tuple[BodyMeasurement, ...]:
         page = self._page("body_measurements", self._measurements)
         return parse_body_measurement_page(page).items
+
+    def _require(self, routine_id: str) -> None:
+        if routine_id not in self._routines:
+            raise Unreachable("hevy_unreachable", f"Hevy has no routine {routine_id}")
 
     def _get(self) -> None:
         if self._fail_next_get:
