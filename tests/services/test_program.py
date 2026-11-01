@@ -7,15 +7,15 @@ import pytest
 from support.clock import FixedClock
 from support.history import a_logged_workout, an_annotation
 from support.kit_fixtures import kit_files
+from support.plans import a_mapped_routine
 from support.program_drafts import WORKED_DRAFT_COMPLETE, a_draft, a_line, a_session, toml
 from support.programs import a_config, a_goal, a_library_store, a_phase, the_worked_store
 
 from coach.core.errors import Invalid, Setup
 from coach.core.kit import KitFiles
-from coach.core.mirror import MirroredRoutine
 from coach.core.program.form import AcknowledgeEntry
 from coach.services.program import AdoptResult, adopt, show, show_draft
-from coach.store import exercises, mirrors, programs
+from coach.store import exercises, programs
 from coach.store.connection import Connection
 
 CLOCK = FixedClock()
@@ -459,21 +459,10 @@ def test_a_start_load_beside_logged_history_warns_start_load_ignored() -> None:
     )
 
 
-def a_mapped_routine(conn: Connection, session_id: str, routine_id: str) -> None:
-    routine = MirroredRoutine(routine_id, "2026-10-01T00:00:00Z", "Pull", None, "{}")
-    with conn:
-        mirrors.upsert_routine(conn, routine, "2026-10-01T00:00:00Z")
-        conn.execute(
-            "INSERT INTO routine_map (session_id, routine_id, status, written_at) "
-            "VALUES (?, ?, 'active', '2026-10-01T00:00:00Z')",
-            (session_id, routine_id),
-        )
-
-
 def test_a_redesign_dropping_a_mapped_session_warns_session_retired_and_block_open() -> None:
     conn = the_worked_store()
     run(conn, rotation_draft())
-    a_mapped_routine(conn, "pull", "r-pull")
+    a_mapped_routine(conn, "pull", "r-pull", updated_at="2026-10-01T00:00:00Z")
 
     result = run(conn, toml(a_draft()))
 

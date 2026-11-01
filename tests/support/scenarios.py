@@ -1,16 +1,27 @@
 """Scenario builders: each writes one piece of history through `store` functions only."""
 
 import json
+from importlib.resources import files
 from typing import Any
 
-from coach.store import rows
+from coach.store import exercises, rows
 from coach.store.connection import Connection
+from coach.store.jsonl import load_rows
 
 RECORDED_AT = "2026-11-01T09:00:00Z"
 
 
 def a_session(conn: Connection, session_id: str, *, introduced_in: str = "pv-1") -> None:
     rows.insert(conn, "session", {"id": session_id, "introduced_in": introduced_in})
+
+
+def a_catalogue_without(conn: Connection, *missing: str) -> None:
+    """The store an older engine seeded, whose catalogue lacked the `missing` ids."""
+    catalogue = files("coach.store").joinpath("catalogue.jsonl").read_text(encoding="utf-8")
+    lines = [line for line in catalogue.splitlines() if line.strip()]
+    kept = [line for line in lines if json.loads(line)["id"] not in missing]
+    assert len(lines) - len(kept) == len(set(missing)), "every missing id is a catalogue id"
+    load_rows(conn, "exercise", "\n".join(kept))
 
 
 def an_exercise(conn: Connection, exercise_id: str, **columns: Any) -> None:
@@ -108,6 +119,17 @@ def a_history(conn: Connection) -> None:
     """A small store touching foreign keys, a forward pointer, nulls, reals and unicode."""
     an_exercise(conn, "bb_bench_press", name="Bänkpress", hevy_template_id="79D0BB3A")
     an_exercise(conn, "bb_back_squat", pattern="squat", hevy_template_id="D04AC939")
+    a_logged_history(conn)
+
+
+def a_history_on_the_catalogue(conn: Connection) -> None:
+    """`a_history` in a store `init` seeded: the athlete edits two catalogue rows."""
+    exercises.update(conn, "bb_bench_press", {"name": "Bänkpress", "hevy_template_id": "79D0BB3A"})
+    exercises.update(conn, "bb_back_squat", {"hevy_template_id": "D04AC939"})
+    a_logged_history(conn)
+
+
+def a_logged_history(conn: Connection) -> None:
     a_session(conn, "upper_a")
     a_session(conn, "lower_a")
     a_workout(conn, "b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13", "2026-10-27T18:00:00Z", sets=11)

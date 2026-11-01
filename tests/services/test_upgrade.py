@@ -1,5 +1,5 @@
 from support.chains import ENGINE_PLUS_PROBE
-from support.scenarios import a_session
+from support.scenarios import a_catalogue_without, a_session
 
 from coach.services.upgrade import upgrade
 from coach.store.catalogue import seed_catalogue
@@ -9,9 +9,8 @@ from coach.store.connection import open_store, open_store_behind, schema_version
 
 def test_upgrade_migrates_merges_the_catalogue_and_exports_at_the_new_version() -> None:
     conn = open_store(":memory:")
-    seed_catalogue(conn)
+    a_catalogue_without(conn, "ab_wheel")
     a_session(conn, "push_a")
-    conn.execute("DELETE FROM exercise WHERE id = 'ab_wheel'")
 
     upgraded = upgrade(conn, engine_version="0.4.0", chain=ENGINE_PLUS_PROBE)
 
