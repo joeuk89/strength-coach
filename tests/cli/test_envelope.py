@@ -134,9 +134,7 @@ def test_each_typed_error_exits_with_its_class(
     def fail(call: Call) -> Outcome:
         raise kind("some_code", "it failed")
 
-    failing = Declaration(
-        name="fail", summary="Fails.", writes="none", needs_instance=False, output={}, run=fail
-    )
+    failing = Declaration(name="fail", summary="Fails.", writes="none", output={}, run=fail)
     monkeypatch.setattr(registry, "declarations", lambda: (failing,))
 
     run = run_coach("fail")
@@ -157,7 +155,6 @@ def a_listing(rows: int, *, width: int = 100, over_budget: OverBudget = never) -
         name="listing",
         summary="Lists.",
         writes="none",
-        needs_instance=False,
         output={},
         run=listing,
         arguments=(Argument("--dry-run", "validate only", takes_value=False),),
@@ -237,7 +234,6 @@ def test_the_largest_row_list_is_cut_first(monkeypatch: pytest.MonkeyPatch) -> N
                 name="card",
                 summary="A card.",
                 writes="none",
-                needs_instance=False,
                 output={},
                 run=card,
             ),
@@ -266,7 +262,6 @@ def test_a_json_schema_naming_rows_count_and_truncated_is_not_a_row_list(
                 name="describe",
                 summary="Describes.",
                 writes="none",
-                needs_instance=False,
                 output={},
                 run=describe,
             ),

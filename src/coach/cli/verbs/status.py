@@ -1,7 +1,7 @@
 import datetime
 from contextlib import closing
 
-from coach.cli.declaration import Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.generated import drifted
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
@@ -12,8 +12,7 @@ from coach.store.export import on_disk
 from coach.store.phases import OpenPhase
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     with closing(open_instance_store(call.instance)) as conn:
         result = status(
             conn,
@@ -238,8 +237,7 @@ DECLARATION = Declaration(
         "Observations, export."
     ),
     writes="none",
-    needs_instance=True,
     output=OUTPUT,
-    run=run,
+    run=InInstance(run),
     examples=(Example(("status",), "Where the instance stands."),),
 )

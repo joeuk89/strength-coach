@@ -7,7 +7,7 @@ from support.instances import an_instance
 from support.scenarios import a_history, a_session
 
 from coach.cli import app, registry
-from coach.cli.declaration import Call, Declaration, Example, Outcome, Writes
+from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Outcome, Writes
 from coach.store.connection import open_store
 from coach.store.export import export
 
@@ -38,7 +38,7 @@ def export_files(root: Path) -> dict[str, bytes]:
 def a_stub_verb(monkeypatch: pytest.MonkeyPatch, *, writes: Writes) -> None:
     """A verb that writes nothing itself and reports what the CLI handed it."""
 
-    def run(call: Call) -> Outcome:
+    def run(call: InstanceCall) -> Outcome:
         rebuilt = call.rebuilt
         return Outcome({"rebuilt": None if rebuilt is None else rebuilt.schema_version})
 
@@ -46,9 +46,8 @@ def a_stub_verb(monkeypatch: pytest.MonkeyPatch, *, writes: Writes) -> None:
         name="stub",
         summary="test only",
         writes=writes,
-        needs_instance=True,
         output={"type": "object"},
-        run=run,
+        run=InInstance(run),
         examples=(Example(("stub",), "test only"),),
     )
     known = registry.declarations()

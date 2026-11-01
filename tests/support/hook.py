@@ -5,14 +5,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Outcome, Writes
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Outcome,
+    Writes,
+)
 from coach.cli.hook.app import main
 from coach.cli.hook.in_process import CoachRun
 
 HASH = "wp-3f9a"
 
 
-def _unused(call: Call) -> Outcome:
+def _unused(call: InstanceCall) -> Outcome:
     raise AssertionError("the hook runs a dry run, never the verb")
 
 
@@ -21,9 +29,8 @@ def a_declaration(name: str, writes: Writes, arguments: tuple[Argument, ...] = (
         name=name,
         summary=name,
         writes=writes,
-        needs_instance=True,
         output={},
-        run=_unused,
+        run=InInstance(_unused),
         arguments=arguments,
         examples=(Example((*name.split(),), name),),
     )

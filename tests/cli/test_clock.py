@@ -9,20 +9,19 @@ from support.instances import an_instance
 
 from coach.cli import app, registry
 from coach.cli.clock import clock_for, machine_timezone
-from coach.cli.declaration import Call, Declaration, Outcome
+from coach.cli.declaration import Declaration, InInstance, InstanceCall, Outcome
 from coach.core.clock import Clock
 
 MONDAY = datetime.datetime(2026, 11, 2, 9, 0, tzinfo=ZoneInfo("Europe/London"))
 
 
 def a_verb_reporting_today(seen: list[Clock]) -> Declaration:
-    def run(call: Call) -> Outcome:
-        assert call.clock is not None
+    def run(call: InstanceCall) -> Outcome:
         seen.append(call.clock)
         return Outcome({"today": call.clock.today().isoformat()})
 
     return Declaration(
-        name="today", summary="Today.", writes="none", needs_instance=True, output={}, run=run
+        name="today", summary="Today.", writes="none", output={}, run=InInstance(run)
     )
 
 

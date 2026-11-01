@@ -1,14 +1,21 @@
 from contextlib import closing
 from dataclasses import asdict
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.hevy_key import api_key
 from coach.cli.instance import open_instance_store
 from coach.services.hevy_import import ImportResult, import_hevy
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     instance = call.instance
     rebuilt: Json | None = (
         None if call.rebuilt is None else {"schema_version": call.rebuilt.schema_version}
@@ -46,7 +53,6 @@ DECLARATION = Declaration(
         "routine and folder mirrors. Events since the last import; --full re-lists everything."
     ),
     writes="store",
-    needs_instance=True,
     arguments=(
         Argument(
             "--full",
@@ -77,7 +83,7 @@ DECLARATION = Declaration(
         },
         "required": ["rebuilt"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("import",), "Pull the Hevy events since the last import."),
         Example(("import", "--full"), "Re-list the whole Hevy account."),

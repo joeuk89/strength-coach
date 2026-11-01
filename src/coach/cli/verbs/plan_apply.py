@@ -1,6 +1,15 @@
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome, on_dry_run
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+    on_dry_run,
+)
 from coach.cli.drafts import read_draft
 from coach.cli.hevy_key import api_key
 from coach.cli.instance import open_instance_store
@@ -12,8 +21,7 @@ from coach.render.approval_prompt import approval_prompt
 from coach.services.plan_apply import DryRun, dry_run, expected, push_approved
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     instance = call.instance
     path = str(call.args["draft"])
     data = read_draft(path)
@@ -122,7 +130,6 @@ DECLARATION = Declaration(
         "terminal it shows the approval prompt and asks [y/N] first; no writes nothing."
     ),
     writes="hevy",
-    needs_instance=True,
     over_budget=on_dry_run,
     arguments=(
         Argument("draft", "path of the TOML plan Draft", required=True),
@@ -164,7 +171,7 @@ DECLARATION = Declaration(
         },
         "required": ["write_plan_hash"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(
             ("plan", "apply", ".coach/drafts/2026-11-01-plan.toml", "--dry-run"),

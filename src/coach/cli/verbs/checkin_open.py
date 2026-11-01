@@ -5,9 +5,10 @@ from typing import cast
 from coach.cli.declaration import (
     Argument,
     ArgValue,
-    Call,
     Declaration,
     Example,
+    InInstance,
+    InstanceCall,
     Json,
     Outcome,
     always,
@@ -21,8 +22,7 @@ from coach.services.checkin_open import checkin_open
 TIERS = ("light", "deep")
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     athlete = call.instance.config.athlete
     tier = call.args.get("tier")
     if tier is not None and tier not in TIERS:
@@ -94,7 +94,6 @@ DECLARATION = Declaration(
         "nothing to say is left out. The outside-plan codes it owns come in warnings[]."
     ),
     writes="none",
-    needs_instance=True,
     over_budget=always,
     arguments=(
         Argument("--date", "the check-in's date (default today)"),
@@ -143,7 +142,7 @@ DECLARATION = Declaration(
         },
         "required": ["tier", "window", "catch_up", "card"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("checkin", "open"), "Open today's check-in card."),
         Example(

@@ -1,6 +1,6 @@
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Outcome
+from coach.cli.declaration import Argument, Declaration, Example, InInstance, InstanceCall, Outcome
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.services.goal_adopt import goal_adopt
@@ -8,8 +8,7 @@ from coach.services.goal_adopt import goal_adopt
 ID_OR_NULL = {"type": ["string", "null"]}
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
     with closing(open_instance_store(call.instance)) as conn:
@@ -35,7 +34,6 @@ DECLARATION = Declaration(
         "the Phase in the same file. The same file again writes nothing and returns the same id."
     ),
     writes="store",
-    needs_instance=True,
     arguments=(Argument("draft", "path of the TOML goal Draft", required=True),),
     output={
         "type": "object",
@@ -74,7 +72,7 @@ DECLARATION = Declaration(
             "diff",
         ],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("goal", "adopt", ".coach/drafts/2026-10-30-goal.toml"), "Adopt a goal Draft."),
     ),

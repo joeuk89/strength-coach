@@ -2,15 +2,22 @@ import datetime
 import hashlib
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Invalid
 from coach.services.program import ShowResult, show, show_draft
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     out = call.args.get("out")
     as_draft = call.args.get("draft") is True
     if out is not None and not as_draft:
@@ -73,7 +80,6 @@ DECLARATION = Declaration(
         "path and hash; with --apply-plan, fold a week's line overrides into that Draft."
     ),
     writes="none",
-    needs_instance=True,
     arguments=(
         Argument("--draft", "write the version in force as an amend Draft", takes_value=False),
         Argument("--out", "where --draft writes (default .coach/drafts/<date>-program.toml)"),
@@ -117,7 +123,7 @@ DECLARATION = Declaration(
         },
         "required": ["version"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("program", "show"), "The Program version in force."),
         Example(("program", "show", "--draft"), "Write the version in force as a Draft."),

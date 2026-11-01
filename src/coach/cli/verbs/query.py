@@ -1,7 +1,15 @@
 import datetime
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
@@ -21,8 +29,7 @@ from coach.services.query import (
 from coach.store.connection import Connection
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     view = str(call.args["view"])
     if view not in VIEWS:
         raise Invalid("invalid_argument", f"no view {view!r}; one of {', '.join(VIEWS.names())}")
@@ -76,9 +83,8 @@ def run(call: Call) -> Outcome:
     return Outcome(_rows(result))
 
 
-def _draft(call: Call, conn: Connection) -> CheckedPlan | None:
+def _draft(call: InstanceCall, conn: Connection) -> CheckedPlan | None:
     """The named plan Draft validated now, read-only: the check `plan apply --dry-run` runs."""
-    assert call.instance is not None and call.clock is not None
     path = _text(call, "draft")
     if path is None:
         return None
@@ -92,17 +98,17 @@ def _draft(call: Call, conn: Connection) -> CheckedPlan | None:
     ).checked
 
 
-def _text(call: Call, name: str) -> str | None:
+def _text(call: InstanceCall, name: str) -> str | None:
     value = call.args.get(name)
     return value if isinstance(value, str) else None
 
 
-def _texts(call: Call, name: str) -> tuple[str, ...]:
+def _texts(call: InstanceCall, name: str) -> tuple[str, ...]:
     value = call.args.get(name, ())
     return value if isinstance(value, tuple) else ()
 
 
-def _date(call: Call, name: str) -> datetime.date | None:
+def _date(call: InstanceCall, name: str) -> datetime.date | None:
     text = _text(call, name)
     if text is None:
         return None
@@ -126,7 +132,6 @@ DECLARATION = Declaration(
     "routines (the Routine map with each routine's folder, status and last verify) or "
     "ledger (one record kind with its withdrawals or event history, or one record by id).",
     writes="none",
-    needs_instance=True,
     arguments=(
         Argument("view", f"one of {', '.join(VIEWS.names())}", required=True),
         Argument(
@@ -156,7 +161,7 @@ DECLARATION = Declaration(
         },
         "required": ["rows", "count", "truncated"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(
             ("query", "exposures", "--exercise", "bb_bench_press", "--last", "5"),

@@ -1,7 +1,15 @@
 import datetime
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files, require_current_kit
@@ -11,8 +19,7 @@ from coach.core.plan_draft import PlanDraft
 from coach.services.plan_draft import plan_draft
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     require_current_kit(call.instance)
     out = call.args.get("out")
     with closing(open_instance_store(call.instance)) as conn:
@@ -78,7 +85,6 @@ DECLARATION = Declaration(
         "warning, the rotation position with its source and the notes."
     ),
     writes="none",
-    needs_instance=True,
     arguments=(
         Argument(
             "--week",
@@ -112,7 +118,7 @@ DECLARATION = Declaration(
         },
         "required": ["path", "hash", "week", "supersedes", "lines", "position", "flags", "notes"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("plan", "draft"), "Draft the next week with no approved plan."),
         Example(("plan", "draft", "--week", "2026-11-02"), "Draft the week starting 2 Nov 2026."),

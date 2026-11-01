@@ -3,7 +3,15 @@ from pathlib import Path
 
 from coach.cli import export_dir as exported
 from coach.cli import git, pages_dir
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+)
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.core.errors import Setup
@@ -17,8 +25,7 @@ WRITE_AUDIT = "hevy/writes.jsonl"
 MESSAGE = "coach publish"
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None
+def run(call: InstanceCall) -> Outcome:
     root = call.instance.root
     profile = root / PROFILE
     with closing(open_instance_store(call.instance)) as conn:
@@ -73,7 +80,6 @@ DECLARATION = Declaration(
     "coach.toml, profile.md, kit/ and the Hevy write audit in one commit; nothing changed means "
     "no commit.",
     writes="git",
-    needs_instance=True,
     arguments=(
         Argument(
             "--dry-run",
@@ -94,7 +100,7 @@ DECLARATION = Declaration(
         },
         "required": ["written", "deleted", "athlete_files", "rows"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(("publish", "--dry-run"), "The files publish would write and commit."),
         Example(("publish",), "Write the export and the pages and commit them."),

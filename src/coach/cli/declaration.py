@@ -72,11 +72,15 @@ class Call:
     full: bool
     last: int
     engine_version: str
-    instance: Instance | None
     env: Mapping[str, str]
-    clock: Clock | None
     make_client: MakeClient
     terminal: Terminal
+
+
+@dataclass(frozen=True)
+class InstanceCall(Call):
+    instance: Instance
+    clock: Clock
     rebuilt: Rebuilt | None = None
 
 
@@ -84,6 +88,13 @@ class Call:
 class Outcome:
     result: Json
     warnings: tuple[Message | Flag, ...] = ()
+
+
+@dataclass(frozen=True)
+class InInstance:
+    """The run of a verb that needs an instance: the CLI finds and loads it before the call."""
+
+    run: Callable[[InstanceCall], Outcome]
 
 
 def never(args: Mapping[str, ArgValue]) -> bool:
@@ -103,9 +114,8 @@ class Declaration:
     name: str
     summary: str
     writes: Writes
-    needs_instance: bool
     output: Json
-    run: Callable[[Call], Outcome]
+    run: Callable[[Call], Outcome] | InInstance
     arguments: tuple[Argument, ...] = ()
     examples: tuple[Example, ...] = ()
     # The one verb that writes [engine]: it runs on an engine newer than the pin (ADR 0007).

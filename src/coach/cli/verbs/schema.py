@@ -38,7 +38,6 @@ DECLARATION = Declaration(
     name="schema",
     summary="The verb declarations as JSON Schema, or one registry as data.",
     writes="none",
-    needs_instance=False,
     arguments=(
         Argument("verb", "the leaf to describe, quoted when it has two words"),
         Argument("--registry", "the registry to print instead, by name"),

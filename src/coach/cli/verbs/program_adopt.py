@@ -1,14 +1,22 @@
 from contextlib import closing
 
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome, on_dry_run
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+    on_dry_run,
+)
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.services.program import AdoptResult, adopt
 
 
-def run(call: Call) -> Outcome:
-    assert call.instance is not None and call.clock is not None
+def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
     position = call.args.get("position")
@@ -54,7 +62,6 @@ DECLARATION = Declaration(
         "Block. The same file again is a no-op with the same version."
     ),
     writes="store",
-    needs_instance=True,
     over_budget=on_dry_run,
     arguments=(
         Argument("draft", "path of the TOML program Draft", required=True),
@@ -85,7 +92,7 @@ DECLARATION = Declaration(
         },
         "required": ["version", "kind", "position", "block", "no_op"],
     },
-    run=run,
+    run=InInstance(run),
     examples=(
         Example(
             ("program", "adopt", ".coach/drafts/2026-10-30-program.toml", "--dry-run"),
