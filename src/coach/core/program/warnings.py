@@ -5,6 +5,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import cast
 
+from coach.core.closed_week.dose import is_hard
 from coach.core.config import WEEKDAYS
 from coach.core.flag import Acknowledgement, Flag, FlagKey, Scope, leave, raise_flag
 from coach.core.muscles import DOSED_MUSCLES
@@ -20,8 +21,7 @@ from coach.core.program.form import WEEKDAYS as SCHEDULE_DAYS
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm, Session
 from coach.core.registries.ledger import Reason
 
-# A hard set is a working set above RPE 5 (docs/spec/week.md, "Dose"); an unstated RPE counts.
-HARD_SET_RPE = 5
+LOW_ADHERENCE = ("watch", "low")
 # The time one set takes before its rest, when it states no duration_s; an opinion.
 SET_WORK_S = 40
 
@@ -35,6 +35,7 @@ def adopt_warnings(form: ProgramForm, context: AdoptContext) -> tuple[Flag, ...]
     raised.muscles()
     raised.block()
     raised.retired()
+    raised.core_session_added()
     for session in form.sessions:
         raised.session(session)
     return raised.flags()
@@ -184,6 +185,25 @@ class _Warnings:
                 f"{gone[0]} is in the version in force and not in this one",
             )
 
+    def core_session_added(self) -> None:
+        """rn:deloads.7: under 80 % adherence no new recurring session is added."""
+        adherence, previous = self.context.adherence, self.context.previous
+        if adherence is None or adherence.state not in LOW_ADHERENCE or previous is None:
+            return
+        core_before = {s.id for s in previous.sessions if s.tier == "core"}
+        for session in self.form.sessions:
+            if session.tier == "core" and session.id not in core_before:
+                self.raise_(
+                    "core_session_added_low_adherence",
+                    Scope("session", session_id=session.id),
+                    {
+                        "session_id": session.id,
+                        "adherence": adherence.figure,
+                        "weeks": adherence.weeks,
+                    },
+                    f"{session.id} adds a core session while adherence is {adherence.state}",
+                )
+
     def session(self, session: Session) -> None:
         scope = Scope("session", session_id=session.id)
         self._unavailable_day(session, scope)
@@ -292,4 +312,4 @@ class _Warnings:
 
 
 def _hard(line: Line) -> bool:
-    return any(group.rpe is None or group.rpe > HARD_SET_RPE for group in line.working_groups())
+    return any(is_hard(group.rpe) for group in line.working_groups())

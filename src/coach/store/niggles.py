@@ -1,5 +1,6 @@
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import cast
 
 from coach.core.prescription import NiggleConstraint
@@ -92,6 +93,32 @@ def every_rehab_session(conn: Connection) -> tuple[Session, ...]:
     """Every niggle's rehab session, resolved or not: the rows are never updated."""
     return tuple(
         _rehab_as_session(cast(Row, niggle["rehab_session"]))
+        for niggle in every(conn)
+        if niggle["rehab_session"] is not None
+    )
+
+
+@dataclass(frozen=True)
+class RehabHistory:
+    session: Session
+    statuses: tuple[tuple[str, str], ...]
+
+    def open_on(self, day: str) -> bool:
+        """Open from the niggle's first event until a `resolved` one dated on or before `day`."""
+        so_far = [status for date, status in self.statuses if date <= day]
+        return bool(so_far) and so_far[-1] != "resolved"
+
+
+def rehab_histories(conn: Connection) -> tuple[RehabHistory, ...]:
+    """Every niggle's rehab session with its dated status events, oldest first."""
+    return tuple(
+        RehabHistory(
+            _rehab_as_session(cast(Row, niggle["rehab_session"])),
+            tuple(
+                (str(event["date"]), str(event["status"]))
+                for event in cast(list[Row], niggle["events"])
+            ),
+        )
         for niggle in every(conn)
         if niggle["rehab_session"] is not None
     )

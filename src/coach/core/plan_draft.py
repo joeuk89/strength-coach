@@ -27,6 +27,8 @@ class PlanDraft:
     conflicts: tuple[Flag, ...] = ()
     confirmed: bool = False
     second_week: tuple[Flag, ...] = ()
+    week_checks: tuple[Flag, ...] = ()
+    hard_week_count: int = 0
 
     @property
     def week_flags(self) -> tuple[Flag, ...]:
@@ -46,7 +48,13 @@ class PlanDraft:
     @property
     def flags(self) -> tuple[Flag, ...]:
         line_flags = (f for s in self.sessions for line in s.lines for f in line.flags)
-        return (*self.week_flags, *self.conflicts, *line_flags, *self.second_week)
+        return (
+            *self.week_flags,
+            *self.conflicts,
+            *self.week_checks,
+            *line_flags,
+            *self.second_week,
+        )
 
     @property
     def line_count(self) -> int:

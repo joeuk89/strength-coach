@@ -11,6 +11,7 @@ from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.ledger_flags import niggle_unconstrained
 from coach.core.planned_week import RotationPosition, week_monday
+from coach.services.closed_weeks import closed_weeks
 from coach.services.rotation import rotation_position
 from coach.store import (
     check_ins,
@@ -70,6 +71,13 @@ class PlanInForce:
 
 
 @dataclass(frozen=True)
+class BlockStatus:
+    id: str
+    hard_weeks: int
+    ceiling: int | None
+
+
+@dataclass(frozen=True)
 class WeekPosition:
     week: datetime.date
     position: RotationPosition
@@ -97,6 +105,7 @@ class StatusResult:
     warnings: tuple[Flag, ...]
     plan: PlanInForce | None = None
     rotation: WeekPosition | None = None
+    block: BlockStatus | None = None
 
 
 def status(
@@ -145,6 +154,7 @@ def status(
         ),
         plan=_plan_in_force(conn, monday),
         rotation=_rotation(conn, monday),
+        block=_block(conn),
     )
 
 
@@ -231,6 +241,17 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
         routines_verified=len(verified),
         routines_unverified=tuple(m.session_id for m in live if m not in verified),
     )
+
+
+def _block(conn: Connection) -> BlockStatus | None:
+    version = programs.latest(conn)
+    if version is None:
+        return None
+    block = closed_weeks(conn).open_block
+    if block is None:
+        return None
+    deload = version.form.deload
+    return BlockStatus(block.id, block.hard_weeks, deload.hard_weeks_ceiling if deload else None)
 
 
 def _rotation(conn: Connection, monday: datetime.date) -> WeekPosition | None:

@@ -29,7 +29,7 @@ def plan_draft(draft: PlanDraft, *, units: Units) -> str:
             "source": draft.position.source,
             "confirmed": draft.confirmed,
         },
-        "flag": [_flag(flag) for flag in (*draft.week_flags, *draft.conflicts)],
+        "flag": [_flag(flag) for flag in (*draft.week_flags, *draft.conflicts, *draft.week_checks)],
         "session": [_session(session, draft.notes, units) for session in draft.sessions],
         "note": [_note(note) for note in draft.notes],
     }

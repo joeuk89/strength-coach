@@ -70,6 +70,7 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
             "follow_ups_due": {"count": 0, "ids": []},
             "decisions": {},
             "observations": {"count": 0, "ids": []},
+            "block": None,
         },
         "warnings": [],
     }

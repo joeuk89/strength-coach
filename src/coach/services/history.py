@@ -29,7 +29,15 @@ def read_history(conn: Connection, units: Units) -> History:
         for v in current
     ]
     exposures = resolve(logged, exercises.library(conn), live, units)
-    return History(exposures, (*_trained_unlogged(live), *_without_sets(current, sessions)))
+    return History(exposures, trained_without_sets(live, current, sessions))
+
+
+def trained_without_sets(
+    live: tuple[Annotation, ...], current: tuple[WorkoutVersion, ...], sessions: dict[str, str]
+) -> tuple[SessionTrained, ...]:
+    """The session dates trained with no logged sets: each `trained_unlogged` Annotation and each
+    hand-entered Workout with no sets."""
+    return (*_trained_unlogged(live), *_without_sets(current, sessions))
 
 
 def days_off_for_line(

@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from typing import cast
 
 from coach.core.clock import Clock
+from coach.core.closed_week.adherence import adherence
 from coach.core.config import Config
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
@@ -22,6 +23,7 @@ from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.program.warnings import adopt_warnings, leave_warnings
 from coach.render.program_draft import program_draft
+from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
 from coach.services.racks import racks_by_location
 from coach.store import exercises, goals, phases, programs, routine_map, week_plans
@@ -82,6 +84,7 @@ def adopt(
         library = _library(conn)
         _check_declared(draft.form, library)
         phase = _open_phase_kind(conn)
+        closed = closed_weeks(conn, config.athlete.units)
         filled = fill(
             draft.form,
             priority_lifts=goal.priority_lifts if goal else (),
@@ -99,7 +102,8 @@ def adopt(
             hevy_on=config.hevy is not None,
             previous=previous.form if previous else None,
             routines=routine_map.mapped(conn),
-            open_block=_open_block(conn, previous),
+            open_block=_open_block(closed, previous),
+            adherence=adherence(closed.weeks, clock.today()),
         )
         raised = adopt_warnings(filled.form, context)
         found = violations(
@@ -121,7 +125,7 @@ def adopt(
             version_id=version_id,
             kind=draft.form.kind,
             position=start,
-            block=f"b-{today if reset else programs.block_opened(conn)}",
+            block=f"b-{today}" if reset else _block_id(closed),
             block_reset=reset,
             diff=diff(previous.form if previous else None, filled.form, filled.filled),
             start_loads=_start_loads(filled.form, library, config),
@@ -221,12 +225,18 @@ def _last_exposures(conn: Connection, config: Config) -> dict[str, Exposure]:
     return latest
 
 
-def _open_block(conn: Connection, previous: programs.VersionRow | None) -> OpenBlock | None:
-    """The Block the version in force runs in. Its hard-week count reads closed weeks, which
-    nothing derives yet, so it stands at 0."""
-    if previous is None:
+def _open_block(closed: ClosedWeeks, previous: programs.VersionRow | None) -> OpenBlock | None:
+    block = closed.open_block
+    if previous is None or block is None:
         return None
-    return OpenBlock(f"b-{programs.block_opened(conn)}", 0)
+    return OpenBlock(block.id, block.hard_weeks)
+
+
+def _block_id(closed: ClosedWeeks) -> str:
+    """Every version after the first follows a redesign, so a Block is open."""
+    block = closed.open_block
+    assert block is not None
+    return block.id
 
 
 def _frozen(flag: Flag) -> AcknowledgeEntry:
@@ -305,7 +315,7 @@ def _no_op(
         version_id=stored.id,
         kind=stored.form.kind,
         position=stored.position,
-        block=f"b-{programs.block_opened(conn)}",
+        block=_block_id(closed_weeks(conn, config.athlete.units)),
         block_reset=False,
         diff=diff(stored.form, stored.form),
         start_loads=_start_loads(stored.form, _library(conn), config),

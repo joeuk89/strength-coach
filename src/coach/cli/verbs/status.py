@@ -7,7 +7,7 @@ from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.core.check_in import CheckInDue
 from coach.core.message import Message
-from coach.services.status import CurrentGoal, PlanInForce, WeekPosition, status
+from coach.services.status import BlockStatus, CurrentGoal, PlanInForce, WeekPosition, status
 from coach.store.export import on_disk
 from coach.store.phases import OpenPhase
 
@@ -70,6 +70,7 @@ def run(call: Call) -> Outcome:
             "follow_ups_due": _ids(result.follow_ups_due),
             "decisions": {kind: _ids(ids) for kind, ids in result.decisions.items()},
             "observations": _ids(result.observations),
+            "block": _block(result.block),
         },
         warnings=(*result.warnings, *drift),
     )
@@ -119,6 +120,12 @@ def _rotation(rotation: WeekPosition | None) -> Json | None:
     }
 
 
+def _block(block: BlockStatus | None) -> Json | None:
+    if block is None:
+        return None
+    return {"id": block.id, "hard_weeks": block.hard_weeks, "ceiling": block.ceiling}
+
+
 def _goal(goal: CurrentGoal | None) -> Json | None:
     if goal is None:
         return None
@@ -152,7 +159,8 @@ DECLARATION = Declaration(
         "the store or the store behind it, the WeekPlan in force and this week's rotation "
         "position, the program version in force, the current Goal and the open Phase, whether "
         "a check-in is due and its tier, open niggles, due follow-ups, Decisions in force by "
-        "kind and current Observations as counts with ids."
+        "kind and current Observations as counts with ids, and the open Block's hard weeks "
+        "against its ceiling."
     ),
     writes="none",
     needs_instance=True,

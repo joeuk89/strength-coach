@@ -158,6 +158,14 @@ def line_counts(conn: Connection, version_id: str) -> list[tuple[str, int]]:
     ]
 
 
+def redesigns(conn: Connection) -> list[str]:
+    """The adoption date of every redesign, oldest first: each opens a Block."""
+    found = conn.execute(
+        "SELECT adopted FROM program_version WHERE kind = 'redesign' ORDER BY sequence"
+    )
+    return [adopted for (adopted,) in found]
+
+
 def block_opened(conn: Connection) -> str | None:
     """The adopted date of the latest redesign: the open Block's id is `b-<that date>`."""
     found = conn.execute(
