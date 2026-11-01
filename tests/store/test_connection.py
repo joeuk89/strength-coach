@@ -2,9 +2,16 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from support.chains import TEMPORARY, TEMPORARY_V1
 
 from coach.core.errors import Setup
-from coach.store.connection import SCHEMA_VERSION, connect, open_store, schema_version
+from coach.store.connection import (
+    connect,
+    copy_to_memory,
+    open_store,
+    open_store_behind,
+    schema_version,
+)
 
 
 def test_the_connection_factory_turns_foreign_keys_on() -> None:
@@ -26,7 +33,6 @@ def test_a_foreign_key_violation_is_refused_by_the_store() -> None:
 def test_a_fresh_database_is_built_at_schema_version_1(tmp_path: Path) -> None:
     conn = open_store(tmp_path / "coach.db")
 
-    assert SCHEMA_VERSION == 1
     assert schema_version(conn) == 1
     tables = {name for (name,) in conn.execute("SELECT name FROM sqlite_master")}
     assert {"week_plan", "workout", "routine_map"} <= tables
@@ -54,3 +60,36 @@ def test_a_database_behind_the_engine_stops_with_schema_behind(tmp_path: Path) -
         open_store(path)
 
     assert raised.value.code == "schema_behind"
+
+
+def a_temporary_store_at_version_1(path: Path) -> None:
+    old = connect(path)
+    old.executescript(TEMPORARY_V1)
+    old.execute("PRAGMA user_version = 1")
+    old.close()
+
+
+def test_a_store_behind_its_chain_stops_with_schema_behind_and_is_left_at_its_version(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "coach.db"
+    a_temporary_store_at_version_1(path)
+
+    with pytest.raises(Setup) as raised:
+        open_store(path, TEMPORARY)
+
+    assert raised.value.code == "schema_behind"
+    assert schema_version(open_store_behind(path, TEMPORARY)) == 1
+
+
+def test_an_in_memory_copy_takes_writes_the_store_never_sees(tmp_path: Path) -> None:
+    path = tmp_path / "coach.db"
+    conn = open_store(path)
+    copy = copy_to_memory(conn)
+
+    copy.execute("INSERT INTO session VALUES ('push_a', 'pv-1')")
+    copy.commit()
+
+    assert copy.execute("PRAGMA foreign_keys").fetchone() == (1,)
+    assert schema_version(copy) == 1
+    assert conn.execute("SELECT count(*) FROM session").fetchone() == (0,)
