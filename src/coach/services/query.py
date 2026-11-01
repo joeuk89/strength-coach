@@ -27,7 +27,7 @@ class QueryResult:
     truncated: bool
 
 
-def readings(conn: Connection, *, kind: str | None, last: int) -> QueryResult:
+def readings(conn: Connection, *, kind: str | None, last: int | None) -> QueryResult:
     """`query readings`: live Weigh-ins, Sleep nights and Activities, newest first."""
     if kind is not None and kind not in READING_KINDS:
         raise Invalid("invalid_argument", f"--kind takes one of {', '.join(READING_KINDS)}")
@@ -47,7 +47,7 @@ def ledger(
     id_: str | None,
     open_: bool,
     today: datetime.date,
-    last: int,
+    last: int | None,
 ) -> QueryResult:
     """`query ledger`: one record kind's rows with their withdrawals, or one record by id."""
     if kind is None and id_ is None:
@@ -73,7 +73,7 @@ def _kind_of(conn: Connection, id_: str) -> str:
     return "exercise" if exercises.get(conn, id_) else "workout"
 
 
-def _newest(rows: list[Row], last: int) -> QueryResult:
+def _newest(rows: list[Row], last: int | None) -> QueryResult:
     kept = rows[:last]
     return QueryResult(kept, len(rows), len(kept) < len(rows))
 
