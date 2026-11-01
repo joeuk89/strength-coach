@@ -26,6 +26,7 @@ from coach.store.connection import Connection
 class CheckedDraft:
     checked: CheckedPlan
     acknowledgements: tuple[Acknowledgement, ...]
+    templates: dict[str, TemplateFacts] | None
 
 
 @dataclass(frozen=True)
@@ -59,12 +60,13 @@ def validate(
         overrides=found.overrides,
         position=found.position,
     )
+    templates = _templates(conn) if config.hevy is not None else None
     checked = check_plan(
         drafted.draft,
         acknowledgements=(*found.acknowledgements, *_leave_warning_decisions(conn, found.week)),
-        templates=_templates(conn) if config.hevy is not None else None,
+        templates=templates,
     )
-    return CheckedDraft(checked, found.acknowledgements)
+    return CheckedDraft(checked, found.acknowledgements, templates)
 
 
 def dry_run(
@@ -86,20 +88,21 @@ def dry_run(
             "and run the dry run again",
             {"flags": [flag.to_summary() for flag in checked.flags]},
         )
-    actions = _actions(conn, checked, hevy_on=config.hevy is not None)
-    versions = {routine.hevy_id: routine.updated_at for routine in mirrors.routines(conn)}
+    actions = _actions(conn, checked, validated.templates)
     digest = write_plan_hash(
         checked.draft,
         acknowledgements=validated.acknowledgements,
         actions=actions,
-        routine_versions={r: versions.get(r) for r in actions.touched_routines},
+        routine_versions={r.hevy_id: r.updated_at for r in mirrors.routines(conn)},
         units=config.athlete.units,
     )
     return DryRun(checked, actions, digest)
 
 
-def _actions(conn: Connection, checked: CheckedPlan, *, hevy_on: bool) -> HevyActions:
-    if not hevy_on:
+def _actions(
+    conn: Connection, checked: CheckedPlan, templates: dict[str, TemplateFacts] | None
+) -> HevyActions:
+    if templates is None:
         return HevyActions()
     version = programs.latest(conn)
     assert version is not None
@@ -112,7 +115,7 @@ def _actions(conn: Connection, checked: CheckedPlan, *, hevy_on: bool) -> HevyAc
         ],
         folders={folder.role for folder in mirrors.folders(conn)},
         sessions_in_force=in_force,
-        templates=_templates(conn),
+        templates=templates,
     )
 
 

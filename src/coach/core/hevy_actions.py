@@ -12,7 +12,6 @@ from coach.core.prescription import PlannedSession, SessionPrescription
 
 type MapStatus = Literal["active", "retired", "missing", "unverified"]
 
-# A routine the map still links to its session; `missing` and `retired` ones are not.
 LINKED: frozenset[str] = frozenset({"active", "unverified"})
 STANDING_CADENCES = frozenset({"standing", "daily"})
 
