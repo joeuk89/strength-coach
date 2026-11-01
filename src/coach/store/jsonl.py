@@ -2,7 +2,7 @@ import json
 import sqlite3
 from typing import Any, cast
 
-from coach.core.errors import Invalid
+from coach.core.errors import Setup
 
 
 def load_rows(conn: sqlite3.Connection, table: str, text: str) -> int:
@@ -34,5 +34,5 @@ def _row(line: str, columns: list[str], table: str, number: int) -> dict[str, An
     return values
 
 
-def _malformed(table: str, number: int, problem: str) -> Invalid:
-    return Invalid("jsonl_row_malformed", f"{table}.jsonl line {number} {problem}")
+def _malformed(table: str, number: int, problem: str) -> Setup:
+    return Setup("jsonl_row_malformed", f"{table}.jsonl line {number} {problem}")
