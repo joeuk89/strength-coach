@@ -1,13 +1,24 @@
 import datetime
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import cast
 
-from coach.core.coaching_records import FollowUpRecord, NiggleRecord
+from coach.core.coaching_records import (
+    DecisionRecord,
+    FollowUpRecord,
+    NiggleRecord,
+    supersede_subject,
+)
 from coach.core.errors import Invalid
 from coach.core.ref import Ref
-from coach.store import exercises, follow_ups, niggles, refs, sessions
+from coach.store import decisions, exercises, follow_ups, niggles, refs, sessions
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
+
+# overrides.md, "Decision kinds": an override Decision lasts at most eight weeks.
+OVERRIDE_DECISION_DAYS = 56
+# Refs to things with no table: a Block is derived and a research note is not in the store.
+UNSTORED_REF_KINDS = ("block", "rn")
 
 
 @dataclass(frozen=True)
@@ -25,6 +36,8 @@ class Writing:
     def stored_ref(self, ref: Ref, where: str) -> Ref:
         """The ref with any Draft-local key resolved, refused unless it names a stored row."""
         resolved = self.resolve(ref)
+        if resolved.kind in UNSTORED_REF_KINDS:
+            return resolved
         if not refs.exists(self.conn, resolved):
             raise Invalid(
                 "invalid_argument", f"{where} cites {resolved}, which names no stored row"
@@ -150,3 +163,82 @@ def _check_deferred(conn: Connection, follow_up_id: str, record: FollowUpRecord)
             f"[[followup]] deferred {follow_up_id} to {due}, which is not later than its "
             f"due date {previous}; a deferral moves the due date later",
         )
+
+
+def write_decision(w: Writing, record: DecisionRecord, decision_id: str) -> None:
+    if record.session and not sessions.exists(w.conn, record.session):
+        raise Invalid(
+            "invalid_argument",
+            f"[[decision]] names session {record.session!r}, "
+            "which no program version or niggle has raised",
+        )
+    if record.exercise:
+        _library_exercise(w.conn, record.exercise, "[[decision]]")
+    evidence = [str(w.stored_ref(ref, "[[decision]] evidence")) for ref in record.evidence]
+    until = _until(w.today, record)
+    target = _retired_target(w.conn, record) if record.kind == "retire" else None
+    decisions.insert_decision(
+        w.conn,
+        w.row(
+            id=decision_id,
+            kind=record.kind,
+            session_id=record.session,
+            exercise_id=record.exercise,
+            params=dict(record.params),
+            until=until.isoformat() if until else None,
+            because=record.because,
+            text=record.text,
+            evidence=evidence,
+        ),
+    )
+    if target is not None:
+        decisions.retire(w.conn, target, decision_id)
+    subject = supersede_subject(record.kind, record.session, record.exercise, record.params)
+    if subject is not None:
+        superseded = [
+            str(row["id"])
+            for row in decisions.in_force(w.conn)
+            if row["id"] != decision_id
+            and supersede_subject(
+                str(row["kind"]),
+                row["session_id"],
+                row["exercise_id"],
+                cast(Mapping[str, object], row["params"]),
+            )
+            == subject
+        ]
+        decisions.supersede(w.conn, superseded, decision_id)
+
+
+def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None:
+    if record.kind == "override":
+        latest = today + datetime.timedelta(days=OVERRIDE_DECISION_DAYS)
+        if record.until and record.until > latest:
+            raise Invalid(
+                "invalid_argument",
+                f"[[decision]] override until {record.until} is more than eight weeks out; "
+                f"the latest is {latest}",
+            )
+    if record.kind == "decline_ceiling":
+        sunday = today + datetime.timedelta(days=6 - today.weekday())
+        if record.until and record.until != sunday:
+            raise Invalid(
+                "invalid_argument",
+                f"[[decision]] decline_ceiling lasts to the Sunday of the week it is made in, "
+                f"{sunday}; drop until or give that date",
+            )
+        return sunday
+    return record.until
+
+
+def _retired_target(conn: Connection, record: DecisionRecord) -> str:
+    target = str(record.params["decision"])
+    stored = decisions.get(conn, target)
+    if stored is None or stored["kind"] == "retire":
+        raise Invalid("invalid_argument", f"[[decision]] retire names {target}, no stored Decision")
+    ended = stored["superseded_by"] or stored["retired_by"]
+    if ended:
+        raise Invalid(
+            "invalid_argument", f"[[decision]] retire names {target}, already ended by {ended}"
+        )
+    return target

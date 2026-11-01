@@ -2,6 +2,7 @@ from coach.store.connection import Connection
 
 # Each ledger table a Draft verb writes, by record kind.
 TABLES = {
+    "decision": "decision",
     "note": "athlete_note",
     "weigh_in": "weigh_in",
     "sleep_night": "sleep_night",

@@ -87,6 +87,16 @@ class Fields:
             raise self.wrong(name, f"a ref to one of {', '.join(kinds)}")
         return ref
 
+    def refs(self, name: str) -> tuple[Ref, ...]:
+        value = self.raw(name)
+        if value is None:
+            return ()
+        if not isinstance(value, list) or not all(
+            isinstance(v, str) for v in cast(list[object], value)
+        ):
+            raise self.wrong(name, "a list of refs")
+        return tuple(Ref.parse(v) for v in cast(list[str], value))
+
     def tables(self, name: str) -> list["Fields"]:
         value = self.raw(name)
         if value is None:

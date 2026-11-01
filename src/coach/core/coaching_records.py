@@ -2,19 +2,31 @@ import datetime
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import cast
+from typing import NoReturn, cast
 
 from coach.core.draft_fields import Fields, required
 from coach.core.errors import Invalid
+from coach.core.flag import FlagKey
 from coach.core.ref import REF_KINDS, Ref
-from coach.core.registries.ledger import CONSTRAINT_KINDS, FOLLOW_UP_EVENTS, NIGGLE_STATUSES
+from coach.core.registries.flags import FLAGS
+from coach.core.registries.ledger import (
+    CONSTRAINT_KINDS,
+    DECISION_KINDS,
+    FOLLOW_UP_EVENTS,
+    NIGGLE_STATUSES,
+    REASONS,
+)
 from coach.core.registries.program import LOAD_MODES, SET_TYPES
+from coach.core.registries.week import OVERRIDE_KINDS
 
 type Json = Mapping[str, object]
 
 REHAB_CADENCES = ("standing", "daily")
 TIERS = ("core", "optional")
 OPEN_REPS = re.compile(r"[1-9][0-9]*\+")
+BLOCK_ID = re.compile(r"b-\d{4}-\d{2}-\d{2}")
+DECISION_ID = re.compile(r"d-\d+")
+ACTIVITY_CAPS = (("weekly_distance", "weekly_minutes"), ("single_distance", "single_minutes"))
 
 
 @dataclass(frozen=True)
@@ -63,6 +75,22 @@ class FollowUpRecord:
     raised_text: str | None = None
     about: Ref | None = None
     text: str | None = None
+    key: str | None = None
+
+
+@dataclass(frozen=True)
+class DecisionRecord:
+    """A Decision: its kind, the two ids the supersede rule keys on, the kind's other params,
+    and the reason triple."""
+
+    kind: str
+    because: str
+    text: str
+    params: Json
+    session: str | None = None
+    exercise: str | None = None
+    until: datetime.date | None = None
+    evidence: tuple[Ref, ...] = ()
     key: str | None = None
 
 
@@ -216,3 +244,124 @@ def parse_follow_up(f: Fields) -> FollowUpRecord:
             key=f.key(),
         )
     )
+
+
+def parse_decision(f: Fields) -> DecisionRecord:
+    kind = required(f.term("kind", DECISION_KINDS, required=True))
+    rule = DECISION_KINDS.get(kind)
+    session = f.text("session", required=True) if "session" in rule.params else None
+    exercise = f.text("exercise", required=True) if "exercise" in rule.params else None
+    params = {
+        name: value
+        for name in rule.params
+        if name not in ("session", "exercise") and (value := _decision_param(f, name)) is not None
+    }
+    if kind == "activity_cap":
+        _check_activity_cap(f, params)
+    # decline_ceiling's until is the Sunday of its week, which the writer fills when left out.
+    until = (
+        f.date("until", required=rule.until == "required" and kind != "decline_ceiling")
+        if rule.until != "none"
+        else None
+    )
+    return f.done(
+        DecisionRecord(
+            kind=kind,
+            because=required(f.term("because", REASONS, required=True)),
+            text=required(f.text("text", required=True)),
+            params=params,
+            session=session,
+            exercise=exercise,
+            until=until,
+            evidence=f.refs("evidence"),
+            key=f.key(),
+        )
+    )
+
+
+def _decision_param(f: Fields, name: str) -> object | None:
+    match name:
+        case "override":
+            return _line_override(f.subtable(name) or _missing(f, name))
+        case "flag":
+            return _calendar_free_flag(f, required(f.text(name, required=True)))
+        case "params_hash" | "activity_kind":
+            return f.text(name, required=True)
+        case "load":
+            return f.number(name, required=True)
+        case "block":
+            return _matching(f, name, BLOCK_ID, "a Block id, b-2026-10-05")
+        case "decision":
+            return _matching(f, name, DECISION_ID, "a Decision id, d-0007")
+        case "ref":
+            return str(f.ref(name, ("rn",)) or _missing(f, name))
+        case _:
+            return f.number(name)
+
+
+def _missing(f: Fields, name: str) -> NoReturn:
+    raise Invalid("invalid_argument", f"{f.where}: {name} is required")
+
+
+def _matching(f: Fields, name: str, pattern: re.Pattern[str], wanted: str) -> str:
+    value = required(f.text(name, required=True))
+    if not pattern.fullmatch(value):
+        raise f.wrong(name, wanted)
+    return value
+
+
+def _line_override(f: Fields) -> Json:
+    kind = required(f.term("kind", OVERRIDE_KINDS, required=True))
+    rule = OVERRIDE_KINDS.get(kind)
+    if rule.scope != "line":
+        raise f.wrong(
+            "kind",
+            "a line-scope override: swap_exercise, pin_load, hold, restate_sets or drop_line",
+        )
+    params = {name: f.raw(name) for name in rule.params if f.has(name)}
+    return f.done({"kind": kind, **params})
+
+
+def _calendar_free_flag(f: Fields, text: str) -> str:
+    key = FlagKey.parse(text)
+    if key.code not in FLAGS or FLAGS.get(key.code).severity != "warning":
+        raise f.wrong("flag", "the key of a registered warning")
+    if key.scope.kind == "week" or key.scope.dated:
+        raise f.wrong("flag", "a calendar-free key: no week scope and no Monday (validation.md)")
+    return text
+
+
+def _check_activity_cap(f: Fields, params: Json) -> None:
+    given = [[name for name in pair if name in params] for pair in ACTIVITY_CAPS]
+    if any(len(names) > 1 for names in given):
+        raise Invalid(
+            "invalid_argument",
+            f"{f.where}: an activity_cap takes weekly_distance or weekly_minutes, "
+            "and single_distance or single_minutes, never both of a pair",
+        )
+    if not any(given):
+        raise Invalid("invalid_argument", f"{f.where}: an activity_cap names at least one cap")
+
+
+def supersede_subject(
+    kind: str, session: object, exercise: object, params: Json
+) -> tuple[object, ...] | None:
+    """What a Decision supersedes the earlier in-force one on (overrides.md, "Decision kinds");
+    None for the kinds that supersede nothing."""
+    match kind:
+        case "override":
+            return (kind, session, exercise, cast(Json, params["override"])["kind"])
+        case "park_session" | "resume_session":
+            return ("session", session)
+        case "training_max" | "safety_ceiling":
+            return (kind, exercise)
+        case "leave_warning":
+            return (kind, params["flag"])
+        case "activity_cap":
+            return (kind, params["activity_kind"])
+        case "decline_ceiling":
+            return (kind, params["block"])
+        case "defer_deep_review":
+            return (kind,)
+        case _:
+            return None
