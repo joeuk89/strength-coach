@@ -9,7 +9,16 @@ from coach.core.exposure import Exposure
 from coach.core.kit import parse_kit_tables
 from coach.core.load import LoadMode
 from coach.core.prescription import ExerciseFacts, PlannedSession, PrescribeRequest, ProgramVersion
-from coach.core.program.form import Line, ProgramForm, Schedule, SchemeRef, Session, SetGroup
+from coach.core.program.form import (
+    Deload,
+    Dose,
+    Line,
+    ProgramForm,
+    Schedule,
+    SchemeRef,
+    Session,
+    SetGroup,
+)
 from coach.core.rack import Rack, grid_rack
 from support.kit_fixtures import kit_tables
 
@@ -54,7 +63,11 @@ EXERCISES = {
     "bb_bench_press": ExerciseFacts("total", "barbell", "horizontal_push"),
     "db_lunge": ExerciseFacts("per_hand_x2", "dumbbell", "lunge"),
     "pull_up": ExerciseFacts("bodyweight", "bodyweight", "vertical_pull"),
+    "assisted_pull_up": ExerciseFacts("assisted", "machine", "vertical_pull"),
 }
+DELOAD = Deload(
+    hard_weeks_ceiling=6, set_cut_pct=40, load_cut_pct=0, rpe_cap=8, test_priority_lifts=True
+)
 
 
 def a_request(
@@ -63,7 +76,12 @@ def a_request(
     racks: Mapping[str, Rack] | None = None,
     on: datetime.date = PLANNED,
     exercises: Mapping[str, ExerciseFacts] | None = None,
+    dose: Dose | None = None,
+    deload: Deload | None = DELOAD,
+    **request: Any,
 ) -> PrescribeRequest:
+    """`request` takes the other request fields: overrides, Decisions, niggle constraints,
+    status spans and trained-unlogged dates."""
     lines = lines or (a_line(),)
     session = Session("lower", "Lower", "lifting", "core", lines=lines)
     form = ProgramForm(
@@ -74,12 +92,15 @@ def a_request(
         location="home",
         schedule=Schedule(("A",), {"A": {"mon": "lower"}}),
         sessions=(session,),
+        dose=dose,
+        deload=deload,
     )
     return PrescribeRequest(
         version=ProgramVersion(form, {**EXERCISES, **(exercises or {})}),
         exposures=exposures,
         racks={"home": HOME_RACKS if racks is None else racks},
         planned=PlannedSession("lower", on, "home", "lifting", lines),
+        **request,
     )
 
 

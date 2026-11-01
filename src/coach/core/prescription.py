@@ -129,6 +129,7 @@ class PrescribedGroup:
     reps: Reps | None = None
     duration_s: int | None = None
     rpe: Number | None = None
+    rpe_cap: Number | None = None
 
 
 @dataclass(frozen=True)

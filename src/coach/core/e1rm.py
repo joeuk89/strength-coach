@@ -67,8 +67,12 @@ def e1rm(exposures: Iterable[Exposure], exercise_id: str, on: datetime.date) -> 
 
 def load_for(e1rm: Load, reps: int, rpe: float, rack: Rack) -> Load:
     """The load the model gives for `reps` at `rpe`, rounded down to a rack row."""
-    target = round(e1rm.amount / (1 + reps_to_failure(reps, rpe) / 30), PRECISION)
-    return round_to_rack(rack, Load(target, e1rm.mode), "cut").load
+    return round_to_rack(rack, model_load(e1rm, reps, rpe), "cut").load
+
+
+def model_load(e1rm: Load, reps: int, rpe: float) -> Load:
+    """The model's load for `reps` at `rpe`, before any rack."""
+    return Load(round(e1rm.amount / (1 + reps_to_failure(reps, rpe) / 30), PRECISION), e1rm.mode)
 
 
 def _estimable(logged: ExposureSet) -> bool:
