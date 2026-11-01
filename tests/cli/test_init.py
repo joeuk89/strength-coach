@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 from support.instances import an_instance
+from support.terminal import TerminalInput
 
 from coach.cli import app
 from coach.cli.registry import declarations
@@ -30,11 +31,6 @@ INIT_TREE = {
     "coach.toml",
     "kit",
 }
-
-
-class TerminalInput(io.StringIO):
-    def isatty(self) -> bool:
-        return True
 
 
 @pytest.fixture(autouse=True)
