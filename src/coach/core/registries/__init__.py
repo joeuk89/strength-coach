@@ -1,7 +1,8 @@
+from coach.core.registries.flags import FLAGS
 from coach.core.registries.ledger import REASONS
 from coach.core.registries.registry import Entry, Registry
 
-REGISTRIES: tuple[Registry[Entry], ...] = (REASONS,)
+REGISTRIES: tuple[Registry[Entry], ...] = (FLAGS, REASONS)
 
 
 def find(name: str) -> Registry[Entry] | None:
