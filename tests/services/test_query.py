@@ -5,6 +5,7 @@ from support.clock import FixedClock
 from support.ledger import a_store, a_weigh_in, an_exercise
 
 from coach.core.errors import Invalid
+from coach.services.checkin_record import checkin_record
 from coach.services.query import ledger, readings
 from coach.services.record import record
 from coach.store.connection import Connection
@@ -142,6 +143,56 @@ def test_ledger_lists_a_manual_workout_with_its_sets() -> None:
 
     row = result.rows[0]
     assert (row["id"], row["source"], row["minutes"], row["sets"]) == ("w-0001", "manual", 60, [])
+
+
+def checked_in(conn: Connection, date: str, body: str) -> None:
+    text = f'date = {date}\ntier = "light"\nread = "a steady week"\n{body}'
+    checkin_record(conn, text.encode("utf-8"), file="ci.toml", clock=FixedClock())
+
+
+def observations_raised_and_one_retired() -> Connection:
+    conn = a_store()
+    checked_in(
+        conn,
+        "2026-10-30",
+        '[[observation]]\ntext = "drift adds volume"\nevidence = ["niggle:@knee"]\n'
+        '[[observation]]\ntext = "sleep is steady"\n'
+        '[[niggle]]\nkey = "knee"\nsite = "left knee"\ndate = 2026-10-29\nstatus = "reported"\n'
+        'constraints = [{ kind = "rpe_cap", pattern = "squat", value = 7 }]\n',
+    )
+    checked_in(conn, "2026-11-06", '[[observation]]\nretire = "o-0001"\nbecause = "it stopped"\n')
+    return conn
+
+
+def test_ledger_lists_observations_with_their_retirement() -> None:
+    conn = observations_raised_and_one_retired()
+
+    result = ledger(conn, kind="observation", id_=None, open_=False, today=TODAY, last=10)
+
+    assert [(r["id"], r["retired_at"], r["retired_because"]) for r in result.rows] == [
+        ("o-0002", None, None),
+        ("o-0001", "2026-11-06", "it stopped"),
+    ]
+    assert result.rows[1]["evidence"] == ["niggle:n-0001"]
+    assert result.rows[0]["evidence"] == []
+
+
+def test_ledger_open_keeps_only_current_observations() -> None:
+    conn = observations_raised_and_one_retired()
+
+    result = ledger(conn, kind="observation", id_=None, open_=True, today=TODAY, last=10)
+
+    assert [r["id"] for r in result.rows] == ["o-0002"]
+
+
+def test_ledger_by_id_finds_an_observation() -> None:
+    conn = observations_raised_and_one_retired()
+
+    result = ledger(conn, kind=None, id_="o-0001", open_=False, today=TODAY, last=10)
+
+    assert [(r["record_kind"], r["text"]) for r in result.rows] == [
+        ("observation", "drift adds volume")
+    ]
 
 
 def test_ledger_needs_a_kind_or_an_id() -> None:

@@ -29,6 +29,13 @@ def retire(
     )
 
 
+def every(conn: Connection) -> list[Row]:
+    return [
+        {**row, "evidence": json.loads(str(row["evidence"])) if row["evidence"] else []}
+        for row in select(conn, "SELECT * FROM observation ORDER BY id")
+    ]
+
+
 def current(conn: Connection) -> list[str]:
     return [
         id_
