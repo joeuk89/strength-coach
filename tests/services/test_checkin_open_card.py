@@ -9,6 +9,7 @@ from support.check_in_cards import (
     opened,
 )
 from support.clock import FixedClock
+from support.ledger import a_store, a_weigh_in
 from support.plans import squat_logged
 
 from coach.core.check_in_card import Ask
@@ -127,3 +128,12 @@ def test_a_catch_up_is_light_and_tier_deep_is_honoured_on_it() -> None:
 
     assert (opened(conn, late).tier, opened(conn, late).catch_up) == ("light", True)
     assert opened(conn, late, tier="deep").tier == "deep"
+
+
+def test_the_weight_field_shows_the_average_in_bodyweight_units() -> None:
+    conn = a_store()
+    a_weigh_in(conn, "2026-11-27", 79.4, id_="wi-0001")
+
+    weight = field_of(opened(conn, datetime.date(2026, 11, 29)), "weight_phase")
+
+    assert (weight.facts["average_14_days"], weight.facts["units"]) == (79.4, "kg")

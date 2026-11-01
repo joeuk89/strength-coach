@@ -21,6 +21,7 @@ def run(call: Call) -> Outcome:
             conn,
             call.clock,
             units=athlete.units,
+            bodyweight_units=athlete.bodyweight_units,
             date=_date(call.args.get("date")),
             tier=None if tier is None else str(tier),
             cadence_days=athlete.checkin_cadence_days,

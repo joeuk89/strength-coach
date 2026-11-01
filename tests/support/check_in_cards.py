@@ -4,6 +4,7 @@ week approved, and the call that opens the card at a date."""
 import datetime
 
 from coach.core.check_in_card import Card, CardField
+from coach.core.units import Units
 from coach.services.checkin_open import checkin_open
 from coach.store.connection import Connection
 from support.clock import FixedClock
@@ -37,8 +38,17 @@ def a_planned_two_session_week(conn: Connection, week: str) -> str:
     return plan_id
 
 
-def opened(conn: Connection, on: datetime.date = FIRST_SUNDAY, *, tier: str | None = None) -> Card:
-    return checkin_open(conn, FixedClock(), date=on, tier=tier, units="lb")
+def opened(
+    conn: Connection,
+    on: datetime.date = FIRST_SUNDAY,
+    *,
+    tier: str | None = None,
+    bodyweight_units: Units = "kg",
+) -> Card:
+    """Lift loads in lb and bodyweight in kg, so a test catches either read in the other's units."""
+    return checkin_open(
+        conn, FixedClock(), date=on, tier=tier, units="lb", bodyweight_units=bodyweight_units
+    )
 
 
 def field_of(card: Card, name: str) -> CardField:

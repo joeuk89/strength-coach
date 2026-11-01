@@ -65,6 +65,7 @@ def checkin_open(
     clock: Clock,
     *,
     units: Units,
+    bodyweight_units: Units,
     date: datetime.date | None = None,
     tier: str | None = None,
     cadence_days: int = DEFAULT_CHECKIN_CADENCE_DAYS,
@@ -119,8 +120,8 @@ def checkin_open(
         ),
         card.weight_phase(
             sum(1 for d in weigh_ins if window.start <= d <= window.end),
-            _in_units(fourteen_day_average(weigh_ins, on), units),
-            units,
+            _in_units(fourteen_day_average(weigh_ins, on), bodyweight_units),
+            bodyweight_units,
             None
             if phase is None
             else card.PhaseRead(
@@ -150,7 +151,7 @@ def checkin_open(
     ]
     warnings = (
         *_ledger_warnings(conn, on),
-        *_phase_warnings(conn, weigh_ins, on, units),
+        *_phase_warnings(conn, weigh_ins, on, bodyweight_units),
         *_activity_warnings(activities, window, on),
         *_training_max_warnings(conn),
     )
@@ -263,14 +264,14 @@ def _ledger_warnings(conn: Connection, on: datetime.date) -> list[Flag]:
 
 
 def _phase_warnings(
-    conn: Connection, weigh_ins: WeighIns, on: datetime.date, units: Units
+    conn: Connection, weigh_ins: WeighIns, on: datetime.date, bodyweight_units: Units
 ) -> list[Flag]:
     phase = phases.in_force(conn)
     if phase is None:
         return []
     raised = (
         phase_trend_off(phase, weigh_ins, on),
-        phase_condition_met(phase, weigh_ins, on, units=units),
+        phase_condition_met(phase, weigh_ins, on, units=bodyweight_units),
     )
     return [flag for flag in raised if flag is not None]
 

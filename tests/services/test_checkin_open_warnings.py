@@ -62,7 +62,7 @@ def test_a_follow_up_past_due_raises_followup_due_and_one_not_yet_due_does_not()
 
 def test_a_14_day_average_meeting_the_bodyweight_condition_raises_phase_condition_met() -> None:
     conn = a_store()
-    a_phase(conn, "deficit", -0.5, Until("bodyweight_at_or_below", 177))
+    a_phase(conn, "deficit", -0.5, Until("bodyweight_at_or_below", 80))
     a_weigh_in(conn, "2026-11-20", 80.4, id_="wi-0001")
     a_weigh_in(conn, "2026-11-27", 79.4, id_="wi-0002")
 
@@ -71,9 +71,20 @@ def test_a_14_day_average_meeting_the_bodyweight_condition_raises_phase_conditio
 
 def test_an_average_above_the_condition_raises_nothing() -> None:
     conn = a_store()
-    a_phase(conn, "deficit", -0.5, Until("bodyweight_at_or_below", 165))
+    a_phase(conn, "deficit", -0.5, Until("bodyweight_at_or_below", 75))
     a_weigh_in(conn, "2026-11-27", 79.4, id_="wi-0001")
 
+    assert codes(conn) == []
+
+
+def test_the_bodyweight_condition_reads_bodyweight_units_not_the_lift_units() -> None:
+    conn = a_store()
+    a_phase(conn, "surplus", 0.25, Until("bodyweight_at_or_above", 170))
+    a_weigh_in(conn, "2026-11-27", 79.4, id_="wi-0001")
+
+    assert [w.code for w in opened(conn, TODAY, bodyweight_units="lb").warnings] == [
+        "phase_condition_met"
+    ]
     assert codes(conn) == []
 
 
