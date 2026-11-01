@@ -92,6 +92,14 @@ def fewest_reps(reps: Reps | None) -> int | None:
     return reps
 
 
+def most_reps(reps: Reps | None) -> int:
+    if isinstance(reps, tuple):
+        return reps[1]
+    if isinstance(reps, str):
+        return int(reps.rstrip("+"))
+    return reps or 0
+
+
 def reps_within_model(sets: Sequence[SetGroup], cap: Number) -> tuple[SetGroup, ...]:
     """Reps cut so no capped set implies more than 12 reps to failure (rn:autoregulation.5)."""
     most = math.floor(MAX_REPS_TO_FAILURE - 10 + cap)
