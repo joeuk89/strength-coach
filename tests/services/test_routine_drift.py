@@ -9,10 +9,10 @@ from support.plan_drafts import a_plan_draft
 from support.plans import SQUAT_LINE, a_squat_program, squat_logged
 from support.program_drafts import a_draft, a_session, toml
 from support.programs import a_config
+from support.pushes import a_pushed_week, push
 
 from coach.core.errors import Invalid
 from coach.services.hevy_import import import_hevy
-from coach.services.plan_apply import apply, dry_run
 from coach.services.program import adopt
 from coach.services.record import record
 from coach.store import mirrors, routine_map, week_plans
@@ -29,31 +29,6 @@ because = "coach_judgement"
 text = "Hold the squat under the last top set."
 """
 PIN_125 = PIN_115.replace("load = 115", "load = 125")
-
-
-def push(conn: Connection, hevy: FakeHevy, data: bytes) -> None:
-    config, kits = a_config(hevy=True), (kit_files(),)
-    digest = dry_run(
-        conn, data, file="p.toml", config=config, kits=kits, clock=FixedClock()
-    ).write_plan_hash
-    apply(
-        conn,
-        hevy,
-        data,
-        file="p.toml",
-        expect=digest,
-        config=config,
-        kits=kits,
-        clock=FixedClock(),
-    )
-
-
-def a_pushed_week() -> tuple[Connection, FakeHevy, str]:
-    conn = a_squat_program()
-    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
-    hevy = FakeHevy(FixedClock())
-    push(conn, hevy, a_plan_draft(conn, hevy=True))
-    return conn, hevy, routine_map.mapped(conn)["lower"]
 
 
 def drift_keys(conn: Connection, hevy: FakeHevy) -> list[tuple[str, object]]:

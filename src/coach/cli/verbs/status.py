@@ -24,6 +24,8 @@ def run(call: Call) -> Outcome:
             kits=read_kit_files(call.instance),
             exported=on_disk(call.instance.export_path),
             units=call.instance.config.athlete.units,
+            bodyweight_units=call.instance.config.athlete.bodyweight_units,
+            locations=call.instance.config.locations,
             cadence_days=call.instance.config.athlete.checkin_cadence_days,
         )
     pin = call.instance.pin

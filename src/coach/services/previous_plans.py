@@ -52,6 +52,16 @@ def second_week_flags(
     return (*drift, *persisting, *frozen_load_off_rack(previous, racks, monday=monday))
 
 
+def frozen_loads_off_rack(
+    conn: Connection, racks: Mapping[str, Mapping[str, Rack]], *, monday: datetime.date
+) -> tuple[Flag, ...]:
+    """What a plan Draft for `monday` raises against the WeekPlan approved before it."""
+    earlier = week_plans.approved_before(conn, monday.isoformat())
+    if not earlier:
+        return ()
+    return frozen_load_off_rack(_previous(conn, earlier[0]), racks, monday=monday)
+
+
 def _past(conn: Connection, row: Row) -> PastPlan:
     week = datetime.date.fromisoformat(str(row["week"]))
     overrides = week_plans.stored_overrides(conn, str(row["id"]))
