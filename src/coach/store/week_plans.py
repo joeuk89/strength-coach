@@ -1,5 +1,6 @@
 """WeekPlans as rows: `plan apply` writes them born approved (schema.md, "Week")."""
 
+import datetime
 import json
 from collections.abc import Mapping, Sequence
 from typing import cast
@@ -157,7 +158,7 @@ def stored_overrides(conn: Connection, plan_id: str) -> tuple[PlanOverride, ...]
     return parse_plan_overrides({"override": tables}, file=f"WeekPlan {plan_id}")
 
 
-def first_week(conn: Connection) -> str | None:
+def first_week(conn: Connection) -> datetime.date | None:
     """The Monday of the first WeekPlan approved; a superseded one was approved too."""
     (found,) = conn.execute("SELECT min(week) FROM week_plan").fetchone()
-    return found
+    return datetime.date.fromisoformat(found) if found else None

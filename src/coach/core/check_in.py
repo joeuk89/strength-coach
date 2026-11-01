@@ -5,6 +5,8 @@ from coach.core.errors import Invalid
 
 # week.md, "When a check-in is due": a window longer than this is a catch-up.
 CATCH_UP_DAYS = 10
+# rn:deloads.12: the deep review falls due 42 days after the last one.
+DEEP_DAYS = 42
 DAY = datetime.timedelta(days=1)
 
 
@@ -47,10 +49,6 @@ def check_in_window(
             f"the check-in on {date} would review a window starting {start}, after its date",
         )
     return Window(start, date)
-
-
-# rn:deloads.12: the deep review falls due 42 days after the last one.
-DEEP_DAYS = 42
 
 
 @dataclass(frozen=True)

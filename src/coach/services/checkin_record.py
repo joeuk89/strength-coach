@@ -46,11 +46,10 @@ def checkin_record(
 def _write(conn: Connection, checkin: CheckInFile, clock: Clock) -> StoredCheckIn:
     replaced = check_ins.current_on(conn, checkin.date)
     previous = check_ins.newest_current(conn, before=checkin.date if replaced else None)
-    first_week = week_plans.first_week(conn)
     window = check_in_window(
         checkin.date,
         previous_end=previous.window.end if previous else None,
-        first_plan_monday=datetime.date.fromisoformat(first_week) if first_week else None,
+        first_plan_monday=week_plans.first_week(conn),
         file_start=checkin.window_start,
     )
     id_ = check_ins.next_id(conn, checkin.date)

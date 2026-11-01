@@ -116,7 +116,7 @@ def status(
     open_niggles = [n for n in niggles.every(conn) if n["status"] != "resolved"]
     last = last_import_at(conn)
     stale = snapshot_stale(last, now) if hevy_on else None
-    monday = week_monday(clock.today())
+    monday = week_monday(today)
     return StatusResult(
         engine_version=engine_version,
         pin=pin,
@@ -151,7 +151,6 @@ def status(
 def _check_in_due(conn: Connection, today: datetime.date, cadence_days: int) -> CheckInDue:
     last = check_ins.newest_current(conn)
     last_deep = check_ins.last_deep(conn)
-    first_week = week_plans.first_week(conn)
     redesigned = programs.block_opened(conn)
     deferrals = [
         str(d["until"])
@@ -163,7 +162,7 @@ def _check_in_due(conn: Connection, today: datetime.date, cadence_days: int) -> 
         cadence_days=cadence_days,
         last=LastCheckIn(last.date, last.tier, last.window) if last else None,
         last_deep=last_deep,
-        first_plan_monday=datetime.date.fromisoformat(first_week) if first_week else None,
+        first_plan_monday=week_plans.first_week(conn),
         redesign_since_deep=bool(
             last_deep and redesigned and datetime.date.fromisoformat(redesigned) > last_deep
         ),
