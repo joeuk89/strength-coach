@@ -75,3 +75,29 @@ def test_last_keeps_that_many_rows() -> None:
         "recovery_ceiling_exceeded",
         "return_band_disagrees",
     ]
+
+
+def test_the_phase_registry_gives_kinds_default_rates_and_trend_bands() -> None:
+    run = run_coach("schema", "--registry", "phase")
+
+    rows = {row["name"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["deficit"]["default_rate_pct_bw_per_week"] == -0.5
+    assert rows["surplus"]["default_rate_pct_bw_per_week"] == 0.25
+    assert rows["maintenance"]["trend_band"] == {"half_width": 0.25, "unit": "pct_bw_per_week"}
+    assert rows["deficit"]["trend_band"] == {"half_width": 50, "unit": "pct_of_rate"}
+    assert rows["surplus"]["rn"] == "rn:training-level §4"
+
+
+def test_the_schemes_registry_names_the_one_scheme_that_reads_a_training_max() -> None:
+    run = run_coach("schema", "--registry", "schemes")
+
+    rows = run.envelope["result"]["rows"]
+    assert [row["name"] for row in rows if row["reads_training_max"]] == ["wave_531"]
+
+
+def test_the_record_kinds_registry_reserves_the_observation_to_the_check_in() -> None:
+    run = run_coach("schema", "--registry", "record-kinds", "--full")
+
+    rows = run.envelope["result"]["rows"]
+    assert len(rows) == 12
+    assert [row["name"] for row in rows if row["check_in_only"]] == ["observation"]
