@@ -107,8 +107,22 @@ def test_a_dry_run_shows_each_start_load_with_its_hevy_kg_and_writes_nothing() -
         "exercise": "bb_bench_press",
         "start_load": 120,
         "units": "lb",
-        "kg": 54.431,
+        "kg": 54.4311,
     } in result.start_loads
+
+
+def test_a_per_hand_start_load_reports_the_dumbbell_total_hevy_stores() -> None:
+    dumbbells = a_line("db_bulgarian_split_squat", start_load=15)
+    draft = toml(a_draft(a_session("legs", dumbbells), location="gym"))
+
+    in_kg = run(the_worked_store(), draft, dry_run=True, units="kg")
+    in_lb = run(
+        the_worked_store(), draft.replace(b"start_load = 15", b"start_load = 25"), dry_run=True
+    )
+
+    assert [load["kg"] for load in in_kg.start_loads] == [30]
+    assert [load["start_load"] for load in in_lb.start_loads] == [25]
+    assert [load["kg"] for load in in_lb.start_loads] == [round(50 * 0.45359237, 4)]
 
 
 def test_a_draft_with_violations_is_refused_with_every_flag_and_writes_nothing() -> None:

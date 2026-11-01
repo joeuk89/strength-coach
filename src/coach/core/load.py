@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from coach.core.config import Units
+from coach.core.units import to_kg
+
 type LoadMode = Literal[
     "total",
     "per_hand_x2",
@@ -23,3 +26,6 @@ class Load:
     @property
     def total(self) -> float:
         return self.amount * 2 if self.mode == "per_hand_x2" else self.amount
+
+    def hevy_kg(self, units: Units) -> float:
+        return to_kg(self.total, units)

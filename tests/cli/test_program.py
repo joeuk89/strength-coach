@@ -100,7 +100,7 @@ def test_program_adopt_dry_run_shows_the_diff_and_start_loads_and_writes_nothing
         "exercise": "bb_back_squat",
         "start_load": 120,
         "units": "lb",
-        "kg": 54.431,
+        "kg": 54.4311,
     }
     assert result["violations"] == [] and result["warnings"] == []
     conn = sqlite3.connect(instance / ".coach" / "coach.db")

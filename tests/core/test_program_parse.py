@@ -98,3 +98,15 @@ def test_the_form_document_parses_back_to_the_same_form() -> None:
     again = parse_program_draft(toml(form.to_document()), file="again.toml").form
 
     assert again == form
+
+
+@pytest.mark.parametrize("kind", ["lifting", "conditioning", "practice"])
+def test_a_session_of_a_kind_that_trains_lines_needs_at_least_one_line(kind: str) -> None:
+    session = a_session("push", kind=kind, tier="optional")
+    del session["line"]
+
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(a_draft(session)), file="v1.toml")
+
+    assert raised.value.code == "invalid_argument"
+    assert "line" in raised.value.message

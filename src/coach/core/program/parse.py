@@ -31,6 +31,8 @@ from coach.core.registries.program import SESSION_KINDS, VERSION_KINDS
 
 type Table = Mapping[str, object]
 
+LINED_KINDS = ("lifting", "conditioning", "practice")
+
 DECLARED_EXERCISE_KEYS = (
     "name",
     "load_mode",
@@ -126,10 +128,12 @@ def _session(reader: "_Reader") -> Session:
     id_ = reader.text("id")
     reader.name_as(("session", id_))
     estimated = reader.optional_table("estimated_sets")
+    title = reader.text("title")
+    kind = reader.choice("kind", (*SESSION_KINDS.names(), "rehab"))
     session = Session(
         id=id_,
-        title=reader.text("title"),
-        kind=reader.choice("kind", (*SESSION_KINDS.names(), "rehab")),
+        title=title,
+        kind=kind,
         tier=reader.choice("tier", TIERS),
         cadence=reader.optional_choice("cadence", CADENCES),
         location=reader.optional_text("location"),
@@ -138,7 +142,7 @@ def _session(reader: "_Reader") -> Session:
         estimated_sets=(
             None if estimated is None else {m: estimated.whole(m) for m in estimated.names()}
         ),
-        lines=tuple(_line(r) for r in reader.tables("line")),
+        lines=tuple(_line(r) for r in reader.tables("line", required=kind in LINED_KINDS)),
     )
     reader.finish()
     return session

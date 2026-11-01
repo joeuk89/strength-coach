@@ -1,7 +1,7 @@
 from coach.core.config import Units
 
 KG_PER_LB = 0.45359237
-KG_PRECISION = 3
+KG_PRECISION = 4
 
 
 def to_kg(amount: float, units: Units) -> float:

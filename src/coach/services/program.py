@@ -4,20 +4,21 @@ import datetime
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
+from typing import cast
 
 from coach.core.clock import Clock
 from coach.core.config import Config, PlatePoolLocation
 from coach.core.errors import Invalid
 from coach.core.goal import Goal
 from coach.core.kit import KitFiles, location_racks, parse_kit_tables, require_current_tables
+from coach.core.load import Load, LoadMode
 from coach.core.program.checks import AdoptContext, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
-from coach.core.program.form import ProgramForm
+from coach.core.program.form import Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.rack import Rack
 from coach.core.registries.program import EQUIPMENT_KINDS, LOAD_MODES
-from coach.core.units import to_kg
 from coach.render.program_draft import program_draft
 from coach.store import exercises, goals, phases, programs, workouts
 from coach.store.connection import Connection
@@ -73,7 +74,7 @@ def adopt(
         version_id = f"pv-{previous.sequence + 1 if previous else 1}"
         start = _position(draft.form, previous, position)
         goal = _current_goal(conn)
-        library = {str(row["id"]): row for row in exercises.every(conn)}
+        library = _library(conn)
         _check_declared(draft.form, library)
         context = AdoptContext(
             version_id=version_id,
@@ -105,7 +106,7 @@ def adopt(
             block=f"b-{today if reset else programs.block_opened(conn)}",
             block_reset=reset,
             diff=diff(previous.form if previous else None, filled.form, filled.filled),
-            start_loads=_start_loads(filled.form, config),
+            start_loads=_start_loads(filled.form, library, config),
             dry_run=dry_run,
         )
         if dry_run:
@@ -184,6 +185,10 @@ def _racks(
     return racks
 
 
+def _library(conn: Connection) -> dict[str, Mapping[str, object]]:
+    return {str(row["id"]): row for row in exercises.every(conn)}
+
+
 def _position(form: ProgramForm, previous: programs.VersionRow | None, asked: str | None) -> str:
     rotation = form.schedule.rotation
     if form.kind == "amend":
@@ -224,7 +229,9 @@ def _check_declared(form: ProgramForm, library: Mapping[str, object]) -> None:
                 )
 
 
-def _start_loads(form: ProgramForm, config: Config) -> tuple[Mapping[str, object], ...]:
+def _start_loads(
+    form: ProgramForm, library: Mapping[str, Mapping[str, object]], config: Config
+) -> tuple[Mapping[str, object], ...]:
     units = config.athlete.units
     return tuple(
         {
@@ -232,12 +239,20 @@ def _start_loads(form: ProgramForm, config: Config) -> tuple[Mapping[str, object
             "exercise": line.exercise,
             "start_load": line.start_load,
             "units": units,
-            "kg": to_kg(line.start_load, units),
+            "kg": Load(line.start_load, _load_mode(form, library, line)).hevy_kg(units),
         }
         for session in form.sessions
         for line in session.lines
         if line.start_load is not None
     )
+
+
+def _load_mode(
+    form: ProgramForm, library: Mapping[str, Mapping[str, object]], line: Line
+) -> LoadMode:
+    declared = form.exercises.get(line.exercise, {})
+    mode = line.load_mode or declared.get("load_mode") or library[line.exercise]["load_mode"]
+    return cast(LoadMode, mode)
 
 
 def _no_op(
@@ -250,7 +265,7 @@ def _no_op(
         block=f"b-{programs.block_opened(conn)}",
         block_reset=False,
         diff=diff(stored.form, stored.form),
-        start_loads=_start_loads(stored.form, config),
+        start_loads=_start_loads(stored.form, _library(conn), config),
         dry_run=dry_run,
         no_op=True,
     )
