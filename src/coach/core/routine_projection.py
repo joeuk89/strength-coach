@@ -66,7 +66,7 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
         exercises.append(exercise)
     return {
         "title": session.title,
-        "folder_id": hevy_folder_id(session.folder_id),
+        "folder_id": _hevy_folder_id(session.folder_id),
         "exercises": exercises,
     }
 
@@ -84,7 +84,7 @@ def retired_routine(live: Routine, folder_id: str) -> Json:
             "sets": [_kept_set(s) for s in exercise.sets],
         }
         exercises.append({k: v for k, v in kept.items() if v is not None})
-    return {"title": title, "folder_id": hevy_folder_id(folder_id), "exercises": exercises}
+    return {"title": title, "folder_id": _hevy_folder_id(folder_id), "exercises": exercises}
 
 
 def routine_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...]:
@@ -120,7 +120,7 @@ def drift_class(diff: Sequence[str]) -> DriftClass:
     return "load" if all(d.endswith("weight_kg") for d in diff) else "structural"
 
 
-def hevy_folder_id(folder_id: str) -> int | str:
+def _hevy_folder_id(folder_id: str) -> int | str:
     """Hevy numbers its folders; the mirror keeps the id as text."""
     return int(folder_id) if folder_id.isdigit() else folder_id
 

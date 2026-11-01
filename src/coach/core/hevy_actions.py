@@ -148,12 +148,12 @@ def projected_sessions(sessions: Sequence[SessionPrescription]) -> tuple[Project
             *(line.exercise_id for line in prescribed.lines),
         )
         found[session.session_id] = ProjectedSession(
-            session.session_id, standing(session), tuple(dict.fromkeys(exercises))
+            session.session_id, _standing(session), tuple(dict.fromkeys(exercises))
         )
     return tuple(found.values())
 
 
-def standing(session: PlannedSession) -> bool:
+def _standing(session: PlannedSession) -> bool:
     """Standing, daily and rehab sessions live in the Standing folder."""
     return session.cadence in STANDING_CADENCES or session.kind == "rehab"
 

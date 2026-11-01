@@ -116,14 +116,12 @@ class Push:
         for template in actions.templates:
             self._template(template.exercise_id)
         linked = {row.session_id: row.status for row in routine_map.rows(self.conn)}
-        for action in (*actions.updates, *actions.creates):
-            body = self._body(action.session_id)
-            routine = guarded.live.get(action.routine_id or "")
-            if action in actions.updates:
-                status = linked[action.session_id]
-                self._update(action, body, routine, unverified=status == "unverified")
-            else:
-                self._create(action, body)
+        for action in actions.updates:
+            routine = guarded.live.get(cast(str, action.routine_id))
+            unverified = linked[action.session_id] == "unverified"
+            self._update(action, self._body(action.session_id), routine, unverified=unverified)
+        for action in actions.creates:
+            self._create(action, self._body(action.session_id))
         for action in actions.retires:
             self._retire(action, guarded.live[cast(str, action.routine_id)])
 
