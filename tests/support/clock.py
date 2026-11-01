@@ -12,3 +12,7 @@ class FixedClock:
 
     def now(self) -> datetime.datetime:
         return self.moment
+
+
+def at(day: datetime.date) -> datetime.datetime:
+    return datetime.datetime.combine(day, NOON.time(), tzinfo=datetime.UTC)

@@ -12,6 +12,7 @@ class StoredGoal:
     goal: Goal
     milestone_ids: tuple[str, ...]
     status: str
+    adopted: str
 
 
 def current_id(conn: Connection) -> str | None:
@@ -68,11 +69,11 @@ def insert(
 
 def get(conn: Connection, goal_id: str) -> StoredGoal | None:
     found = conn.execute(
-        "SELECT kind, because, why, status FROM goal WHERE id = ?", (goal_id,)
+        "SELECT kind, because, why, status, adopted FROM goal WHERE id = ?", (goal_id,)
     ).fetchone()
     if found is None:
         return None
-    kind, because, why, status = found
+    kind, because, why, status, adopted = found
     lifts = tuple(
         lift
         for (lift,) in conn.execute(
@@ -95,6 +96,7 @@ def get(conn: Connection, goal_id: str) -> StoredGoal | None:
         ),
         milestone_ids=tuple(m[0] for m in milestones),
         status=status,
+        adopted=adopted,
     )
 
 

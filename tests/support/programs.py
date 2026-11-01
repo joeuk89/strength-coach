@@ -3,7 +3,7 @@
 from typing import Any
 
 from coach.core.config import Config, parse_config
-from coach.core.goal import Goal, PhaseOpen, Until
+from coach.core.goal import Goal, Milestone, PhaseOpen, Until
 from coach.core.registries.phase import PHASE
 from coach.store import goals, phases
 from coach.store.catalogue import seed_catalogue
@@ -49,14 +49,22 @@ def a_goal(
     priority_lifts: tuple[str, ...] = WORKED_GOAL_PRIORITY_LIFTS,
     *,
     id_: str = "g-0001",
+    why: str = "",
+    milestones: tuple[Milestone, ...] = (),
 ) -> None:
-    goal = Goal(kind=kind, because="first goal", priority_lifts=priority_lifts, why="")
+    goal = Goal(
+        kind=kind,
+        because="first goal",
+        priority_lifts=priority_lifts,
+        why=why,
+        milestones=milestones,
+    )
     with conn:
         goals.insert(
             conn,
             id_=id_,
             goal=goal,
-            milestone_ids=(),
+            milestone_ids=tuple(f"m-{n:04d}" for n in range(1, len(milestones) + 1)),
             adopted="2026-10-01",
             draft_hash=f"sha256:{id_}",
             recorded_at=RECORDED_AT,

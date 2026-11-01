@@ -23,6 +23,7 @@ from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.program.warnings import adopt_warnings, leave_warnings
 from coach.render.program_draft import program_draft
+from coach.services.cadence import cadence_signals
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
 from coach.services.racks import racks_by_location
@@ -104,6 +105,12 @@ def adopt(
             routines=routine_map.mapped(conn),
             open_block=_open_block(closed, previous),
             adherence=adherence(closed.weeks, clock.today()),
+            signals={
+                str(flag.scope.exercise_id): flag
+                for flag in cadence_signals(
+                    conn, closed, units=config.athlete.units, on=clock.today()
+                )
+            },
         )
         raised = adopt_warnings(filled.form, context)
         found = violations(

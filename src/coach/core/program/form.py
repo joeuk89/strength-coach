@@ -133,6 +133,11 @@ class ProgramForm:
     def session(self, id_: str) -> Session | None:
         return next((s for s in self.sessions if s.id == id_), None)
 
+    def first_line(self, exercise_id: str) -> Line | None:
+        return next(
+            (line for s in self.sessions for line in s.lines if line.exercise == exercise_id), None
+        )
+
     def locations(self) -> tuple[str, ...]:
         named = [self.location, *(s.location for s in self.sessions if s.location)]
         return tuple(dict.fromkeys(named))
