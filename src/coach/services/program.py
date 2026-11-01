@@ -10,7 +10,7 @@ from coach.core.clock import Clock
 from coach.core.config import Config
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag
+from coach.core.flag import Flag, FlagKey, Scope
 from coach.core.goal import Goal
 from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
@@ -161,7 +161,19 @@ def show(conn: Connection) -> ShowResult:
 
 
 def show_draft(conn: Connection) -> str:
-    return program_draft(_in_force(conn).form)
+    """The version in force as a Draft for the next version; a version-scoped acknowledgement
+    names that next version and keeps its params hash, so it leaves only an unchanged warning."""
+    version = _in_force(conn)
+    next_scope = Scope("version", version_id=f"pv-{version.sequence + 1}")
+    carried = tuple(_carried(entry, next_scope) for entry in version.form.acknowledgements)
+    return program_draft(replace(version.form, acknowledgements=carried))
+
+
+def _carried(entry: AcknowledgeEntry, next_scope: Scope) -> AcknowledgeEntry:
+    key = FlagKey.parse(entry.flag)
+    if key.scope.kind != "version":
+        return entry
+    return replace(entry, flag=str(FlagKey(key.code, next_scope)))
 
 
 def _current_goal(conn: Connection) -> Goal | None:

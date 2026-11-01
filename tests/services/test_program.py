@@ -543,3 +543,27 @@ def test_a_carried_acknowledgement_still_leaves_its_unchanged_warning() -> None:
     assert again.version_id == "pv-2"
     assert again.acknowledgements == adopted.acknowledgements
     assert programs.acknowledgements(conn, "pv-2") == adopted.acknowledgements
+
+
+def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version() -> None:
+    conn = the_worked_store()
+    draft = a_draft(emphasis="maintenance")
+    draft["acknowledge"] = [
+        {
+            "flag": "emphasis_off_goal@version:pv-1",
+            "because": "coach_judgement",
+            "text": "A maintenance block while travelling.",
+        }
+    ]
+    adopted = run(conn, toml(draft))
+
+    again = run(conn, show_draft(conn))
+
+    [left] = [f for f in again.warnings if f.code == "emphasis_off_goal"]
+    assert left.key == "emphasis_off_goal@version:pv-2"
+    assert left.left is not None and left.left.text == "A maintenance block while travelling."
+    [entry] = programs.acknowledgements(conn, "pv-2")
+    assert (entry.flag, entry.params_hash) == (
+        "emphasis_off_goal@version:pv-2",
+        adopted.acknowledgements[0].params_hash,
+    )
