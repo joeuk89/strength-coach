@@ -90,6 +90,13 @@ def test_a_set_logged_over_the_authored_rpe_is_not_a_hit() -> None:
     assert (line.change, line.flags) == ("held", ())
 
 
+def test_a_double_progression_set_dropped_below_the_anchor_load_is_not_a_hit() -> None:
+    line = squat((120, 8, 8), (120, 8, 8), (90, 8, 8), (90, 8, 8))
+
+    assert (line.change, line.flags) == ("held", ())
+    assert line.groups[-1].load == Load(120, "total")
+
+
 def bench(
     line: Line, *sets: tuple[float | None, int, float | None], **request: Any
 ) -> LinePrescription:
@@ -112,6 +119,19 @@ def test_linear_a_short_set_is_a_miss_and_holds() -> None:
 
     assert (line.change, line.flags) == ("held", ())
     assert line.groups[0].load == Load(120, "total")
+
+
+def test_linear_a_set_dropped_below_the_anchor_load_is_a_miss_and_holds() -> None:
+    line = bench(LINEAR, (120, 5, 8), (120, 5, 8), (100, 5, 8), (100, 5, 8))
+
+    assert (line.change, line.flags) == ("held", ())
+    assert line.groups[0].load == Load(120, "total")
+
+
+def test_linear_off_rack_sets_at_the_anchor_used_still_hit() -> None:
+    line = bench(LINEAR, (121, 5, 8), (121, 5, 8), (120, 5, 8), (120, 5, 8))
+
+    assert line.change == "4×5 @8: 120 → 125"
 
 
 def test_hold_repeats_the_anchor_top_load_with_the_authored_sets() -> None:

@@ -111,7 +111,7 @@ class _Derivation:
         return load
 
     def _move(self, exposure: Exposure, before: Load | None, rack: Rack | None) -> Load | None:
-        verdict = judge(self.line, exposure)
+        verdict = judge(self.line, exposure, before)
         if verdict.missed is not None:
             missed = verdict.missed
             self._raise(

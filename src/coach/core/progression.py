@@ -4,6 +4,7 @@ scheme"). It reads the version's authored groups, never a past plan."""
 from dataclasses import dataclass
 
 from coach.core.exposure import Exposure, ExposureSet
+from coach.core.load import Load
 from coach.core.program.form import Line, Number, Reps
 
 RPE_OVER = 2
@@ -30,7 +31,9 @@ class Verdict:
 HOLD = Verdict(hit=False)
 
 
-def judge(line: Line, anchor: Exposure) -> Verdict:
+def judge(line: Line, anchor: Exposure, load: Load | None = None) -> Verdict:
+    """`load` is the anchor load the line moves from; a working set logged lighter than it is
+    not at the anchor load, so it reaches no target."""
     authored = [
         (group.reps, group.rpe) for group in line.working_groups() for _ in range(group.count)
     ]
@@ -39,11 +42,12 @@ def judge(line: Line, anchor: Exposure) -> Verdict:
     if len(logged) < len(authored) or any(s.reps is None for s in logged):
         return HOLD
     pairs = list(zip(authored, logged, strict=True))
+    at_load = all(_at_load(s, load) for s in logged)
     match line.scheme.name:
         case "double_progression":
-            return _double_progression(pairs)
+            return _double_progression(pairs, at_load)
         case "linear":
-            return Verdict(all(_reached(logged, reps, rpe) for (reps, rpe), logged in pairs))
+            return Verdict(at_load and _all_reached(pairs))
         case _:
             return HOLD
 
@@ -51,14 +55,29 @@ def judge(line: Line, anchor: Exposure) -> Verdict:
 type Pair = tuple[tuple[Reps | None, Number | None], ExposureSet]
 
 
-def _double_progression(pairs: list[Pair]) -> Verdict:
+def _double_progression(pairs: list[Pair], at_load: bool) -> Verdict:
     for index, ((reps, rpe), logged) in enumerate(pairs, start=1):
         assert logged.reps is not None
         low, high = _range(reps)
         over = rpe is not None and logged.rpe is not None and logged.rpe >= rpe + RPE_OVER
         if over or logged.reps < low:
             return Verdict(False, Missed(index, logged.reps, (low, high), logged.rpe, rpe))
-    return Verdict(all(_reached(logged, reps, rpe) for (reps, rpe), logged in pairs))
+    return Verdict(at_load and _all_reached(pairs))
+
+
+def _all_reached(pairs: list[Pair]) -> bool:
+    return all(_reached(logged, reps, rpe) for (reps, rpe), logged in pairs)
+
+
+def _at_load(logged: ExposureSet, load: Load | None) -> bool:
+    if load is None:
+        return True
+    if logged.load is None:
+        return False
+    amount = logged.load.as_mode(load.mode).amount
+    if load.mode == "assisted":
+        return amount <= load.amount
+    return amount >= load.amount
 
 
 def _reached(logged: ExposureSet, reps: Reps | None, rpe: Number | None) -> bool:
