@@ -19,10 +19,13 @@ ROUNDING = 1e-9
 
 @dataclass(frozen=True)
 class TargetSet:
-    """One prescribed working set: the bottom of its reps and its RPE."""
+    """One prescribed working set: the bottom of its reps, its RPE, the top of its reps and its
+    load in athlete units."""
 
     reps: int | None = None
     rpe: float | None = None
+    top: int | None = None
+    load: float | None = None
 
 
 @dataclass(frozen=True)
