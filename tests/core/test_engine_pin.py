@@ -1,6 +1,6 @@
 import pytest
 
-from coach.core.engine_pin import check_pin
+from coach.core.engine_pin import check_pin, notes_between
 from coach.core.errors import Setup
 
 
@@ -24,3 +24,30 @@ def test_a_release_engine_against_a_different_pin_stops() -> None:
     assert raised.value.code == "engine_pin_mismatch"
     assert "1.3.0" in raised.value.message
     assert "1.2.0" in raised.value.message
+
+
+def test_upgrade_admits_a_release_engine_newer_than_the_pin() -> None:
+    assert check_pin("1.10.0", "1.9.3", upgrading=True) is None
+    assert check_pin("1.2.0", "1.2.0", upgrading=True) is None
+
+
+def test_upgrade_refuses_a_release_engine_older_than_the_pin() -> None:
+    with pytest.raises(Setup) as raised:
+        check_pin("1.9.3", "1.10.0", upgrading=True)
+
+    assert raised.value.code == "engine_pin_mismatch"
+    assert "1.10.0" in raised.value.message
+
+
+def test_upgrade_refuses_a_dev_engine_because_only_a_release_writes_the_pin() -> None:
+    with pytest.raises(Setup) as raised:
+        check_pin("1.3.0.dev0", "1.2.0", upgrading=True)
+
+    assert raised.value.code == "engine_pin_required"
+
+
+def test_migration_notes_are_those_of_each_major_crossed() -> None:
+    notes = {2: "two", 3: "three", 4: "four"}
+
+    assert notes_between("1.4.0", "3.0.1", notes) == ("two", "three")
+    assert notes_between("3.0.0", "3.9.0", notes) == ()
