@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
@@ -38,7 +39,7 @@ class FlagCode:
     rn: Citation = ()
     cleared_by: tuple[str, ...] = ()
 
-    def refs_for(self, params: dict[str, object]) -> Refs:
+    def refs_for(self, params: Mapping[str, object]) -> Refs:
         if isinstance(self.rn, ByCase):
             return self.rn.refs_for(params.get(self.rn.param))
         return self.rn

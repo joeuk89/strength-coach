@@ -48,9 +48,7 @@ class Scope:
         for name in REF_FIELDS:
             present = getattr(self, name) is not None
             if present != (name in wanted):
-                raise ValueError(
-                    f"a {self.kind} scope {'takes' if not present else 'has no'} {name}"
-                )
+                raise ValueError(f"a {self.kind} scope {'has no' if present else 'takes'} {name}")
         if self.kind == "week" and self.monday is None:
             raise ValueError("a week scope takes its Monday")
         if self.kind not in DATED_KINDS and self.monday is not None:
@@ -186,7 +184,7 @@ def raise_flag(
     unknown = set(params) - set(row.params)
     if unknown:
         raise ValueError(f"{code} has no params {sorted(unknown)}")
-    refs = row.refs_for(dict(params))
+    refs = row.refs_for(params)
     if rn is None:
         if len(refs) > 1:
             raise ValueError(f"{code} rests on {list(refs)}; pass the rn that raised it")

@@ -13,8 +13,6 @@ class Entry(Protocol):
 
 @dataclass(frozen=True)
 class Term:
-    """An entry that is its name and nothing else."""
-
     name: str
 
     def describe(self) -> Row:

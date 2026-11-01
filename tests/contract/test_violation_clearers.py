@@ -4,8 +4,8 @@ from coach.cli.registry import declarations
 from coach.core.registries.agent import RECORD_KINDS
 from coach.core.registries.flags import FLAGS, FlagCode
 
-# Leaves verbs.md declares that no ticket has built yet. A leaf leaves this set when it lands,
-# and the test below fails until it does.
+# Leaves verbs.md declares that are not built yet. Remove each one as it lands, or the test below
+# fails.
 PENDING_LEAVES = frozenset(
     {
         "import",
