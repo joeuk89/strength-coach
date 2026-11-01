@@ -147,7 +147,8 @@ class _Derivation:
             first = Load(ladder[0], "assisted")
             return _Move(found.derived_from, self._uniform(first), "first prescription")
         logged = found.exposure.top_load
-        assert logged is not None and logged.mode == "assisted"
+        if logged is None or logged.mode != "assisted":
+            return _Move(found.derived_from, self._uniform(None), "held")
         rung = Load(rung_of(logged.amount, ladder), "assisted")
         if rung != logged:
             self._raise(
@@ -253,10 +254,11 @@ class _Derivation:
 
     def _reset(self, exposure: Exposure, before: Load, rack: Rack | None) -> Load | None:
         history = ordinary(line_history(self.request.exposures, exposure, on=self.on))
-        if misses_at(self.line, history, before, rack) < misses_before_reset(self.line):
+        misses = misses_at(self.line, history, before, rack)
+        if misses < misses_before_reset(self.line):
             return None
         reset = reset_load(self.line, before, rack)
-        self.steps.append(Step("scheme", before.amount, reset.amount, "reset"))
+        self.steps.append(Step("scheme", before.amount, reset.amount, f"reset, misses {misses}"))
         return self._round(rack, reset, "cut")
 
     def _stall(self, anchor_exposure: Exposure) -> None:

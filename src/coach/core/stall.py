@@ -16,9 +16,8 @@ type Metric = tuple[float, ...]
 
 def stall_streak(line: Line, history: Sequence[Exposure]) -> tuple[Exposure, ...]:
     """The longest newest run of `history` (ordinary, newest first) with no gain over its
-    oldest, oldest first; empty under three or for a scheme with no metric. `wave_531` has
-    none: its rep-outs fall wave to wave by design, and `training_max_due` and
-    `rep_range_missed` report it."""
+    oldest, oldest first; empty under three or for a scheme with no metric. `wave_531` reads
+    the rep-out's e1RM, since raw rep-out counts fall wave to wave by design."""
     metric = _METRICS.get(line.scheme.name)
     if metric is None:
         return ()
@@ -62,6 +61,10 @@ def _best_e1rm(_line: Line, exposure: Exposure) -> Metric:
     return (max((_e1rm(exposure, i) for i in range(len(exposure.working))), default=0),)
 
 
+def _rep_out_e1rm(_line: Line, exposure: Exposure) -> Metric:
+    return (_e1rm(exposure, len(exposure.working) - 1) if exposure.working else 0,)
+
+
 def _e1rm(exposure: Exposure, index: int) -> float:
     found = point(exposure, exposure.working[index])
     return 0 if found is None else found.load.amount
@@ -72,4 +75,5 @@ _METRICS: dict[str, Callable[[Line, Exposure], Metric]] = {
     "linear": _hit,
     "assistance_ladder": _rung,
     "top_backoff": _best_e1rm,
+    "wave_531": _rep_out_e1rm,
 }

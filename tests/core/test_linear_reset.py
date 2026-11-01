@@ -29,7 +29,7 @@ def test_one_miss_holds_at_the_anchor_load() -> None:
 def test_the_second_consecutive_miss_at_one_load_resets_rounded_down_to_the_rack() -> None:
     line = bench(WEEK_1_MISS, WEEK_2_MISS)
 
-    assert line.steps[0] == Step("scheme", 120, 107.5, "reset")
+    assert line.steps[0] == Step("scheme", 120, 107.5, "reset, misses 2")
     assert line.change == "reset 120 → 107.5"
     assert line.groups[0].load == Load(107.5, "total")
 

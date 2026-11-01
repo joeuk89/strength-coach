@@ -1,4 +1,4 @@
-from support.exposures import an_exposure
+from support.exposures import Logged, an_exposure
 from support.prescribe import a_line, a_request, working
 
 from coach.core.load import Load
@@ -10,7 +10,7 @@ PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", 
 ASSISTED = {"assisted_pull_up": ExerciseFacts("assisted", "machine", "vertical_pull")}
 
 
-def pull_up(*sets: tuple[float, int, float]) -> LinePrescription:
+def pull_up(*sets: Logged) -> LinePrescription:
     logged = an_exposure(
         "2026-10-26", *sets, workout_id="h-3", exercise_id="assisted_pull_up", mode="assisted"
     )
@@ -65,3 +65,9 @@ def test_a_logged_load_between_rungs_reads_as_the_rung_with_more_assistance() ->
 
     assert line.groups[0].load == Load(30, "assisted")
     assert [f.code for f in line.flags] == ["offgrid_anchor_ignored"]
+
+
+def test_an_anchor_logged_with_no_load_holds_with_no_load() -> None:
+    line = pull_up(*[(None, 8, 8)] * 4)
+
+    assert (line.change, line.groups[0].load, line.steps) == ("held", None, ())

@@ -64,14 +64,14 @@ def wave(on: str, *sets: tuple[float, int]) -> Exposure:
 
 WAVE_1 = wave("2026-10-12", (130, 5), (150, 5), (170, 8))
 WAVE_2 = wave("2026-10-19", (140, 3), (160, 3), (180, 5))
-WAVE_3 = wave("2026-10-26", (150, 1), (170, 1), (190, 3))
+WAVE_3 = wave("2026-10-26", (150, 1), (170, 1), (190, 6))
 
 
 def test_after_the_third_wave_at_one_training_max_it_warns_training_max_due() -> None:
     line = squat(3, WAVE_1, WAVE_2, WAVE_3)
 
     assert [(f.code, dict(f.params)) for f in line.flags] == [
-        ("training_max_due", {"training_max": 200, "source": "d-0001", "rep_outs": [8, 5, 3]})
+        ("training_max_due", {"training_max": 200, "source": "d-0001", "rep_outs": [8, 5, 6]})
     ]
     assert working(line) == [(1, 130, 5), (1, 150, 5), (1, 170, "5+")]
 
@@ -93,3 +93,34 @@ def test_a_rep_out_below_its_waves_reps_warns_rep_range_missed() -> None:
             {"set_index": 3, "reps": 2, "range": [3, 3], "logged_rpe": None, "authored_rpe": None},
         )
     ]
+
+
+def stalls(line: LinePrescription) -> list[dict[str, object]]:
+    return [dict(f.params) for f in line.flags if f.code == "stall_streak"]
+
+
+def test_three_waves_with_no_rep_out_e1rm_gain_raise_stall_streak_with_their_refs() -> None:
+    flat = [
+        wave(on, (130, 5), (150, 5), (170, 5)) for on in ("2026-10-12", "2026-10-19", "2026-10-26")
+    ]
+
+    assert stalls(squat(3, *flat)) == [
+        {
+            "streak": 3,
+            "exposures": [
+                "exposure:w-2026-10-12/bb_back_squat",
+                "exposure:w-2026-10-19/bb_back_squat",
+                "exposure:w-2026-10-26/bb_back_squat",
+            ],
+        }
+    ]
+
+
+def test_a_rising_rep_out_e1rm_is_not_a_stall() -> None:
+    rising = [
+        wave("2026-10-12", (130, 5), (150, 5), (170, 5)),
+        wave("2026-10-19", (130, 5), (150, 5), (170, 6)),
+        wave("2026-10-26", (130, 5), (150, 5), (170, 7)),
+    ]
+
+    assert stalls(squat(3, *rising)) == []
