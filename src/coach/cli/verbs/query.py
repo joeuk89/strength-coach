@@ -2,10 +2,15 @@ import datetime
 from contextlib import closing
 
 from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
+from coach.cli.kit import read_kit_files
 from coach.core.errors import Invalid
+from coach.core.plan_check import CheckedPlan
 from coach.core.registries.agent import VIEWS
-from coach.services.query import QueryResult, exposures, ledger, readings
+from coach.services.plan_apply import validate
+from coach.services.query import QueryResult, exposures, flags, ledger, lines, readings
+from coach.store.connection import Connection
 
 
 def run(call: Call) -> Outcome:
@@ -35,9 +40,48 @@ def run(call: Call) -> Outcome:
                 today=call.clock.today(),
                 last=last,
             )
+        elif view == "flags":
+            result = flags(
+                conn,
+                draft=_draft(call, conn),
+                today=call.clock.today(),
+                code=_text(call, "code"),
+                severity=_text(call, "severity"),
+                scope=_text(call, "scope"),
+                summary=call.args.get("summary") is True,
+                last=last,
+            )
+        elif view == "lines":
+            result = lines(
+                conn,
+                draft=_draft(call, conn),
+                today=call.clock.today(),
+                units=call.instance.config.athlete.units,
+                exercises=_texts(call, "exercise"),
+                session=_text(call, "session"),
+                date=_date(call, "date"),
+                changed=call.args.get("changed") is True,
+                last=last,
+            )
         else:
             raise Invalid("invalid_argument", f"query {view} is not in this engine build yet")
     return Outcome(_rows(result))
+
+
+def _draft(call: Call, conn: Connection) -> CheckedPlan | None:
+    """The named plan Draft validated now, read-only: the check `plan apply --dry-run` runs."""
+    assert call.instance is not None and call.clock is not None
+    path = _text(call, "draft")
+    if path is None:
+        return None
+    return validate(
+        conn,
+        read_draft(path),
+        file=path,
+        config=call.instance.config,
+        kits=read_kit_files(call.instance),
+        clock=call.clock,
+    ).checked
 
 
 def _text(call: Call, name: str) -> str | None:
@@ -69,14 +113,27 @@ def _rows(result: QueryResult) -> Json:
 DECLARATION = Declaration(
     name="query",
     summary="One read view as a row list: exposures (each exercise in a workout with its "
-    "annotations applied and its e1RM), readings (Weigh-ins, Sleep nights, Activities) or "
+    "annotations applied and its e1RM), readings (Weigh-ins, Sleep nights, Activities), "
+    "flags and lines (of the plan in force, or of a plan Draft validated now with --draft) or "
     "ledger (one record kind with its withdrawals or event history, or one record by id).",
     writes="none",
     needs_instance=True,
     arguments=(
         Argument("view", f"one of {', '.join(VIEWS.names())}", required=True),
-        Argument("--exercise", "exposures: one exercise id; repeat for more", repeatable=True),
+        Argument(
+            "--exercise", "exposures, lines: one exercise id; repeat for more", repeatable=True
+        ),
         Argument("--since", "exposures: on or after this date, YYYY-MM-DD"),
+        Argument(
+            "--draft", "flags, lines: a plan Draft to validate now instead of the plan in force"
+        ),
+        Argument("--code", "flags: one flag code"),
+        Argument("--severity", "flags: violation or warning"),
+        Argument("--scope", "flags: one scope kind, such as line or week"),
+        Argument("--summary", "flags: counts by code and severity", takes_value=False),
+        Argument("--session", "lines: one session id"),
+        Argument("--date", "lines: one date, YYYY-MM-DD"),
+        Argument("--changed", "lines: only lines whose prescription moved", takes_value=False),
         Argument("--kind", "readings: weigh_in, sleep_night or activity; ledger: a record kind"),
         Argument("--id", "ledger: one record by id"),
         Argument("--open", "ledger: live rows only", takes_value=False),
@@ -101,5 +158,7 @@ DECLARATION = Declaration(
         ),
         Example(("query", "ledger", "--kind", "status_span", "--open"), "Status spans in force."),
         Example(("query", "ledger", "--kind", "niggle", "--open"), "Open niggles."),
+        Example(("query", "flags", "--summary"), "Counts of the plan in force's flags by code."),
+        Example(("query", "lines", "--changed"), "The plan in force's lines that moved."),
     ),
 )

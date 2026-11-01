@@ -42,3 +42,16 @@ def overrides(conn: Connection, plan_id: str) -> list[Row]:
         row["params"] = json.loads(str(row["params"]))
         row["evidence"] = json.loads(str(row["evidence"])) if row["evidence"] else []
     return found
+
+
+def prescriptions(conn: Connection, plan_id: str) -> list[Row]:
+    """The plan's frozen prescription rows, set groups and flags decoded, in date order."""
+    found = select(
+        conn,
+        "SELECT * FROM prescription WHERE plan_id = ? ORDER BY date, session_id, exercise_id",
+        (plan_id,),
+    )
+    for row in found:
+        row["set_groups"] = json.loads(str(row["set_groups"]))
+        row["flags"] = json.loads(str(row["flags"]))
+    return found
