@@ -41,11 +41,17 @@ def run(call: Call) -> Outcome:
         (export_dir / name).write_text(publication.files[name], encoding="utf-8")
     for name in deleted:
         (export_dir / name).unlink()
-    paths = [EXPORT, *athlete_files]
-    if (root / WRITE_AUDIT).is_file():
-        paths.append(WRITE_AUDIT)
+    paths = [
+        path
+        for path in (EXPORT, *ATHLETE_FILES, KIT, WRITE_AUDIT)
+        if _has_files(root / path) or git.tracks(root, path)
+    ]
     commit = git.commit(root, paths, MESSAGE) if git.changed(root, paths) else None
     return Outcome({"commit": commit, **summary})
+
+
+def _has_files(path: Path) -> bool:
+    return path.is_file() or (path.is_dir() and any(p.is_file() for p in path.rglob("*")))
 
 
 def _athlete_files(root: Path) -> list[str]:

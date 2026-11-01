@@ -138,3 +138,27 @@ def test_publish_clears_store_behind_export(instance: Path) -> None:
         "behind_store": False,
         "store_behind_export": False,
     }
+
+
+def test_a_deleted_kit_file_is_removed_by_the_next_publish(instance: Path) -> None:
+    (instance / "kit" / "home.json").write_text("{}\n", encoding="utf-8")
+    (instance / "kit" / "gym.json").write_text("{}\n", encoding="utf-8")
+    run_coach("publish")
+    (instance / "kit" / "gym.json").unlink()
+
+    run = run_coach("publish")
+
+    assert run.envelope["result"]["commit"] is not None
+    assert "kit/gym.json" not in committed_files(instance)
+    assert "kit/home.json" in committed_files(instance)
+
+
+def test_a_deleted_profile_is_removed_by_the_next_publish(instance: Path) -> None:
+    (instance / "profile.md").write_text("# Athlete\n", encoding="utf-8")
+    run_coach("publish")
+    (instance / "profile.md").unlink()
+
+    run = run_coach("publish")
+
+    assert run.envelope["result"]["commit"] is not None
+    assert "profile.md" not in committed_files(instance)
