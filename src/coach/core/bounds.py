@@ -325,8 +325,7 @@ class _Bounding:
         pin = self._pin()
         ceiling = safety_ceiling(self.context.request.decisions, self.context.line.exercise)
         if ceiling is None or not self.loads:
-            if pin is not None and rack is not None:
-                self._pin_on_rack(pin, rack)
+            self._pin_on_rack(pin, rack)
             return
         limit = Load(ceiling, self.loads[0].mode)
         if rack is not None:
@@ -338,13 +337,13 @@ class _Bounding:
                 [limit.amount],
                 f"the pinned {pin.amount:g} is over the safety ceiling of {ceiling:g}",
             )
-        elif pin is not None and rack is not None:
+        else:
             self._pin_on_rack(pin, rack)
         if not self._limit("rack", limit, "safety_ceiling", lowers_rounding=False):
             self.steps.append(Step("rack", ceiling, self._amounts(), "not_binding"))
 
-    def _pin_on_rack(self, pin: Load, rack: Rack) -> None:
-        if on_rack(rack, pin.amount):
+    def _pin_on_rack(self, pin: Load | None, rack: Rack | None) -> None:
+        if pin is None or rack is None or on_rack(rack, pin.amount):
             return
         nearest = list(rows_beside(rack, pin.amount))
         implement = self.context.exercise.equipment_kind

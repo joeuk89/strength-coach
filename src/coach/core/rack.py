@@ -137,7 +137,6 @@ def on_rack(rack: Rack, amount: float) -> bool:
 
 
 def rows_beside(rack: Rack, amount: float) -> tuple[float, ...]:
-    """The row below `amount` and the row above it, whichever exist."""
     return tuple(row.load for row in (rack.row_below(amount), rack.row_above(amount)) if row)
 
 
