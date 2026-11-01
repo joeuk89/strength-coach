@@ -5,6 +5,7 @@ import datetime
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from coach.core.closed_week.adherence import WATCH_BELOW
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
@@ -17,7 +18,8 @@ from coach.core.registries.schemes import CadenceSignal
 from coach.core.stall import stall_streak
 from coach.core.switching import switch_for
 
-ADHERENCE_FLOOR = 0.8
+# The `ok` line of week.md's adherence states.
+ADHERENCE_FLOOR = WATCH_BELOW
 RESETS_SLOW = 2
 _DAY = datetime.timedelta(days=1)
 
@@ -142,6 +144,10 @@ def _signal(code: CadenceSignal, read: CadenceRead, metric: Metric) -> Flag:
             **({"blocks": [b.id for b in read.blocks]} if code == "cadence_slow" else {}),
             **switch.params(),
         },
-        f"{exercise} on {scheme}: {code.replace('_', ' ')} over the last two Blocks; "
+        f"{exercise} on {scheme}: {code.replace('_', ' ')} over {_read_over(code)}; "
         f"the version may {switch.may}",
     )
+
+
+def _read_over(code: CadenceSignal) -> str:
+    return "the last two Blocks" if code == "cadence_slow" else "the closed Block"
