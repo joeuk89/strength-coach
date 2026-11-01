@@ -59,7 +59,7 @@ Three writers set `exercise.hevy_template_id`:
 
 | Writer | When |
 | --- | --- |
-| the catalogue seed at `init` | Hevy built-in template ids (eight hex characters, the same in every account) shipped with the catalogue entry (`src/coach/store/catalogue.jsonl`, `schema.md` "The engine catalogue"); seeded from the old library's 108 catalogue pairs and the six that the old code resolved by title |
+| the catalogue seed at `init` | Hevy built-in template ids (eight hex characters, the same in every account) shipped with the catalogue entry (`src/coach/store/catalogue.jsonl`, `schema.md` "The engine catalogue"); seeded from the old library's 108 catalogue pairs, the six that the old code resolved by title, and the 15 built-in templates the history uses that the old library filed under `custom_*` or a different exercise's id |
 | an `[[exercise]]` record | an account-specific custom template: an edit to an existing Exercise, or a new Exercise with every column and `source = record` when no program line names it |
 | `plan apply` | after a verified `POST /v1/exercise_templates` (ADR 0011) |
 

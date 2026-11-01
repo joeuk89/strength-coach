@@ -55,7 +55,7 @@ def test_no_two_rows_share_a_hevy_template_id() -> None:
 def test_every_row_with_a_built_in_equivalent_carries_its_template_id() -> None:
     template_ids = [row["hevy_template_id"] for row in seeded() if row["hevy_template_id"]]
 
-    assert len(template_ids) == 112
+    assert len(template_ids) == 127
 
 
 def test_each_template_id_is_the_built_in_template_of_the_row_hevy_title() -> None:
