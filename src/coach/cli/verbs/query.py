@@ -2,6 +2,7 @@ import datetime
 
 from coach.cli.declaration import (
     Argument,
+    Call,
     Declaration,
     Example,
     InInstance,
@@ -97,17 +98,17 @@ def _draft(call: InstanceCall, conn: Connection) -> CheckedPlan | None:
     ).checked
 
 
-def _text(call: InstanceCall, name: str) -> str | None:
+def _text(call: Call, name: str) -> str | None:
     value = call.args.get(name)
     return value if isinstance(value, str) else None
 
 
-def _texts(call: InstanceCall, name: str) -> tuple[str, ...]:
+def _texts(call: Call, name: str) -> tuple[str, ...]:
     value = call.args.get(name, ())
     return value if isinstance(value, tuple) else ()
 
 
-def _date(call: InstanceCall, name: str) -> datetime.date | None:
+def _date(call: Call, name: str) -> datetime.date | None:
     text = _text(call, name)
     if text is None:
         return None
