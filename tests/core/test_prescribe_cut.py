@@ -430,3 +430,16 @@ def test_a_wave_531_return_line_drops_the_rep_out_and_cuts_the_training_max() ->
         (1, Load(57.5, "total"), 5),
         (1, Load(67.5, "total"), 5),
     ]
+
+
+def test_a_wave_531_return_line_cuts_the_training_max_before_rounding_once() -> None:
+    wave = a_line("bb_bench_press", SetGroup(3, "working"), scheme="wave_531", start_load=107)
+    logged = an_exposure("2026-10-03", (70, 5, None), (80, 5, None), (90, 8, None))
+
+    line = derive(wave, logged, racks={"barbell": a_rack(*[50 + 2.5 * i for i in range(21)])})
+
+    # 107 × 0.65 × 0.90 is 62.6, one row down to 62.5; rounding each wave load first gives 60
+    assert [(g.count, g.load, g.reps) for g in line.groups] == [
+        (1, Load(62.5, "total"), 5),
+        (1, Load(70, "total"), 5),
+    ]

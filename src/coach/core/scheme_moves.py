@@ -209,7 +209,8 @@ class SchemeMoves:
             return self._held(None)
         index = wave_index(self.given.request.hard_week_count)
         count = sum(group.count for group in self.given.sets if group.working)
-        targets = wave_targets(tm.load, index, count, self.given.rack)
+        # Unrounded, so a cut multiplies the training max and the rack step rounds once.
+        targets = wave_targets(tm.load, index, count, rack=None)
         wave = f"wave {index + 1}"
         self.steps.append(Step("scheme", tm.load.amount, tuple(t.amount for t in targets), wave))
         if exposure is not None:

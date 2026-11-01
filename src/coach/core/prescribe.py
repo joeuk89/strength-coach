@@ -35,7 +35,7 @@ from coach.core.program.form import (
     SchemeRef,
     SetGroup,
 )
-from coach.core.rack import Rack, next_row_up
+from coach.core.rack import Rack, Rounding, next_row_up, round_to_rack
 from coach.core.scheme_moves import Move, SchemeInput, SchemeMoves
 from coach.core.top_backoff import back_off_load
 from coach.core.warm_up import warm_up_loads
@@ -162,7 +162,7 @@ class _Derivation:
             bounded = bound(context, move.proposal, move.rounding, self.steps, self.flags)
         if pin is not None:
             self._check_increment(found.exposure, rack, before, bounded.load)
-        change = _change(line, before, bounded, move.change, moved)
+        change = _change(line, before, bounded, move.change, _racked(moved, rack, move.rounding))
         return self._bounded(line, found.derived_from, rack, bounded, change)
 
     def _bounded(
@@ -395,6 +395,13 @@ def _first(proposal: Proposal) -> Load | None:
     if isinstance(proposal, tuple):
         return proposal[0] if proposal else None
     return proposal
+
+
+def _racked(load: Load | None, rack: Rack | None, rounding: Rounding) -> Load | None:
+    """The proposal as the rack step alone would leave it."""
+    if load is None or rack is None:
+        return load
+    return round_to_rack(rack, load, rounding).load
 
 
 def _pinned(proposal: Proposal, pinned: Load) -> Proposal:
