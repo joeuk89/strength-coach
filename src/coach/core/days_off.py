@@ -7,6 +7,8 @@ import statistics
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from coach.core.exposure import Exposure
+
 GAPS_READ = 4
 USUAL_INTERVAL_DAYS = (7, 14)
 USUAL_INTERVAL_DAYS_RN = None
@@ -51,3 +53,30 @@ def usual_interval(dates: Iterable[datetime.date]) -> int:
     if not gaps:
         return low
     return min(max(math.floor(statistics.median(gaps)), low), high)
+
+
+@dataclass(frozen=True)
+class SessionTrained:
+    """A trained-unlogged Annotation or a hand-entered Workout with no sets: a lifting exposure
+    date for every line of its session, carrying no load."""
+
+    date: datetime.date
+    session_id: str | None
+
+
+def line_days_off(
+    exposures: Iterable[Exposure],
+    trained: Iterable[SessionTrained],
+    *,
+    exercise_id: str,
+    session_id: str,
+    on: datetime.date,
+) -> DaysOff:
+    exposures = tuple(exposures)
+    trained = tuple(trained)
+    session_dates = [t.date for t in trained if t.session_id == session_id]
+    return days_off(
+        on,
+        line_dates=[*(e.date for e in exposures if e.exercise_id == exercise_id), *session_dates],
+        lifting_dates=[*(e.date for e in exposures), *(t.date for t in trained)],
+    )

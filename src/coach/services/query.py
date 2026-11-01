@@ -2,10 +2,15 @@ import datetime
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from coach.core.config import Units
+from coach.core.e1rm import point
 from coach.core.errors import Invalid
+from coach.core.exposure import Exposure
 from coach.core.registries.agent import RECORD_KINDS
+from coach.services.history import read_history
 from coach.services.ledger import ID_PREFIX
-from coach.store import annotations, decisions, exercises, follow_ups, niggles, notes, workouts
+from coach.store import annotations, decisions, follow_ups, niggles, notes, workouts
+from coach.store import exercises as library
 from coach.store import readings as stored
 from coach.store.connection import Connection
 from coach.store.rows import Row
@@ -31,6 +36,49 @@ def readings(conn: Connection, *, kind: str | None, last: int | None) -> QueryRe
     ]
     rows.sort(key=lambda r: (str(r.get("date", r.get("night"))), str(r["id"])), reverse=True)
     return _newest(rows, last)
+
+
+def exposures(
+    conn: Connection,
+    *,
+    exercises: tuple[str, ...],
+    since: datetime.date | None,
+    last: int | None,
+    units: Units,
+) -> QueryResult:
+    """`query exposures`: each Exposure with its annotations applied, newest first."""
+    unknown = [e for e in exercises if library.get(conn, e) is None]
+    if unknown:
+        raise Invalid("invalid_argument", f"no exercise {', '.join(unknown)} in the library")
+    found = [
+        e
+        for e in read_history(conn, units).exposures
+        if (not exercises or e.exercise_id in exercises) and (since is None or e.date >= since)
+    ]
+    found.sort(key=lambda e: e.exercise_id)
+    found.sort(key=lambda e: (e.date, e.workout_id), reverse=True)
+    return _newest([_exposure(e) for e in found], last)
+
+
+def _exposure(exposure: Exposure) -> Row:
+    top = exposure.top_load
+    best = max(
+        (p for s in exposure.working if (p := point(exposure, s)) is not None),
+        key=lambda p: p.load.amount,
+        default=None,
+    )
+    return {
+        "exposure": exposure.ref,
+        "date": exposure.date.isoformat(),
+        "session": exposure.session_id,
+        "load": None if top is None else top.amount,
+        "load_mode": None if top is None else top.mode,
+        "reps": [s.reps for s in exposure.working],
+        "rpe": [s.rpe for s in exposure.working],
+        "e1rm": None if best is None else best.load.amount,
+        "e1rm_lower_bound": None if best is None else best.lower_bound,
+        "annotations": list(exposure.annotations),
+    }
 
 
 def ledger(
@@ -63,7 +111,7 @@ def _kind_of(conn: Connection, id_: str) -> str:
     for kind, (_, prefix) in ID_PREFIX.items():
         if id_.startswith(prefix):
             return kind
-    return "exercise" if exercises.get(conn, id_) else "workout"
+    return "exercise" if library.get(conn, id_) else "workout"
 
 
 def _newest(rows: list[Row], last: int | None) -> QueryResult:
@@ -125,7 +173,7 @@ def _workouts(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
 
 
 def _exercises(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
-    return exercises.every(conn)
+    return library.every(conn)
 
 
 def _niggles(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
