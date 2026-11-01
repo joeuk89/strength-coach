@@ -64,7 +64,13 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Jso
     flag is its key, severity and acknowledgement, since the prompt already carries its text."""
     checked = found.checked
     prompt = approval_prompt(
-        checked, found.actions, found.write_plan_hash, units=units, full=full, resumes=found.resumes
+        checked,
+        found.actions,
+        found.write_plan_hash,
+        units=units,
+        full=full,
+        resumes=found.resumes,
+        moved_routines=found.moved_routines,
     )
     flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
     kept = flags if full else flags[:last]
@@ -73,6 +79,7 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Jso
         "week": draft.week.isoformat(),
         "supersedes": draft.supersedes,
         "resumes": found.resumes,
+        "moved_routines": list(found.moved_routines),
         "position": {"week": draft.position.week, "source": draft.position.source},
         **found.actions.to_json(),
         "flags": kept,
@@ -122,6 +129,7 @@ DECLARATION = Declaration(
             "week": {"type": "string", "format": "date"},
             "supersedes": {"type": ["string", "null"]},
             "resumes": {"type": ["string", "null"]},
+            "moved_routines": {"type": "array", "items": {"type": "string"}},
             "position": {"type": "object"},
             "folders_to_create": {"type": "array", "items": {"type": "string"}},
             "routines": {
