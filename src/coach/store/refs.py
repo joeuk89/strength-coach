@@ -1,18 +1,9 @@
 from coach.core.ref import Ref
+from coach.core.registries.agent import RECORD_KINDS
 from coach.store.connection import Connection
 
-# The kinds whose id is a row's primary key in one table.
-TABLE_OF = {
-    "exercise": "exercise",
-    "niggle": "niggle",
-    "follow_up": "follow_up",
-    "decision": "decision",
-    "goal": "goal",
-    "milestone": "milestone",
-    "phase": "phase",
-    "check_in": "check_in",
-    "routine": "routine",
-}
+# Ref kinds that are not record kinds, each naming a row of the table of its own name.
+OWN_TABLE = ("goal", "milestone", "phase", "check_in", "routine")
 KEY_OF = {"routine": "hevy_id"}
 
 
@@ -27,8 +18,14 @@ def exists(conn: Connection, ref: Ref) -> bool:
         return _row(conn, "workout", workout_id) and (
             not exercise_id or _row(conn, "exercise", exercise_id)
         )
-    table = TABLE_OF.get(ref.kind)
+    table = _table_of(ref)
     return table is not None and _row(conn, table, ref.id)
+
+
+def _table_of(ref: Ref) -> str | None:
+    if ref.record_kind in RECORD_KINDS:
+        return RECORD_KINDS.get(ref.record_kind).store_table
+    return ref.kind if ref.kind in OWN_TABLE else None
 
 
 def _row(conn: Connection, table: str, id_: str) -> bool:
