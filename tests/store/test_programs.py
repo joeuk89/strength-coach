@@ -1,10 +1,8 @@
-import datetime
-
-from support.ledger import a_hevy_workout, a_store, an_exercise
+from support.ledger import a_store, an_exercise
 from support.program_drafts import a_draft, a_line, a_session, toml
 
 from coach.core.program.parse import parse_program_draft
-from coach.store import exercises, programs, workouts
+from coach.store import exercises, programs
 from coach.store.connection import Connection
 
 
@@ -60,15 +58,6 @@ def test_the_block_opens_at_the_latest_redesign() -> None:
     assert programs.block_opened(conn) == "2026-11-01"
     a_version(conn, 3)
     assert programs.block_opened(conn) == "2026-11-03"
-
-
-def test_an_exercise_has_an_exposure_when_a_current_workout_logs_its_template() -> None:
-    conn = a_store()
-    an_exercise(conn, "bb_bench_press", hevy_template_id="T-BENCH")
-    an_exercise(conn, "db_curl", hevy_template_id="T-CURL")
-    a_hevy_workout(conn, "w1", date=datetime.date(2026, 10, 20), templates=(("T-BENCH", "Bench"),))
-
-    assert workouts.exercises_with_exposure(conn) == frozenset({"bb_bench_press"})
 
 
 def test_a_declared_exercise_is_inserted_from_the_draft_or_updated_field_by_field() -> None:

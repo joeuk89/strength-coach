@@ -251,14 +251,3 @@ ORDER BY t.workout_id
 def mapped_template_ids(conn: Connection) -> frozenset[str]:
     rows = conn.execute("SELECT hevy_template_id FROM exercise WHERE hevy_template_id IS NOT NULL")
     return frozenset(template_id for (template_id,) in rows)
-
-
-def exercises_with_exposure(conn: Connection) -> frozenset[str]:
-    """Exercises a current workout logs a working set of, through the set's template id."""
-    rows = conn.execute(
-        "SELECT DISTINCT e.id FROM workout_current w "
-        "JOIN logged_set s ON s.workout_id = w.id AND s.workout_updated_at = w.updated_at "
-        "JOIN exercise e ON e.hevy_template_id = s.hevy_template_id "
-        "WHERE s.set_type = 'working'"
-    )
-    return frozenset(id_ for (id_,) in rows)

@@ -20,7 +20,8 @@ from coach.core.program.parse import parse_program_draft
 from coach.core.rack import Rack
 from coach.core.registries.program import EQUIPMENT_KINDS, LOAD_MODES
 from coach.render.program_draft import program_draft
-from coach.store import exercises, goals, phases, programs, workouts
+from coach.services.history import read_history
+from coach.store import exercises, goals, phases, programs
 from coach.store.connection import Connection
 from coach.store.transaction import transaction
 
@@ -80,7 +81,7 @@ def adopt(
             version_id=version_id,
             library=library,
             racks=racks,
-            exposed=workouts.exercises_with_exposure(conn),
+            exposed=_exposed(conn, config),
             goal=goal,
             hevy_on=config.hevy is not None,
         )
@@ -184,6 +185,12 @@ def _racks(
             )
         racks[location.name] = location_racks(location, kit)
     return racks
+
+
+def _exposed(conn: Connection, config: Config) -> frozenset[str]:
+    """Exercises with an Exposure anywhere, resolved as `prescribe` resolves them."""
+    history = read_history(conn, config.athlete.units)
+    return frozenset(exposure.exercise_id for exposure in history.exposures)
 
 
 def _library(conn: Connection) -> dict[str, Mapping[str, object]]:

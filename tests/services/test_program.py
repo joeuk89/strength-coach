@@ -4,6 +4,7 @@ from typing import Any, cast
 
 import pytest
 from support.clock import FixedClock
+from support.history import a_logged_workout, an_annotation
 from support.kit_fixtures import kit_files
 from support.program_drafts import WORKED_DRAFT_COMPLETE, a_draft, a_line, a_session, toml
 from support.programs import a_config, a_goal, a_library_store, a_phase, the_worked_store
@@ -316,3 +317,33 @@ def test_a_surplus_phase_fills_the_upper_half_of_the_dose_band() -> None:
 
     row = conn.execute("SELECT dose FROM program_version").fetchone()
     assert json.loads(row[0])["per_muscle"] == 15
+
+
+def a_store_with_bench_history(*, set_type: str = "working", voided: bool = False) -> Connection:
+    conn = the_worked_store()
+    with conn:
+        exercises.update(conn, "bb_bench_press", {"hevy_template_id": "T-BENCH"})
+    a_logged_workout(conn, "h-1", "2026-10-20", ("T-BENCH", ((60, 8, 8),)), set_type=set_type)
+    if voided:
+        an_annotation(conn, "a-0001", "void", "workout:h-1/bb_bench_press")
+    return conn
+
+
+def test_a_logged_working_set_waives_the_start_load() -> None:
+    draft = toml(a_draft(a_session("push", a_line(start_load=None))))
+
+    assert run(a_store_with_bench_history(), draft, dry_run=True).version_id == "pv-1"
+
+
+@pytest.mark.parametrize(
+    "history", [{"voided": True}, {"set_type": "test"}], ids=["voided", "test_only"]
+)
+def test_history_that_resolves_to_no_exposure_still_needs_a_start_load(
+    history: dict[str, Any],
+) -> None:
+    draft = toml(a_draft(a_session("push", a_line(start_load=None))))
+
+    with pytest.raises(Invalid) as refused:
+        run(a_store_with_bench_history(**history), draft, dry_run=True)
+
+    assert refused.value.code == "start_load_missing"
