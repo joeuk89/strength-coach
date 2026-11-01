@@ -1,10 +1,13 @@
+import hashlib
 import importlib.metadata
+import shutil
 import sqlite3
 from pathlib import Path
 
 import pytest
 from support.cli import run_coach
 from support.instances import an_instance
+from support.kit_fixtures import INVENTORY, TABLES
 
 from coach.cli import app
 
@@ -48,6 +51,7 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
             "engine": {"version": RELEASE_ENGINE, "pin": RELEASE_ENGINE},
             "hevy": {"on": False},
             "schema_version": 1,
+            "kit": [],
         },
         "warnings": [],
     }
@@ -193,3 +197,89 @@ def test_an_unknown_timezone_stops_status_with_config_unknown_key(
     assert run.code == 5
     assert run.envelope["error"]["code"] == "config_unknown_key"
     assert "athlete.timezone" in run.envelope["error"]["message"]
+
+
+HOME = {
+    "kind": "plate-pool",
+    "kit": "home",
+    "collars": "clamp",
+    "dumbbells": "pair",
+    "implements": {"barbell": "barbell"},
+}
+
+
+def an_instance_with_the_fixture_kit(root: Path) -> Path:
+    an_instance(root, pin=RELEASE_ENGINE, location={"home": HOME})
+    (root / "kit").mkdir()
+    shutil.copyfile(INVENTORY, root / "kit" / "home.json")
+    shutil.copyfile(TABLES, root / "kit" / "home.achievable.json")
+    return root
+
+
+def test_status_reports_kit_tables_built_from_the_inventory_as_current(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(an_instance_with_the_fixture_kit(tmp_path))
+
+    run = run_coach("status")
+
+    assert run.code == 0
+    assert run.envelope["result"]["kit"] == [
+        {"location": "home", "kit": "home", "tables": "current"}
+    ]
+
+
+def test_status_reports_kit_tables_stale_once_the_inventory_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    root = an_instance_with_the_fixture_kit(tmp_path)
+    inventory = root / "kit" / "home.json"
+    inventory.write_bytes(inventory.read_bytes().replace(b'"count": 4', b'"count": 6', 1))
+    monkeypatch.chdir(root)
+
+    run = run_coach("status")
+
+    assert run.code == 0
+    assert run.envelope["result"]["kit"] == [{"location": "home", "kit": "home", "tables": "stale"}]
+
+
+def test_status_reports_a_missing_tables_file_as_stale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    root = an_instance_with_the_fixture_kit(tmp_path)
+    (root / "kit" / "home.achievable.json").unlink()
+    monkeypatch.chdir(root)
+
+    run = run_coach("status")
+
+    assert run.envelope["result"]["kit"] == [{"location": "home", "kit": "home", "tables": "stale"}]
+
+
+def test_status_lists_no_kit_tables_for_a_grid_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    gym = {
+        "kind": "grid",
+        "implements": {"barbell": "bar"},
+        "implement": {"bar": {"increment": 2.5}},
+    }
+    monkeypatch.chdir(an_instance(tmp_path, pin=RELEASE_ENGINE, location={"gym": gym}))
+
+    run = run_coach("status")
+
+    assert run.envelope["result"]["kit"] == []
+
+
+def test_status_keeps_no_kit_hash_in_the_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    root = an_instance_with_the_fixture_kit(tmp_path)
+    monkeypatch.chdir(root)
+
+    run_coach("status")
+
+    store = sqlite3.connect(root / ".coach" / "coach.db")
+    dump = "\n".join(store.iterdump())
+    store.close()
+    assert hashlib.sha256(INVENTORY.read_bytes()).hexdigest()[:8] not in dump
+    assert "sha256" not in dump

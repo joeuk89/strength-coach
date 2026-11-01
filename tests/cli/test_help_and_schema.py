@@ -47,7 +47,7 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
     assert declaration["input"]["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert declaration["input"]["type"] == "object"
     assert declaration["input"]["properties"] == {}
-    assert declaration["output"]["required"] == ["engine", "hevy", "schema_version"]
+    assert declaration["output"]["required"] == ["engine", "hevy", "schema_version", "kit"]
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 
 
