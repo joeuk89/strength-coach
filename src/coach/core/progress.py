@@ -54,10 +54,11 @@ def milestone_read(
 
 
 def best_set(exposures: Iterable[Exposure], exercise_id: str) -> BestSet | None:
-    """The heaviest working set, then the most reps at it; under assistance, the least."""
+    """The heaviest working set, then the most reps at it, first logged; under assistance, the
+    least assistance."""
     found = [
         (exposure.date, logged)
-        for exposure in exposures
+        for exposure in sorted(exposures, key=lambda e: e.date)
         if exposure.exercise_id == exercise_id
         for logged in exposure.working
         if logged.reps
