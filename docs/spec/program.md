@@ -139,7 +139,7 @@ authors, and adopt warns where they sit outside the emphasis band.
 per_muscle = 10          # hard sets per muscle per week
 [dose.lift]
 bb_bench_press = 8       # one entry per priority lift
-pull_up = 8
+pull_up = { sets = 8, counts = ["negative_pull_up", "band_pull_up"] }
 
 [deload]
 hard_weeks_ceiling = 6   # the Block ceiling; was `blocks.hard_weeks_ceiling`
@@ -151,6 +151,15 @@ test_priority_lifts = true
 
 The three shape fields are the light cut `prescription.md` applies on every lifting line of a
 `light_week`; the override may restate any of them for one week (`overrides.md`).
+
+A `[dose.lift]` entry is a bare target, or a table whose `sets` is the target and whose `counts`
+names the lift's counted variants: exercises whose hard sets add to the lift's weekly figure,
+one each, under the same exposure filter as the per-muscle dose (`week.md`, "Dose"). A lift
+trained mostly through its rungs (a strict pull-up built with negatives and band pull-ups) keeps
+a target inside the band this way. Adopt never fills `counts`; choosing a lift's variants is
+coaching judgement. The variants count toward the target and the disrupted-week floor only:
+they do not stand in for the lift on a line (`priority_lift_absent`), are never tested, and
+need not come first in a session. `dose_off_band` reads `sets`.
 
 ### New exercises
 
@@ -307,12 +316,14 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `acknowledgement_unmatched` | version | an `[[acknowledge]]` key adopt did not raise |
 | `goal_missing` | version | no current Goal (`goals.md`) |
 | `priority_lifts_required` | version | `strength` emphasis under a Goal with no priority lifts (`goals.md`) |
+| `counted_variant_unknown` | version | a `counts` entry not in the library and not declared in the Draft |
+| `counted_variant_not_exclusive` | version | an exercise in the `counts` of two lifts, or a priority lift in another lift's `counts` |
 
 ### Warnings (acknowledgeable, frozen on the version)
 
 | Code | Scope | Params |
 | --- | --- | --- |
-| `emphasis_off_goal`, `scheme_off_emphasis`, `priority_lift_absent`, `priority_lift_not_first`, `dose_off_band`, `deload_off_emphasis` | as `goals.md` | as `goals.md` |
+| `emphasis_off_goal`, `scheme_off_emphasis`, `priority_lift_absent`, `priority_lift_not_first`, `dose_off_band`, `counted_variant_off_pattern`, `deload_off_emphasis` | as `goals.md` | as `goals.md` |
 | `muscle_no_hard_sets` | version | muscle, sessions searched |
 | `session_over_minutes` | session | estimate, `minutes` |
 | `session_on_unavailable_day` | session | session id, weekday, `[athlete].available_days` |

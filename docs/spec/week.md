@@ -171,6 +171,12 @@ the trailing four ordinary weeks (rn:volume-frequency.1; three of four is opinio
 `session_dose_high` when a planned session exceeds 11 fractional sets (rn:volume-frequency.3). `progress` keeps its block-boundary
 view.
 
+Per priority lift, the hard sets of the lift and of its counted variants (`program.md`, "Dose and
+deload"), one each, from the same exposures the per-muscle figure reads, against the version's
+per-lift target. The card carries it beside the muscle rows; `plan draft` raises
+`lift_dose_under_target` on the same three-of-four rule. The disrupted-week floor
+(`minimum_week_floor`) counts a variant's planned hard sets toward the lift's two.
+
 ## Activity rules
 
 Three rules, each a code; the rest of the old activity layer is gone (ADR 0004 amended).

@@ -128,7 +128,7 @@ or opinion there.
 | --- | --- | --- | --- | --- |
 | Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
 | RIR | stimulus dial: the line's authored RPE stands every week (default 8, 2 RIR); the walk toward failure happens as double progression adds reps at a held load, not as a coded rule (`prescription.md`) | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
-| Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion) | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
+| Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion). A lift's counted variants add their hard sets to its figure (`program.md`, "Dose and deload") | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
 | Scheme the skill proposes (`scheme_off_emphasis` band) | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods §3` |
 | Stall signal (per line, `prescription.md`; several stalled lines read as one muscle behind is the `program` skill's judgement from `coach progress`) | reps at the authored RPE flat on the line | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
 | Deload | `set_cut_pct` 40, `load_cut_pct` 0, `rpe_cap` 8: cut sets, hold load | `set_cut_pct` 30, `load_cut_pct` 0, `rpe_cap` 8; `test_priority_lifts` prescribes a **test** single on each priority lift in the light week, whose result may become the next block's training max | no planned deload | §6 and rn:deloads.8 to .10, evidence that intensity is held; the percentages are this framework's defaults (opinion) |
@@ -186,6 +186,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `priority_lift_absent` | warning | version | exercise id | Acknowledgement, or a line for it |
 | `priority_lift_not_first` | warning | session | exercise id, position among the session's lines that carry a working group (an activation-only or warm-up line never counts) | Acknowledgement, or reordering |
 | `dose_off_band` | warning | version | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
+| `counted_variant_off_pattern` | warning | version | lift, counted variant, the two patterns, the two primary muscle lists | Acknowledgement, or a variant sharing the lift's pattern and primary muscles |
 | `deload_off_emphasis` | warning | version | deload policy, expected shape | Acknowledgement, or the expected shape |
 | `scheme_change_off_signal` | warning | line | previous scheme, new scheme, signal key or none, `may_schemes` | Acknowledgement, or keeping the scheme, or a scheme the signal lists (**Response to a cadence signal**) |
 
@@ -198,8 +199,8 @@ handed**) carries the version and never the Goal or the Phase (ADR 0003, amended
 goal-specific weekly behaviour is a property of the scheme the version names:
 
 - the dose check against the version's per-muscle target and, for priority lifts, the per-lift
-  target (ADR 0009, extended): the card's Dose line and the plan warnings `dose_under_target`
-  and `session_dose_high` (`week.md`);
+  target with its counted variants (ADR 0009, extended): the card's Dose line and the plan
+  warnings `dose_under_target`, `lift_dose_under_target` and `session_dose_high` (`week.md`);
 - no coded RIR walk and no coded set ramp: the authored RPE stands, and sets are added by the
   agent through `restate_sets` or the next version when the dose check shows a muscle under
   target (`prescription.md`);

@@ -102,6 +102,11 @@ The hard sets per muscle per week, and per priority lift, a program version is c
 Filled from the emphasis and phase when the version leaves it unsaid.
 _Avoid_: volume target, landmark, MEV
 
+**Counted variant**:
+An exercise a dose target names as counting its hard sets toward a priority lift's target. Never
+itself a priority lift; counts toward at most one lift.
+_Avoid_: regression, assistance exercise, progression, accessory
+
 **Deload policy**:
 A program version's hard-week ceiling, the shape of its light week (sets cut, load cut, RPE cap)
 and whether priority lifts are tested in it. Filled from the emphasis when unsaid; a light week's

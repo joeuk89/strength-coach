@@ -249,6 +249,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
 | `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
 | `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) | rn:volume-frequency.1 |
+| `lift_dose_under_target` | week | priority lift, target, the four weekly figures, the counted variants (`week.md`) | rn:volume-frequency.1, rn:minimum-effective-dose.4 |
 | `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) | rn:volume-frequency.3 |
 | `override_persisting` | line | kind, weeks, plan ids | `null` |
 | `light_week_shape_off_trigger` | week | proposed shape, the plan's shape, triggers | rn:deloads.5, .8 to .10 |
