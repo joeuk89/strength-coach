@@ -8,6 +8,7 @@ from typing import cast
 
 from coach.core.anchor import AnchorExposure, StartLoad, anchor, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
+from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.line_history import line_history, ordinary
@@ -26,6 +27,7 @@ from coach.core.program.form import LOAD_BEARING_MODES, RACK_MODES, Line, SetGro
 from coach.core.progression import Verdict, judge
 from coach.core.rack import Rack, Rounding, next_row_up, round_to_rack
 from coach.core.stall import stall_streak
+from coach.core.top_backoff import back_off_load, top_set
 from coach.core.warm_up import warm_up_loads
 
 
@@ -34,6 +36,18 @@ def prescribe(request: PrescribeRequest) -> SessionPrescription:
     return SessionPrescription(
         planned, tuple(_Derivation(request, line).derive() for line in planned.lines)
     )
+
+
+type Found = AnchorExposure | StartLoad
+
+
+@dataclass(frozen=True)
+class _Move:
+    """Step 1's result: the line's working groups with their loads."""
+
+    derived_from: str | None
+    working: tuple[PrescribedGroup, ...]
+    change: str
 
 
 @dataclass
@@ -53,6 +67,10 @@ class _Derivation:
             exercise_id=self.line.exercise,
         )
 
+    @property
+    def on(self) -> datetime.date:
+        return self.request.planned.date
+
     def derive(self) -> LinePrescription:
         exercise = self.request.version.exercises[self.line.exercise]
         mode = cast(LoadMode, self.line.load_mode or exercise.load_mode)
@@ -63,42 +81,50 @@ class _Derivation:
                 f"the line's load mode {mode} cannot be read from the exercise's "
                 f"{exercise.load_mode}",
             )
-            return self._prescription(None, None, None, "held")
+            return self._prescription(_Move(None, self._uniform(None), "held"), None)
         rack = self._rack(exercise, mode)
         start = None if self.line.start_load is None else Load(self.line.start_load, mode)
         found = anchor(
             self.request.exposures,
             exercise_id=self.line.exercise,
             session_id=self.request.planned.session_id,
-            on=self.request.planned.date,
+            on=self.on,
             start_load=start,
         )
-        if self.line.scheme.name == "assistance_ladder":
-            return self._ladder(found)
+        if isinstance(found, AnchorExposure):
+            self._stall(found.exposure)
+        return self._prescription(self._scheme(found, rack, mode), rack)
+
+    def _scheme(self, found: Found, rack: Rack | None, mode: LoadMode) -> _Move:
+        match self.line.scheme.name:
+            case "assistance_ladder":
+                return self._ladder(found)
+            case "top_backoff":
+                return self._top_backoff(found, rack, mode)
+            case _:
+                return self._load_step(found, rack, mode)
+
+    def _load_step(self, found: Found, rack: Rack | None, mode: LoadMode) -> _Move:
+        """One load for every working group: `double_progression`, `linear` and `hold`."""
         loaded = mode in LOAD_BEARING_MODES
         if isinstance(found, StartLoad):
             working = self._round(rack, self._opening(found, loaded), "hold")
-            return self._prescription(found.derived_from, rack, working, "first prescription")
+            return _Move(found.derived_from, self._uniform(working), "first prescription")
         before = self._anchor_load(found.exposure, rack, mode) if loaded else None
-        self._stall(found.exposure)
         if self.line.scheme.name == "linear" and before is not None:
             reset = self._reset(found.exposure, before, rack)
             if reset is not None:
-                return self._prescription(
-                    found.derived_from, rack, reset, f"reset {_n(before)} → {_n(reset)}"
-                )
+                change = f"reset {_n(before)} → {_n(reset)}"
+                return _Move(found.derived_from, self._uniform(reset), change)
         working = self._move(found.exposure, before, rack)
         rounded = self._round(rack, working, "step_up" if working != before else "hold")
-        changed = before is not None and rounded is not None and rounded != before
-        change = f"{_working(self.line)}: {_n(before)} → {_n(rounded)}" if changed else "held"
-        return self._prescription(found.derived_from, rack, rounded, change)
+        return _Move(found.derived_from, self._uniform(rounded), self._change(before, rounded))
 
-    def _ladder(self, found: AnchorExposure | StartLoad) -> LinePrescription:
+    def _ladder(self, found: Found) -> _Move:
         ladder = rungs(self.line)
         if isinstance(found, StartLoad):
             first = Load(ladder[0], "assisted")
-            return self._prescription(found.derived_from, None, first, "first prescription")
-        self._stall(found.exposure)
+            return _Move(found.derived_from, self._uniform(first), "first prescription")
         logged = found.exposure.top_load
         assert logged is not None and logged.mode == "assisted"
         rung = Load(rung_of(logged.amount, ladder), "assisted")
@@ -112,16 +138,53 @@ class _Derivation:
                 },
                 f"the logged {logged.amount:g} is not a rung; the anchor uses {rung.amount:g}",
             )
-        verdict = self._judge(found.exposure, rung)
-        if not verdict.hit:
-            return self._prescription(found.derived_from, None, rung, "held")
+        held = _Move(found.derived_from, self._uniform(rung), "held")
+        if not self._judge(found.exposure, rung).hit:
+            return held
         up = next_rung(rung.amount, ladder)
         if up is None:
             self.steps.append(Step("scheme", rung.amount, rung.amount, "last_rung"))
-            return self._prescription(found.derived_from, None, rung, "held")
+            return held
         self.steps.append(Step("scheme", rung.amount, up, "hit"))
         change = f"{_working(self.line)}: rung {_n(rung)} → {up:g}"
-        return self._prescription(found.derived_from, None, Load(up, "assisted"), change)
+        return _Move(found.derived_from, self._uniform(Load(up, "assisted")), change)
+
+    def _top_backoff(self, found: Found, rack: Rack | None, mode: LoadMode) -> _Move:
+        if isinstance(found, StartLoad):
+            top = self._round(rack, self._opening(found, loaded=True), "hold")
+            return _Move(
+                found.derived_from, self._top_then_backoffs(top, rack), "first prescription"
+            )
+        before = self._anchor_load(found.exposure, rack, mode)
+        top = before
+        estimate = e1rm(self.request.exposures, self.line.exercise, self.on)
+        if estimate is None:
+            self._raise(
+                "no_e1rm",
+                {"exercise_id": self.line.exercise, "scheme": self.line.scheme.name},
+                f"no e1RM for {self.line.exercise} in the window, so the top set holds",
+            )
+        elif before is not None and rack is not None:
+            moved = top_set(estimate.load.as_mode(mode), self.line, before, rack)
+            self.steps.append(Step("scheme", before.amount, moved.load.amount, moved.cause))
+            top = self._round(rack, moved.load, "hold")
+        working = self._top_then_backoffs(top, rack)
+        return _Move(found.derived_from, working, self._change(before, top))
+
+    def _top_then_backoffs(
+        self, top: Load | None, rack: Rack | None
+    ) -> tuple[PrescribedGroup, ...]:
+        first, *rest = self.line.working_groups()
+        back_off = None if top is None else back_off_load(top, self.line, rack)
+        return (_group(first, top), *(_group(group, back_off) for group in rest))
+
+    def _uniform(self, load: Load | None) -> tuple[PrescribedGroup, ...]:
+        return tuple(_group(group, load) for group in self.line.working_groups())
+
+    def _change(self, before: Load | None, after: Load | None) -> str:
+        if before is None or after is None or before == after:
+            return "held"
+        return f"{_working(self.line)}: {_n(before)} → {_n(after)}"
 
     def _reset(self, exposure: Exposure, before: Load, rack: Rack | None) -> Load | None:
         history = ordinary(line_history(self.request.exposures, exposure, on=self.on))
@@ -141,10 +204,6 @@ class _Derivation:
                 f"{len(streak)} exposures in a row with no gain on the "
                 f"{self.line.scheme.name} metric",
             )
-
-    @property
-    def on(self) -> datetime.date:
-        return self.request.planned.date
 
     def _rack(self, exercise: ExerciseFacts, mode: LoadMode) -> Rack | None:
         if mode not in RACK_MODES:
@@ -215,34 +274,41 @@ class _Derivation:
         self.steps.append(Step("rack", load.amount, rounded.load.amount, rounded.cause))
         return rounded.load
 
-    def _prescription(
-        self, derived_from: str | None, rack: Rack | None, working: Load | None, change: str
-    ) -> LinePrescription:
+    def _prescription(self, move: _Move, rack: Rack | None) -> LinePrescription:
         return LinePrescription(
             exercise_id=self.line.exercise,
             scheme=self.line.scheme.name,
-            groups=self._groups(rack, working),
-            derived_from=derived_from,
+            groups=self._groups(move.working, rack),
+            derived_from=move.derived_from,
             steps=tuple(self.steps),
             flags=tuple(self.flags),
-            change=change,
+            change=move.change,
         )
 
-    def _groups(self, rack: Rack | None, working: Load | None) -> tuple[PrescribedGroup, ...]:
+    def _groups(
+        self, working: tuple[PrescribedGroup, ...], rack: Rack | None
+    ) -> tuple[PrescribedGroup, ...]:
+        """The authored groups in order, the scheme's working groups standing in for the
+        authored ones, the warm-ups ramped off the first working load."""
         count = sum(group.count for group in self.line.sets if group.type == "warm_up")
+        first = working[0].load if working else None
         warm_ups: list[Load | None] = [None] * count
-        if working is not None and count:
-            targets, loads = warm_up_loads(working, count, rack)
+        if first is not None and count:
+            targets, loads = warm_up_loads(first, count, rack)
             self.steps.append(
                 Step("warm_up", targets, tuple(load.amount for load in loads), "ladder")
             )
             warm_ups = list(loads)
         groups: list[PrescribedGroup] = []
+        placed = False
         for group in self.line.sets:
             if group.type == "warm_up":
                 groups.extend(_group(group, warm_ups.pop(0), count=1) for _ in range(group.count))
-            else:
-                groups.append(_group(group, working if group.working else None))
+            elif not group.working:
+                groups.append(_group(group, None))
+            elif not placed:
+                groups.extend(working)
+                placed = True
         return tuple(groups)
 
     def _raise(self, code: str, params: dict[str, object], message: str) -> None:
