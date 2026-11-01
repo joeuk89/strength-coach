@@ -82,6 +82,7 @@ def generate(root: Path) -> None:
     _athlete_files(root)
     _library(root)
     clock.moment = at(ADOPTED)
+    _ok(coach("import"))
     _ok(coach("goal", "adopt", _draft(root, "goal", GOAL)))
     _ok(coach("program", "adopt", _draft(root, "program", toml(_program()).decode())))
     _history(root)
@@ -91,6 +92,8 @@ def generate(root: Path) -> None:
     plan.write_text(plan.read_text().replace("confirmed = false", "confirmed = true"))
     checked = _ok(coach("plan", "apply", str(plan), "--dry-run"))["result"]
     _ok(coach("plan", "apply", str(plan), "--expect", str(checked["write_plan_hash"])))
+    clock.moment = at(TODAY) - datetime.timedelta(hours=6)
+    _ok(coach("import"))
     clock.moment = at(TODAY)
     _ok(coach("record", _draft(root, "record", _ledger())))
     _ok(coach("record", _draft(root, "resolve", _resolutions())))
