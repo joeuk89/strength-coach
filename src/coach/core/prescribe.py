@@ -110,12 +110,19 @@ class _Derivation:
             on=self.on,
             start_load=start,
         )
-        if isinstance(found, AnchorExposure):
+        if isinstance(found, AnchorExposure) and self._scheme_name != "hold":
             self._stall(found.exposure)
         return self._prescription(self._scheme(found, rack, mode), rack)
 
+    @property
+    def _scheme_name(self) -> str:
+        """A conditioning session's lines run `hold`, whatever scheme they name."""
+        if self.request.planned.kind == "conditioning":
+            return "hold"
+        return self.line.scheme.name
+
     def _scheme(self, found: Found, rack: Rack | None, mode: LoadMode) -> _Move:
-        match self.line.scheme.name:
+        match self._scheme_name:
             case "assistance_ladder":
                 return self._ladder(found)
             case "top_backoff":
@@ -132,7 +139,10 @@ class _Derivation:
             working = self._round(rack, self._opening(found, loaded), "hold")
             return _Move(found.derived_from, self._uniform(working), "first prescription")
         before = self._anchor_load(found.exposure, rack, mode) if loaded else None
-        if self.line.scheme.name == "linear" and before is not None:
+        if self._scheme_name == "hold":
+            rounded = self._round(rack, before, "hold")
+            return _Move(found.derived_from, self._uniform(rounded), "held")
+        if self._scheme_name == "linear" and before is not None:
             reset = self._reset(found.exposure, before, rack)
             if reset is not None:
                 change = f"reset {_n(before)} → {_n(reset)}"

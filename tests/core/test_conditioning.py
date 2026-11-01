@@ -1,8 +1,11 @@
 import datetime
 from collections.abc import Mapping
 
-from support.prescribe import PLANNED, a_line, a_request, working
+from support.exposures import an_exposure
+from support.prescribe import PLANNED, a_line, a_rack, a_request, working
 
+from coach.core.exposure import Exposure
+from coach.core.load import Load
 from coach.core.prescribe import prescribe
 from coach.core.prescription import (
     ConditioningDose,
@@ -12,7 +15,7 @@ from coach.core.prescription import (
     PrescribeRequest,
     ProgramVersion,
 )
-from coach.core.program.form import ProgramForm, Schedule, SchemeRef, Session
+from coach.core.program.form import Line, ProgramForm, Schedule, SchemeRef, Session
 
 LINES = (
     a_line("burpee", working(1, 10, None), scheme="hold"),
@@ -126,3 +129,47 @@ def test_circuit_rounds_step_one_round_to_the_cap_then_reps() -> None:
 
 def test_a_lifting_session_carries_no_dose() -> None:
     assert prescribe(a_request()).dose is None
+
+
+def a_conditioning_request(line: Line, *exposures: Exposure) -> PrescribeRequest:
+    session = Session("engine", "Engine", "conditioning", "optional", scheme=EMOM, lines=(line,))
+    form = ProgramForm(
+        name="Test",
+        kind="redesign",
+        because="first program",
+        emphasis="hypertrophy",
+        location="home",
+        schedule=Schedule(("A",), {"A": {"wed": "engine"}}),
+        sessions=(session,),
+    )
+    return PrescribeRequest(
+        version=ProgramVersion(form, {"bb_bench_press": EXERCISES_BENCH}),
+        exposures=exposures,
+        racks={"home": {"barbell": a_rack(100, 105, 107.5, 110, 115, 120, 125)}},
+        planned=PlannedSession("engine", PLANNED, "home", "conditioning", (line,)),
+    )
+
+
+EXERCISES_BENCH = ExerciseFacts("total", "barbell", "horizontal_push")
+BENCH = a_line("bb_bench_press", working(4, 5), scheme="linear")
+
+
+def test_a_conditioning_line_authored_with_linear_holds_at_the_anchor_after_a_hit() -> None:
+    hit = an_exposure("2026-10-28", (120, 5, 8), (120, 5, 8), (120, 5, 8), (120, 5, 8))
+
+    line = prescribe(a_conditioning_request(BENCH, hit)).lines[0]
+
+    assert (line.change, line.groups[0].load) == ("held", Load(120, "total"))
+
+
+def test_a_conditioning_line_neither_resets_nor_flags_a_stall() -> None:
+    misses = (
+        an_exposure("2026-10-12", (120, 5, 8), (120, 5, 8), (120, 5, 8), (120, 4, 9)),
+        an_exposure("2026-10-19", (120, 5, 8), (120, 5, 8), (120, 5, 8), (120, 4, 9)),
+        an_exposure("2026-10-26", (120, 5, 8), (120, 5, 9), (120, 4, 9), (120, 3, 10)),
+    )
+
+    line = prescribe(a_conditioning_request(BENCH, *misses)).lines[0]
+
+    assert (line.change, line.groups[0].load) == ("held", Load(120, "total"))
+    assert [flag.code for flag in line.flags] == []
