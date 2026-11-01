@@ -50,10 +50,6 @@ def run(call: Call) -> Outcome:
                 {"location": kit.location, "kit": kit.kit, "tables": kit.tables}
                 for kit in result.kit
             ],
-            "export": {
-                "behind_store": result.export.behind_store,
-                "store_behind_export": result.export.store_behind_export,
-            },
             "plan": _plan(result.plan),
             "rotation": _rotation(result.rotation),
             "program": (
@@ -68,12 +64,16 @@ def run(call: Call) -> Outcome:
             ),
             "goal": _goal(result.goal),
             "phase": _phase(result.phase),
+            "block": _block(result.block),
             "check_in": _check_in(result.check_in),
             "niggles": _ids(result.niggles),
             "follow_ups_due": _ids(result.follow_ups_due),
             "decisions": {kind: _ids(ids) for kind, ids in result.decisions.items()},
             "observations": _ids(result.observations),
-            "block": _block(result.block),
+            "export": {
+                "behind_store": result.export.behind_store,
+                "store_behind_export": result.export.store_behind_export,
+            },
         },
         warnings=(*result.warnings, *drift),
     )
@@ -178,7 +178,6 @@ OUTPUT: Json = {
             "type": "array",
             "items": _object(location=STRING, kit=STRING, tables={"enum": ["current", "stale"]}),
         },
-        "export": _object(behind_store=BOOLEAN, store_behind_export=BOOLEAN),
         "plan": _object(
             True,
             id=STRING,
@@ -212,6 +211,7 @@ OUTPUT: Json = {
         "follow_ups_due": IDS,
         "decisions": {"type": "object", "additionalProperties": IDS},
         "observations": IDS,
+        "export": _object(behind_store=BOOLEAN, store_behind_export=BOOLEAN),
     },
     "required": [
         "engine",
@@ -219,7 +219,6 @@ OUTPUT: Json = {
         "workouts",
         "schema_version",
         "kit",
-        "export",
         "plan",
         "rotation",
         "program",
@@ -230,6 +229,7 @@ OUTPUT: Json = {
         "follow_ups_due",
         "decisions",
         "observations",
+        "export",
     ],
 }
 
@@ -237,9 +237,9 @@ OUTPUT: Json = {
 DECLARATION = Declaration(
     name="status",
     summary=(
-        "Where the instance stands: engine pin, Hevy, workouts, kit, export, the WeekPlan, "
-        "rotation and program in force, Goal, Phase, check-in, niggles, follow-ups, Decisions, "
-        "Observations, Block."
+        "Where the instance stands: engine pin, Hevy, workouts, kit, the WeekPlan, rotation and "
+        "program in force, Goal, Phase, Block, check-in, niggles, follow-ups, Decisions, "
+        "Observations, export."
     ),
     writes="none",
     needs_instance=True,
