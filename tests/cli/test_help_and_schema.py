@@ -54,6 +54,8 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
         "schema_version",
         "kit",
         "export",
+        "goal",
+        "phase",
     ]
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 

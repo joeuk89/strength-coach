@@ -1,10 +1,12 @@
+import datetime
 from contextlib import closing
 
-from coach.cli.declaration import Call, Declaration, Example, Outcome
+from coach.cli.declaration import Call, Declaration, Example, Json, Outcome
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
-from coach.services.status import status
+from coach.services.status import CurrentGoal, status
 from coach.store.export import on_disk
+from coach.store.phases import OpenPhase
 
 
 def run(call: Call) -> Outcome:
@@ -37,9 +39,25 @@ def run(call: Call) -> Outcome:
                 "behind_store": result.export.behind_store,
                 "store_behind_export": result.export.store_behind_export,
             },
+            "goal": _goal(result.goal),
+            "phase": _phase(result.phase),
         },
         warnings=result.warnings,
     )
+
+
+def _goal(goal: CurrentGoal | None) -> Json | None:
+    if goal is None:
+        return None
+    return {"id": goal.id, "kind": goal.kind, "priority_lifts": list(goal.priority_lifts)}
+
+
+def _phase(phase: OpenPhase | None) -> Json | None:
+    if phase is None:
+        return None
+    value = phase.until.value
+    shown = value.isoformat() if isinstance(value, datetime.date) else value
+    return {"id": phase.id, "kind": phase.kind, "until": {"kind": phase.until.kind, "value": shown}}
 
 
 DECLARATION = Declaration(
@@ -48,7 +66,7 @@ DECLARATION = Declaration(
         "Where the instance stands: the engine version against its pin, Hevy on or off and "
         "the age of the last import, workouts stored by source, the schema version, each "
         "plate-pool location's kit tables current or stale, whether the export is behind "
-        "the store or the store behind it."
+        "the store or the store behind it, the current Goal and the open Phase."
     ),
     writes="none",
     needs_instance=True,
@@ -95,8 +113,45 @@ DECLARATION = Declaration(
                 },
                 "required": ["behind_store", "store_behind_export"],
             },
+            "goal": {
+                "type": ["object", "null"],
+                "properties": {
+                    "id": {"type": "string"},
+                    "kind": {"type": "string"},
+                    "priority_lifts": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["id", "kind", "priority_lifts"],
+            },
+            "phase": {
+                "type": ["object", "null"],
+                "properties": {
+                    "id": {"type": "string"},
+                    "kind": {"type": "string"},
+                    "until": {
+                        "type": "object",
+                        "properties": {
+                            "kind": {"type": "string"},
+                            "value": {
+                                "type": ["string", "number", "null"],
+                                "description": "a date, a bodyweight, or null for coachs_call",
+                            },
+                        },
+                        "required": ["kind", "value"],
+                    },
+                },
+                "required": ["id", "kind", "until"],
+            },
         },
-        "required": ["engine", "hevy", "workouts", "schema_version", "kit", "export"],
+        "required": [
+            "engine",
+            "hevy",
+            "workouts",
+            "schema_version",
+            "kit",
+            "export",
+            "goal",
+            "phase",
+        ],
     },
     run=run,
     examples=(Example(("status",), "Where the instance stands."),),

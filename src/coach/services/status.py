@@ -6,9 +6,11 @@ from coach.core.flag import Flag
 from coach.core.import_flags import snapshot_stale
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
+from coach.store import goals, phases
 from coach.store.connection import Connection, schema_version
 from coach.store.export import MANIFEST, export, parse_manifest, tables_behind
 from coach.store.import_runs import last_import_at
+from coach.store.phases import OpenPhase
 from coach.store.workouts import counts_by_source
 
 
@@ -26,6 +28,13 @@ class KitTables:
 
 
 @dataclass(frozen=True)
+class CurrentGoal:
+    id: str
+    kind: str
+    priority_lifts: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class StatusResult:
     engine_version: str
     pin: str
@@ -36,6 +45,8 @@ class StatusResult:
     workouts: dict[str, int]
     kit: tuple[KitTables, ...]
     export: ExportState
+    goal: CurrentGoal | None
+    phase: OpenPhase | None
     warnings: tuple[Flag, ...]
 
 
@@ -63,6 +74,8 @@ def status(
         workouts=counts_by_source(conn),
         kit=tuple(KitTables(files.location, files.kit, tables_state(files)) for files in kits),
         export=_export_state(conn, engine_version, exported),
+        goal=_current_goal(conn),
+        phase=phases.open_phase(conn),
         warnings=(stale,) if stale else (),
     )
 
@@ -75,3 +88,11 @@ def _export_state(
         behind_store=export(conn, engine_version).files != exported,
         store_behind_export=manifest is not None and bool(tables_behind(conn, manifest)),
     )
+
+
+def _current_goal(conn: Connection) -> CurrentGoal | None:
+    goal_id = goals.current_id(conn)
+    stored = goals.get(conn, goal_id) if goal_id else None
+    if stored is None:
+        return None
+    return CurrentGoal(stored.id, stored.goal.kind, stored.goal.priority_lifts)
