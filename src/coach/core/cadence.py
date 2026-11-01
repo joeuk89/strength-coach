@@ -6,7 +6,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from coach.core.closed_week.adherence import WATCH_BELOW
-from coach.core.e1rm import e1rm
+from coach.core.e1rm import E1rm, e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.line_history import newest_first, ordinary
@@ -87,11 +87,22 @@ def _stalled_at_both_ends(read: CadenceRead) -> Metric | None:
 
 def _flat_e1rm(read: CadenceRead) -> Metric | None:
     before, closed = read.blocks
-    start = e1rm(read.exposures, read.line.exercise, before.end + _DAY)
-    end = e1rm(read.exposures, read.line.exercise, closed.end + _DAY)
+    exercise = read.line.exercise
+    start = e1rm(read.exposures, exercise, before.start) or _first_e1rm(read, before)
+    end = e1rm(read.exposures, exercise, closed.end + _DAY)
     if start is None or end is None or end.load.amount > start.load.amount:
         return None
     return {"e1rm_from": start.load.amount, "e1rm_to": end.load.amount}
+
+
+def _first_e1rm(read: CadenceRead, block: BlockSpan) -> E1rm | None:
+    exercise = read.line.exercise
+    days = [
+        e.date
+        for e in read.exposures
+        if e.exercise_id == exercise and block.start <= e.date <= block.end
+    ]
+    return e1rm(read.exposures, exercise, min(days) + _DAY) if days else None
 
 
 def _every_exposure_at_top(read: CadenceRead) -> Metric | None:

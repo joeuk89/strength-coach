@@ -123,6 +123,19 @@ def test_a_rising_e1rm_on_top_backoff_raises_nothing() -> None:
     assert cadence_signal(a_read(TOP_BACKOFF, *exposures)) is None
 
 
+def test_a_gain_in_the_earlier_block_then_a_flat_closed_block_raises_nothing() -> None:
+    exposures = (*top_sets(100, "2026-08-31"), *top_sets(105, *WEEKS))
+
+    assert cadence_signal(a_read(TOP_BACKOFF, *exposures)) is None
+
+
+def test_with_no_e1rm_before_the_earlier_block_the_slope_starts_at_its_first_exposure() -> None:
+    flag = cadence_signal(a_read(TOP_BACKOFF, *top_sets(100, *WEEKS)))
+
+    assert flag is not None
+    assert flag.params["metric"] == {"e1rm_from": 123.33, "e1rm_to": 123.33}
+
+
 def in_session(session_id: str, load: float, *days: str) -> tuple[Exposure, ...]:
     return tuple(
         an_exposure(on, (load, 5, 8), *[(85, 5, 7)] * 3, session_id=session_id) for on in days

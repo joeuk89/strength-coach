@@ -1,10 +1,14 @@
 import datetime
 
-from support.blocks import BOUNDARY, WHY, two_closed_blocks
+from support.blocks import BOUNDARY, PULL_UP_LINE, WHY, two_closed_blocks
 from support.clock import FixedClock, at
+from support.kit_fixtures import kit_files
 from support.ledger import a_weigh_in
+from support.program_drafts import a_draft, a_line, a_session, toml
+from support.programs import a_config
 
-from coach.services.progress import Progress, progress
+from coach.services.program import adopt
+from coach.services.progress import LiftProgress, Progress, progress
 from coach.store.connection import Connection
 
 RISING = (100, 105, 105, 110, 115, 115)
@@ -84,3 +88,38 @@ def test_the_report_shows_milestones_reached_and_to_go() -> None:
         (datetime.date(2026, 11, 23), None, True),
         (datetime.date(2026, 12, 7), None, True),
     ]
+
+
+LINEAR_BENCH = a_line(
+    "bb_bench_press",
+    sets=[{"count": 4, "reps": 6, "rpe": 8}],
+    scheme={"name": "linear"},
+    start_load=100,
+)
+DROP_AFTER_MISSES = (100, 100, 100, 100, 90, 90)
+
+
+def bench_in(found: Progress) -> LiftProgress:
+    return next(lift for lift in found.lifts if lift.exercise_id == "bb_bench_press")
+
+
+def test_a_load_drop_after_misses_on_linear_counts_as_a_reset() -> None:
+    conn = two_closed_blocks(bench_tops=DROP_AFTER_MISSES, bench_line=LINEAR_BENCH)
+
+    assert bench_in(report(conn)).resets == 1
+
+
+def test_a_drop_before_the_lift_moved_to_linear_is_no_reset() -> None:
+    conn = two_closed_blocks(bench_tops=DROP_AFTER_MISSES)
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", LINEAR_BENCH, PULL_UP_LINE), kind="amend", because="slow")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    bench = bench_in(report(conn))
+
+    assert (bench.scheme, bench.resets, bench.stall_streak) == ("linear", 0, 0)

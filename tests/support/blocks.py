@@ -40,7 +40,7 @@ MILESTONES = (
 )
 
 
-def a_push_program() -> Connection:
+def a_push_program(bench_line: dict[str, object] = BENCH_LINE) -> Connection:
     """The worked Goal with a `why` and two bench milestones, the maintenance Phase, and `push`
     adopted on 30 Oct 2026."""
     conn = a_library_store()
@@ -48,7 +48,7 @@ def a_push_program() -> Connection:
     a_phase(conn, "maintenance")
     adopt(
         conn,
-        toml(a_draft(a_session("push", BENCH_LINE, PULL_UP_LINE))),
+        toml(a_draft(a_session("push", bench_line, PULL_UP_LINE))),
         file="d.toml",
         config=a_config(),
         kits=(kit_files(),),
@@ -65,11 +65,12 @@ def two_closed_blocks(
     bench_tops: Sequence[float] = FLAT_BENCH,
     pull_up_reps: Sequence[int] = (6,) * WEEKS,
     steps: Sequence[dict[str, object]] = (),
+    bench_line: dict[str, object] = BENCH_LINE,
 ) -> Connection:
     """Six weeks of `push` on each Monday, weeks 3 and 6 light, all closed by one Check-in:
     Blocks b-2026-10-30 and b-2026-11-23 closed, b-2026-12-14 open. Bench logs a top set of
     `bench_tops[week]` × 5 at RPE 8 and three back-offs at 85 %, in lb."""
-    conn = a_push_program()
+    conn = a_push_program(bench_line)
     for week in range(WEEKS):
         plan_id = an_approved_plan(conn, monday(week))
         a_frozen_prescription(

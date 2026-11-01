@@ -134,6 +134,10 @@ def latest(conn: Connection) -> VersionRow | None:
     return _one(conn, f"{READ} ORDER BY sequence DESC LIMIT 1", ())
 
 
+def newest_first(conn: Connection) -> list[VersionRow]:
+    return [_row(found) for found in conn.execute(f"{READ} ORDER BY sequence DESC")]
+
+
 def in_force_at(conn: Connection, instant: str) -> VersionRow | None:
     """The latest version recorded by `instant`; one recorded in the same second counts."""
     return _one(
@@ -176,8 +180,10 @@ def block_opened(conn: Connection) -> str | None:
 
 def _one(conn: Connection, sql: str, params: tuple[object, ...]) -> VersionRow | None:
     found = conn.execute(sql, params).fetchone()
-    if found is None:
-        return None
+    return None if found is None else _row(found)
+
+
+def _row(found: tuple[str, int, str, str, str, str, str]) -> VersionRow:
     id_, sequence, position, adopted, form, draft_hash, recorded_at = found
     parsed, _ = parse_form(json.loads(form), file=f"program_version {id_}")
     return VersionRow(id_, sequence, position, adopted, parsed, draft_hash, recorded_at)

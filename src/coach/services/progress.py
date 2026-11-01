@@ -119,8 +119,8 @@ def progress(
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
     exposures = read_history(conn, units).exposures
-    version = programs.latest(conn)
-    form = version.form if version else None
+    versions = programs.newest_first(conn)
+    form = versions[0].form if versions else None
     stored = _goal(conn)
     priority = stored.goal.priority_lifts if stored else ()
     signals = cadence_signals(conn, closed, units=units, on=today)
@@ -132,7 +132,15 @@ def progress(
     return Progress(
         block=block,
         lifts=tuple(
-            _lift(exercise, form, exposures, spans, today, by_exercise.get(exercise))
+            _lift(
+                exercise,
+                form,
+                exposures,
+                spans,
+                _scheme_since(versions, exercise),
+                today,
+                by_exercise.get(exercise),
+            )
             for exercise in priority
         ),
         milestones=tuple(
@@ -159,6 +167,7 @@ def _lift(
     form: ProgramForm | None,
     exposures: Sequence[Exposure],
     spans: Sequence[BlockSpan],
+    since: datetime.date | None,
     today: datetime.date,
     signal: str | None,
 ) -> LiftProgress:
@@ -166,7 +175,11 @@ def _lift(
     read = spans[-BLOCKS_READ:]
     at_end = tuple((s.id, _e1rm(exposures, exercise, s.end + _DAY)) for s in read)
     history = ordinary(
-        newest_first(e for e in exposures if e.exercise_id == exercise and e.date <= today)
+        newest_first(
+            e
+            for e in exposures
+            if e.exercise_id == exercise and (since is None or since <= e.date) and e.date <= today
+        )
     )
     return LiftProgress(
         exercise_id=exercise,
@@ -180,6 +193,21 @@ def _lift(
         resets=_resets(line, history),
         signal=signal,
     )
+
+
+def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:
+    """The adoption date of the oldest version in the unbroken run giving the exercise its
+    current scheme."""
+    current = _line(versions[0].form, exercise) if versions else None
+    if current is None:
+        return None
+    since: datetime.date | None = None
+    for version in versions:
+        line = _line(version.form, exercise)
+        if line is None or line.scheme.name != current.scheme.name:
+            break
+        since = datetime.date.fromisoformat(version.adopted[:10])
+    return since
 
 
 def _line(form: ProgramForm | None, exercise: str) -> Line | None:
