@@ -9,6 +9,7 @@ from typing import cast
 
 from coach.core.anchor import StartLoad, anchor
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
+from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
@@ -16,6 +17,7 @@ from coach.core.load import Load, LoadMode
 from coach.core.overrides import line_override
 from coach.core.planned_week import week_monday
 from coach.core.prescription import (
+    ConditioningDose,
     ExerciseFacts,
     LinePrescription,
     PlanOverride,
@@ -24,7 +26,15 @@ from coach.core.prescription import (
     SessionPrescription,
     Step,
 )
-from coach.core.program.form import LOAD_BEARING_MODES, RACK_MODES, Line, Number, Reps, SetGroup
+from coach.core.program.form import (
+    LOAD_BEARING_MODES,
+    RACK_MODES,
+    Line,
+    Number,
+    Reps,
+    SchemeRef,
+    SetGroup,
+)
 from coach.core.rack import Rack, next_row_up
 from coach.core.scheme_moves import Move, SchemeInput, SchemeMoves
 from coach.core.top_backoff import back_off_load
@@ -33,8 +43,19 @@ from coach.core.warm_up import warm_up_loads
 
 def prescribe(request: PrescribeRequest) -> SessionPrescription:
     planned = request.planned
-    derived = (_Derivation(request, line).derive() for line in planned.lines)
-    return SessionPrescription(planned, tuple(line for line in derived if line is not None))
+    lines = planned.lines
+    if planned.kind == "conditioning":
+        lines = tuple(replace(line, scheme=SchemeRef("hold", {})) for line in lines)
+    derived = (_Derivation(request, line).derive() for line in lines)
+    kept = tuple(line for line in derived if line is not None)
+    return SessionPrescription(planned, kept, _session_dose(request))
+
+
+def _session_dose(request: PrescribeRequest) -> ConditioningDose | None:
+    session = request.version.form.session(request.planned.session_id)
+    if session is None or session.scheme is None:
+        return None
+    return conditioning_dose(session.scheme, request.activities.get(session.id))
 
 
 type Applied = tuple[str, PlanOverride]
