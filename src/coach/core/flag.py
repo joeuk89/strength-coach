@@ -172,6 +172,16 @@ class Flag:
             "left": self.left.to_json() if self.left else None,
         }
 
+    def to_summary(self) -> dict[str, object]:
+        """The flag in a default summary: its key and what it says, the params left out."""
+        return {
+            "key": self.key,
+            "code": self.code,
+            "severity": self.severity,
+            "message": self.message,
+            "left": self.left.to_json() if self.left else None,
+        }
+
 
 def raise_flag(
     code: str, scope: Scope, params: Mapping[str, object], message: str, *, rn: str | None = None

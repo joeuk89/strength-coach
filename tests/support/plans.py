@@ -2,10 +2,12 @@
 Each writes only through `store` functions or the services that own the record."""
 
 import json
+from collections.abc import Mapping, Sequence
 
+from coach.core.mirror import ENGINE_FOLDER_TITLES, FolderRole, MirroredFolder, MirroredRoutine
 from coach.core.units import KG_PER_LB
 from coach.services.program import adopt
-from coach.store import exercises, notes, rows
+from coach.store import exercises, mirrors, notes, rows, sessions
 from coach.store.connection import Connection
 from support.clock import FixedClock
 from support.history import a_logged_workout
@@ -115,5 +117,86 @@ def a_plan_override(
                 "because": "pain",
                 "text": "Knee niggle.",
                 "evidence": None,
+            },
+        )
+
+
+def an_acknowledgement(conn: Connection, plan_id: str, key: str, params_hash: str) -> None:
+    """An acknowledgement frozen on an approved WeekPlan, as `plan apply` freezes it."""
+    with conn:
+        rows.insert(
+            conn,
+            "acknowledgement",
+            {
+                "id": f"ack-{plan_id}-{key}",
+                "plan_id": plan_id,
+                "version_id": None,
+                "key": key,
+                "params_hash": params_hash,
+                "because": "kit",
+                "text": "Left on the plan in force.",
+                "evidence": None,
+            },
+        )
+
+
+def a_mapped_routine(
+    conn: Connection, session: str, routine: str, *, updated_at: str, mapped: bool = True
+) -> None:
+    """A routine in the mirror as import stores it and, with `mapped`, its Routine map row."""
+    with conn:
+        mirrors.upsert_routine(
+            conn, MirroredRoutine(routine, updated_at, session, None, "{}"), updated_at
+        )
+        if not sessions.exists(conn, session):
+            sessions.insert(conn, session, "pv-1")
+        if mapped:
+            rows.insert(
+                conn,
+                "routine_map",
+                {
+                    "session_id": session,
+                    "routine_id": routine,
+                    "status": "active",
+                    "last_verified": updated_at,
+                    "plan_id": None,
+                    "written_at": updated_at,
+                },
+            )
+
+
+def a_folder(conn: Connection, role: FolderRole, hevy_id: str) -> None:
+    with conn:
+        mirrors.upsert_folder(conn, MirroredFolder(role, hevy_id, ENGINE_FOLDER_TITLES[role]))
+
+
+def a_frozen_prescription(
+    conn: Connection,
+    plan_id: str,
+    session: str,
+    on: str,
+    exercise: str,
+    *,
+    set_groups: Sequence[Mapping[str, object]],
+    change: str,
+    flags: Sequence[Mapping[str, object]] = (),
+) -> None:
+    """A prescription row as `plan apply` freezes it on an approved WeekPlan."""
+    with conn:
+        if not sessions.exists(conn, session):
+            sessions.insert(conn, session, "pv-1")
+        rows.insert(
+            conn,
+            "prescription",
+            {
+                "plan_id": plan_id,
+                "session_id": session,
+                "date": on,
+                "exercise_id": exercise,
+                "set_groups": json.dumps(list(set_groups)),
+                "derived_from": "start_load",
+                "steps": "[]",
+                "flags": json.dumps(list(flags)),
+                "change": change,
             },
         )
