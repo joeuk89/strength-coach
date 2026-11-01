@@ -17,7 +17,7 @@ def test_the_prompt_for_the_worked_week_fits_the_budget_and_carries_every_part()
     )
 
     prompt = approval_prompt(
-        acknowledged.checked, acknowledged.actions, acknowledged.write_plan_hash, units="lb"
+        acknowledged.summary, acknowledged.actions, acknowledged.write_plan_hash, units="lb"
     )
 
     lines = prompt.splitlines()

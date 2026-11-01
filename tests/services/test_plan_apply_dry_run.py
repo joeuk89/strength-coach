@@ -147,7 +147,7 @@ def test_a_superseding_draft_inherits_no_acknowledgement_from_the_plan_in_force(
 
     superseding = run(conn, a_plan_draft(conn))
 
-    assert superseding.checked.draft.supersedes == plan_id
+    assert superseding.summary.supersedes == plan_id
     assert offgrid(superseding).left is None
 
 

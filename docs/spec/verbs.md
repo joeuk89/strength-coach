@@ -236,7 +236,10 @@ its response line when the attempt ends (ADR 0011), so a request with no respons
 where a process died. The re-run with the same `--expect` prompts again and resumes from the
 Routine map's statuses. If a routine the Write plan touches changed in the mirror after approval,
 other than by this push's own read-back, the dry run prints a new hash covering the changed
-versions, and the re-run refuses `expect_mismatch` until that hash is approved.
+versions, and the re-run refuses `expect_mismatch` until that hash is approved. On a resume the
+dry run shows the frozen WeekPlan, not a fresh derivation. Its summary and Hevy actions come from
+the frozen rows, and no Draft check runs again, because the plan was approved as it stands. To
+change the numbers, draft a superseding plan.
 
 ## Exit classes
 

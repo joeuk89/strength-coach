@@ -6,10 +6,10 @@ from collections.abc import Sequence
 
 from coach.core.config import Units
 from coach.core.flag import Flag
-from coach.core.frozen_prescription import dose, frozen_groups
+from coach.core.frozen_prescription import dose
 from coach.core.hevy_actions import HevyActions, RoutineAction
-from coach.core.plan_check import CheckedPlan
-from coach.core.prescription import LinePrescription, PlanOverride, SessionPrescription
+from coach.core.plan_summary import PlanSummary, SummaryLine, SummarySession
+from coach.core.prescription import PlanOverride
 
 LIST_CAP = 5
 NAMES_CAP = 6
@@ -17,7 +17,7 @@ DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
 def approval_prompt(
-    checked: CheckedPlan,
+    summary: PlanSummary,
     actions: HevyActions,
     write_plan_hash: str,
     *,
@@ -26,21 +26,20 @@ def approval_prompt(
     resumes: str | None = None,
     moved_routines: Sequence[str] = (),
 ) -> str:
-    draft = checked.draft
-    span_end = draft.week + datetime.timedelta(days=6)
-    header = f"Plan {draft.week} to {span_end}, rotation week {draft.position.week}"
+    span_end = summary.week + datetime.timedelta(days=6)
+    header = f"Plan {summary.week} to {span_end}, rotation week {summary.position.week}"
     if resumes is not None:
         header += f", resuming {resumes}"
-    elif draft.supersedes is not None:
-        header += f", superseding {draft.supersedes}"
+    elif summary.supersedes is not None:
+        header += f", superseding {summary.supersedes}"
     lines = [header]
     if moved_routines:
         lines.append(f"Changed in Hevy since approval: {', '.join(moved_routines)}")
-    for group in _by_session(draft.sessions):
+    for group in _by_session(summary.sessions):
         lines.extend(_session(group, units))
-    left = [f for f in checked.flags if f.left is not None]
-    standing = [f for f in checked.flags if f.left is None]
-    lines += _section("Overrides", [_override(o) for o in draft.overrides], full)
+    left = [f for f in summary.flags if f.left is not None]
+    standing = [f for f in summary.flags if f.left is None]
+    lines += _section("Overrides", [_override(o) for o in summary.overrides], full)
     lines += _section("Left warnings", [_left(f) for f in left], full)
     lines += _section("Warnings not left", [f"  {f.key}: {f.message}" for f in standing], full)
     lines += _hevy(actions, full)
@@ -48,19 +47,17 @@ def approval_prompt(
     return "\n".join(lines)
 
 
-def _by_session(
-    sessions: Sequence[SessionPrescription],
-) -> list[list[SessionPrescription]]:
+def _by_session(sessions: Sequence[SummarySession]) -> list[list[SummarySession]]:
     """A session planned on several days shows once, with its days."""
-    grouped: dict[str, list[SessionPrescription]] = {}
-    for prescribed in sessions:
-        grouped.setdefault(prescribed.session.session_id, []).append(prescribed)
+    grouped: dict[str, list[SummarySession]] = {}
+    for session in sessions:
+        grouped.setdefault(session.session_id, []).append(session)
     return list(grouped.values())
 
 
-def _session(group: list[SessionPrescription], units: Units) -> list[str]:
-    first = group[0].session
-    days = ", ".join(DAY_NAMES[p.session.date.weekday()] for p in group)
+def _session(group: list[SummarySession], units: Units) -> list[str]:
+    first = group[0]
+    days = ", ".join(DAY_NAMES[s.date.weekday()] for s in group)
     head = f"{days} {first.date if len(group) == 1 else ''}".rstrip()
     return [
         f"{head} {first.session_id} ({first.location})",
@@ -68,8 +65,8 @@ def _session(group: list[SessionPrescription], units: Units) -> list[str]:
     ]
 
 
-def _line(line: LinePrescription, units: Units) -> str:
-    return f"{line.exercise_id} {dose(frozen_groups(line.groups, units), units)} · {line.change}"
+def _line(line: SummaryLine, units: Units) -> str:
+    return f"{line.exercise_id} {dose(line.set_groups, units)} · {line.change}"
 
 
 def _override(override: PlanOverride) -> str:

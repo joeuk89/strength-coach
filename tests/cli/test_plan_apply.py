@@ -209,6 +209,37 @@ def test_a_resume_after_a_routine_moved_refuses_the_old_hash_and_pushes_under_th
     assert fresh.envelope["result"]["resumed"] is True
 
 
+def test_a_resume_after_an_aggravated_niggle_shows_the_frozen_plan_and_pushes_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root, overrides=PIN_OFF_RACK)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+    with_hevy("plan", "apply", draft, "--expect", digest)
+    (root / "knee.toml").write_text(KNEE_CAP.replace('"reported"', '"aggravated"'))
+    assert coach("record", "knee.toml").code == 0
+
+    dry = with_hevy("plan", "apply", draft, "--dry-run")
+    resumed = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert dry.code == 0, dry.stdout
+    shown = dry.envelope["result"]
+    assert (shown["write_plan_hash"], shown["resumes"]) == (digest, "wp-2026-11-02")
+    assert shown["position"] == {"week": "A", "source": "plan_in_force"}
+    assert "Mon 2026-11-02 lower (home)" in shown["prompt"].splitlines()
+    assert any(
+        line.startswith("  bb_back_squat 4×6–8 at 115 lb") for line in shown["prompt"].splitlines()
+    )
+    assert resumed.code == 0, resumed.stdout
+    assert resumed.envelope["result"]["resumed"] is True
+
+
 def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

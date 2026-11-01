@@ -5,7 +5,7 @@ and the push: the WeekPlan born approved, then the Hevy writes, each read back a
 import datetime
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import cast
 
 from coach.core.clock import Clock
@@ -14,11 +14,18 @@ from coach.core.draft_fields import draft_hash
 from coach.core.errors import Invalid, Refused
 from coach.core.flag import Acknowledgement, Flag
 from coach.core.frozen_prescription import frozen_groups
-from coach.core.hevy_actions import HevyActions, hevy_actions, projected_sessions
+from coach.core.hevy_actions import (
+    HevyActions,
+    ProjectedSession,
+    frozen_sessions,
+    hevy_actions,
+    projected_sessions,
+)
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles
 from coach.core.plan_check import CheckedPlan, TemplateFacts, check_plan
-from coach.core.plan_input import parse_plan_input
+from coach.core.plan_input import PlanInput, parse_plan_input
+from coach.core.plan_summary import PlanSummary, fresh_summary, frozen_summary
 from coach.core.prescription import PlanOverride
 from coach.core.program.checks import TEMPLATE_COLUMNS
 from coach.core.write_plan import (
@@ -34,6 +41,7 @@ from coach.services.projections import session_facts
 from coach.services.routine_push import Push, RoutineOutcome, guard
 from coach.store import exercises, mirrors, niggles, programs, routine_map, week_plans
 from coach.store.connection import Connection
+from coach.store.rows import Row
 from coach.store.transaction import transaction
 
 
@@ -46,16 +54,20 @@ class CheckedDraft:
 
 @dataclass(frozen=True)
 class DryRun:
-    checked: CheckedPlan
+    """`checked` is the Draft checked now, which a first approval freezes; a resume has none,
+    since it shows and pushes the WeekPlan as it was frozen."""
+
+    summary: PlanSummary
     actions: HevyActions
     write_plan_hash: str
     acknowledgements: tuple[Acknowledgement, ...] = ()
     resumes: str | None = None
     moved_routines: tuple[str, ...] = ()
+    checked: CheckedPlan | None = None
 
     @property
     def flags(self) -> tuple[Flag, ...]:
-        return self.checked.flags
+        return self.summary.flags
 
 
 def validate(
@@ -69,6 +81,17 @@ def validate(
 ) -> CheckedDraft:
     """Every flag of the Draft re-derived now, left or not; a violation is reported, not raised."""
     found = parse_plan_input(data, file=file)
+    return _validated(conn, found, config=config, kits=kits, clock=clock)
+
+
+def _validated(
+    conn: Connection,
+    found: PlanInput,
+    *,
+    config: Config,
+    kits: Sequence[KitFiles],
+    clock: Clock,
+) -> CheckedDraft:
     drafted = plan_draft(
         conn,
         config=config,
@@ -96,7 +119,11 @@ def dry_run(
     kits: Sequence[KitFiles],
     clock: Clock,
 ) -> DryRun:
-    validated = validate(conn, data, file=file, config=config, kits=kits, clock=clock)
+    found = parse_plan_input(data, file=file)
+    approved = week_plans.with_draft(conn, found.week.isoformat(), draft_hash(data))
+    if approved is not None:
+        return _resumed(conn, approved, hevy=config.hevy is not None)
+    validated = _validated(conn, found, config=config, kits=kits, clock=clock)
     checked = validated.checked
     if checked.violations:
         first = checked.violations[0]
@@ -107,30 +134,6 @@ def dry_run(
             {"flags": [flag.to_summary() for flag in checked.flags]},
         )
     actions = _actions(conn, checked, validated.templates)
-    approved = week_plans.with_draft(conn, checked.draft.week.isoformat(), draft_hash(data))
-    if approved is not None:
-        # The same Draft already approved: a re-run resumes its push under the approved hash,
-        # or a new one when a touched routine moved in Hevy since approval.
-        resumes = str(approved["id"])
-        draft = replace(checked.draft, supersedes=week_plans.superseded(conn, resumes))
-        moved = moved_routines(
-            actions.touched_routines,
-            approved_at=str(approved["approved_at"]),
-            imports=mirrors.routine_imports(conn),
-            own_writes=routine_map.written_by(conn, resumes),
-        )
-        versions = {r.hevy_id: r.updated_at for r in mirrors.routines(conn)}
-        digest = resumed_write_plan_hash(
-            str(approved["write_plan_hash"]), {routine: versions[routine] for routine in moved}
-        )
-        return DryRun(
-            replace(checked, draft=draft),
-            actions,
-            digest,
-            validated.acknowledgements,
-            resumes,
-            moved,
-        )
     digest = write_plan_hash(
         checked.draft,
         acknowledgements=validated.acknowledgements,
@@ -138,7 +141,79 @@ def dry_run(
         routine_versions={r.hevy_id: r.updated_at for r in mirrors.routines(conn)},
         units=config.athlete.units,
     )
-    return DryRun(checked, actions, digest, validated.acknowledgements)
+    return DryRun(
+        fresh_summary(checked, config.athlete.units),
+        actions,
+        digest,
+        validated.acknowledgements,
+        checked=checked,
+    )
+
+
+def _resumed(conn: Connection, approved: Row, *, hevy: bool) -> DryRun:
+    """The same Draft already approved: the dry run shows and pushes the frozen WeekPlan under
+    the approved hash, or a new one when a touched routine moved in Hevy since approval."""
+    plan_id = str(approved["id"])
+    rows = week_plans.prescriptions(conn, plan_id)
+    overrides = week_plans.stored_overrides(conn, plan_id)
+    summary = frozen_summary(
+        week=datetime.date.fromisoformat(str(approved["week"])),
+        position=str(approved["position"]),
+        supersedes=week_plans.superseded(conn, plan_id),
+        rows=rows,
+        overrides=overrides,
+        locations=_locations(conn, approved),
+    )
+    actions = _frozen_actions(conn, approved, rows) if hevy else HevyActions()
+    moved = moved_routines(
+        actions.touched_routines,
+        approved_at=str(approved["approved_at"]),
+        imports=mirrors.routine_imports(conn),
+        own_writes=routine_map.written_by(conn, plan_id),
+    )
+    versions = {r.hevy_id: r.updated_at for r in mirrors.routines(conn)}
+    digest = resumed_write_plan_hash(
+        str(approved["write_plan_hash"]), {routine: versions[routine] for routine in moved}
+    )
+    return DryRun(summary, actions, digest, resumes=plan_id, moved_routines=moved)
+
+
+def _locations(conn: Connection, approved: Row) -> dict[str, str]:
+    """Each session at its own location, else the default of the version in force at approval."""
+    version = programs.in_force_at(conn, str(approved["approved_at"]))
+    default = version.form.location if version else None
+    sessions = (*niggles.every_rehab_session(conn), *(version.form.sessions if version else ()))
+    return {s.id: s.location or default or "" for s in sessions}
+
+
+def _frozen_actions(conn: Connection, approved: Row, rows: Sequence[Row]) -> HevyActions:
+    """The frozen WeekPlan's sessions against the routines, folders and templates as they are
+    now. Every session the plan projects stays in force, so a resume never retires one."""
+    facts = session_facts(conn, approved)
+    projected = frozen_sessions(
+        [(str(r["session_id"]), str(r["exercise_id"])) for r in rows],
+        standing={s for s, f in facts.items() if f.standing},
+    )
+    return hevy_actions(
+        projected,
+        routine_map=routine_map.rows(conn),
+        folders={folder.role for folder in mirrors.folders(conn)},
+        sessions_in_force=_in_force(conn, approved, projected),
+        templates=_templates(conn),
+    )
+
+
+def _in_force(
+    conn: Connection,
+    approved: Row,
+    projected: Sequence[ProjectedSession],
+) -> set[str]:
+    version = programs.in_force_at(conn, str(approved["approved_at"]))
+    return {
+        *(s.id for s in (version.form.sessions if version else ())),
+        *(s.id for s in niggles.open_rehab_sessions(conn)),
+        *(s.session_id for s in projected),
+    }
 
 
 def _actions(
@@ -259,6 +334,7 @@ def push_approved(
 def _approve(
     conn: Connection, found: DryRun, data: bytes, units: Units, now: datetime.datetime
 ) -> str:
+    assert found.checked is not None
     draft = found.checked.draft
     week = draft.week.isoformat()
     at = utc_instant(now)
