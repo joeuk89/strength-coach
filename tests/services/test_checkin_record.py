@@ -238,6 +238,35 @@ def test_a_superseding_row_keeps_the_window_of_the_row_before_the_one_it_replace
     )
 
 
+def test_an_earlier_check_in_can_be_corrected_after_a_later_one() -> None:
+    conn = a_store()
+    run(conn, header() + "window_start = 2026-10-26\n")
+    run(conn, header("2026-11-08"))
+
+    corrected = run(conn, header(read="again") + "window_start = 2026-10-26\n")
+
+    assert (corrected.check_in, corrected.superseded) == ("ci-2026-11-01-2", "ci-2026-11-01")
+    assert (corrected.window_start, corrected.window_end) == (
+        datetime.date(2026, 10, 26),
+        datetime.date(2026, 11, 1),
+    )
+
+
+def test_a_correction_between_two_check_ins_starts_after_the_one_before_it() -> None:
+    conn = a_store()
+    run(conn, header() + "window_start = 2026-10-26\n")
+    run(conn, header("2026-11-08"))
+    run(conn, header("2026-11-15"))
+
+    corrected = run(conn, header("2026-11-08", read="again"))
+
+    assert (corrected.check_in, corrected.window_start, corrected.superseded) == (
+        "ci-2026-11-08-2",
+        datetime.date(2026, 11, 2),
+        "ci-2026-11-08",
+    )
+
+
 def test_phase_close_closes_the_open_phase_with_the_check_in_as_closed_by() -> None:
     conn = a_store()
     run(conn, EVERY_KIND.split("[[niggle]]")[0])

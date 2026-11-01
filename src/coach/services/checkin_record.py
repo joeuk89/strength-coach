@@ -45,7 +45,7 @@ def checkin_record(
 
 def _write(conn: Connection, checkin: CheckInFile, clock: Clock) -> StoredCheckIn:
     replaced = check_ins.current_on(conn, checkin.date)
-    previous = check_ins.newest_current(conn, other_than=checkin.date)
+    previous = check_ins.newest_current(conn, before=checkin.date if replaced else None)
     first_week = week_plans.first_week(conn)
     window = check_in_window(
         checkin.date,

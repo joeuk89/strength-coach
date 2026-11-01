@@ -42,14 +42,14 @@ def current_on(conn: Connection, date: datetime.date) -> StoredCheckIn | None:
 
 
 def newest_current(
-    conn: Connection, *, other_than: datetime.date | None = None
+    conn: Connection, *, before: datetime.date | None = None
 ) -> StoredCheckIn | None:
-    """The newest `current` row, or the newest dated other than the day a correction replaces."""
+    """The newest `current` row, or the newest dated strictly before `before`."""
     return _one(
         conn,
-        f"SELECT {COLUMNS} FROM check_in WHERE status = 'current' AND date IS NOT ? "
+        f"SELECT {COLUMNS} FROM check_in WHERE status = 'current' AND (? IS NULL OR date < ?) "
         "ORDER BY date DESC LIMIT 1",
-        (other_than.isoformat() if other_than else None,),
+        (before.isoformat(),) * 2 if before else (None, None),
     )
 
 
