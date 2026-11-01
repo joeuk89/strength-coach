@@ -83,9 +83,11 @@ def diff(
         for name in VERSION_FIELDS
         if before.get(name) != after.get(name)
     }
-    added, removed, changed = _keyed_changes(
-        _by(before.get("session"), "id"), _by(after.get("session"), "id")
-    )
+    sessions_before = _by(before.get("session"), "id")
+    sessions_after = _by(after.get("session"), "id")
+    if _reordered(sessions_before, sessions_after):
+        version["session_order"] = (list(sessions_before), list(sessions_after))
+    added, removed, changed = _keyed_changes(sessions_before, sessions_after)
     return ProgramDiff(
         version=version,
         sessions_added=added,
@@ -98,15 +100,16 @@ def diff(
 
 
 def _session_change(old: Document, new: Document) -> SessionChange | None:
-    added, removed, changed = _keyed_changes(
-        _by(old.get("line"), "exercise"), _by(new.get("line"), "exercise")
-    )
+    lines_before, lines_after = _by(old.get("line"), "exercise"), _by(new.get("line"), "exercise")
+    added, removed, changed = _keyed_changes(lines_before, lines_after)
     lines = tuple(
         LineChange(str(b["exercise"]), fields)
         for a, b in changed
         if (fields := _fields_changed(a, b, ("exercise",)))
     )
     fields = _fields_changed(old, new, ("id", "line"))
+    if _reordered(lines_before, lines_after):
+        fields = (*fields, "line_order")
     if not (fields or added or removed or lines):
         return None
     return SessionChange(str(new["id"]), fields, added, removed, lines)
@@ -119,6 +122,11 @@ def _keyed_changes(
     removed = tuple(key for key in before if key not in after)
     both = [(before[key], after[key]) for key in after if key in before]
     return added, removed, both
+
+
+def _reordered(before: Mapping[str, Document], after: Mapping[str, Document]) -> bool:
+    """Whether the keys both sides hold come in a different order."""
+    return [key for key in before if key in after] != [key for key in after if key in before]
 
 
 def _fields_changed(old: Document, new: Document, ignore: tuple[str, ...]) -> tuple[str, ...]:

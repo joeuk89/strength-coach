@@ -65,3 +65,34 @@ def test_sessions_and_lines_added_removed_and_changed() -> None:
         ],
     }
     assert change["version"] == {"schedule": change["version"]["schedule"]}
+
+
+def test_reordering_lines_in_a_session_is_a_line_order_change() -> None:
+    before, _ = filled_form(a_draft(a_session("push", a_line(), a_line("bb_back_squat"))))
+    after, _ = filled_form(a_draft(a_session("push", a_line("bb_back_squat"), a_line())))
+
+    change = diff(before, after)
+
+    assert not change.empty
+    assert [(s.id, s.fields) for s in change.sessions_changed] == [("push", ("line_order",))]
+
+
+def test_adding_a_line_alone_is_not_a_line_order_change() -> None:
+    before, _ = filled_form(a_draft(a_session("push", a_line())))
+    after, _ = filled_form(a_draft(a_session("push", a_line("bb_back_squat"), a_line())))
+
+    assert [s.fields for s in diff(before, after).sessions_changed] == [()]
+
+
+def test_reordering_sessions_is_a_session_order_change() -> None:
+    schedule = {"rotation": ["A"], "A": {"mon": "push", "wed": "legs"}}
+    push, legs = a_session("push"), a_session("legs", a_line("bb_back_squat"))
+    before, _ = filled_form(a_draft(push, legs, schedule=schedule))
+    after, _ = filled_form(a_draft(legs, push, schedule=schedule))
+
+    change: Any = diff(before, after).to_json()
+
+    assert change["empty"] is False
+    assert change["version"] == {
+        "session_order": {"from": ["push", "legs"], "to": ["legs", "push"]}
+    }
