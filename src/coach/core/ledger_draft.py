@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import cast
 
+from coach.core.coaching_records import NiggleRecord, parse_niggle
 from coach.core.draft_fields import Fields, Table, draft_hash, required
 from coach.core.errors import Invalid
 from coach.core.ref import KEY, Ref
@@ -114,7 +115,8 @@ class ExerciseRecord:
 
 
 type LedgerRecord = (
-    NoteRecord
+    NiggleRecord
+    | NoteRecord
     | WeighInRecord
     | SleepNightRecord
     | ActivityRecord
@@ -340,6 +342,7 @@ def _muscles(value: object, f: Fields) -> dict[str, list[str]]:
 
 
 PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
+    "niggle": parse_niggle,
     "note": _note,
     "weigh_in": _weigh_in,
     "sleep_night": _sleep_night,
@@ -349,6 +352,7 @@ PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
     "exercise": _exercise,
 }
 KIND_OF: dict[type, str] = {
+    NiggleRecord: "niggle",
     NoteRecord: "note",
     WeighInRecord: "weigh_in",
     SleepNightRecord: "sleep_night",

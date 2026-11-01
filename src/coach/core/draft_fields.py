@@ -72,6 +72,12 @@ class Fields:
             return value
         raise self.wrong(name, f"one of {', '.join(registry.names())}")
 
+    def choice(self, name: str, values: tuple[str, ...], *, required: bool = False) -> str | None:
+        value = self.text(name, required=required)
+        if value is None or value in values:
+            return value
+        raise self.wrong(name, f"one of {', '.join(values)}")
+
     def ref(self, name: str, kinds: tuple[str, ...]) -> Ref | None:
         value = self.text(name)
         if value is None:
