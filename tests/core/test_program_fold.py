@@ -36,6 +36,31 @@ def test_a_swap_folds_to_the_lines_exercise_load_mode_and_start_load() -> None:
     assert folded.folded == (Folded("lower-a", "bb_back_squat", "swap_exercise"),)
 
 
+def a_per_side_squat_form() -> ProgramForm:
+    form = a_rotation_form()
+    lower = form.sessions[0]
+    lines = (a_line(load_mode="per_side"), *lower.lines[1:])
+    return replace(form, sessions=(replace(lower, lines=lines), *form.sessions[1:]))
+
+
+def test_a_swap_without_a_load_mode_keeps_the_lines_load_mode() -> None:
+    folded = fold_overrides(
+        a_per_side_squat_form(), (on_squat("swap_exercise", to="bb_front_squat", start_load=60),)
+    )
+
+    squat = lower_lines(folded.form)[0]
+    assert (squat.exercise, squat.load_mode, squat.start_load) == ("bb_front_squat", "per_side", 60)
+
+
+def test_a_swap_with_a_load_mode_replaces_the_lines_load_mode() -> None:
+    folded = fold_overrides(
+        a_per_side_squat_form(),
+        (on_squat("swap_exercise", to="goblet_squat", start_load=24, load_mode="total"),),
+    )
+
+    assert lower_lines(folded.form)[0].load_mode == "total"
+
+
 def test_a_pin_folds_to_the_start_load_and_is_named_a_folded_pin() -> None:
     pin = PlanOverride("pin_load", "lower-a", "bb_bench_press", params={"load": 100})
 
