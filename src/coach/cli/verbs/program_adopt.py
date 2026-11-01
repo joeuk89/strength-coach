@@ -41,7 +41,11 @@ def _result(result: AdoptResult) -> Json:
             "warnings": list[Json](),
             "no_op": result.no_op,
         }
-    return summary | {"acknowledgements": list[Json](), "no_op": result.no_op}
+    acknowledgements: list[Json] = [
+        {"flag": entry.flag, "because": entry.because, "text": entry.text}
+        for entry in result.acknowledgements
+    ]
+    return summary | {"acknowledgements": acknowledgements, "no_op": result.no_op}
 
 
 DECLARATION = Declaration(

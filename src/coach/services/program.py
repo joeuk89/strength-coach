@@ -15,7 +15,7 @@ from coach.core.load import Load, LoadMode
 from coach.core.program.checks import AdoptContext, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
-from coach.core.program.form import Line, ProgramForm
+from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.rack import Rack
 from coach.core.registries.program import EQUIPMENT_KINDS, LOAD_MODES
@@ -36,6 +36,7 @@ class AdoptResult:
     block_reset: bool
     diff: ProgramDiff
     start_loads: tuple[Mapping[str, object], ...]
+    acknowledgements: tuple[AcknowledgeEntry, ...] = ()
     dry_run: bool = False
     no_op: bool = False
 
@@ -62,15 +63,14 @@ def adopt(
     position: str | None = None,
 ) -> AdoptResult:
     """Validate, fill, upsert declared exercises and record the version in one transaction.
-    A Draft whose hash is stored writes nothing and returns that version."""
+    A Draft whose hash matches the version in force writes nothing and returns that version."""
     draft = parse_program_draft(data, file=file)
     racks = _racks(config, kits, draft.form)
     writing: AbstractContextManager[None] = nullcontext() if dry_run else transaction(conn)
     with writing:
-        stored = programs.by_hash(conn, draft.hash)
-        if stored is not None:
-            return _no_op(conn, stored, config, dry_run)
         previous = programs.latest(conn)
+        if previous is not None and previous.draft_hash == draft.hash:
+            return _no_op(conn, previous, config, dry_run)
         version_id = f"pv-{previous.sequence + 1 if previous else 1}"
         start = _position(draft.form, previous, position)
         goal = _current_goal(conn)
@@ -107,6 +107,7 @@ def adopt(
             block_reset=reset,
             diff=diff(previous.form if previous else None, filled.form, filled.filled),
             start_loads=_start_loads(filled.form, library, config),
+            acknowledgements=filled.form.acknowledgements,
             dry_run=dry_run,
         )
         if dry_run:
@@ -266,6 +267,7 @@ def _no_op(
         block_reset=False,
         diff=diff(stored.form, stored.form),
         start_loads=_start_loads(stored.form, _library(conn), config),
+        acknowledgements=stored.form.acknowledgements,
         dry_run=dry_run,
         no_op=True,
     )

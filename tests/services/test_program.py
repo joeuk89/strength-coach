@@ -152,6 +152,28 @@ def test_the_same_draft_again_is_a_no_op_with_the_same_version_number() -> None:
     assert conn.execute("SELECT count(*) FROM program_version").fetchone() == (1,)
 
 
+def test_going_back_to_an_earlier_draft_records_a_new_version_in_force() -> None:
+    conn = the_worked_store()
+    run(conn, rotation_draft())
+    run(conn, rotation_draft(because="block 2"))
+
+    back = run(conn, rotation_draft())
+
+    assert not back.no_op and back.version_id == "pv-3"
+    assert show(conn).version_id == "pv-3"
+
+
+def test_adopt_returns_the_acknowledgements_it_froze_and_so_does_the_no_op() -> None:
+    conn = the_worked_store()
+
+    adopted = run(conn, WORKED_DRAFT_COMPLETE)
+    again = run(conn, WORKED_DRAFT_COMPLETE)
+
+    flags = ["scheme_off_emphasis@line:a-sat-pull/pull_up"]
+    assert [entry.flag for entry in adopted.acknowledgements] == flags
+    assert again.no_op and again.acknowledgements == adopted.acknowledgements
+
+
 def test_a_redesign_starts_at_the_first_week_or_at_position() -> None:
     conn = the_worked_store()
 

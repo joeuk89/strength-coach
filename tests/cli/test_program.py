@@ -82,7 +82,14 @@ def test_program_adopt_records_the_worked_draft(instance: Path) -> None:
         "kind": "redesign",
         "position": "A",
         "block": {"id": "b-2026-10-30", "reset": True},
-        "acknowledgements": [],
+        "acknowledgements": [
+            {
+                "flag": "scheme_off_emphasis@line:a-sat-pull/pull_up",
+                "because": "coach_judgement",
+                "text": "The pull-up progresses through the assistance ladder and negatives; "
+                "the weekly single is the measure.",
+            }
+        ],
         "no_op": False,
     }
 

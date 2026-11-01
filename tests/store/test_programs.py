@@ -33,7 +33,6 @@ def test_a_version_round_trips_with_its_sessions_and_lines() -> None:
     written = a_version(conn, 1)
 
     assert programs.latest(conn) == written
-    assert programs.by_hash(conn, "sha256:1") == written
     assert programs.line_counts(conn, "pv-1") == [("push", 2)]
     assert conn.execute("SELECT id, introduced_in FROM session").fetchall() == [("push", "pv-1")]
 

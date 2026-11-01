@@ -103,10 +103,6 @@ def latest(conn: Connection) -> VersionRow | None:
     return _one(conn, f"{READ} ORDER BY sequence DESC LIMIT 1", ())
 
 
-def by_hash(conn: Connection, draft_hash: str) -> VersionRow | None:
-    return _one(conn, f"{READ} WHERE draft_hash = ?", (draft_hash,))
-
-
 def line_counts(conn: Connection, version_id: str) -> list[tuple[str, int]]:
     """Each session of the version with its line count, in the version's order."""
     return [
