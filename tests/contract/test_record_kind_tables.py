@@ -56,7 +56,9 @@ def test_every_id_prefix_matches_the_schema_ids_table(kind: RecordKind) -> None:
 
 
 def test_kinds_without_a_schema_prefix() -> None:
-    unlisted = {k.name: k.id_prefix for k in RECORD_KINDS.entries if k.store_table not in SCHEMA_PREFIXES}
+    unlisted = {
+        k.name: k.id_prefix for k in RECORD_KINDS.entries if k.store_table not in SCHEMA_PREFIXES
+    }
 
     assert unlisted == {"note": "an-", "exercise": None}
     assert "an-" not in SCHEMA_PREFIXES.values()
