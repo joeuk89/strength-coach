@@ -151,7 +151,7 @@ class ProgramForm:
                 "rpe_cap": self.deload.rpe_cap,
                 "test_priority_lifts": self.deload.test_priority_lifts,
             }
-        document["session"] = [_session_document(s) for s in self.sessions]
+        document["session"] = [session_document(s) for s in self.sessions]
         if self.exercises:
             document["exercise"] = {id_: dict(fields) for id_, fields in self.exercises.items()}
         if self.acknowledgements:
@@ -162,7 +162,7 @@ class ProgramForm:
         return document
 
 
-def _session_document(session: Session) -> dict[str, object]:
+def session_document(session: Session) -> dict[str, object]:
     document: dict[str, object] = {
         "id": session.id,
         "title": session.title,
@@ -173,16 +173,16 @@ def _session_document(session: Session) -> dict[str, object]:
         "cadence": session.cadence,
         "location": session.location,
         "minutes": session.minutes,
-        "scheme": _scheme_document(session.scheme) if session.scheme else None,
+        "scheme": scheme_document(session.scheme) if session.scheme else None,
         "estimated_sets": dict(session.estimated_sets) if session.estimated_sets else None,
     }
     document |= {key: value for key, value in optional.items() if value is not None}
     if session.lines:
-        document["line"] = [_line_document(line) for line in session.lines]
+        document["line"] = [line_document(line) for line in session.lines]
     return document
 
 
-def _line_document(line: Line) -> dict[str, object]:
+def line_document(line: Line) -> dict[str, object]:
     document: dict[str, object] = {"exercise": line.exercise}
     if line.load_mode is not None:
         document["load_mode"] = line.load_mode
@@ -190,7 +190,7 @@ def _line_document(line: Line) -> dict[str, object]:
     document["rest_s"] = line.rest_s
     optional: dict[str, object | None] = {
         "cues": line.cues,
-        "scheme": _scheme_document(line.scheme),
+        "scheme": scheme_document(line.scheme),
         "start_load": line.start_load,
         "superset": line.superset,
     }
@@ -211,5 +211,5 @@ def _group_document(group: SetGroup) -> dict[str, object]:
     return document | {key: value for key, value in optional.items() if value is not None}
 
 
-def _scheme_document(scheme: SchemeRef) -> dict[str, object]:
+def scheme_document(scheme: SchemeRef) -> dict[str, object]:
     return {"name": scheme.name, **scheme.params}
