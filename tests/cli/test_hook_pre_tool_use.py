@@ -165,6 +165,13 @@ def test_a_command_that_writes_nothing_gated_gets_no_answer(command: str) -> Non
         "curl https://api.hevyapp.com/v1/workoutsX",
         "timeout 5 curl https://api.hevyapp.com/v1/workouts",
         "if true; then curl -X DELETE https://api.hevyapp.com/v1/workouts/abc; fi",
+        "python3 - <<'EOF'\nimport urllib.request as u\n"
+        "u.urlopen(u.Request('https://api.hevyapp.com/v1/workouts/abc', method='DELETE'))\nEOF",
+        "node <<EOF\nfetch('https://api.hevyapp.com/v1/workouts/abc',{method:'DELETE'})\nEOF",
+        "cat > x.py <<'EOF'\nimport urllib.request as u\n"
+        "u.urlopen('https://api.hevyapp.com/v1/workouts')\nEOF\npython3 x.py",
+        "python3 - <<'EOF'\n# don't log the key\n"
+        "import urllib.request as u; u.urlopen('https://api.hevyapp.com/v1/workouts')\nEOF",
     ],
 )
 @pytest.mark.parametrize("mode", EVERY_MODE)
@@ -181,6 +188,8 @@ def test_any_method_on_hevy_workouts_is_denied(command: str, mode: str | None) -
         "curl https://api.hevyapp.com/v1/routines",
         "curl -X PUT -d @r.json https://api.hevyapp.com/v1/routines/r1",
         "wget https://api.hevyapp.com/v1/exercise_templates",
+        "python3 - <<'EOF'\nimport urllib.request as u\n"
+        "u.urlopen(u.Request('https://api.hevyapp.com/v1/routines/r1', method='PUT'))\nEOF",
     ],
 )
 def test_a_raw_call_on_another_hevy_path_asks_with_a_warning(command: str) -> None:

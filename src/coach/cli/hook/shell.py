@@ -57,7 +57,7 @@ SUBSTITUTED = "__coach_hook_substituted__"
 
 
 def scan(command: str, cwd: Path) -> list[Finding]:
-    return list(_scan(command, cwd, 0))
+    return list(dict.fromkeys(_scan(command, cwd, 0)))
 
 
 def _scan(text: str, cwd: Path, depth: int) -> Iterator[Finding]:
@@ -71,6 +71,7 @@ def _scan(text: str, cwd: Path, depth: int) -> Iterator[Finding]:
     except ValueError as error:
         if _mentions(text):
             yield Unreadable(str(error))
+            yield from _hevy_calls(text)
         return
     for script in scripts:
         yield from _scan(script, cwd, depth + 1)
@@ -100,13 +101,18 @@ def _command(words: list[str], text: str, cwd: Path, depth: int) -> Iterator[Fin
             yield CoachCall(tuple(argv), cwd, any(_opaque(word) for word in argv))
             return
         if program in HTTP_CLIENTS or INTERPRETER.match(program):
-            for match in HEVY_URL.finditer(" ".join(rest[1:])):
-                yield HevyCall(_normalised(match.group("path") or "/"))
+            # The whole text, because a heredoc or a file written earlier in it can carry the URL.
+            yield from _hevy_calls(text)
             if HEVY_HOST in text.lower() and any(_opaque(word) for word in rest[1:]):
                 yield Unreadable("a URL in it is only known when the shell runs it")
             return
     if _opaque(words[0]) and _mentions(text):
         yield Unreadable("the program it runs is only known when the shell runs it")
+
+
+def _hevy_calls(text: str) -> Iterator[HevyCall]:
+    for match in HEVY_URL.finditer(text):
+        yield HevyCall(_normalised(match.group("path") or "/"))
 
 
 def _opaque(word: str) -> bool:
