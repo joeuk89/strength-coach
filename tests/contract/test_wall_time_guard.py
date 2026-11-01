@@ -116,3 +116,51 @@ def test_slow_teardown_counts_once_toward_the_budget(pytester: pytest.Pytester) 
 
     result.assert_outcomes(passed=1, errors=1)
     result.stdout.fnmatch_lines(["*1.20 s*over the 1.0 s budget*"])
+
+
+def test_a_shared_fixture_does_not_count_toward_the_first_test_that_uses_it(
+    pytester: pytest.Pytester,
+) -> None:
+    pytester.makeconftest(PLANTED_CONFTEST)
+    pytester.makepyfile(
+        """
+        import pytest
+        from conftest import CLOCK
+
+        @pytest.fixture(scope="module")
+        def shared():
+            CLOCK.seconds += 1.5
+
+        def test_first(shared, fake_clock):
+            fake_clock.seconds += 0.6
+
+        def test_second(shared):
+            pass
+        """
+    )
+
+    result = pytester.runpytest("-p", "support.wall_time")
+
+    result.assert_outcomes(passed=2)
+
+
+def test_a_slow_test_using_a_shared_fixture_still_fails(pytester: pytest.Pytester) -> None:
+    pytester.makeconftest(PLANTED_CONFTEST)
+    pytester.makepyfile(
+        """
+        import pytest
+        from conftest import CLOCK
+
+        @pytest.fixture(scope="module")
+        def shared():
+            CLOCK.seconds += 0.5
+
+        def test_slow(shared, fake_clock):
+            fake_clock.seconds += 1.5
+        """
+    )
+
+    result = pytester.runpytest("-p", "support.wall_time")
+
+    result.assert_outcomes(failed=1)
+    result.stdout.fnmatch_lines(["*1.50 s*over the 1.0 s budget*"])
