@@ -14,7 +14,6 @@ from coach.core.planned_week import week_monday
 from coach.core.registries.agent import RECORD_KINDS
 from coach.core.registries.flags import Severity
 from coach.services.history import read_history
-from coach.services.ledger import ID_PREFIX
 from coach.store import (
     annotations,
     decisions,
@@ -124,9 +123,9 @@ def ledger(
 
 
 def _kind_of(conn: Connection, id_: str) -> str:
-    for kind, (_, prefix) in ID_PREFIX.items():
-        if id_.startswith(prefix):
-            return kind
+    for kind in RECORD_KINDS.entries:
+        if kind.id_prefix is not None and id_.startswith(kind.id_prefix):
+            return kind.name
     return "exercise" if library.get(conn, id_) else "workout"
 
 

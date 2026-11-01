@@ -1,36 +1,13 @@
+from coach.core.registries.agent import RECORD_KINDS, RecordKind
 from coach.store.connection import Connection
 
-# Each ledger table a Draft verb writes, by record kind.
-TABLES = {
-    "annotation": "annotation",
-    "decision": "decision",
-    "note": "athlete_note",
-    "weigh_in": "weigh_in",
-    "sleep_night": "sleep_night",
-    "activity": "activity",
-    "status_span": "status_span",
-    "workout": "workout",
-    "observation": "observation",
-}
-# A record kind written as events: the event table and the column naming the record's id.
-EVENTS = {
-    "niggle": ("niggle_event", "niggle_id"),
-    "followup": ("follow_up_event", "follow_up_id"),
-}
 WITHDRAWABLE = ("weigh_in", "sleep_night", "status_span", "annotation")
 
 
 def written_by(conn: Connection, draft_hash: str) -> dict[str, list[str]]:
     """The ids each record kind holds under one Draft hash, in id order."""
     queries = {
-        **{
-            kind: f"SELECT DISTINCT id FROM {table} WHERE draft_hash = ? ORDER BY id"
-            for kind, table in TABLES.items()
-        },
-        **{
-            kind: f"SELECT {column} FROM {table} WHERE draft_hash = ? ORDER BY id"
-            for kind, (table, column) in EVENTS.items()
-        },
+        kind.name: _ids_written(kind) for kind in RECORD_KINDS.entries if kind.carries_draft_hash
     }
     found = {
         kind: [id_ for (id_,) in conn.execute(sql, (draft_hash,))] for kind, sql in queries.items()
@@ -48,3 +25,11 @@ def withdrawn_by_draft(conn: Connection, draft_hash: str) -> list[str]:
             (draft_hash,),
         )
     ]
+
+
+def _ids_written(kind: RecordKind) -> str:
+    if kind.event_table is not None:
+        return (
+            f"SELECT {kind.store_table}_id FROM {kind.event_table} WHERE draft_hash = ? ORDER BY id"
+        )
+    return f"SELECT DISTINCT id FROM {kind.store_table} WHERE draft_hash = ? ORDER BY id"

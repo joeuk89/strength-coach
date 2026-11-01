@@ -27,6 +27,7 @@ from coach.core.ledger_draft import (
     kind_of,
 )
 from coach.core.ref import Ref
+from coach.core.registries.agent import RECORD_KINDS
 from coach.core.withdrawal import withdrawable
 from coach.services.coaching_ledger import (
     Writing,
@@ -39,20 +40,6 @@ from coach.store import exercises, notes, observations, readings, refs, workouts
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 
-# schema.md, "Ids". An Athlete note's prefix is not in that table: `an-`, since `n-` is a niggle's.
-ID_PREFIX = {
-    "niggle": ("niggle", "n-"),
-    "followup": ("follow_up", "f-"),
-    "decision": ("decision", "d-"),
-    "annotation": ("annotation", "a-"),
-    "note": ("athlete_note", "an-"),
-    "weigh_in": ("weigh_in", "wi-"),
-    "sleep_night": ("sleep_night", "sn-"),
-    "activity": ("activity", "ac-"),
-    "status_span": ("status_span", "ss-"),
-    "workout": ("workout", "w-"),
-    "observation": ("observation", "o-"),
-}
 # What a withdrawing row restates from the row it withdraws (schema.md, "Views").
 RESTATED = {
     "weigh_in": ("date", "kg", "source"),
@@ -116,7 +103,9 @@ class _Writer:
         named = [_named_id(r) for r in self.draft.records]
         kinds = [kind_of(r) for r, n in zip(self.draft.records, named, strict=True) if n is None]
         fresh = {
-            kind: next_ids(self.conn, *ID_PREFIX[kind], kinds.count(kind)) for kind in ID_PREFIX
+            kind.name: next_ids(self.conn, kind.store_table, kind.id_prefix, kinds.count(kind.name))
+            for kind in RECORD_KINDS.entries
+            if kind.id_prefix is not None
         }
         return [
             n if n is not None else fresh[kind_of(r)].pop(0)
