@@ -10,7 +10,7 @@ from coach.core.bounds import Proposal
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
-from coach.core.line_history import line_history, ordinary
+from coach.core.line_history import line_history, ordinary, top_on_grid
 from coach.core.linear import misses_at, misses_before_reset, reset_load
 from coach.core.load import Load, LoadMode
 from coach.core.prescription import PrescribeRequest, Step
@@ -176,10 +176,24 @@ class SchemeMoves:
             return self._held(before)
         if before is None:
             return self._held(before)
-        top = top_set(found.load.as_mode(self.given.mode), self.line, before, self.given.rack)
+        floor = self._heavier(before, self._top_of(found.exposure))
+        top = top_set(found.load.as_mode(self.given.mode), self.line, floor, self.given.rack)
         if top.load != before:
             self.steps.append(Step("scheme", before.amount, top.load.amount, top.cause))
         return Move(top.load, "hold", self.given.sets)
+
+    def _top_of(self, ref: str) -> Load | None:
+        """The top working load of the exposure an e1RM point came from."""
+        exposure = next(e for e in self.given.request.exposures if e.ref == ref)
+        return top_on_grid(exposure, self.given.rack, self.given.mode)
+
+    @staticmethod
+    def _heavier(anchor_top: Load, best_top: Load | None) -> Load:
+        """The one-row cap counts from the best point's top too, so a lighter bad day as the
+        anchor never lowers the top set (docs/spec/prescription.md, "The move, per scheme")."""
+        if best_top is None or best_top.amount <= anchor_top.amount:
+            return anchor_top
+        return best_top
 
     def _wave(self, exposure: Exposure | None) -> Move:
         tm = training_max(
@@ -190,7 +204,7 @@ class SchemeMoves:
             return self._held(None)
         index = wave_index(self.given.request.hard_week_count)
         count = sum(group.count for group in self.given.sets if group.working)
-        targets = wave_targets(tm.load, index, count)
+        targets = wave_targets(tm.load, index, count, self.given.rack)
         wave = f"wave {index + 1}"
         self.steps.append(Step("scheme", tm.load.amount, tuple(t.amount for t in targets), wave))
         if exposure is not None:

@@ -134,7 +134,7 @@ class _Derivation:
             loaded = mode in LOAD_BEARING_MODES
             pinned = self._pin(opening, mode, *pin) if pin is not None and loaded else None
             context = replace(context, scheme_load=opening, pin=pinned)
-            proposal = move.proposal if pinned is None else pinned
+            proposal = move.proposal if pinned is None else _pinned(move.proposal, pinned)
             bounded = bound(context, proposal, move.rounding, self.steps, self.flags)
             change = "first prescription"
             return self._bounded(line, found.derived_from, rack, bounded, change)
@@ -157,7 +157,7 @@ class _Derivation:
             pin=pinned,
         )
         if pinned is not None:
-            bounded = bound(context, pinned, "hold", self.steps, self.flags)
+            bounded = bound(context, _pinned(move.proposal, pinned), "hold", self.steps, self.flags)
         else:
             bounded = bound(context, move.proposal, move.rounding, self.steps, self.flags)
         if pin is not None:
@@ -395,6 +395,13 @@ def _first(proposal: Proposal) -> Load | None:
     if isinstance(proposal, tuple):
         return proposal[0] if proposal else None
     return proposal
+
+
+def _pinned(proposal: Proposal, pinned: Load) -> Proposal:
+    """A pin keeps a per-set proposal per set, so only the last set stays open."""
+    if isinstance(proposal, tuple):
+        return tuple(pinned for _ in proposal)
+    return pinned
 
 
 def _amount(load: Load | None) -> float | None:

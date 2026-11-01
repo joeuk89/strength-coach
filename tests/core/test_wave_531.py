@@ -126,3 +126,34 @@ def test_a_light_cut_and_a_niggle_cap_bind_each_wave_set() -> None:
         line.steps
     )
     assert working(line) == [(1, 57.5, 5), (1, 67.5, 5), (1, 70, 5)]
+
+
+TRAINING_MAX_110 = DecisionInForce(
+    "d-0007", "training_max", exercise_id="bb_bench_press", params={"load": 110}
+)
+
+
+def test_wave_loads_off_the_rack_still_name_the_wave_as_the_change() -> None:
+    line = derive(*THREE_WAVES, decisions=(TRAINING_MAX_110,), hard_week_count=1)
+
+    # 77, 88 and 99 of 110, each down to a row
+    assert working(line) == [(1, 75, 3), (1, 87.5, 3), (1, 97.5, "3+")]
+    assert line.change == "wave 2: training max 110"
+
+
+def pin(load: float) -> PlanOverride:
+    return PlanOverride(
+        "pin_load", session_id="lower", exercise_id="bb_bench_press", params={"load": load}
+    )
+
+
+def test_a_pin_on_a_first_wave_leaves_only_the_last_set_open() -> None:
+    line = derive(overrides=(pin(80),), hard_week_count=1)
+
+    assert working(line) == [(1, 80, 3), (1, 80, 3), (1, 80, "3+")]
+
+
+def test_a_pin_on_a_wave_after_an_exposure_leaves_only_the_last_set_open() -> None:
+    line = derive(*THREE_WAVES, overrides=(pin(80),), hard_week_count=1)
+
+    assert working(line) == [(1, 80, 3), (1, 80, 3), (1, 80, "3+")]

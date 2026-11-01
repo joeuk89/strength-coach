@@ -49,14 +49,17 @@ def wave_index(hard_week_count: int) -> int:
     return hard_week_count % len(WAVES)
 
 
-def wave_targets(tm: Load, index: int, count: int) -> tuple[Load, ...]:
-    """Each working set's share of the training max before the rack; sets past the wave's three
-    repeat its heaviest."""
+def wave_targets(tm: Load, index: int, count: int, rack: Rack | None) -> tuple[Load, ...]:
+    """Each working set's share of the training max rounded down to the rack; sets past the
+    wave's three repeat its heaviest."""
     percents = WAVES[index]
-    return tuple(
+    shares = (
         Load(round(tm.amount * percents[min(i, len(percents) - 1)] / 100, PRECISION), tm.mode)
         for i in range(count)
     )
+    if rack is None:
+        return tuple(shares)
+    return tuple(round_to_rack(rack, share, "cut").load for share in shares)
 
 
 def rep_out_target(index: int) -> int:
@@ -69,8 +72,7 @@ def wave_of(exposure: Exposure, tm: Load, rack: Rack | None) -> int | None:
     if logged is None:
         return None
     for index in range(len(WAVES)):
-        heaviest = wave_targets(tm, index, len(WAVES[index]))[-1]
-        if (heaviest if rack is None else round_to_rack(rack, heaviest, "cut").load) == logged:
+        if wave_targets(tm, index, len(WAVES[index]), rack)[-1] == logged:
             return index
     return None
 

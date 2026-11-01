@@ -73,6 +73,18 @@ def test_one_bad_day_never_lowers_the_top_set() -> None:
     assert working_loads(after_a_bad_day) == working_loads(good)
 
 
+def test_a_bad_day_at_a_lighter_top_never_lowers_the_top_set() -> None:
+    good = derive(bench_on("2026-10-26", top_rpe=8, top=110))
+
+    after_a_bad_day = derive(
+        bench_on("2026-10-19", top_rpe=8, top=110),
+        an_exposure("2026-10-26", (100, 3, 9.5), *[(85, 4, 9)] * 3, session_id="lower"),
+    )
+
+    assert working_loads(good)[0] == (1, Load(110, "total"))
+    assert working_loads(after_a_bad_day) == working_loads(good)
+
+
 def test_with_no_exposure_the_start_load_is_the_top_and_the_back_offs_derive_from_it() -> None:
     opening = a_line(
         "bb_bench_press",
