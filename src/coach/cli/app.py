@@ -48,16 +48,17 @@ def main(
         elif options.help:
             result = declaration.describe()
         else:
+            running = engine_version()
             instance = None
             if declaration.needs_instance:
-                instance, pin_warning = _instance()
+                instance, pin_warning = _instance(running)
                 if pin_warning:
                     warnings.append(pin_warning)
             call = Call(
                 args=options.args,
                 full=options.full,
                 last=options.last,
-                engine_version=engine_version(),
+                engine_version=running,
                 instance=instance,
                 env=env,
                 clock=clock,
@@ -83,10 +84,10 @@ def run() -> int:
     return main(sys.argv[1:], os.environ, sys.stdout, sys.stderr)
 
 
-def _instance() -> tuple[Instance, Message | None]:
+def _instance(running: str) -> tuple[Instance, Message | None]:
     root = find_root(Path.cwd())
     pin = read_pin(root)
-    pin_warning = check_pin(engine_version(), pin)
+    pin_warning = check_pin(running, pin)
     return Instance(root=root, pin=pin), pin_warning
 
 
