@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
+from coach.core.activity_rules import quality_stack, status_span_drops
 from coach.core.clock import Clock
 from coach.core.closed_week.block import block_ceiling_exceeded
 from coach.core.closed_week.dose import (
@@ -13,8 +14,10 @@ from coach.core.closed_week.dose import (
     minimum_week_floor,
     session_dose_high,
 )
+from coach.core.closed_week.match import QUALITY_RPE
 from coach.core.config import Config
 from coach.core.errors import Invalid
+from coach.core.fatigue import light_week_flags
 from coach.core.flag import Flag
 from coach.core.instant import parse_instant
 from coach.core.kit import KitFiles
@@ -36,16 +39,26 @@ from coach.core.program.form import ProgramForm
 from coach.render.plan_draft import plan_draft as render_plan_draft
 from coach.services.closed_weeks import (
     ClosedWeeks,
-    closed_weeks,
+    WeekLog,
     muscle_map,
     parked_sessions,
     status_spans,
 )
+from coach.services.fatigue import Fatigue
 from coach.services.history import read_history
 from coach.services.previous_plans import second_week_flags
 from coach.services.racks import racks_by_location
 from coach.services.rotation import default_week, rotation_position
-from coach.store import decisions, exercises, goals, niggles, notes, programs, week_plans
+from coach.store import (
+    check_ins,
+    decisions,
+    exercises,
+    goals,
+    niggles,
+    notes,
+    programs,
+    week_plans,
+)
 from coach.store.connection import Connection
 
 # The Decision kinds prescribe reads (prescription.md, "What prescribe is handed").
@@ -80,7 +93,8 @@ def plan_draft(
     rotation = inferred if position is None else RotationPosition(position, inferred.source)
     rehab = niggles.open_rehab_sessions(conn)
     spans = status_spans(conn)
-    closed = closed_weeks(conn, config.athlete.units)
+    log = WeekLog(conn, config.athlete.units)
+    closed = log.closed_by(check_ins.current_windows(conn))
     hard_week_count = closed.open_block.hard_weeks if closed.open_block else 0
     planned = choose_sessions(
         planned_sessions(
@@ -119,6 +133,7 @@ def plan_draft(
         for session in planned
     )
     in_force = week_plans.in_force(conn, monday.isoformat())
+    standing = Fatigue(conn, log).standing()
     draft = PlanDraft(
         week=monday,
         position=rotation,
@@ -136,8 +151,25 @@ def plan_draft(
             racks=racks,
             units=config.athlete.units,
         ),
-        week_checks=_week_checks(
-            conn, version.form, closed, sessions, overrides, monday=monday, today=clock.today()
+        week_checks=(
+            *_week_checks(
+                conn, version.form, closed, sessions, overrides, monday=monday, today=clock.today()
+            ),
+            *light_week_flags(
+                overrides,
+                standing.proposal if standing else None,
+                hard_weeks=hard_week_count,
+                deload=version.form.deload,
+                monday=monday,
+            ),
+            *quality_stack(
+                sessions,
+                quality=_quality_conditioning(version.form),
+                patterns={
+                    str(r["id"]): cast(str | None, r["pattern"]) for r in exercises.every(conn)
+                },
+            ),
+            *status_span_drops(sessions, spans),
         ),
         hard_week_count=hard_week_count,
     )
@@ -211,6 +243,21 @@ def _week_checks(
         kept = cast(Sequence[str], minimum.params.get("keep", ()))
         found.append(minimum_week_floor(sessions, kept, _priority_lifts(conn), monday))
     return tuple(flag for flag in found if flag is not None)
+
+
+def _quality_conditioning(form: ProgramForm) -> frozenset[str]:
+    """The conditioning sessions whose scheme targets quality work (rn:running-load.6)."""
+    return frozenset(
+        s.id
+        for s in form.sessions
+        if s.kind == "conditioning"
+        and s.scheme is not None
+        and _number(s.scheme.params.get("rpe_target")) >= QUALITY_RPE
+    )
+
+
+def _number(value: object) -> float:
+    return float(value) if isinstance(value, int | float) else 0
 
 
 def _priority_lifts(conn: Connection) -> tuple[str, ...]:
