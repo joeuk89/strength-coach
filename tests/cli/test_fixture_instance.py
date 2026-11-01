@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from support.fake_hevy import FakeHevy
@@ -61,6 +62,32 @@ def test_exit_3_a_routine_moved_in_hevy_since_the_import(instance: Path) -> None
     assert run.code == 3
     assert run.envelope["error"]["code"] == "routine_moved"
     assert hevy.calls == [("GET", "/v1/routines/fake-routine-0001")]
+
+
+def a_mirror_without_the_folder(root: Path, title: str) -> None:
+    """Rebuild the store from an export that holds no folder titled `title`."""
+    folders = root / "export" / "folder.jsonl"
+    rows = folders.read_text().splitlines(keepends=True)
+    kept = [row for row in rows if json.loads(row)["title"] != title]
+    folders.write_text("".join(kept))
+    manifest_path = root / "export" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["tables"]["folder"] = len(kept)
+    manifest_path.write_text(json.dumps(manifest))
+    (root / ".coach" / "coach.db").unlink()
+
+
+def test_exit_3_two_hevy_folders_share_an_engine_title(instance: Path) -> None:
+    a_mirror_without_the_folder(instance, "Program")
+    plan = next_weeks_plan(instance)
+    digest = coach("plan", "apply", plan, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy = hevy_holding(instance, CLOCK, more_folders=("Program", "Program"))
+
+    run = coach("plan", "apply", plan, "--expect", digest, hevy=hevy)
+
+    assert run.code == 3
+    assert run.envelope["error"]["code"] == "folder_title_shared"
+    assert [call for call in hevy.calls if call[0] != "GET"] == []
 
 
 def test_exit_4_hevy_unreachable_on_import(instance: Path) -> None:
