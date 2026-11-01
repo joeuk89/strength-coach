@@ -5,30 +5,30 @@ from typing import cast
 
 from coach.cli.declaration import Json
 from coach.core.errors import Invalid
-from coach.core.notice import Notice
+from coach.core.message import Message
 
 
 def success(
-    schema_version: int, verb: str | None, result: Json, warnings: Sequence[Notice]
+    schema_version: int, verb: str | None, result: Json, warnings: Sequence[Message]
 ) -> Json:
     return {
         "schema_version": schema_version,
         "ok": True,
         "verb": verb,
         "result": result,
-        "warnings": [_notice(w) for w in warnings],
+        "warnings": [_message(w) for w in warnings],
     }
 
 
 def failure(
-    schema_version: int, verb: str | None, notice: Notice, warnings: Sequence[Notice]
+    schema_version: int, verb: str | None, error: Message, warnings: Sequence[Message]
 ) -> Json:
     return {
         "schema_version": schema_version,
         "ok": False,
         "verb": verb,
-        "error": _notice(notice),
-        "warnings": [_notice(w) for w in warnings],
+        "error": _message(error),
+        "warnings": [_message(w) for w in warnings],
     }
 
 
@@ -42,13 +42,15 @@ def project(result: Json, paths: Sequence[str]) -> Json:
     """Keep only the dotted `paths` of `result`, nested as they were."""
     projected: Json = {}
     for path in paths:
+        value = _lookup(result, path)
         *parents, leaf = path.split(".")
         target = projected
         for key in parents:
             child = target.setdefault(key, {})
-            assert isinstance(child, dict)
+            if not isinstance(child, dict):
+                raise Invalid("invalid_argument", f"--fields: {path!r} conflicts with another path")
             target = cast(Json, child)
-        target[leaf] = copy.deepcopy(_lookup(result, path))
+        target[leaf] = copy.deepcopy(value)
     return projected
 
 
@@ -62,5 +64,5 @@ def _lookup(result: object, path: str) -> object:
     return value
 
 
-def _notice(notice: Notice) -> Json:
-    return {"code": notice.code, "message": notice.message}
+def _message(message: Message) -> Json:
+    return {"code": message.code, "message": message.message}

@@ -2,6 +2,6 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Notice:
+class Message:
     code: str
     message: str

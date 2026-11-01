@@ -1,13 +1,13 @@
 from coach.core.errors import Setup
-from coach.core.notice import Notice
+from coach.core.message import Message
 
 
-def check_pin(engine_version: str, pin: str) -> Notice | None:
+def check_pin(engine_version: str, pin: str) -> Message | None:
     """Compare the running engine with the instance's pin (ADR 0007: exact match, `.dev` warns)."""
     if engine_version == pin:
         return None
     if ".dev" in engine_version:
-        return Notice(
+        return Message(
             "engine_pin_dev",
             f"engine {engine_version} is a development build running against pin {pin}",
         )

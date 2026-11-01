@@ -9,12 +9,12 @@ def test_a_release_engine_matching_its_pin_raises_nothing() -> None:
 
 
 def test_a_dev_engine_runs_against_any_release_pin_with_a_warning() -> None:
-    notice = check_pin("1.3.0.dev0", "1.2.0")
+    warning = check_pin("1.3.0.dev0", "1.2.0")
 
-    assert notice is not None
-    assert notice.code == "engine_pin_dev"
-    assert "1.3.0.dev0" in notice.message
-    assert "1.2.0" in notice.message
+    assert warning is not None
+    assert warning.code == "engine_pin_dev"
+    assert "1.3.0.dev0" in warning.message
+    assert "1.2.0" in warning.message
 
 
 def test_a_release_engine_against_a_different_pin_stops() -> None:

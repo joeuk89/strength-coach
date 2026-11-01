@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 from coach.core.clock import Clock
-from coach.core.notice import Notice
+from coach.core.message import Message
 
 type Writes = Literal["none", "store", "hevy", "git"]
 type Json = dict[str, object]
@@ -59,7 +59,7 @@ class Call:
 @dataclass(frozen=True)
 class Outcome:
     result: Json
-    warnings: tuple[Notice, ...] = ()
+    warnings: tuple[Message, ...] = ()
 
 
 @dataclass(frozen=True)

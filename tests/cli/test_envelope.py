@@ -50,6 +50,18 @@ def test_fields_naming_a_path_the_result_lacks_is_invalid(instance: Path) -> Non
     assert run.envelope["error"]["code"] == "invalid_argument"
 
 
+@pytest.mark.parametrize(
+    "fields",
+    ["schema_version,schema_version.x", "schema_version.x,schema_version", "engine.version.x"],
+)
+def test_fields_naming_a_path_below_a_scalar_is_invalid(instance: Path, fields: str) -> None:
+    run = run_coach("status", "--fields", fields)
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == "invalid_argument"
+    assert run.stderr == ""
+
+
 def test_fields_and_full_together_are_invalid(instance: Path) -> None:
     run = run_coach("status", "--fields", "engine", "--full")
 

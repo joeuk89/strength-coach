@@ -13,7 +13,7 @@ from coach.cli.instance import find_root, read_pin
 from coach.core.clock import Clock
 from coach.core.engine_pin import check_pin
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
-from coach.core.notice import Notice
+from coach.core.message import Message
 from coach.store.connection import SCHEMA_VERSION
 
 EXIT_CLASSES: tuple[tuple[type[CoachError], int], ...] = (
@@ -38,7 +38,7 @@ def main(
     clock: Clock | None = None,
 ) -> int:
     verb: str | None = None
-    warnings: list[Notice] = []
+    warnings: list[Message] = []
     try:
         declaration, tokens = find_leaf(argv, registry.declarations())
         verb = declaration.name if declaration else None
@@ -50,9 +50,9 @@ def main(
         else:
             instance = None
             if declaration.needs_instance:
-                instance, notice = _instance()
-                if notice:
-                    warnings.append(notice)
+                instance, pin_warning = _instance()
+                if pin_warning:
+                    warnings.append(pin_warning)
             call = Call(
                 args=options.args,
                 full=options.full,
@@ -69,13 +69,13 @@ def main(
         _write(stdout, envelope.success(SCHEMA_VERSION, verb, result, warnings))
         return 0
     except CoachError as error:
-        notice = Notice(error.code, error.message)
-        _write(stdout, envelope.failure(SCHEMA_VERSION, verb, notice, warnings))
+        failed = Message(error.code, error.message)
+        _write(stdout, envelope.failure(SCHEMA_VERSION, verb, failed, warnings))
         return next(code for kind, code in EXIT_CLASSES if isinstance(error, kind))
     except Exception as error:
         traceback.print_exc(file=stderr)
-        notice = Notice("internal_error", f"{type(error).__name__}: {error}")
-        _write(stdout, envelope.failure(SCHEMA_VERSION, verb, notice, warnings))
+        failed = Message("internal_error", f"{type(error).__name__}: {error}")
+        _write(stdout, envelope.failure(SCHEMA_VERSION, verb, failed, warnings))
         return 1
 
 
@@ -83,11 +83,11 @@ def run() -> int:
     return main(sys.argv[1:], os.environ, sys.stdout, sys.stderr)
 
 
-def _instance() -> tuple[Instance, Notice | None]:
+def _instance() -> tuple[Instance, Message | None]:
     root = find_root(Path.cwd())
     pin = read_pin(root)
-    notice = check_pin(engine_version(), pin)
-    return Instance(root=root, pin=pin), notice
+    pin_warning = check_pin(engine_version(), pin)
+    return Instance(root=root, pin=pin), pin_warning
 
 
 def _projected(result: Json, options: Options) -> Json:
