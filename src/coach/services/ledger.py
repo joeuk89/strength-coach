@@ -328,9 +328,12 @@ def _named_id(record: LedgerRecord) -> str | None:
             return None
 
 
+# Exercises, then niggles, follow-ups and workouts: the records later ones may cite.
+WRITE_ORDER = {"exercise": 0, "niggle": 1, "followup": 1, "workout": 1}
+
+
 def _write_order(record: LedgerRecord) -> int:
-    """Exercises, then niggles, follow-ups and workouts: the records later ones may cite."""
-    return {"exercise": 0, "niggle": 1, "followup": 1, "workout": 1}.get(kind_of(record), 2)
+    return WRITE_ORDER.get(kind_of(record), 2)
 
 
 def _iso(day: datetime.date | None) -> str | None:

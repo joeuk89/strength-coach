@@ -127,7 +127,7 @@ def parse_niggle(f: Fields) -> NiggleRecord:
             "niggle_constraint_on_resolved",
             f"{f.where}: a resolved event carries no constraints; a resolved niggle binds nothing",
         )
-    opened = f.date("opened") if named is None else None
+    opened = (f.date("opened") or date) if named is None else None
     rehab = f.subtable("rehab")
     if rehab is not None and named is not None:
         raise Invalid(
@@ -141,7 +141,7 @@ def parse_niggle(f: Fields) -> NiggleRecord:
             constraints=constraints,
             niggle=named,
             site=site,
-            opened=opened or (date if named is None else None),
+            opened=opened,
             rehab=_rehab(rehab) if rehab else None,
             text=f.text("text"),
             key=f.key(),
@@ -412,10 +412,11 @@ def parse_annotation(f: Fields) -> AnnotationRecord:
 
 
 def _match_params(f: Fields, params: Json | None) -> Json:
-    planned = (params or {}).get("planned_session")
+    params = params or {}
+    planned = params.get("planned_session")
     if not isinstance(planned, str) or Ref.parse(planned).kind != "planned_session":
         raise f.wrong("params", "a table naming the planned_session the workout matches")
-    return {**(params or {}), "planned_session": planned}
+    return params
 
 
 def annotation_refs(record: AnnotationRecord) -> tuple[Ref, ...]:

@@ -21,26 +21,20 @@ WITHDRAWABLE = ("weigh_in", "sleep_night", "status_span", "annotation")
 
 def written_by(conn: Connection, draft_hash: str) -> dict[str, list[str]]:
     """The ids each record kind holds under one Draft hash, in id order."""
-    found: dict[str, list[str]] = {}
-    for kind, table in TABLES.items():
-        ids = [
-            id_
-            for (id_,) in conn.execute(
-                f"SELECT DISTINCT id FROM {table} WHERE draft_hash = ? ORDER BY id", (draft_hash,)
-            )
-        ]
-        if ids:
-            found[kind] = ids
-    for kind, (table, column) in EVENTS.items():
-        ids = [
-            id_
-            for (id_,) in conn.execute(
-                f"SELECT {column} FROM {table} WHERE draft_hash = ? ORDER BY id", (draft_hash,)
-            )
-        ]
-        if ids:
-            found[kind] = ids
-    return found
+    queries = {
+        **{
+            kind: f"SELECT DISTINCT id FROM {table} WHERE draft_hash = ? ORDER BY id"
+            for kind, table in TABLES.items()
+        },
+        **{
+            kind: f"SELECT {column} FROM {table} WHERE draft_hash = ? ORDER BY id"
+            for kind, (table, column) in EVENTS.items()
+        },
+    }
+    found = {
+        kind: [id_ for (id_,) in conn.execute(sql, (draft_hash,))] for kind, sql in queries.items()
+    }
+    return {kind: ids for kind, ids in found.items() if ids}
 
 
 def withdrawn_by_draft(conn: Connection, draft_hash: str) -> list[str]:

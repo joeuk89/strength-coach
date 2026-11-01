@@ -93,12 +93,14 @@ def _newest_first(rows: list[Row], day: str) -> list[Row]:
     return sorted(rows, key=lambda r: (str(r[day]), str(r["id"])), reverse=True)
 
 
+def _unwithdrawn(rows: list[Row]) -> list[Row]:
+    return [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
+
+
 def _withdrawable(table: str, day: str) -> Callable[[Connection, bool, datetime.date], list[Row]]:
     def read(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
         rows = stored.with_withdrawals(conn, table)
-        if open_:
-            rows = [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
-        return _newest_first(rows, day)
+        return _newest_first(_unwithdrawn(rows) if open_ else rows, day)
 
     return read
 
@@ -147,9 +149,7 @@ def _decisions(conn: Connection, open_: bool, today: datetime.date) -> list[Row]
 
 def _annotations(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
     rows = annotations.every(conn)
-    if open_:
-        rows = [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
-    return sorted(rows, key=lambda r: str(r["id"]), reverse=True)
+    return sorted(_unwithdrawn(rows) if open_ else rows, key=lambda r: str(r["id"]), reverse=True)
 
 
 # Notes, Activities and Exercises have no lifecycle, so `--open` keeps every row of them.

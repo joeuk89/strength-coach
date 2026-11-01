@@ -10,7 +10,11 @@ def insert_decision(conn: Connection, row: Mapping[str, object]) -> None:
     insert(
         conn,
         "decision",
-        {**row, "params": json.dumps(row["params"]), "evidence": _json_or_null(row["evidence"])},
+        {
+            **row,
+            "params": json.dumps(row["params"]),
+            "evidence": json.dumps(row["evidence"]) if row["evidence"] else None,
+        },
     )
 
 
@@ -43,10 +47,6 @@ def supersede(conn: Connection, decision_ids: list[str], by: str) -> None:
 
 def retire(conn: Connection, decision_id: str, by: str) -> None:
     conn.execute("UPDATE decision SET retired_by = ? WHERE id = ?", (by, decision_id))
-
-
-def _json_or_null(value: object) -> str | None:
-    return json.dumps(value) if value else None
 
 
 def _decoded(found: list[Row]) -> list[Row]:
