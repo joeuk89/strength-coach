@@ -1,5 +1,5 @@
 from support.exposures import an_exposure
-from support.prescribe import a_line, a_request
+from support.prescribe import a_line, a_rack, a_request, working
 
 from coach.core.exposure import Exposure
 from coach.core.prescribe import prescribe
@@ -74,3 +74,53 @@ def test_a_light_week_exposure_does_not_make_up_the_three() -> None:
     light = squat_on("2026-10-22", (100, 3, 6), light_week=True)
 
     assert stalls(squat_on("2026-10-19"), light, squat_on("2026-10-26")) == []
+
+
+BENCH = a_line("bb_bench_press", working(4, 5), scheme="linear")
+BENCH_RACK = a_rack(100, 105, 107.5, 110, 115, 120, 125)
+
+
+def bench_on(on: str, load: float, last_reps: int) -> Exposure:
+    return an_exposure(on, (load, 5, 8), (load, 5, 8), (load, 5, 8), (load, last_reps, 8))
+
+
+def bench_stalls(*exposures: Exposure) -> list[dict[str, object]]:
+    request = a_request(BENCH, exposures=exposures, racks={"barbell": BENCH_RACK})
+    return [dict(f.params) for f in prescribe(request).lines[0].flags if f.code == "stall_streak"]
+
+
+def test_a_linear_hit_at_the_reset_load_is_not_a_stall() -> None:
+    found = bench_stalls(
+        bench_on("2026-10-12", 120, 4),
+        bench_on("2026-10-19", 120, 4),
+        bench_on("2026-10-26", 107.5, 5),
+    )
+
+    assert found == []
+
+
+def test_three_consecutive_linear_misses_raise_stall_streak_whatever_the_load() -> None:
+    found = bench_stalls(
+        bench_on("2026-10-12", 120, 4),
+        bench_on("2026-10-19", 120, 4),
+        bench_on("2026-10-26", 107.5, 4),
+    )
+
+    assert [p["streak"] for p in found] == [3]
+
+
+def test_three_linear_hits_at_one_load_are_not_a_stall() -> None:
+    found = bench_stalls(
+        *(bench_on(on, 120, 5) for on in ("2026-10-12", "2026-10-19", "2026-10-26"))
+    )
+
+    assert found == []
+
+
+def test_a_lighter_double_progression_load_starts_a_new_run() -> None:
+    lighter = ((110, 8, 8), (110, 8, 8), (110, 7, 8), (110, 6, 8))
+
+    assert (
+        stalls(squat_on("2026-10-12"), squat_on("2026-10-19"), squat_on("2026-10-26", *lighter))
+        == []
+    )
