@@ -12,13 +12,15 @@ from coach.core.errors import Invalid
 from coach.core.instant import parse_instant
 from coach.core.kit import KitFiles
 from coach.core.load import LoadMode
+from coach.core.overrides import override_conflicts
 from coach.core.plan_draft import AthleteNote, PlanDraft
-from coach.core.planned_week import planned_sessions
+from coach.core.planned_week import choose_sessions, planned_sessions
 from coach.core.prescribe import prescribe
 from coach.core.prescription import (
     DecisionInForce,
     ExerciseFacts,
     PlannedSession,
+    PlanOverride,
     PrescribeRequest,
     ProgramVersion,
     StatusSpan,
@@ -47,6 +49,7 @@ def plan_draft(
     kits: Sequence[KitFiles],
     clock: Clock,
     week: datetime.date | None = None,
+    overrides: Sequence[PlanOverride] = (),
 ) -> PlanDraftResult:
     version = _in_force(conn)
     monday = week or default_week(conn, clock.today())
@@ -55,8 +58,19 @@ def plan_draft(
     position = rotation_position(conn, version, monday)
     rehab = niggles.open_rehab_sessions(conn)
     spans = _status_spans(conn)
-    planned = planned_sessions(
-        version.form, position=position.week, monday=monday, rehab=rehab, spans=spans
+    planned = choose_sessions(
+        planned_sessions(
+            version.form,
+            position=position.week,
+            monday=monday,
+            rehab=rehab,
+            spans=spans,
+            parked=_parked(conn, monday),
+        ),
+        overrides,
+        form=version.form,
+        monday=monday,
+        rehab=rehab,
     )
     locations = {*version.form.locations(), *(s.location for s in planned)}
     racks = racks_by_location(config, kits, locations)
@@ -71,6 +85,7 @@ def plan_draft(
                 racks=racks,
                 planned=session,
                 trained=history.trained,
+                overrides=tuple(overrides),
                 decisions=_decisions(conn, session),
                 niggle_constraints=constraints,
                 status_spans=spans,
@@ -85,6 +100,8 @@ def plan_draft(
         sessions=sessions,
         notes=_notes_since_last_approved(conn),
         supersedes=None if in_force is None else str(in_force["id"]),
+        overrides=tuple(overrides),
+        conflicts=override_conflicts(overrides, monday),
     )
     return PlanDraftResult(draft, render_plan_draft(draft, units=config.athlete.units))
 
@@ -118,6 +135,15 @@ def _decisions(conn: Connection, session: PlannedSession) -> tuple[DecisionInFor
         )
         for row in decisions.in_force(conn, session.date.isoformat())
         if row["kind"] in PRESCRIBING_DECISIONS
+    )
+
+
+def _parked(conn: Connection, monday: datetime.date) -> frozenset[str]:
+    """A park supersedes the resume before it on the same session, and the other way round."""
+    return frozenset(
+        str(row["session_id"])
+        for row in decisions.in_force(conn, monday.isoformat())
+        if row["kind"] == "park_session"
     )
 
 

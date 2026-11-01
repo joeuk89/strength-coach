@@ -7,6 +7,7 @@ from typing import NoReturn, cast
 from coach.core.draft_fields import Fields, required
 from coach.core.errors import Invalid
 from coach.core.flag import FlagKey
+from coach.core.overrides import line_override
 from coach.core.ref import REF_KINDS, Ref
 from coach.core.registries.flags import FLAGS
 from coach.core.registries.ledger import (
@@ -18,7 +19,6 @@ from coach.core.registries.ledger import (
 )
 from coach.core.registries.log import ANNOTATION_KINDS
 from coach.core.registries.program import LOAD_MODES, SET_TYPES
-from coach.core.registries.week import OVERRIDE_KINDS
 
 type Json = Mapping[str, object]
 
@@ -328,15 +328,9 @@ def _matching(f: Fields, name: str, pattern: re.Pattern[str], wanted: str) -> st
 
 
 def _line_override(f: Fields) -> Json:
-    kind = required(f.term("kind", OVERRIDE_KINDS, required=True))
-    rule = OVERRIDE_KINDS.get(kind)
-    if rule.scope != "line":
-        raise f.wrong(
-            "kind",
-            "a line-scope override: swap_exercise, pin_load, hold, restate_sets or drop_line",
-        )
-    params = {name: f.raw(name) for name in rule.params if f.has(name)}
-    return f.done({"kind": kind, **params})
+    """Checked as the plan's own line override is, and stored as written."""
+    line_override(f.table, where=f.where)
+    return dict(f.table)
 
 
 def _calendar_free_flag(f: Fields, text: str) -> str:

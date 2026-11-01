@@ -14,16 +14,19 @@ from coach.core.flag import Flag, FlagKey, Scope
 from coach.core.goal import Goal
 from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
+from coach.core.overrides import parse_plan_overrides
+from coach.core.prescription import PlanOverride
 from coach.core.program.checks import AdoptContext, OpenBlock, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
+from coach.core.program.fold import Folded, fold_overrides
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.program.warnings import adopt_warnings, leave_warnings
 from coach.render.program_draft import program_draft
 from coach.services.history import read_history
 from coach.services.racks import racks_by_location
-from coach.store import exercises, goals, phases, programs, routine_map
+from coach.store import exercises, goals, phases, programs, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.transaction import transaction
 
@@ -160,13 +163,29 @@ def show(conn: Connection) -> ShowResult:
     )
 
 
-def show_draft(conn: Connection) -> str:
+@dataclass(frozen=True)
+class ShownDraft:
+    text: str
+    folded: tuple[Folded, ...] = ()
+
+
+def show_draft(conn: Connection, *, apply_plan: datetime.date | None = None) -> ShownDraft:
     """The version in force as a Draft for the next version; a version-scoped acknowledgement
-    names that next version and keeps its params hash, so it leaves only an unchanged warning."""
+    names that next version and keeps its params hash, so it leaves only an unchanged warning.
+    With `apply_plan`, that week's approved WeekPlan's line overrides are folded in
+    (overrides.md, "What `--apply-plan` folds")."""
     version = _in_force(conn)
     next_scope = Scope("version", version_id=f"pv-{version.sequence + 1}")
     carried = tuple(_carried(entry, next_scope) for entry in version.form.acknowledgements)
-    return program_draft(replace(version.form, acknowledgements=carried))
+    form = replace(version.form, acknowledgements=carried)
+    if apply_plan is None:
+        return ShownDraft(program_draft(form))
+    plan = week_plans.in_force(conn, apply_plan.isoformat())
+    if plan is None:
+        raise Invalid("invalid_argument", f"the week of {apply_plan} has no approved WeekPlan")
+    stored = week_plans.overrides(conn, str(plan["id"]))
+    folded = fold_overrides(form, _plan_overrides(stored, str(plan["id"])))
+    return ShownDraft(program_draft(folded.form, folded_pins=folded.pins), folded.folded)
 
 
 def _carried(entry: AcknowledgeEntry, next_scope: Scope) -> AcknowledgeEntry:
@@ -174,6 +193,22 @@ def _carried(entry: AcknowledgeEntry, next_scope: Scope) -> AcknowledgeEntry:
     if key.scope.kind != "version":
         return entry
     return replace(entry, flag=str(FlagKey(key.code, next_scope)))
+
+
+def _plan_overrides(
+    stored: Sequence[Mapping[str, object]], plan_id: str
+) -> tuple[PlanOverride, ...]:
+    """Stored rows read back through the Draft's own parser, so both carry one typed shape."""
+    tables: list[dict[str, object]] = []
+    for row in stored:
+        refs = {"session": row["session_id"], "exercise": row["exercise_id"], "date": row["date"]}
+        table = {"kind": row["kind"], **{k: v for k, v in refs.items() if v is not None}}
+        table |= cast(Mapping[str, object], row["params"])
+        table |= {"because": row["because"], "text": row["text"]}
+        if row["evidence"]:
+            table["evidence"] = row["evidence"]
+        tables.append(table)
+    return parse_plan_overrides({"override": tables}, file=f"WeekPlan {plan_id}")
 
 
 def _current_goal(conn: Connection) -> Goal | None:

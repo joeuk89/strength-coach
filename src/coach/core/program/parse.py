@@ -159,6 +159,15 @@ def parse_line(document: Table, *, file: str) -> Line:
     return _line(_Reader(document, ("line",), file, []))
 
 
+def parse_set_groups(groups: Sequence[Table], *, file: str, where: str) -> tuple[SetGroup, ...]:
+    """A line's whole set groups outside a form; a key outside the group's shape is refused."""
+    unknown: list[str] = []
+    parsed = tuple(_group(_Reader(group, (where,), file, unknown)) for group in groups)
+    if unknown:
+        raise Invalid("unknown_key", f"{file}: unknown key {', '.join(unknown)}")
+    return parsed
+
+
 def _line(reader: "_Reader") -> Line:
     exercise = reader.text("exercise")
     reader.name_as((*reader.path[:-1], exercise))

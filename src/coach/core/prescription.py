@@ -12,7 +12,7 @@ from coach.core.load import Load, LoadMode
 from coach.core.program.form import Line, Number, ProgramForm, Reps
 from coach.core.rack import Rack
 
-type StepValue = float | tuple[float, ...] | None
+type StepValue = float | str | tuple[float, ...] | None
 
 
 @dataclass(frozen=True)
@@ -43,11 +43,17 @@ class PlannedSession:
 
 @dataclass(frozen=True)
 class PlanOverride:
+    """One typed departure on the plan, scoped by the refs it carries (docs/spec/overrides.md,
+    "WeekPlan overrides"); `params` holds the kind's params as parsed values."""
+
     kind: str
     session_id: str | None = None
     exercise_id: str | None = None
     date: datetime.date | None = None
     params: Mapping[str, object] = field(default_factory=dict[str, object])
+    because: str | None = None
+    text: str | None = None
+    evidence: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

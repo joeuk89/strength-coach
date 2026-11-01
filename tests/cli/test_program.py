@@ -1,5 +1,6 @@
 import shutil
 import sqlite3
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,7 @@ from support.cli import run_coach
 from support.clock import FixedClock
 from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
+from support.plans import a_plan_override, an_approved_plan
 from support.program_drafts import CUSTOM_EXERCISES, WORKED_DRAFT_COMPLETE, a_draft, toml
 from support.programs import GYM, HOME
 
@@ -246,3 +248,56 @@ def test_status_reports_the_program_version_in_force(instance: Path) -> None:
         "emphasis": "hypertrophy",
         "adopted": "2026-10-30",
     }
+
+
+def a_week_with_a_swap_and_a_pin(root: Path) -> None:
+    conn = open_store(root / ".coach" / "coach.db")
+    plan_id = an_approved_plan(conn, "2026-10-26")
+    a_plan_override(
+        conn,
+        plan_id,
+        "swap_exercise",
+        "a-mon-lower",
+        "bb_back_squat",
+        to="goblet_squat",
+        start_load=25,
+    )
+    a_plan_override(conn, plan_id, "pin_load", "b-sat-push", "bb_bench_press", load=100)
+    conn.close()
+
+
+def test_apply_plan_folds_a_swap_and_a_pin_into_a_draft_that_adopts_as_an_amend(
+    instance: Path,
+) -> None:
+    coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
+    a_week_with_a_swap_and_a_pin(instance)
+
+    shown = coach("program", "show", "--draft", "--apply-plan", "2026-10-26")
+    text = (instance / shown.envelope["result"]["path"]).read_text()
+    adopted = coach("program", "adopt", shown.envelope["result"]["path"])
+
+    assert shown.envelope["result"]["folded"] == [
+        {"session": "a-mon-lower", "exercise": "bb_back_squat", "kind": "swap_exercise"},
+        {"session": "b-sat-push", "exercise": "bb_bench_press", "kind": "pin_load"},
+    ]
+    sessions = {s["id"]: s for s in tomllib.loads(text)["session"]}
+    assert sessions["a-mon-lower"]["line"][0]["exercise"] == "goblet_squat"
+    assert sessions["a-mon-lower"]["line"][0]["start_load"] == 25
+    assert "start_load = 100  # folded pin" in text
+    assert adopted.code == 0, adopted.stdout
+    assert adopted.envelope["result"]["kind"] == "amend"
+
+
+def test_apply_plan_on_a_week_with_no_approved_plan_is_refused(instance: Path) -> None:
+    coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
+
+    run = coach("program", "show", "--draft", "--apply-plan", "2026-10-26")
+
+    assert run.code == 1
+    assert "2026-10-26" in run.envelope["error"]["message"]
+
+
+def test_apply_plan_needs_draft(instance: Path) -> None:
+    run = coach("program", "show", "--apply-plan", "2026-10-26")
+
+    assert run.envelope["error"]["code"] == "invalid_argument"

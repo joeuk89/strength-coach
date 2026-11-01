@@ -1,6 +1,8 @@
 """Scenario builders for plan draft: an adopted version, squat history and approved plans.
 Each writes only through `store` functions or the services that own the record."""
 
+import json
+
 from coach.core.units import KG_PER_LB
 from coach.services.program import adopt
 from coach.store import exercises, notes, rows
@@ -84,5 +86,34 @@ def a_note(
                 "check_in": None,
                 "draft_hash": "h",
                 "recorded_at": at,
+            },
+        )
+
+
+def a_plan_override(
+    conn: Connection,
+    plan_id: str,
+    kind: str,
+    session: str,
+    exercise: str,
+    **params: object,
+) -> None:
+    """An override row on an approved WeekPlan, as `plan apply` freezes it."""
+    with conn:
+        count = conn.execute("SELECT COUNT(*) FROM override").fetchone()[0]
+        rows.insert(
+            conn,
+            "override",
+            {
+                "id": f"o-{count + 1:04d}",
+                "plan_id": plan_id,
+                "kind": kind,
+                "session_id": session,
+                "exercise_id": exercise,
+                "date": None,
+                "params": json.dumps(params),
+                "because": "pain",
+                "text": "Knee niggle.",
+                "evidence": None,
             },
         )

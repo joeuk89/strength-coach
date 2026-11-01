@@ -1,33 +1,13 @@
 import datetime
 
-from support.prescribe import a_line
+from support.prescribe import PLANNED, a_line, a_rotation_form
 
 from coach.core.planned_week import RotationPosition, infer_position, planned_sessions
 from coach.core.prescription import StatusSpan
-from coach.core.program.form import ProgramForm, Schedule, Session
+from coach.core.program.form import ProgramForm, Session
 
-MONDAY = datetime.date(2026, 11, 2)
+MONDAY = PLANNED
 LINE = (a_line(),)
-
-
-def a_form(*extra: Session) -> ProgramForm:
-    return ProgramForm(
-        name="Test",
-        kind="redesign",
-        because="first program",
-        emphasis="hypertrophy",
-        location="home",
-        schedule=Schedule(
-            ("A", "B"),
-            {"A": {"mon": "lower-a", "thu": "push-a"}, "B": {"tue": "pull-b"}},
-        ),
-        sessions=(
-            Session("lower-a", "Lower A", "lifting", "core", lines=LINE),
-            Session("push-a", "Push A", "lifting", "core", location="gym", lines=LINE),
-            Session("pull-b", "Pull B", "lifting", "core", lines=LINE),
-            *extra,
-        ),
-    )
 
 
 def planned(
@@ -38,12 +18,12 @@ def planned(
 
 
 def test_weekly_sessions_fall_on_their_weekday_of_the_rotation_week() -> None:
-    assert planned(a_form()) == [("2026-11-02", "lower-a"), ("2026-11-05", "push-a")]
-    assert planned(a_form(), "B") == [("2026-11-03", "pull-b")]
+    assert planned(a_rotation_form()) == [("2026-11-02", "lower-a"), ("2026-11-05", "push-a")]
+    assert planned(a_rotation_form(), "B") == [("2026-11-03", "pull-b")]
 
 
 def test_a_session_takes_its_own_location_or_the_versions() -> None:
-    sessions = planned_sessions(a_form(), position="A", monday=MONDAY)
+    sessions = planned_sessions(a_rotation_form(), position="A", monday=MONDAY)
 
     assert [(s.session_id, s.location) for s in sessions] == [
         ("lower-a", "home"),
@@ -52,7 +32,7 @@ def test_a_session_takes_its_own_location_or_the_versions() -> None:
 
 
 def test_a_standing_session_is_planned_once_on_the_monday_and_a_daily_one_every_day() -> None:
-    form = a_form(
+    form = a_rotation_form(
         Session("mobility", "Mobility", "practice", "optional", cadence="standing", lines=LINE),
         Session("hang", "Hang", "practice", "optional", cadence="daily", lines=LINE),
     )
@@ -68,7 +48,7 @@ def test_a_standing_session_is_planned_once_on_the_monday_and_a_daily_one_every_
 def test_an_open_niggles_rehab_session_is_planned_by_its_cadence() -> None:
     rehab = Session("knee-rehab", "Knee rehab", "rehab", "optional", "standing", lines=LINE)
 
-    found = planned_sessions(a_form(), position="A", monday=MONDAY, rehab=(rehab,))
+    found = planned_sessions(a_rotation_form(), position="A", monday=MONDAY, rehab=(rehab,))
 
     assert ("knee-rehab", "rehab", "home", MONDAY) in [
         (s.session_id, s.kind, s.location, s.date) for s in found
@@ -78,14 +58,14 @@ def test_an_open_niggles_rehab_session_is_planned_by_its_cadence() -> None:
 def test_a_no_training_span_over_the_whole_week_plans_nothing() -> None:
     span = StatusSpan("no_training", datetime.date(2026, 10, 30), datetime.date(2026, 11, 8))
 
-    assert planned(a_form(), spans=(span,)) == []
+    assert planned(a_rotation_form(), spans=(span,)) == []
 
 
 def test_a_no_training_span_over_part_of_the_week_plans_the_week() -> None:
     span = StatusSpan("no_training", MONDAY, MONDAY)
     ill = StatusSpan("ill", MONDAY, None)
 
-    assert len(planned(a_form(), spans=(span, ill))) == 2
+    assert len(planned(a_rotation_form(), spans=(span, ill))) == 2
 
 
 ROTATION = ("A", "B", "C")

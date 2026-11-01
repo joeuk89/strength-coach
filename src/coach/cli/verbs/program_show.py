@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 from contextlib import closing
 
@@ -14,11 +15,15 @@ def run(call: Call) -> Outcome:
     as_draft = call.args.get("draft") is True
     if out is not None and not as_draft:
         raise Invalid("invalid_argument", "--out names where --draft writes; add --draft")
+    week = _week(call.args.get("apply_plan"))
+    if week is not None and not as_draft:
+        raise Invalid("invalid_argument", "--apply-plan folds into the Draft; add --draft")
     with closing(open_instance_store(call.instance)) as conn:
         shown = show(conn)
-        text = show_draft(conn) if as_draft else None
-    if text is None:
+        drafted = show_draft(conn, apply_plan=week) if as_draft else None
+    if drafted is None:
         return Outcome(_summary(shown, None if call.full else call.last))
+    text = drafted.text
     path = write_engine_draft(
         call.instance.root,
         today=call.clock.today().isoformat(),
@@ -27,7 +32,22 @@ def run(call: Call) -> Outcome:
         out=out if isinstance(out, str) else None,
     )
     digest = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return Outcome({"version": shown.version_id, "path": path, "hash": digest})
+    result: Json = {"version": shown.version_id, "path": path, "hash": digest}
+    if week is not None:
+        result["folded"] = [
+            {"session": f.session_id, "exercise": f.exercise_id, "kind": f.kind}
+            for f in drafted.folded
+        ]
+    return Outcome(result)
+
+
+def _week(value: object) -> datetime.date | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError as error:
+        raise Invalid("invalid_argument", f"--apply-plan {value!r} is not a date") from error
 
 
 def _summary(shown: ShowResult, last: int | None) -> Json:
@@ -50,13 +70,18 @@ DECLARATION = Declaration(
     summary=(
         "The Program version in force: number, kind, emphasis, adopted date, because and its "
         "sessions with line counts; with --draft, write it as a Draft to edit and return the "
-        "path and hash."
+        "path and hash; with --apply-plan, fold a week's line overrides into that Draft."
     ),
     writes="none",
     needs_instance=True,
     arguments=(
         Argument("--draft", "write the version in force as an amend Draft", takes_value=False),
         Argument("--out", "where --draft writes (default .coach/drafts/<date>-program.toml)"),
+        Argument(
+            "--apply-plan",
+            "with --draft, fold the line overrides of the approved WeekPlan of the week "
+            "starting on this Monday into the Draft",
+        ),
     ),
     output={
         "type": "object",
@@ -77,6 +102,18 @@ DECLARATION = Declaration(
             "truncated": {"type": "boolean"},
             "path": {"type": "string", "description": "with --draft"},
             "hash": {"type": "string", "description": "with --draft"},
+            "folded": {
+                "type": "array",
+                "description": "with --apply-plan: the overrides folded in",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "session": {"type": "string"},
+                        "exercise": {"type": "string"},
+                        "kind": {"type": "string"},
+                    },
+                },
+            },
         },
         "required": ["version"],
     },
@@ -84,5 +121,10 @@ DECLARATION = Declaration(
     examples=(
         Example(("program", "show"), "The Program version in force."),
         Example(("program", "show", "--draft"), "Write the version in force as a Draft."),
+        Example(
+            ("program", "show", "--draft", "--apply-plan", "2026-11-02"),
+            "Fold the week of 2 Nov 2026's swaps, pins, holds, restated sets and dropped lines "
+            "into the Draft.",
+        ),
     ),
 )

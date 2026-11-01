@@ -4,7 +4,7 @@ from typing import cast
 
 import pytest
 
-from coach.render.toml import TomlValue, dumps
+from coach.render.toml import Commented, TomlValue, dumps
 
 
 def test_scalars_round_trip() -> None:
@@ -111,3 +111,12 @@ def test_a_table_key_after_a_sub_table_stays_in_its_table() -> None:
 def test_a_value_toml_cannot_hold_is_refused(value: object) -> None:
     with pytest.raises(TypeError):
         dumps({"bad": cast(TomlValue, value)})
+
+
+def test_a_commented_value_emits_its_comment_after_the_value_and_reads_back_bare() -> None:
+    text = dumps(
+        {"line": [{"exercise": "bb_bench_press", "start_load": Commented(100, "folded pin")}]}
+    )
+
+    assert "start_load = 100  # folded pin" in text
+    assert tomllib.loads(text) == {"line": [{"exercise": "bb_bench_press", "start_load": 100}]}

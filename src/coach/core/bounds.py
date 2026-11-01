@@ -57,6 +57,8 @@ class LineContext:
     scope: Scope
     anchor: Exposure | None = None
     anchor_top: Load | None = None
+    scheme_load: Load | None = None
+    pin: Load | None = None
 
 
 @dataclass(frozen=True)
@@ -126,14 +128,16 @@ class _Bounding:
 
     def _return_band(self, band: Band, days: int) -> None:
         cause = f"return {band.label}, {days} days off"
-        base = self.load
+        base = self.context.scheme_load
         if base is not None and self.context.anchor_top is not None:
             base = easier(base, self.context.anchor_top)
         if base is not None:
             target = self._band_load(band, base)
+            pin = self._pin()
+            if pin is not None and not harder(pin, target):
+                target = pin
             if target != self.load:
                 self._lower("cut", target, cause)
-            pin = self._pin()
             if pin is not None and harder(pin, target):
                 self._raise(
                     "return_band_disagrees",
@@ -357,11 +361,7 @@ class _Bounding:
         )
 
     def _pin(self) -> Load | None:
-        pin = self._override("pin_load")
-        if pin is None or pin.exercise_id is None:
-            return None
-        load = pin.params.get("load")
-        return Load(load, self.context.mode) if isinstance(load, int | float) else None
+        return self.context.pin
 
     def _raise(self, code: str, params: dict[str, object], message: str) -> None:
         self.flags.append(raise_flag(code, self.context.scope, params, message))

@@ -2,7 +2,21 @@ import datetime
 import math
 import re
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import cast
+
+
+@dataclass(frozen=True)
+class Commented:
+    """A key's value with a comment after it on the same line; reads back as the bare value."""
+
+    value: "TomlValue"
+    comment: str
+
+    def __post_init__(self) -> None:
+        if "\n" in self.comment or "\r" in self.comment:
+            raise ValueError("a comment is one line")
+
 
 type TomlValue = (
     str
@@ -11,6 +25,7 @@ type TomlValue = (
     | float
     | datetime.date
     | datetime.datetime
+    | Commented
     | Sequence[TomlValue]
     | Mapping[str, TomlValue]
 )
@@ -39,7 +54,10 @@ def _emit_table(
             lines.append("")
         lines.append(header)
     for key, value in pairs:
-        lines.append(f"{_key(key)} = {_inline(value)}")
+        if isinstance(value, Commented):
+            lines.append(f"{_key(key)} = {_inline(value.value)}  # {value.comment}")
+        else:
+            lines.append(f"{_key(key)} = {_inline(value)}")
     for key, value in nested:
         child = (*path, key)
         dotted = ".".join(_key(part) for part in child)

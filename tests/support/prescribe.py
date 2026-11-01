@@ -64,6 +64,7 @@ EXERCISES = {
     "db_lunge": ExerciseFacts("per_hand_x2", "dumbbell", "lunge"),
     "pull_up": ExerciseFacts("bodyweight", "bodyweight", "vertical_pull"),
     "assisted_pull_up": ExerciseFacts("assisted", "machine", "vertical_pull"),
+    "goblet_squat": ExerciseFacts("single_implement", "dumbbell", "squat"),
 }
 DELOAD = Deload(
     hard_weeks_ceiling=6, set_cut_pct=40, load_cut_pct=0, rpe_cap=8, test_priority_lifts=True
@@ -106,3 +107,26 @@ def a_request(
 
 def facts(load_mode: LoadMode, equipment_kind: str = "barbell") -> ExerciseFacts:
     return ExerciseFacts(load_mode, equipment_kind, "squat")
+
+
+def a_rotation_form(*extra: Session) -> ProgramForm:
+    """Two rotation weeks: A plans `lower-a` on Monday and `push-a` (at the gym) on Thursday,
+    B plans `pull-b` on Tuesday."""
+    line = (a_line(),)
+    return ProgramForm(
+        name="Test",
+        kind="redesign",
+        because="first program",
+        emphasis="hypertrophy",
+        location="home",
+        schedule=Schedule(
+            ("A", "B"),
+            {"A": {"mon": "lower-a", "thu": "push-a"}, "B": {"tue": "pull-b"}},
+        ),
+        sessions=(
+            Session("lower-a", "Lower A", "lifting", "core", lines=line),
+            Session("push-a", "Push A", "lifting", "core", location="gym", lines=line),
+            Session("pull-b", "Pull B", "lifting", "core", lines=line),
+            *extra,
+        ),
+    )
