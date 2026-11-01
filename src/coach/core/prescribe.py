@@ -7,8 +7,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import cast
 
-from coach.core.anchor import StartLoad, anchor, anchor_load
-from coach.core.bounds import TEST_RPE, Bounded, LineContext, bound
+from coach.core.anchor import StartLoad, anchor
+from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
@@ -24,8 +24,8 @@ from coach.core.prescription import (
     Step,
 )
 from coach.core.program.form import LOAD_BEARING_MODES, RACK_MODES, Line, Number, SetGroup
-from coach.core.progression import judge
 from coach.core.rack import Rack, next_row_up
+from coach.core.scheme_moves import Move, SchemeInput, SchemeMoves
 from coach.core.warm_up import warm_up_loads
 
 
@@ -70,7 +70,7 @@ class _Derivation:
                 f"{authored.exercise} is not in the library",
             )
             unknown = Bounded(authored.sets, None)
-            return self._prescription(authored, None, self._groups(None, unknown), "held")
+            return self._prescription(authored, None, self._groups(authored, None, unknown), "held")
         sets = authored.sets
         if "restate_sets" in overrides:
             sets = self._restate(authored, *overrides["restate_sets"])
@@ -83,7 +83,9 @@ class _Derivation:
                 f"{exercise.load_mode}",
             )
             unloaded = Bounded(sets, None)
-            return self._prescription(authored, None, self._groups(None, unloaded), "held")
+            return self._prescription(
+                authored, None, self._groups(authored, None, unloaded), "held"
+            )
         rack = self._rack(exercise, mode)
         start = None if authored.start_load is None else Load(authored.start_load, mode)
         found = anchor(
@@ -93,54 +95,71 @@ class _Derivation:
             on=self.request.planned.date,
             start_load=start,
         )
-        loaded = mode in LOAD_BEARING_MODES
         line = replace(authored, sets=sets)
-        context = LineContext(self.request, line, exercise, mode, rack, self.scope)
+        schemes = SchemeMoves(
+            SchemeInput(self.request, authored, sets, mode, rack, self.scope),
+            self.steps,
+            self.flags,
+        )
         pin = overrides.get("pin_load")
         if isinstance(found, StartLoad):
-            pinned_only = pin is not None and found.load is None
-            opening = None if pinned_only else self._opening(authored, found, loaded)
+            pinned_only = pin is not None and found.load is None and line.scheme.name != "wave_531"
+            move = Move(None, "hold", line.sets) if pinned_only else schemes.opening(found)
+            line = replace(line, sets=move.sets)
+            context = LineContext(self.request, line, exercise, mode, rack, self.scope)
+            opening = _first(move.proposal)
+            loaded = mode in LOAD_BEARING_MODES
             pinned = self._pin(opening, mode, *pin) if pin is not None and loaded else None
             context = replace(context, scheme_load=opening, pin=pinned)
-            working = opening if pinned is None else pinned
-            bounded = bound(context, working, "hold", self.steps, self.flags)
-            return self._bounded(authored, found.derived_from, rack, bounded, "first prescription")
-        before = self._anchor_load(found.exposure, rack, mode) if loaded else None
-        moved = self._move_or_hold(authored, found.exposure, before, rack, overrides)
+            proposal = move.proposal if pinned is None else pinned
+            bounded = bound(context, proposal, move.rounding, self.steps, self.flags)
+            change = "first prescription"
+            return self._bounded(line, found.derived_from, rack, bounded, change)
+        before = schemes.anchor_top(found.exposure)
+        move = self._move_or_hold(schemes, found.exposure, before, overrides)
+        line = replace(line, sets=move.sets)
+        moved = _first(move.proposal)
         pinned = None if pin is None or moved is None else self._pin(moved, moved.mode, *pin)
-        context = replace(
-            context, anchor=found.exposure, anchor_top=before, scheme_load=moved, pin=pinned
+        context = LineContext(
+            self.request,
+            line,
+            exercise,
+            mode,
+            rack,
+            self.scope,
+            anchor=found.exposure,
+            anchor_top=before,
+            scheme_load=moved,
+            pin=pinned,
         )
         if pinned is not None:
             bounded = bound(context, pinned, "hold", self.steps, self.flags)
         else:
-            rounding = "hold" if moved == before else "step_up"
-            bounded = bound(context, moved, rounding, self.steps, self.flags)
+            bounded = bound(context, move.proposal, move.rounding, self.steps, self.flags)
         if pin is not None:
             self._check_increment(found.exposure, rack, before, bounded.load)
-        change = _change(line, before, bounded)
-        return self._bounded(authored, found.derived_from, rack, bounded, change)
+        change = _change(line, before, bounded, move.change)
+        return self._bounded(line, found.derived_from, rack, bounded, change)
 
     def _bounded(
-        self, authored: Line, derived_from: str, rack: Rack | None, bounded: Bounded, change: str
+        self, line: Line, derived_from: str, rack: Rack | None, bounded: Bounded, change: str
     ) -> LinePrescription:
         if bounded.dropped:
-            return self._prescription(authored, derived_from, (), "dropped")
-        return self._prescription(authored, derived_from, self._groups(rack, bounded), change)
+            return self._prescription(line, derived_from, (), "dropped")
+        return self._prescription(line, derived_from, self._groups(line, rack, bounded), change)
 
     def _move_or_hold(
         self,
-        authored: Line,
+        schemes: SchemeMoves,
         exposure: Exposure,
         before: Load | None,
-        rack: Rack | None,
         overrides: Mapping[str, Applied],
-    ) -> Load | None:
+    ) -> Move:
         if "hold" not in overrides:
-            return self._move(authored, exposure, before, rack)
+            return schemes.move(exposure, before)
         step, _ = overrides["hold"]
         self.steps.append(Step(step, None, _amount(before), "hold"))
-        return before
+        return Move(before, "hold", schemes.given.sets)
 
     def _overrides(self) -> dict[str, Applied]:
         """The line's override Decisions in force, then the plan's own: the plan wins on the same
@@ -212,60 +231,6 @@ class _Derivation:
         racks = self.request.racks.get(self.request.planned.location, {})
         return racks.get(exercise.equipment_kind)
 
-    def _opening(self, authored: Line, found: StartLoad, loaded: bool) -> Load | None:
-        """No exposure anywhere: the start load at the scheme's opening position."""
-        if not loaded:
-            return None
-        if found.load is None:
-            self._raise(
-                "start_load_missing",
-                {"exercise_id": authored.exercise},
-                f"{authored.exercise} has no Exposure yet and the line has no start_load",
-            )
-            return None
-        self.steps.append(Step("scheme", None, found.load.amount, "start_load"))
-        return found.load
-
-    def _anchor_load(self, exposure: Exposure, rack: Rack | None, mode: LoadMode) -> Load | None:
-        if rack is None:
-            top = exposure.top_load
-            return None if top is None else top.as_mode(mode)
-        load, offgrid = anchor_load(
-            exposure,
-            rack,
-            session_id=self.request.planned.session_id,
-            monday=self.scope.monday,
-            mode=mode,
-        )
-        if offgrid is not None:
-            self.flags.append(offgrid)
-        return load
-
-    def _move(
-        self, authored: Line, exposure: Exposure, before: Load | None, rack: Rack | None
-    ) -> Load | None:
-        verdict = judge(authored, exposure, before)
-        if verdict.missed is not None:
-            missed = verdict.missed
-            self._raise(
-                "rep_range_missed",
-                {
-                    "set_index": missed.set_index,
-                    "reps": missed.reps,
-                    "range": list(missed.range),
-                    "logged_rpe": missed.logged_rpe,
-                    "authored_rpe": missed.authored_rpe,
-                },
-                f"working set {missed.set_index} logged {missed.reps} reps at RPE "
-                f"{missed.logged_rpe}: over the line, so the load holds",
-            )
-        if not verdict.hit or before is None or rack is None:
-            return before
-        moved = next_row_up(rack, before)
-        cause = "hit" if moved.cause == "row" else "rack_top"
-        self.steps.append(Step("scheme", before.amount, moved.load.amount, cause))
-        return moved.load
-
     def _prescription(
         self,
         authored: Line,
@@ -283,7 +248,9 @@ class _Derivation:
             change=change,
         )
 
-    def _groups(self, rack: Rack | None, bounded: Bounded) -> tuple[PrescribedGroup, ...]:
+    def _groups(
+        self, line: Line, rack: Rack | None, bounded: Bounded
+    ) -> tuple[PrescribedGroup, ...]:
         working = bounded.load
         count = sum(group.count for group in bounded.sets if group.type == "warm_up")
         warm_ups: list[Load | None] = [None] * count
@@ -302,8 +269,10 @@ class _Derivation:
             if group.working and test is not None:
                 groups.append(PrescribedGroup("test", 1, test, 1, None, TEST_RPE))
                 test = None
-            cap = bounded.rpe_cap if group.working else None
-            groups.append(_group(group, working if group.working else None, rpe_cap=cap))
+            if not group.working:
+                groups.append(_group(group, None))
+                continue
+            groups.append(_group(group, working, rpe_cap=bounded.rpe_cap))
         return tuple(groups)
 
     def _raise(self, code: str, params: dict[str, object], message: str) -> None:
@@ -333,11 +302,14 @@ def _group(
     )
 
 
-def _change(line: Line, before: Load | None, bounded: Bounded) -> str:
-    """`4×6–8 @8: 120 → 125`; with the shape changed, `4×8 @8 rung 40 → 3×8 @≤8 rung 60`."""
+def _change(line: Line, before: Load | None, bounded: Bounded, named: str | None) -> str:
+    """`4×6–8 @8: 120 → 125`; with the shape changed, `4×8 @8 rung 40 → 3×8 @≤8 rung 60`; the
+    scheme's own change (`reset 120 → 107.5`) when the cut and ceilings left the shape alone."""
     after = bounded.load
     authored = _shape(line.sets, None)
     shaped = _shape(bounded.sets, bounded.rpe_cap)
+    if shaped == authored and named is not None:
+        return named
     if shaped == authored:
         if before is None or after is None or after == before:
             return "held"
@@ -366,6 +338,12 @@ def _describe(group: SetGroup, rpe_cap: Number | None) -> str:
     else:
         rpe = "" if group.rpe is None else f" @{group.rpe:g}"
     return f"{group.count}×{dose}{rpe}"
+
+
+def _first(proposal: Proposal) -> Load | None:
+    if isinstance(proposal, tuple):
+        return proposal[0] if proposal else None
+    return proposal
 
 
 def _amount(load: Load | None) -> float | None:
