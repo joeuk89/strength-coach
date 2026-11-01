@@ -12,9 +12,11 @@ from support.plans import (
     squat_logged,
 )
 
+from coach.services.checkin_open import record_card
+from coach.services.checkin_record import checkin_record
 from coach.services.record import record
 from coach.services.status import StatusResult, status
-from coach.store import week_plans
+from coach.store import check_ins, week_plans
 from coach.store.connection import Connection
 
 FOURTH_SUNDAY = datetime.date(2026, 11, 29)
@@ -29,7 +31,7 @@ def aggravated(conn: Connection, on: str) -> None:
     record(conn, niggle.encode(), file="n.toml", clock=FixedClock())
 
 
-def four_hard_weeks(*, readiness: str) -> Connection:
+def four_hard_weeks(*, readiness: str | None = None) -> Connection:
     """Four hard squat weeks; the first three closed by a check-in reporting `readiness`."""
     conn = a_squat_program()
     for n in range(4):
@@ -38,8 +40,10 @@ def four_hard_weeks(*, readiness: str) -> Connection:
     return conn
 
 
-def block_of(conn: Connection, on: datetime.date = FOURTH_SUNDAY) -> dict[str, object]:
-    return dict(field_of(opened(conn, on), "block").facts)
+def block_of(
+    conn: Connection, on: datetime.date = FOURTH_SUNDAY, *, readiness: str | None = None
+) -> dict[str, object]:
+    return dict(field_of(opened(conn, on, readiness=readiness), "block").facts)
 
 
 def light_week_pending(conn: Connection, on: datetime.date) -> bool:
@@ -56,10 +60,10 @@ def status_on(conn: Connection, on: datetime.date) -> StatusResult:
 
 
 def test_poor_readiness_and_an_aggravated_niggle_propose_a_light_week_with_a_load_cut() -> None:
-    conn = four_hard_weeks(readiness="poor")
+    conn = four_hard_weeks()
     aggravated(conn, "2026-11-25")
 
-    block = block_of(conn)
+    block = block_of(conn, readiness="poor")
 
     assert block["hard_weeks"] == 4
     assert block["proposal"] == "light_week"
@@ -71,11 +75,29 @@ def test_poor_readiness_and_an_aggravated_niggle_propose_a_light_week_with_a_loa
 
 
 def test_poor_readiness_alone_is_a_watch() -> None:
-    conn = four_hard_weeks(readiness="poor")
+    conn = four_hard_weeks()
+
+    block = block_of(conn, readiness="poor")
+
+    assert (block["proposal"], block["watch"]) == ("none", "readiness")
+
+
+def test_with_no_readiness_given_the_same_state_is_a_watch() -> None:
+    conn = four_hard_weeks()
+    aggravated(conn, "2026-11-25")
 
     block = block_of(conn)
 
-    assert (block["proposal"], block["watch"]) == ("none", "readiness")
+    assert (block["proposal"], block["watch"]) == ("none", "niggle")
+
+
+def test_the_previous_check_ins_readiness_is_not_this_ones() -> None:
+    conn = four_hard_weeks(readiness="poor")
+    aggravated(conn, "2026-11-25")
+
+    block = block_of(conn, readiness="good")
+
+    assert (block["proposal"], block["watch"]) == ("none", "niggle")
 
 
 def test_under_three_hard_weeks_the_block_line_says_skipped() -> None:
@@ -88,11 +110,17 @@ def test_under_three_hard_weeks_the_block_line_says_skipped() -> None:
     assert block_of(conn, datetime.date(2026, 11, 15))["proposal"] == "skipped (2 hard weeks)"
 
 
+def short_nights(conn: Connection, *nights: str) -> None:
+    draft = "".join(f"[[sleep_night]]\nnight = {n}\nhours = 6\n" for n in nights)
+    record(conn, draft.encode(), file="s.toml", clock=FixedClock())
+
+
 def proposed_and_recorded() -> Connection:
-    """The proposal above, then the check-in that opened it recorded with readiness `ok`."""
-    conn = four_hard_weeks(readiness="poor")
+    """The proposal above, then the check-in that opened it recorded with the readiness given at
+    its open, `poor`, after a row reporting `ok`."""
+    conn = four_hard_weeks(readiness="ok")
     aggravated(conn, "2026-11-25")
-    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="ok")
+    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="poor")
     return conn
 
 
@@ -103,6 +131,38 @@ def test_the_proposal_stands_at_the_next_checkin_open() -> None:
 
     assert (block["proposal"], block["standing_from"]) == ("light_week", "ci-2026-11-29")
     assert light_week_pending(conn, datetime.date(2026, 12, 1))
+
+
+def test_checkin_record_stores_the_readiness_given_at_open_and_the_proposal_stands() -> None:
+    conn = four_hard_weeks(readiness="ok")
+    aggravated(conn, "2026-11-25")
+    assert block_of(conn, readiness="poor")["proposal"] == "light_week"
+    draft = 'date = 2026-11-29\ntier = "deep"\nread = "A heavy block."\nreadiness = "poor"\n'
+
+    checkin_record(conn, draft.encode(), file="c.toml", clock=FixedClock())
+
+    assert check_ins.current(conn)[-1].readiness == "poor"
+    assert block_of(conn, datetime.date(2026, 12, 6))["standing_from"] == "ci-2026-11-29"
+
+
+def test_a_recorded_check_ins_card_reads_its_own_readiness() -> None:
+    conn = proposed_and_recorded()
+    row = check_ins.current(conn)[-1]
+
+    card = record_card(conn, row, units="lb", bodyweight_units="kg")
+
+    assert dict(field_of(card, "block").facts)["proposal"] == "light_week"
+
+
+def test_a_recorded_check_in_without_poor_readiness_leaves_no_proposal_standing() -> None:
+    conn = four_hard_weeks(readiness="poor")
+    aggravated(conn, "2026-11-25")
+    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="ok")
+
+    block = block_of(conn, datetime.date(2026, 12, 6))
+
+    assert "standing_from" not in block
+    assert not light_week_pending(conn, datetime.date(2026, 12, 1))
 
 
 def test_a_plan_carrying_light_week_clears_the_proposal() -> None:
@@ -171,9 +231,8 @@ def test_a_set_longer_than_prescribed_is_not_read_as_drift() -> None:
 
 
 def test_a_fresh_proposal_keeps_the_standing_one_and_the_deep_tier() -> None:
-    conn = four_hard_weeks(readiness="poor")
-    aggravated(conn, "2026-11-25")
-    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="poor")
+    conn = proposed_and_recorded()
+    short_nights(conn, "2026-12-02", "2026-12-03", "2026-12-04", "2026-12-05")
     on = datetime.date(2026, 12, 6)
 
     card = opened(conn, on)
@@ -229,3 +288,15 @@ def test_a_standing_proposal_leaves_the_next_check_ins_light() -> None:
     assert (card.tier, status_on(conn, on).check_in.tier) == ("light", "light")
     assert dict(field_of(card, "block").facts)["standing_from"] == "ci-2026-11-29"
     assert light_week_pending(conn, on)
+
+
+def test_status_reads_no_readiness_before_the_athlete_gives_one() -> None:
+    conn = a_squat_program()
+    for n in range(4):
+        a_hard_squat_week(conn, monday(n))
+    a_check_in(conn, monday(0), "2026-11-08")
+    a_check_in(conn, monday(1), "2026-11-15")
+    a_check_in(conn, monday(2), "2026-11-22", readiness="poor")
+    aggravated(conn, "2026-11-25")
+
+    assert status_on(conn, FOURTH_SUNDAY).check_in.tier == "light"
