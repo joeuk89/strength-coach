@@ -21,17 +21,17 @@ creating custom exercise templates (ADR 0011, `ALLOWED_WRITES` in `src/coach/hev
 
 ## Install the engine and plugin
 
+Install the engine from GitHub; you don't need a copy of the repo:
+
 ```
-git clone https://github.com/joeuk89/strength-coach
-cd strength-coach
-uv tool install --editable .
+uv tool install git+https://github.com/joeuk89/strength-coach
 ```
 
 This puts two commands on your PATH: `coach`, the CLI, and `coach-hook`, which the plugin's hooks
-call. Then, in Claude Code:
+call. `uv tool upgrade coach` updates it later. Then, in Claude Code:
 
 ```
-/plugin marketplace add <path to your strength-coach checkout>
+/plugin marketplace add joeuk89/strength-coach
 /plugin install coach@strength-coach
 ```
 
@@ -159,6 +159,22 @@ Every verb prints one JSON envelope. `coach --help` lists them; `coach <verb> --
 | `upgrade` | git | Bring the instance up to the installed engine |
 
 ## Development
+
+To work on the engine, clone the repo and install it in editable mode, so `coach` runs your
+working copy. Point the plugin at the checkout to try changes to the skills and hooks:
+
+```
+git clone https://github.com/joeuk89/strength-coach
+cd strength-coach
+uv tool install --editable .
+```
+
+```
+/plugin marketplace add <path to your strength-coach checkout>
+/plugin install coach@strength-coach
+```
+
+The checks:
 
 ```
 uv sync
