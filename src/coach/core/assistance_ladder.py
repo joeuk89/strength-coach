@@ -2,14 +2,14 @@
 load, most assistance first; a full hit climbs one rung, the last rung holds."""
 
 from collections.abc import Sequence
+from typing import cast
 
 from coach.core.program.form import Line
 
 
 def rungs(line: Line) -> tuple[float, ...]:
-    authored = line.scheme.params.get("rungs", ())
-    assert isinstance(authored, Sequence)
-    return tuple(sorted((float(r) for r in authored), reverse=True))  # pyright: ignore[reportUnknownArgumentType, reportUnknownVariableType]
+    authored = cast(Sequence[float], line.scheme.params.get("rungs", ()))
+    return tuple(sorted((float(r) for r in authored), reverse=True))
 
 
 def rung_of(load: float, ladder: Sequence[float]) -> float:
