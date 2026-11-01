@@ -85,6 +85,18 @@ class Outcome:
     warnings: tuple[Message | Flag, ...] = ()
 
 
+def never(args: Mapping[str, ArgValue]) -> bool:
+    return False
+
+
+def always(args: Mapping[str, ArgValue]) -> bool:
+    return True
+
+
+def on_dry_run(args: Mapping[str, ArgValue]) -> bool:
+    return args.get("dry_run") is True
+
+
 @dataclass(frozen=True)
 class Declaration:
     name: str
@@ -97,6 +109,9 @@ class Declaration:
     examples: tuple[Example, ...] = ()
     # The one verb that writes [engine]: it runs on an engine newer than the pin (ADR 0007).
     moves_pin: bool = False
+    # Whether a call's default output may run over the 3 KB budget, because the agent must act
+    # on all of it (verbs.md, "Envelope and budget").
+    over_budget: Callable[[Mapping[str, ArgValue]], bool] = never
 
     def input_schema(self) -> Json:
         properties: Json = {

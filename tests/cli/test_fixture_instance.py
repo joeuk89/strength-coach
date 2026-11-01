@@ -25,19 +25,12 @@ def next_weeks_plan(root: Path) -> str:
     return PLAN
 
 
-def test_the_cards_lift_rows_follow_the_list_rule(instance: Path) -> None:
-    card = coach("checkin", "open", "--full").envelope["result"]["card"]
-    every = next(f for f in card if f["field"] == "lifts")
+def test_the_default_card_keeps_every_lift_and_activity_row(instance: Path) -> None:
+    card = {f["field"]: f for f in coach("checkin", "open").envelope["result"]["card"]}
 
-    lifts = next(
-        f for f in coach("checkin", "open").envelope["result"]["card"] if f["field"] == "lifts"
-    )
-
-    assert len(every["rows"]) == every["count"] == 4
-    assert every["truncated"] is False
-    assert lifts["count"] == 4
-    assert lifts["truncated"] is True
-    assert lifts["rows"] == every["rows"][: len(lifts["rows"])]
+    lifts, activities = card["lifts"], card["activities"]
+    assert (len(lifts["rows"]), lifts["count"], lifts["truncated"]) == (4, 4, False)
+    assert (len(activities["rows"]), activities["count"], activities["truncated"]) == (1, 1, False)
 
 
 def test_exit_0_status_reads_the_fixture_instance(instance: Path) -> None:

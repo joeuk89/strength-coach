@@ -2,7 +2,16 @@ import datetime
 from contextlib import closing
 from typing import cast
 
-from coach.cli.declaration import Argument, ArgValue, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    ArgValue,
+    Call,
+    Declaration,
+    Example,
+    Json,
+    Outcome,
+    always,
+)
 from coach.cli.instance import open_instance_store
 from coach.core.check_in_card import CardField
 from coach.core.errors import Invalid
@@ -86,6 +95,7 @@ DECLARATION = Declaration(
     ),
     writes="none",
     needs_instance=True,
+    over_budget=always,
     arguments=(
         Argument("--date", "the check-in's date (default today)"),
         Argument("--tier", "deep raises the derived tier; it never lowers it"),
