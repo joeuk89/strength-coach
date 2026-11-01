@@ -5,6 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import cast
 
+from coach.core.closed_week.adherence import Adherence
 from coach.core.config import WEEKDAYS, Weekday
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
@@ -26,11 +27,9 @@ from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
-# Adopt cannot raise these two yet (they read cadence signals and adherence), so an
-# acknowledgement of either passes while it names the Draft.
-UNJUDGED_ADOPT_WARNINGS = frozenset(
-    {"scheme_change_off_signal", "core_session_added_low_adherence"}
-)
+# Adopt cannot raise this one yet (it reads cadence signals), so an acknowledgement of it
+# passes while it names the Draft.
+UNJUDGED_ADOPT_WARNINGS = frozenset({"scheme_change_off_signal"})
 
 
 @dataclass(frozen=True)
@@ -56,6 +55,7 @@ class AdoptContext:
     previous: ProgramForm | None = None
     routines: Mapping[str, str] = field(default_factory=dict[str, str])
     open_block: OpenBlock | None = None
+    adherence: Adherence | None = None
     raised_warnings: frozenset[str] = field(default_factory=frozenset[str])
 
 
