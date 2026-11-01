@@ -162,3 +162,12 @@ def first_week(conn: Connection) -> datetime.date | None:
     """The Monday of the first WeekPlan approved; a superseded one was approved too."""
     (found,) = conn.execute("SELECT min(week) FROM week_plan").fetchone()
     return datetime.date.fromisoformat(found) if found else None
+
+
+def light_week_approvals(conn: Connection) -> list[datetime.date]:
+    """The day each WeekPlan carrying a `light_week` override was approved."""
+    found = conn.execute(
+        "SELECT DISTINCT p.approved_at FROM week_plan p JOIN override o ON o.plan_id = p.id "
+        "WHERE o.kind = 'light_week' AND p.approved_at IS NOT NULL ORDER BY p.approved_at"
+    )
+    return [datetime.date.fromisoformat(at[:10]) for (at,) in found]

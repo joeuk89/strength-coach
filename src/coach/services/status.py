@@ -139,7 +139,7 @@ def status(
         program=_program(conn),
         goal=_current_goal(conn),
         phase=phases.open_phase(conn),
-        check_in=_check_in_due(conn, today, cadence_days),
+        check_in=check_in_due_on(conn, today, cadence_days),
         niggles=tuple(str(n["id"]) for n in open_niggles),
         follow_ups_due=_follow_ups_due(conn, today),
         decisions=_decisions_in_force(conn, today),
@@ -158,7 +158,13 @@ def status(
     )
 
 
-def _check_in_due(conn: Connection, today: datetime.date, cadence_days: int) -> CheckInDue:
+def check_in_due_on(
+    conn: Connection,
+    today: datetime.date,
+    cadence_days: int,
+    *,
+    light_week_proposed: bool = False,
+) -> CheckInDue:
     last = check_ins.newest_current(conn)
     last_deep = check_ins.last_deep(conn)
     redesigned = programs.block_opened(conn)
@@ -176,6 +182,7 @@ def _check_in_due(conn: Connection, today: datetime.date, cadence_days: int) -> 
         redesign_since_deep=bool(
             last_deep and redesigned and datetime.date.fromisoformat(redesigned) > last_deep
         ),
+        light_week_proposed=light_week_proposed,
         deep_deferred_until=datetime.date.fromisoformat(max(deferrals)) if deferrals else None,
     )
 

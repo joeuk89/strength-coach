@@ -10,6 +10,8 @@ from coach.core.check_in import DAY, Window
 from coach.core.closed_week.sessions import TargetSet
 from coach.core.cut import LightShape, light_shape
 from coach.core.exposure import ExposureSet
+from coach.core.flag import Flag, Scope, raise_flag
+from coach.core.prescription import PlanOverride
 from coach.core.program.form import Deload
 
 type ProposalState = Literal["propose", "watch", "none", "skipped"]
@@ -164,6 +166,56 @@ def propose(triggers: Sequence[Trigger], *, hard_weeks: int, deload: Deload | No
     if state != "propose":
         return Proposal(state, tuple(triggers), hard_weeks, ceiling)
     return Proposal(state, tuple(triggers), hard_weeks, ceiling, _shape(proposal, deload))
+
+
+def light_week_flags(
+    overrides: Iterable[PlanOverride],
+    standing: Proposal | None,
+    *,
+    hard_weeks: int,
+    deload: Deload | None,
+    monday: datetime.date,
+) -> list[Flag]:
+    """The plan's `light_week` judged against the proposal standing (week.md; overrides.md)."""
+    light = next((o for o in overrides if o.kind == "light_week"), None)
+    if light is None:
+        return []
+    scope = Scope("week", monday)
+    if standing is None or standing.shape is None:
+        ceiling = deload.hard_weeks_ceiling if deload else None
+        return [
+            raise_flag(
+                "light_week_unprompted",
+                scope,
+                {"hard_weeks": hard_weeks, "ceiling": ceiling},
+                f"the plan takes a light week with no proposal standing ({hard_weeks} hard weeks)",
+                rn="rn:deloads.4" if hard_weeks < MIN_HARD_WEEKS else "rn:deloads.3",
+            )
+        ]
+    planned = light_shape(deload, light.params)
+    if planned == standing.shape:
+        return []
+    return [
+        raise_flag(
+            "light_week_shape_off_trigger",
+            scope,
+            {
+                "proposed_shape": _shape_json(standing.shape),
+                "plan_shape": _shape_json(planned),
+                "triggers": list(standing.reasons),
+            },
+            f"the plan's light week differs from the one {', '.join(standing.reasons)} proposed",
+            rn="rn:deloads.5",
+        )
+    ]
+
+
+def _shape_json(shape: LightShape) -> dict[str, object]:
+    return {
+        "set_cut_pct": shape.set_cut_pct,
+        "load_cut_pct": shape.load_cut_pct,
+        "rpe_cap": shape.rpe_cap,
+    }
 
 
 def _shape(proposal: Proposal, deload: Deload | None) -> LightShape:

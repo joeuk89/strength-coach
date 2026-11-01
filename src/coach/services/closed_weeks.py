@@ -38,6 +38,8 @@ from coach.store.rows import Row
 
 WEEK_OVERRIDES = ("light_week", "minimum_week", "one_off_week")
 
+type WindowList = Sequence[tuple[datetime.date, datetime.date]]
+
 
 @dataclass(frozen=True)
 class ClosedWeeks:
@@ -50,12 +52,7 @@ class ClosedWeeks:
 
 
 def closed_weeks(conn: Connection, units: Units = "kg") -> ClosedWeeks:
-    redesigns = [datetime.date.fromisoformat(d) for d in programs.redesigns(conn)]
-    if not redesigns:
-        return ClosedWeeks()
-    log = _Log(conn, units)
-    weeks = tuple(close_week(log.facts(monday)) for monday in _closed_mondays(conn, redesigns[0]))
-    return ClosedWeeks(weeks, blocks([(w.monday, w.kind) for w in weeks], redesigns))
+    return WeekLog(conn, units).closed_by(check_ins.current_windows(conn))
 
 
 def status_spans(conn: Connection) -> tuple[StatusSpan, ...]:
@@ -82,8 +79,7 @@ def parked_sessions(conn: Connection, monday: datetime.date) -> frozenset[str]:
     )
 
 
-def _closed_mondays(conn: Connection, first: datetime.date) -> list[datetime.date]:
-    windows = check_ins.current_windows(conn)
+def _closed_mondays(windows: WindowList, first: datetime.date) -> list[datetime.date]:
     if not windows:
         return []
     last = max(end for _, end in windows)
@@ -97,14 +93,18 @@ def _closed_mondays(conn: Connection, first: datetime.date) -> list[datetime.dat
     return found
 
 
-class _Log:
-    """What every closed week reads, loaded once."""
+class WeekLog:
+    """What every closed week reads, loaded once. A week closes when a window covers its Sunday,
+    so a window not yet recorded closes its weeks the same way (`checkin open`)."""
 
     def __init__(self, conn: Connection, units: Units) -> None:
         self.conn = conn
+        self.redesigns = [datetime.date.fromisoformat(d) for d in programs.redesigns(conn)]
+        self._weeks: dict[datetime.date, ClosedWeek] = {}
         library = exercises.library(conn)
         live = annotations.live(conn)
         current = workouts.current_workouts(conn)
+        rpes = workouts.session_rpes(conn)
         sessions = workouts.sessions_of_current(conn)
         exposures = resolve(
             (LoggedWorkout(v.id, _day(v.date), v.sets) for v in current), library, live, units
@@ -118,6 +118,7 @@ class _Log:
                 _started(v.raw),
                 workout_class(v.sets, library),
                 v.minutes,
+                rpes.get(v.id),
             )
             for v in current
         )
@@ -132,6 +133,20 @@ class _Log:
         self.routines = routine_map.mapped(conn)
         self.rehab = niggles.rehab_histories(conn)
         self.muscles = muscle_map(conn)
+
+    def closed_by(self, windows: WindowList) -> ClosedWeeks:
+        if not self.redesigns:
+            return ClosedWeeks()
+        weeks = tuple(self.week(m) for m in _closed_mondays(windows, self.redesigns[0]))
+        return ClosedWeeks(weeks, blocks([(w.monday, w.kind) for w in weeks], self.redesigns))
+
+    def week(self, monday: datetime.date) -> ClosedWeek:
+        if monday not in self._weeks:
+            self._weeks[monday] = close_week(self.facts(monday))
+        return self._weeks[monday]
+
+    def workout(self, workout_id: str) -> WeekWorkout:
+        return next(w for w in self.workouts if w.id == workout_id)
 
     def facts(self, monday: datetime.date) -> WeekFacts:
         sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
@@ -197,12 +212,15 @@ class _Log:
             for line in s.lines
             if line.scheme.name == "hold"
         }
-        targets = _targets(week_plans.prescriptions(self.conn, plan_id), hold_lines)
+        frozen = week_plans.prescriptions(self.conn, plan_id)
+        targets = _targets(frozen, hold_lines)
+        returned = _returned(frozen)
         return tuple(
             PlannedWork(
                 s,
                 targets.get((s.date, s.session_id), {}),
                 dropped=s.session_id in dropped,
+                returned=returned.get((s.date, s.session_id), frozenset()),
             )
             for s in sessions
         )
@@ -218,7 +236,9 @@ def _targets(
             continue
         groups = cast(list[dict[str, object]], row["set_groups"])
         sets = tuple(
-            TargetSet(_bottom(group), _number(group.get("rpe")))
+            TargetSet(
+                _bottom(group), _number(group.get("rpe")), _top(group), _number(group.get("load"))
+            )
             for group in groups
             if group.get("type") == "working"
             for _ in range(int(cast(int, group.get("count", 1))))
@@ -226,6 +246,17 @@ def _targets(
         if sets:
             found.setdefault((_day(str(row["date"])), session_id), {})[exercise_id] = sets
     return found
+
+
+def _returned(rows: Sequence[Row]) -> dict[PlannedRef, frozenset[str]]:
+    """The lines that took a return band, by planned session (prescription.md, "The cut")."""
+    found: dict[PlannedRef, set[str]] = {}
+    for row in rows:
+        steps = cast(list[dict[str, object]], row["steps"])
+        if any(str(step.get("cause", "")).startswith("return") for step in steps):
+            ref = (_day(str(row["date"])), str(row["session_id"]))
+            found.setdefault(ref, set()).add(str(row["exercise_id"]))
+    return {ref: frozenset(lines) for ref, lines in found.items()}
 
 
 def _claims(
@@ -258,6 +289,15 @@ def _bottom(group: Mapping[str, object]) -> int | None:
     reps = group.get("range") or group.get("reps")
     if isinstance(reps, list):
         return int(cast(list[int], reps)[0])
+    return reps if isinstance(reps, int) else None
+
+
+def _top(group: Mapping[str, object]) -> int | None:
+    reps = group.get("range") or group.get("reps")
+    if isinstance(reps, list):
+        return int(cast(list[int], reps)[-1])
+    if isinstance(reps, str):
+        return None
     return reps if isinstance(reps, int) else None
 
 

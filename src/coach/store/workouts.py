@@ -56,6 +56,14 @@ def insert(conn: Connection, workout: WorkoutRow, sets: Sequence[SetRow]) -> Non
     )
 
 
+def session_rpes(conn: Connection) -> dict[str, float]:
+    """The session RPE a hand-entered workout carries, by workout id."""
+    found = conn.execute(
+        "SELECT id, session_rpe FROM workout_current WHERE session_rpe IS NOT NULL"
+    )
+    return {workout_id: rpe for workout_id, rpe in found}
+
+
 def session_exists(conn: Connection, session_id: str) -> bool:
     return conn.execute("SELECT 1 FROM session WHERE id = ?", (session_id,)).fetchone() is not None
 

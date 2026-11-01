@@ -6,7 +6,7 @@ from coach.core.check_in import Window
 from coach.store import rows
 from coach.store.connection import Connection
 
-COLUMNS = "id, date, tier, window_start, window_end, status"
+COLUMNS = "id, date, tier, window_start, window_end, status, readiness"
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class StoredCheckIn:
     tier: str
     window: Window
     status: str
+    readiness: str | None = None
 
 
 def insert(conn: Connection, row: Mapping[str, object]) -> None:
@@ -73,9 +74,19 @@ def _one(conn: Connection, sql: str, params: tuple[object, ...]) -> StoredCheckI
     found = conn.execute(sql, params).fetchone()
     if found is None:
         return None
-    id_, date, tier, start, end, status = found
+    return _stored(found)
+
+
+def _stored(found: tuple[str, ...]) -> StoredCheckIn:
+    id_, date, tier, start, end, status, readiness = found
     window = Window(datetime.date.fromisoformat(start), datetime.date.fromisoformat(end))
-    return StoredCheckIn(id_, datetime.date.fromisoformat(date), tier, window, status)
+    return StoredCheckIn(id_, datetime.date.fromisoformat(date), tier, window, status, readiness)
+
+
+def current(conn: Connection) -> list[StoredCheckIn]:
+    """Every `current` row, oldest first."""
+    found = conn.execute(f"SELECT {COLUMNS} FROM check_in WHERE status = 'current' ORDER BY date")
+    return [_stored(row) for row in found]
 
 
 def current_windows(conn: Connection) -> list[tuple[datetime.date, datetime.date]]:

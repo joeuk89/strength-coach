@@ -8,6 +8,7 @@ from coach.core.fatigue import (
     DriftExposure,
     NiggleHistory,
     Trigger,
+    light_week_flags,
     niggle_trigger,
     propose,
     readiness_trigger,
@@ -15,6 +16,7 @@ from coach.core.fatigue import (
     short_sleep_week,
 )
 from coach.core.load import Load
+from coach.core.prescription import PlanOverride
 from coach.core.program.form import Deload
 
 CHECK_IN = datetime.date(2026, 11, 8)
@@ -182,3 +184,51 @@ def test_an_extra_set_than_prescribed_is_not_judged() -> None:
 
 def test_the_later_drift_must_fall_inside_the_window() -> None:
     assert rpe_drift([STEADY, an_exposure(1, 9, 9), an_exposure(4, 9, 9)], WINDOW) is None
+
+
+PLAN_WEEK = datetime.date(2026, 11, 9)
+LIGHT_WEEK = PlanOverride("light_week")
+
+
+def test_a_light_week_with_no_proposal_standing_is_unprompted() -> None:
+    [flag] = light_week_flags([LIGHT_WEEK], None, hard_weeks=2, deload=POLICY, monday=PLAN_WEEK)
+
+    assert flag.code == "light_week_unprompted"
+    assert flag.params == {"hard_weeks": 2, "ceiling": 6}
+
+
+def test_a_light_week_in_the_proposed_shape_raises_nothing() -> None:
+    standing = propose(
+        [Trigger("readiness"), Trigger("short_sleep_week")], hard_weeks=4, deload=POLICY
+    )
+
+    assert (
+        light_week_flags([LIGHT_WEEK], standing, hard_weeks=4, deload=POLICY, monday=PLAN_WEEK)
+        == []
+    )
+
+
+def test_a_light_week_holding_the_load_a_niggle_proposed_to_cut_is_off_trigger() -> None:
+    standing = propose([Trigger("readiness"), Trigger("niggle")], hard_weeks=4, deload=POLICY)
+
+    [flag] = light_week_flags([LIGHT_WEEK], standing, hard_weeks=4, deload=POLICY, monday=PLAN_WEEK)
+
+    assert flag.code == "light_week_shape_off_trigger"
+    assert flag.params == {
+        "proposed_shape": {"set_cut_pct": 40, "load_cut_pct": 10, "rpe_cap": 8},
+        "plan_shape": {"set_cut_pct": 40, "load_cut_pct": 0, "rpe_cap": 8},
+        "triggers": ["readiness", "niggle"],
+    }
+
+
+def test_a_light_week_restating_the_proposed_load_cut_raises_nothing() -> None:
+    standing = propose([Trigger("readiness"), Trigger("niggle")], hard_weeks=4, deload=POLICY)
+    restated = PlanOverride("light_week", params={"load_cut_pct": 10})
+
+    assert (
+        light_week_flags([restated], standing, hard_weeks=4, deload=POLICY, monday=PLAN_WEEK) == []
+    )
+
+
+def test_a_plan_with_no_light_week_raises_neither() -> None:
+    assert light_week_flags([], None, hard_weeks=4, deload=POLICY, monday=PLAN_WEEK) == []
