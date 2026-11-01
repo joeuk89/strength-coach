@@ -1,6 +1,7 @@
 """The Write plan hash (ADR 0006, "The Write plan"): the WeekPlan row that would be frozen, the
 Hevy writes, and the stored version of each routine they touch. The Draft's notes are not in it."""
 
+import datetime
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
@@ -57,11 +58,16 @@ def _override(override: PlanOverride) -> Json:
         "session": override.session_id,
         "exercise": override.exercise_id,
         "date": None if override.date is None else override.date.isoformat(),
-        "params": {name: _param(value) for name, value in override.params.items()},
+        "params": override_params(override),
         "because": override.because,
         "text": override.text,
         "evidence": list(override.evidence),
     }
+
+
+def override_params(override: PlanOverride) -> Json:
+    """The kind's params as JSON values the Draft parser reads back."""
+    return {name: _param(value) for name, value in override.params.items()}
 
 
 def _param(value: object) -> object:
@@ -70,6 +76,8 @@ def _param(value: object) -> object:
             group_document(item) if isinstance(item, SetGroup) else item
             for item in cast(tuple[object, ...], value)
         ]
+    if isinstance(value, datetime.date):
+        return value.isoformat()
     return value
 
 

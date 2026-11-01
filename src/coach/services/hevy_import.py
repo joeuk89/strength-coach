@@ -5,8 +5,8 @@ from coach.core.clock import Clock
 from coach.core.errors import Unreachable
 from coach.core.flag import Flag
 from coach.core.import_flags import exercise_unmapped, snapshot_stale, workout_reappeared
-from coach.core.instant import parse_instant, utc_instant
-from coach.core.mirror import BodyMeasurement, MirroredRoutine, Routine, engine_folders
+from coach.core.instant import utc_instant
+from coach.core.mirror import BodyMeasurement, engine_folders, mirrored_routine
 from coach.core.workout_import import Changes, event_since, reconcile_events, reconcile_full
 from coach.hevy.protocol import HevyClient
 from coach.store.connection import Connection
@@ -72,7 +72,7 @@ def import_hevy(conn: Connection, client: HevyClient, clock: Clock, *, full: boo
             append_version(conn, version, at)
         append_tombstones(conn, changes.tombstones)
         entered, withdrawn = _weigh_ins(conn, measurements, at)
-        routine_rows = sum(upsert_routine(conn, _mirrored(r), at) for r in pulled_routines)
+        routine_rows = sum(upsert_routine(conn, mirrored_routine(r), at) for r in pulled_routines)
         folder_rows = sum(upsert_folder(conn, f) for f in pulled_folders)
         summary = {
             **_log_summary(changes),
@@ -119,16 +119,6 @@ def _weigh_ins(
         enter_weigh_in(conn, date, kg, "hevy", at)
         entered += 1
     return entered, withdrawn
-
-
-def _mirrored(routine: Routine) -> MirroredRoutine:
-    return MirroredRoutine(
-        hevy_id=routine.id,
-        updated_at=utc_instant(parse_instant(routine.updated_at)),
-        title=routine.title,
-        folder_id=routine.folder_id,
-        raw=routine.raw,
-    )
 
 
 def _log_summary(changes: Changes) -> dict[str, int]:

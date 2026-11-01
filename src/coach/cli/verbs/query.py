@@ -9,7 +9,15 @@ from coach.core.errors import Invalid
 from coach.core.plan_check import CheckedPlan
 from coach.core.registries.agent import VIEWS
 from coach.services.plan_apply import validate
-from coach.services.query import QueryResult, exposures, flags, ledger, lines, readings
+from coach.services.query import (
+    QueryResult,
+    exposures,
+    flags,
+    ledger,
+    lines,
+    readings,
+    routines,
+)
 from coach.store.connection import Connection
 
 
@@ -64,7 +72,7 @@ def run(call: Call) -> Outcome:
                 last=last,
             )
         else:
-            raise Invalid("invalid_argument", f"query {view} is not in this engine build yet")
+            result = routines(conn, last=last)
     return Outcome(_rows(result))
 
 
@@ -114,7 +122,8 @@ DECLARATION = Declaration(
     name="query",
     summary="One read view as a row list: exposures (each exercise in a workout with its "
     "annotations applied and its e1RM), readings (Weigh-ins, Sleep nights, Activities), "
-    "flags and lines (of the plan in force, or of a plan Draft validated now with --draft) or "
+    "flags and lines (of the plan in force, or of a plan Draft validated now with --draft), "
+    "routines (the Routine map with each routine's folder, status and last verify) or "
     "ledger (one record kind with its withdrawals or event history, or one record by id).",
     writes="none",
     needs_instance=True,
