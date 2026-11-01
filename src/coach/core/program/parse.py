@@ -1,12 +1,12 @@
 """The program Draft read into a form. A malformed value stops the read at once; a key outside
 the schema is collected, so adopt reports it as `unknown_key` beside every other violation."""
 
-import hashlib
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
+from coach.core.draft_fields import draft_hash
 from coach.core.errors import Invalid
 from coach.core.program.form import (
     CADENCES,
@@ -49,10 +49,6 @@ class ParsedDraft:
     hash: str
     form: ProgramForm
     unknown_keys: tuple[str, ...]
-
-
-def draft_hash(data: bytes) -> str:
-    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def parse_program_draft(data: bytes, *, file: str) -> ParsedDraft:
