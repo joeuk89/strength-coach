@@ -375,7 +375,7 @@ class _Bounding:
             return None
         if self.context.line.scheme.name not in TEST_SCHEMES:
             return None
-        other_caps = [cap for cap in self.rpe_caps if cap[1] != "light_week"]
+        other_caps = [(cap, cause) for cap, cause in self.rpe_caps if cause != "light_week"]
         if other_caps:
             _, cause = min(other_caps, key=lambda c: c[0])
             self.steps.append(Step("test", None, None, cause))
