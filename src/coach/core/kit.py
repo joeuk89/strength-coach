@@ -33,6 +33,7 @@ class KitFiles:
     kit: str
     tables: Mapping[str, object] | None
     inventory_sha256: str | None
+    inventory: bytes | None = None
 
 
 def parse_kit_tables(
