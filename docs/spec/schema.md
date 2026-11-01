@@ -634,7 +634,7 @@ as `export/exercise.jsonl`, so the export loader reads it. `init` inserts every 
 new store. `upgrade` merges it: a catalogue id the store lacks is inserted, an id the store has
 is left exactly as it stands, whatever the catalogue now says, because the instance's row may
 carry an athlete's edit (`[[exercise]]`) or a verified template id. No verb deletes an
-`exercise` row. The seed content is `cutover.md`'s (the old library's catalogue pairs).
+`exercise` row. The seed content is `cutover.md`'s (the old library's catalogue pairs and the built-in templates the history uses).
 
 ## Export
 

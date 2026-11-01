@@ -5,7 +5,6 @@ import pytest
 from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.kit_fixtures import kit_files
-from support.ledger import an_exercise
 from support.plan_drafts import a_plan_draft
 from support.plans import SQUAT_LINE, a_squat_program, squat_logged
 from support.program_drafts import a_draft, a_session, toml
@@ -133,13 +132,6 @@ RESOLVED = '[[niggle]]\nniggle = "n-0001"\ndate = 2026-10-29\nstatus = "resolved
 
 def test_a_retired_rehab_routine_whose_read_back_differed_raises_no_drift_on_import() -> None:
     conn = a_squat_program()
-    an_exercise(
-        conn,
-        "dead_hang",
-        load_mode="duration",
-        equipment_kind="bodyweight",
-        hevy_template_id="DH-0001",
-    )
     squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
     record(conn, REHAB.encode(), file="n.toml", clock=FixedClock())
     hevy = FakeHevy(FixedClock())
