@@ -1,0 +1,83 @@
+"""The Write plan hash (ADR 0006, "The Write plan"): the WeekPlan row that would be frozen, the
+Hevy writes, and the stored version of each routine they touch. The Draft's notes are not in it."""
+
+import hashlib
+import json
+from collections.abc import Mapping, Sequence
+from typing import cast
+
+from coach.core.config import Units
+from coach.core.flag import Acknowledgement
+from coach.core.frozen_prescription import frozen_groups
+from coach.core.hevy_actions import HevyActions
+from coach.core.plan_draft import PlanDraft
+from coach.core.prescription import PlanOverride
+from coach.core.program.form import SetGroup, group_document
+
+type Json = dict[str, object]
+
+
+def write_plan_hash(
+    draft: PlanDraft,
+    *,
+    acknowledgements: Sequence[Acknowledgement],
+    actions: HevyActions,
+    routine_versions: Mapping[str, str | None],
+    units: Units,
+) -> str:
+    document: Json = {
+        "week": draft.week.isoformat(),
+        "position": draft.position.week,
+        "overrides": [_override(o) for o in draft.overrides],
+        "acknowledgements": [_acknowledgement(a) for a in acknowledgements],
+        "prescriptions": [
+            {
+                "session": prescribed.session.session_id,
+                "date": prescribed.session.date.isoformat(),
+                "location": prescribed.session.location,
+                "exercise": line.exercise_id,
+                "derived_from": line.derived_from,
+                "set_groups": frozen_groups(line.groups, units),
+            }
+            for prescribed in draft.sessions
+            for line in prescribed.lines
+        ],
+        "hevy": actions.to_json(),
+        "routines": {
+            routine: routine_versions.get(routine) for routine in actions.touched_routines
+        },
+    }
+    canonical = json.dumps(document, sort_keys=True, separators=(",", ":"), default=str)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _override(override: PlanOverride) -> Json:
+    return {
+        "kind": override.kind,
+        "session": override.session_id,
+        "exercise": override.exercise_id,
+        "date": None if override.date is None else override.date.isoformat(),
+        "params": {name: _param(value) for name, value in override.params.items()},
+        "because": override.because,
+        "text": override.text,
+        "evidence": list(override.evidence),
+    }
+
+
+def _param(value: object) -> object:
+    if isinstance(value, tuple):
+        return [
+            group_document(item) if isinstance(item, SetGroup) else item
+            for item in cast(tuple[object, ...], value)
+        ]
+    return value
+
+
+def _acknowledgement(acknowledgement: Acknowledgement) -> Json:
+    return {
+        "key": str(acknowledgement.key),
+        "params_hash": acknowledgement.params_hash,
+        "because": acknowledgement.because,
+        "text": acknowledgement.text,
+        "evidence": list(acknowledgement.evidence),
+    }

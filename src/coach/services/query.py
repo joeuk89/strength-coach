@@ -1,21 +1,30 @@
 import datetime
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import cast, get_args
 
 from coach.core.config import Units
 from coach.core.e1rm import point
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
+from coach.core.frozen_prescription import dose, frozen_groups
+from coach.core.plan_check import CheckedPlan
+from coach.core.planned_week import week_monday
 from coach.core.registries.agent import RECORD_KINDS
+from coach.core.registries.flags import Severity
 from coach.services.history import read_history
 from coach.services.ledger import ID_PREFIX
-from coach.store import annotations, decisions, follow_ups, niggles, notes, workouts
+from coach.store import annotations, decisions, follow_ups, niggles, notes, week_plans, workouts
 from coach.store import exercises as library
 from coach.store import readings as stored
 from coach.store.connection import Connection
 from coach.store.rows import Row
 
 READING_KINDS = ("weigh_in", "sleep_night", "activity")
+SEVERITIES: tuple[str, ...] = get_args(Severity.__value__)
+# What `prescribe` calls a line whose load and shape did not move.
+UNCHANGED = "held"
 
 
 @dataclass(frozen=True)
@@ -214,3 +223,134 @@ LEDGER_READERS: dict[str, Callable[[Connection, bool, datetime.date], list[Row]]
     "workout": _workouts,
     "exercise": _exercises,
 }
+
+
+def flags(
+    conn: Connection,
+    *,
+    draft: CheckedPlan | None,
+    today: datetime.date,
+    code: str | None,
+    severity: str | None,
+    scope: str | None,
+    summary: bool,
+    last: int | None,
+) -> QueryResult:
+    """`query flags`: the flags frozen on the plan in force, or those of a Draft validated now;
+    with `summary` the counts by (code, severity)."""
+    if severity is not None and severity not in SEVERITIES:
+        raise Invalid("invalid_argument", f"--severity takes one of {', '.join(SEVERITIES)}")
+    found = [
+        flag
+        for flag in _plan_flags(conn, draft, today)
+        if (code is None or flag["code"] == code)
+        and (severity is None or flag["severity"] == severity)
+        and (scope is None or cast(Row, flag["scope"])["kind"] == scope)
+    ]
+    if summary:
+        counts = Counter((str(f["code"]), str(f["severity"])) for f in found)
+        rows: list[Row] = [
+            {"code": c, "severity": s, "count": n} for (c, s), n in sorted(counts.items())
+        ]
+        return _newest(rows, last)
+    return _newest([_flag_row(flag) for flag in found], last)
+
+
+def lines(
+    conn: Connection,
+    *,
+    draft: CheckedPlan | None,
+    today: datetime.date,
+    units: Units,
+    exercises: tuple[str, ...],
+    session: str | None,
+    date: datetime.date | None,
+    changed: bool,
+    last: int | None,
+) -> QueryResult:
+    """`query lines`: each line of the plan in force, or of a Draft validated now, with its
+    prescription, its change from the last exposure and its flag keys."""
+    rows = [
+        row
+        for row in _plan_lines(conn, draft, today, units)
+        if (not exercises or row["exercise"] in exercises)
+        and (session is None or row["session"] == session)
+        and (date is None or row["date"] == date.isoformat())
+        and (not changed or row["change"] != UNCHANGED)
+    ]
+    return _newest(rows, last)
+
+
+def _plan_flags(conn: Connection, draft: CheckedPlan | None, today: datetime.date) -> list[Row]:
+    if draft is not None:
+        return [flag.to_json() for flag in draft.flags]
+    unique: dict[str, Row] = {}
+    for row in _in_force_prescriptions(conn, today):
+        for flag in cast(list[Row], row["flags"]):
+            unique.setdefault(str(flag["key"]), flag)
+    return list(unique.values())
+
+
+def _plan_lines(
+    conn: Connection, draft: CheckedPlan | None, today: datetime.date, units: Units
+) -> list[Row]:
+    if draft is not None:
+        return [
+            _line_row(
+                prescribed.session.date.isoformat(),
+                prescribed.session.session_id,
+                line.exercise_id,
+                frozen_groups(line.groups, units),
+                line.change,
+                [flag.key for flag in line.flags],
+                units,
+            )
+            for prescribed in draft.draft.sessions
+            for line in prescribed.lines
+        ]
+    return [
+        _line_row(
+            str(row["date"]),
+            str(row["session_id"]),
+            str(row["exercise_id"]),
+            cast(list[Row], row["set_groups"]),
+            str(row["change"]),
+            [str(flag["key"]) for flag in cast(list[Row], row["flags"])],
+            units,
+        )
+        for row in _in_force_prescriptions(conn, today)
+    ]
+
+
+def _in_force_prescriptions(conn: Connection, today: datetime.date) -> list[Row]:
+    plan = week_plans.in_force(conn, week_monday(today).isoformat())
+    return [] if plan is None else week_plans.prescriptions(conn, str(plan["id"]))
+
+
+def _line_row(
+    date: str,
+    session: str,
+    exercise: str,
+    set_groups: Sequence[Mapping[str, object]],
+    change: str,
+    flag_keys: list[str],
+    units: Units,
+) -> Row:
+    return {
+        "date": date,
+        "session": session,
+        "exercise": exercise,
+        "prescription": dose(set_groups, units),
+        "change": change,
+        "flags": flag_keys,
+    }
+
+
+def _flag_row(flag: Row) -> Row:
+    return {
+        "key": flag["key"],
+        "code": flag["code"],
+        "severity": flag["severity"],
+        "message": flag["message"],
+        "left": flag["left"],
+    }

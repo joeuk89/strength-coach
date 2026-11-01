@@ -14,7 +14,7 @@ from coach.core.kit import KitFiles
 from coach.core.load import LoadMode
 from coach.core.overrides import override_conflicts
 from coach.core.plan_draft import AthleteNote, PlanDraft
-from coach.core.planned_week import choose_sessions, planned_sessions
+from coach.core.planned_week import RotationPosition, choose_sessions, planned_sessions
 from coach.core.prescribe import prescribe
 from coach.core.prescription import (
     DecisionInForce,
@@ -50,18 +50,24 @@ def plan_draft(
     clock: Clock,
     week: datetime.date | None = None,
     overrides: Sequence[PlanOverride] = (),
+    position: str | None = None,
 ) -> PlanDraftResult:
+    """`position` is the rotation week a Draft confirmed; without one the inferred week stands
+    unconfirmed."""
     version = _in_force(conn)
     monday = week or default_week(conn, clock.today())
     if monday.weekday() != 0:
         raise Invalid("invalid_argument", f"--week {monday} is not a Monday")
-    position = rotation_position(conn, version, monday)
+    inferred = rotation_position(conn, version, monday)
+    if position is not None and position not in version.form.schedule.rotation:
+        raise Invalid("invalid_argument", f"rotation week {position!r} is not in the rotation")
+    rotation = inferred if position is None else RotationPosition(position, inferred.source)
     rehab = niggles.open_rehab_sessions(conn)
     spans = _status_spans(conn)
     planned = choose_sessions(
         planned_sessions(
             version.form,
-            position=position.week,
+            position=rotation.week,
             monday=monday,
             rehab=rehab,
             spans=spans,
@@ -96,12 +102,13 @@ def plan_draft(
     in_force = week_plans.in_force(conn, monday.isoformat())
     draft = PlanDraft(
         week=monday,
-        position=position,
+        position=rotation,
         sessions=sessions,
         notes=_notes_since_last_approved(conn),
         supersedes=None if in_force is None else str(in_force["id"]),
         overrides=tuple(overrides),
         conflicts=override_conflicts(overrides, monday),
+        confirmed=position is not None,
     )
     return PlanDraftResult(draft, render_plan_draft(draft, units=config.athlete.units))
 
