@@ -4,7 +4,7 @@ Hevy writes, and the stored version of each routine they touch. The Draft's note
 import datetime
 import hashlib
 import json
-from collections.abc import Mapping, Sequence, Set
+from collections.abc import Mapping, Sequence
 from typing import cast
 
 from coach.core.config import Units
@@ -58,18 +58,21 @@ def moved_routines(
     *,
     approved_at: str,
     imports: Mapping[str, str],
-    own_writes: Set[tuple[str, str]],
+    own_writes: Mapping[str, str],
 ) -> tuple[str, ...]:
-    """The touched routines the mirror took in after approval, other than by the push's own
-    read-back, which stamps the mirror's `imported_at` and the map's `written_at` alike."""
+    """The touched routines the mirror took in after approval and after the push last wrote or
+    checked them. The push's own read-back stamps `imported_at` and `written_at` alike."""
     approved = parse_instant(approved_at)
     return tuple(
         routine
         for routine in touched
         if routine in imports
-        and parse_instant(imports[routine]) > approved
-        and (routine, imports[routine]) not in own_writes
+        and parse_instant(imports[routine]) > _last_seen(approved, own_writes.get(routine))
     )
+
+
+def _last_seen(approved: datetime.datetime, written_at: str | None) -> datetime.datetime:
+    return approved if written_at is None else max(approved, parse_instant(written_at))
 
 
 def resumed_write_plan_hash(approved: str, moved_versions: Mapping[str, str | None]) -> str:

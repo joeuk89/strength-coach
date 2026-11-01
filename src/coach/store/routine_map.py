@@ -31,9 +31,9 @@ def rows(conn: Connection) -> tuple[MappedRoutine, ...]:
     )
 
 
-def written_by(conn: Connection, plan_id: str) -> frozenset[tuple[str, str]]:
-    """Each (routine, written_at) the WeekPlan's push mapped."""
-    return frozenset(
+def written_by(conn: Connection, plan_id: str) -> dict[str, str]:
+    """Each routine the WeekPlan's push mapped, to when it last wrote or checked it."""
+    return dict(
         conn.execute("SELECT routine_id, written_at FROM routine_map WHERE plan_id = ?", (plan_id,))
     )
 

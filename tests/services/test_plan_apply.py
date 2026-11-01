@@ -583,3 +583,41 @@ def test_resumes_after_approval_keep_the_approved_hash_while_only_the_push_wrote
     assert (found.write_plan_hash, found.moved_routines) == (digest, ())
     assert settled.resumed
     assert [o.outcome for o in settled.routines] == ["unchanged", "unchanged"]
+
+
+def test_a_settled_rerun_on_a_later_day_keeps_the_approved_hash_for_the_next_resume() -> None:
+    conn = a_squat_week(a_session("lower", a_line("bb_back_squat")), a_session("upper"))
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = the_hash(conn, data)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        push(conn, hevy, data, digest)
+    push(
+        conn,
+        hevy,
+        data,
+        digest,
+        FixedClock(datetime.datetime(2026, 10, 31, 12, tzinfo=datetime.UTC)),
+    )
+    settled = push(
+        conn,
+        hevy,
+        data,
+        digest,
+        FixedClock(datetime.datetime(2026, 11, 1, 12, tzinfo=datetime.UTC)),
+    )
+
+    found = a_rerun_dry_run(conn, data)
+    again = push(
+        conn,
+        hevy,
+        data,
+        digest,
+        FixedClock(datetime.datetime(2026, 11, 2, 12, tzinfo=datetime.UTC)),
+    )
+
+    assert [o.outcome for o in settled.routines] == ["unchanged", "unchanged"]
+    assert (found.write_plan_hash, found.moved_routines) == (digest, ())
+    assert again.resumed
+    assert [o.outcome for o in again.routines] == ["unchanged", "unchanged"]
