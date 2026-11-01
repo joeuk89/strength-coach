@@ -245,8 +245,10 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
 
 def _block(conn: Connection) -> BlockStatus | None:
     version = programs.latest(conn)
+    if version is None:
+        return None
     block = closed_weeks(conn).open_block
-    if version is None or block is None:
+    if block is None:
         return None
     deload = version.form.deload
     return BlockStatus(block.id, block.hard_weeks, deload.hard_weeks_ceiling if deload else None)

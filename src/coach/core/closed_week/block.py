@@ -46,12 +46,12 @@ def blocks(
         if not found:
             continue
         block = found[-1]
-        hard = block.hard_weeks + (1 if kind == "hard" else 0)
         if kind in CLOSING_KINDS:
             found[-1] = replace(block, weeks=block.weeks + 1, closed_by=kind)
             following = monday + datetime.timedelta(weeks=1)
             found.append(Block(f"b-{following.isoformat()}", following))
         else:
+            hard = block.hard_weeks + (1 if kind == "hard" else 0)
             found[-1] = replace(block, hard_weeks=hard, weeks=block.weeks + 1)
     for day in pending:
         open_at(day)

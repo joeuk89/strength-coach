@@ -9,7 +9,7 @@ from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.muscles import DOSED_MUSCLES
 from coach.core.planned_week import week_monday
-from coach.core.prescription import SessionPrescription
+from coach.core.prescription import LinePrescription, SessionPrescription
 
 type MuscleMap = Mapping[str, Mapping[str, Sequence[str]]]
 
@@ -78,8 +78,7 @@ def dose_under_target(
 def session_dose_high(session: SessionPrescription, muscles: MuscleMap) -> Flag | None:
     planned: dict[str, float] = {}
     for line in session.lines:
-        hard = sum(g.count for g in line.groups if g.type == "working" and is_hard(_rpe(g.rpe)))
-        _add(planned, muscles.get(line.exercise_id), hard)
+        _add(planned, muscles.get(line.exercise_id), _hard_sets(line))
     if not planned:
         return None
     muscle, sets = max(planned.items(), key=lambda item: item[1])
@@ -104,9 +103,7 @@ def minimum_week_floor(
     hard: dict[str, int] = {}
     for session in sessions:
         for line in session.lines:
-            hard[line.exercise_id] = hard.get(line.exercise_id, 0) + sum(
-                g.count for g in line.groups if g.type == "working" and is_hard(_rpe(g.rpe))
-            )
+            hard[line.exercise_id] = hard.get(line.exercise_id, 0) + _hard_sets(line)
     for lift in priority_lifts:
         if hard.get(lift, 0) < PRIORITY_FLOOR:
             return raise_flag(
@@ -120,6 +117,10 @@ def minimum_week_floor(
 
 def _trailing(weeks: Iterable[ClosedWeek]) -> list[ClosedWeek]:
     return sorted((w for w in weeks if w.ordinary), key=lambda w: w.monday)[-TRAILING_WEEKS:]
+
+
+def _hard_sets(line: LinePrescription) -> int:
+    return sum(g.count for g in line.groups if g.type == "working" and is_hard(_rpe(g.rpe)))
 
 
 def _add(dose: dict[str, float], muscles: Mapping[str, Sequence[str]] | None, sets: float) -> None:
