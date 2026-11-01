@@ -178,3 +178,30 @@ def test_a_hold_after_an_exposure_off_the_waves_repeats_its_loads_at_this_weeks_
     )
 
     assert working(line) == [(1, 60, 3), (1, 70, 3), (1, 80, "3+")]
+
+
+def stalls(line: LinePrescription) -> list[dict[str, object]]:
+    return [dict(f.params) for f in line.flags if f.code == "stall_streak"]
+
+
+def test_rep_out_counts_falling_while_their_e1rm_rises_are_not_a_stall() -> None:
+    waves = (
+        wave_logged("2026-10-12", (65, 75, 85), 5, 8),
+        wave_logged("2026-10-19", (70, 80, 90), 3, 7),
+        wave_logged("2026-10-26", (75, 85, 95), 1, 5),
+    )
+
+    assert stalls(derive(*waves, hard_week_count=3)) == []
+
+
+def test_three_waves_with_no_rep_out_e1rm_gain_raise_stall_streak() -> None:
+    dates = ("2026-10-12", "2026-10-19", "2026-10-26")
+    waves = (
+        wave_logged(dates[0], (65, 75, 85), 5, 9),
+        wave_logged(dates[1], (70, 80, 90), 3, 6),
+        wave_logged(dates[2], (75, 85, 95), 1, 4),
+    )
+
+    assert stalls(derive(*waves, hard_week_count=3)) == [
+        {"streak": 3, "exposures": [f"exposure:w-{on}/bb_bench_press" for on in dates]}
+    ]

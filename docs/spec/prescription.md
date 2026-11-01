@@ -135,7 +135,7 @@ count (rn:progression-methods §4). The metric per scheme:
 | `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`, Starting Strength's "the 2nd time in a row", rn:training-level §2) sets the load to `reset_factor` × the anchor load, rounded **down** to the rack. Both are `linear` params (`program.md`); the registry default `reset_factor = 0.9` is the over-40 reset (5 % under 40, 10 % over 40, rn:training-level §2), so a coach names `reset_factor = 0.95` on the line for a younger athlete. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
 | `assistance_ladder` | the rung | hold the rung |
 | `top_backoff` | e1RM | none: the model holds the top set |
-| `wave_531` | the rep-out count | none: `training_max_due` or `rep_range_missed` says what happened |
+| `wave_531` | the rep-out's e1RM (counts fall wave to wave by design) | none: `training_max_due` or `rep_range_missed` says what happened |
 
 A stall is a warning the agent judges within the block; the scheme may change only at the block
 boundary (`goals.md`, **Response to a cadence signal**). RPE rising at a held load on many lines
