@@ -91,7 +91,6 @@ def run_hook(
     *,
     declarations: Sequence[Declaration] = DECLARATIONS,
     run_coach: CoachRun | None = None,
-    env: dict[str, str] | None = None,
 ) -> HookRun:
     seen: list[tuple[list[str], Path]] = []
     inner = run_coach or clean_dry_run()
@@ -104,7 +103,6 @@ def run_hook(
     code = main(
         [event],
         io.StringIO(stdin),
-        env or {},
         out,
         io.StringIO(),
         declarations=lambda: tuple(declarations),

@@ -1,7 +1,6 @@
 """`coach-hook <event>`: the plugin's hooks, a second entry point beside `coach` (ADR 0019)."""
 
 import json
-import os
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -18,7 +17,6 @@ NO_INSTANCE = "no_instance"
 def main(
     argv: Sequence[str],
     stdin: TextIO,
-    env: dict[str, str],
     stdout: TextIO,
     stderr: TextIO,
     *,
@@ -40,7 +38,7 @@ def main(
 
 
 def run() -> int:
-    return main(sys.argv[1:], sys.stdin, dict(os.environ), sys.stdout, sys.stderr)
+    return main(sys.argv[1:], sys.stdin, sys.stdout, sys.stderr)
 
 
 def _read(stdin: TextIO) -> object:
