@@ -72,6 +72,8 @@ NIGGLE_STATUSES = terms(
 )
 FOLLOW_UP_EVENTS = terms("follow-up-events", "deferred", "kept", "resolved", "dropped")
 CHECK_IN_STATUSES = terms("check-in-statuses", "current", "superseded")
+CHECK_IN_TIERS = terms("check-in-tiers", "light", "deep")
+READINESS = terms("readiness", "poor", "ok", "good")
 GOAL_KINDS = terms("goal-kinds", "hypertrophy", "strength")
 GOAL_STATUSES = terms("goal-statuses", "current", "superseded")
 MILESTONE_TARGET_KINDS = terms(

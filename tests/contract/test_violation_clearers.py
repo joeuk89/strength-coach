@@ -9,7 +9,6 @@ from coach.core.registries.flags import FLAGS, FlagCode
 PENDING_LEAVES = frozenset(
     {
         "checkin open",
-        "checkin record",
         "progress",
     }
 )
