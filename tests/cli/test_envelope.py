@@ -1,6 +1,5 @@
 import io
 import json
-from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import pytest
@@ -10,11 +9,11 @@ from support.instances import an_instance
 from coach.cli import app, registry
 from coach.cli.declaration import (
     Argument,
-    ArgValue,
     Call,
     Declaration,
     Json,
     Outcome,
+    OverBudget,
     always,
     never,
     on_dry_run,
@@ -145,9 +144,7 @@ def test_each_typed_error_exits_with_its_class(
     assert run.envelope["error"]["code"] == "some_code"
 
 
-def a_listing(
-    rows: int, *, width: int = 100, over_budget: Callable[[Mapping[str, ArgValue]], bool] = never
-) -> Declaration:
+def a_listing(rows: int, *, width: int = 100, over_budget: OverBudget = never) -> Declaration:
     def listing(call: Call) -> Outcome:
         kept = [{"id": n, "text": "x" * width} for n in range(rows)][: call.last]
         return Outcome({"rows": kept, "count": rows, "truncated": len(kept) < rows})
