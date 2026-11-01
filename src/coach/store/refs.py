@@ -22,7 +22,7 @@ def exists(conn: Connection, ref: Ref) -> bool:
         return _planned_session(conn, ref.id)
     if ref.kind == "workout":
         workout_id, _, exercise_id = ref.id.partition("/")
-        return _workout(conn, workout_id) and (
+        return _row(conn, "workout", workout_id) and (
             not exercise_id or _row(conn, "exercise", exercise_id)
         )
     table = TABLE_OF.get(ref.kind)
@@ -32,10 +32,6 @@ def exists(conn: Connection, ref: Ref) -> bool:
 def _row(conn: Connection, table: str, id_: str) -> bool:
     key = KEY_OF.get(table, "id")
     return conn.execute(f"SELECT 1 FROM {table} WHERE {key} = ?", (id_,)).fetchone() is not None
-
-
-def _workout(conn: Connection, id_: str) -> bool:
-    return conn.execute("SELECT 1 FROM workout WHERE id = ?", (id_,)).fetchone() is not None
 
 
 def _planned_session(conn: Connection, ref_id: str) -> bool:

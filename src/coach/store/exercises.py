@@ -29,11 +29,7 @@ def get(conn: Connection, id_: str) -> Row | None:
     found = conn.execute(
         f"SELECT {', '.join(COLUMNS)} FROM exercise WHERE id = ?", (id_,)
     ).fetchone()
-    if found is None:
-        return None
-    row: Row = dict(zip(COLUMNS, found, strict=True))
-    row["muscles"] = json.loads(str(row["muscles"]))
-    return row
+    return None if found is None else _decoded(dict(zip(COLUMNS, found, strict=True)))
 
 
 def update(conn: Connection, id_: str, fields: Mapping[str, object]) -> None:
@@ -57,4 +53,8 @@ def _column(name: str, value: object) -> object:
 
 def every(conn: Connection) -> list[Row]:
     rows = select(conn, f"SELECT {', '.join(COLUMNS)} FROM exercise ORDER BY id")
-    return [{**row, "muscles": json.loads(str(row["muscles"]))} for row in rows]
+    return [_decoded(row) for row in rows]
+
+
+def _decoded(row: Row) -> Row:
+    return {**row, "muscles": json.loads(str(row["muscles"]))}

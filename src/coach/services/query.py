@@ -4,20 +4,13 @@ from dataclasses import dataclass
 
 from coach.core.errors import Invalid
 from coach.core.registries.agent import RECORD_KINDS
+from coach.services.ledger import ID_PREFIX
 from coach.store import exercises, notes, workouts
 from coach.store import readings as stored
 from coach.store.connection import Connection
 from coach.store.rows import Row
 
 READING_KINDS = ("weigh_in", "sleep_night", "activity")
-ID_PREFIXES = (
-    ("an-", "note"),
-    ("wi-", "weigh_in"),
-    ("sn-", "sleep_night"),
-    ("ac-", "activity"),
-    ("ss-", "status_span"),
-    ("w-", "workout"),
-)
 
 
 @dataclass(frozen=True)
@@ -67,7 +60,7 @@ def ledger(
 
 
 def _kind_of(conn: Connection, id_: str) -> str:
-    for prefix, kind in ID_PREFIXES:
+    for kind, (_, prefix) in ID_PREFIX.items():
         if id_.startswith(prefix):
             return kind
     return "exercise" if exercises.get(conn, id_) else "workout"

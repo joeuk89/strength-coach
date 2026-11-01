@@ -106,10 +106,12 @@ class _Writer:
 
     def _write(self, record: LedgerRecord, id_: str) -> str | None:
         match record:
-            case WeighInRecord(withdraws=str(target)) | SleepNightRecord(withdraws=str(target)):
+            case (
+                WeighInRecord(withdraws=str(target))
+                | SleepNightRecord(withdraws=str(target))
+                | StatusSpanRecord(withdraws=str(target))
+            ):
                 return self._withdraw(kind_of(record), id_, target)
-            case StatusSpanRecord(withdraws=str(target)):
-                return self._withdraw("status_span", id_, target)
             case NoteRecord():
                 self._note(record, id_)
             case WeighInRecord():

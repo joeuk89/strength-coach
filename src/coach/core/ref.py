@@ -49,10 +49,11 @@ class Ref:
         kind, colon, id_ = text.partition(":")
         if not colon or kind not in REF_KINDS or not id_:
             raise Invalid("invalid_argument", f"{text!r} is not a ref (`kind:id`, schema.md)")
-        local = id_.removeprefix(LOCAL) if id_.startswith(LOCAL) else None
+        ref = cls(kind, id_)
+        local = ref.local_key
         if local is not None and not KEY.fullmatch(local):
             raise Invalid("invalid_argument", f"{text!r} cites {local!r}, which is not a key")
-        return cls(kind, id_)
+        return ref
 
     def resolved(self, id_: str) -> "Ref":
         return Ref(self.kind, id_)
