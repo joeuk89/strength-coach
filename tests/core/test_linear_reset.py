@@ -90,3 +90,14 @@ def test_resets_per_lift_are_derived_from_history() -> None:
     assert resets(BENCH, history, RACK, "total") == (
         Reset("exposure:w-2026-10-12/bb_bench_press", 120, 107.5),
     )
+
+
+def test_every_rep_made_over_the_authored_rpe_is_not_a_miss() -> None:
+    hard = [(120, 5, 9.5)] * 4
+    line = derive(
+        an_exposure("2026-10-19", *hard, session_id="lower"),
+        an_exposure("2026-10-26", *hard, session_id="lower"),
+    )
+
+    assert (line.change, line.groups[0].load) == ("held", Load(120, "total"))
+    assert all(step.step != "scheme" for step in line.steps)

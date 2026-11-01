@@ -8,7 +8,7 @@ from coach.core.exposure import Exposure
 from coach.core.line_history import newest_first, ordinary, top_on_grid
 from coach.core.load import Load, LoadMode
 from coach.core.program.form import Line
-from coach.core.progression import judge
+from coach.core.progression import judge, short
 from coach.core.rack import Rack, round_to_rack
 from coach.core.scheme_params import number
 
@@ -20,9 +20,9 @@ def misses_before_reset(line: Line) -> int:
 
 
 def missed(line: Line, exposure: Exposure, load: Load) -> bool:
-    """Every authored set attempted and not every one made; a set never logged is not a miss."""
-    verdict = judge(line, exposure, load)
-    return not verdict.hit and not verdict.incomplete
+    """Every authored set attempted and one logged short of its reps; RPE plays no part, and a
+    set never logged is not a miss."""
+    return not judge(line, exposure, load).incomplete and short(line, exposure)
 
 
 def misses_at(line: Line, history: Sequence[Exposure], load: Load, rack: Rack | None) -> int:

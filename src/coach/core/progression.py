@@ -56,6 +56,15 @@ def judge(line: Line, anchor: Exposure, load: Load | None = None) -> Verdict:
             return HOLD
 
 
+def short(line: Line, anchor: Exposure) -> bool:
+    """A working set logged below the top of its authored reps, whatever its RPE."""
+    authored = [group.reps for group in line.working_groups() for _ in range(group.count)]
+    return any(
+        logged.reps is not None and logged.reps < _top(reps)
+        for reps, logged in zip(authored, anchor.working, strict=False)
+    )
+
+
 type Pair = tuple[tuple[Reps | None, Number | None], ExposureSet]
 
 

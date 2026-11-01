@@ -79,3 +79,24 @@ def test_a_held_line_never_stalls() -> None:
     line = derive(squat_on("2026-10-12"), squat_on("2026-10-19"), squat_on("2026-10-26"), line=held)
 
     assert stalls(line) == []
+
+
+LINEAR = a_line("bb_back_squat", working(4, 5), scheme="linear")
+
+
+def test_a_linear_line_stalls_on_three_consecutive_misses() -> None:
+    short = ((120, 5, 8), (120, 5, 8), (120, 5, 8), (120, 4, 8))
+    dates = ("2026-10-12", "2026-10-19", "2026-10-26")
+
+    line = derive(*(squat_on(on, *short) for on in dates), line=LINEAR)
+
+    assert stalls(line) == [{"streak": 3, "exposures": [ref(on) for on in dates]}]
+
+
+def test_a_linear_line_making_every_rep_over_the_authored_rpe_does_not_stall() -> None:
+    hard = ((120, 5, 9.5),) * 4
+    dates = ("2026-10-12", "2026-10-19", "2026-10-26")
+
+    line = derive(*(squat_on(on, *hard) for on in dates), line=LINEAR)
+
+    assert stalls(line) == []
