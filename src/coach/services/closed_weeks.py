@@ -97,7 +97,7 @@ class WeekLog:
     """What every closed week reads, loaded once. A week closes when a window covers its Sunday,
     so a window not yet recorded closes its weeks the same way (`checkin open`)."""
 
-    def __init__(self, conn: Connection, units: Units) -> None:
+    def __init__(self, conn: Connection, units: Units = "kg") -> None:
         self.conn = conn
         self.redesigns = [datetime.date.fromisoformat(d) for d in programs.redesigns(conn)]
         self._weeks: dict[datetime.date, ClosedWeek] = {}

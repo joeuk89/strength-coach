@@ -11,7 +11,8 @@ from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.ledger_flags import niggle_unconstrained
 from coach.core.planned_week import RotationPosition, week_monday
-from coach.services.closed_weeks import closed_weeks
+from coach.services.closed_weeks import WeekLog
+from coach.services.fatigue import Fatigue
 from coach.services.rotation import rotation_position
 from coach.store import (
     check_ins,
@@ -75,6 +76,7 @@ class BlockStatus:
     id: str
     hard_weeks: int
     ceiling: int | None
+    light_week_pending: bool = False
 
 
 @dataclass(frozen=True)
@@ -126,6 +128,8 @@ def status(
     last = last_import_at(conn)
     stale = snapshot_stale(last, now) if hevy_on else None
     monday = week_monday(today)
+    log = WeekLog(conn)
+    pending = Fatigue(conn, log).standing() is not None
     return StatusResult(
         engine_version=engine_version,
         pin=pin,
@@ -139,7 +143,7 @@ def status(
         program=_program(conn),
         goal=_current_goal(conn),
         phase=phases.open_phase(conn),
-        check_in=check_in_due_on(conn, today, cadence_days),
+        check_in=check_in_due_on(conn, today, cadence_days, light_week_proposed=pending),
         niggles=tuple(str(n["id"]) for n in open_niggles),
         follow_ups_due=_follow_ups_due(conn, today),
         decisions=_decisions_in_force(conn, today),
@@ -154,7 +158,7 @@ def status(
         ),
         plan=_plan_in_force(conn, monday),
         rotation=_rotation(conn, monday),
-        block=_block(conn),
+        block=_block(conn, log, pending),
     )
 
 
@@ -250,15 +254,16 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     )
 
 
-def _block(conn: Connection) -> BlockStatus | None:
+def _block(conn: Connection, log: WeekLog, pending: bool) -> BlockStatus | None:
     version = programs.latest(conn)
     if version is None:
         return None
-    block = closed_weeks(conn).open_block
+    block = log.closed_by(check_ins.current_windows(conn)).open_block
     if block is None:
         return None
     deload = version.form.deload
-    return BlockStatus(block.id, block.hard_weeks, deload.hard_weeks_ceiling if deload else None)
+    ceiling = deload.hard_weeks_ceiling if deload else None
+    return BlockStatus(block.id, block.hard_weeks, ceiling, pending)
 
 
 def _rotation(conn: Connection, monday: datetime.date) -> WeekPosition | None:

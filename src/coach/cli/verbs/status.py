@@ -123,7 +123,12 @@ def _rotation(rotation: WeekPosition | None) -> Json | None:
 def _block(block: BlockStatus | None) -> Json | None:
     if block is None:
         return None
-    return {"id": block.id, "hard_weeks": block.hard_weeks, "ceiling": block.ceiling}
+    return {
+        "id": block.id,
+        "hard_weeks": block.hard_weeks,
+        "ceiling": block.ceiling,
+        "light_week_pending": block.light_week_pending,
+    }
 
 
 def _goal(goal: CurrentGoal | None) -> Json | None:
@@ -160,7 +165,7 @@ DECLARATION = Declaration(
         "position, the program version in force, the current Goal and the open Phase, whether "
         "a check-in is due and its tier, open niggles, due follow-ups, Decisions in force by "
         "kind and current Observations as counts with ids, and the open Block's hard weeks "
-        "against its ceiling."
+        "against its ceiling with whether a light week or deload is pending."
     ),
     writes="none",
     needs_instance=True,
