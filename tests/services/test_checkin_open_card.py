@@ -1,3 +1,4 @@
+import datetime
 from typing import cast
 
 from support.check_in_cards import (
@@ -117,3 +118,12 @@ text = "the knee felt fine on stairs"
     }
     assert field_of(card, "niggles").asks == (Ask("niggle_status", "niggle:n-0001"),)
     assert [w.code for w in card.warnings] == ["followup_due"]
+
+
+def test_a_catch_up_is_light_and_tier_deep_is_honoured_on_it() -> None:
+    conn = a_two_session_program()
+    a_planned_two_session_week(conn, monday(0))
+    late = datetime.date(2026, 11, 15)
+
+    assert (opened(conn, late).tier, opened(conn, late).catch_up) == ("light", True)
+    assert opened(conn, late, tier="deep").tier == "deep"
