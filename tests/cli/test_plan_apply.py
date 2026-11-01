@@ -1,3 +1,5 @@
+import io
+import sys
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
@@ -15,6 +17,7 @@ from support.planning_instance import (
     the_store,
 )
 from support.plans import squat_logged
+from support.terminal import typed
 from support.worked_week import a_dry_run, the_worked_week
 
 from coach.cli import app, envelope
@@ -239,6 +242,91 @@ def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
     assert [(r["session"], r["folder"], r["status"]) for r in routines] == [
         ("lower", "Program", "active")
     ]
+
+
+def a_hevy_instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    return root
+
+
+def test_no_at_the_terminal_shows_the_prompt_and_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = a_hevy_instance(tmp_path, monkeypatch)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    dry = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]
+    monkeypatch.setattr(sys, "stdin", typed("n"))
+
+    run = with_hevy("plan", "apply", draft, "--expect", dry["write_plan_hash"])
+
+    assert run.code == 0, run.stdout
+    assert run.envelope["result"] == {"declined": True, "write_plan_hash": dry["write_plan_hash"]}
+    assert dry["prompt"] in run.stderr
+    assert "[y/N]" in run.stderr
+    assert (hevy.calls, hevy.audit) == ([], [])
+    assert coach("query", "routines").envelope["result"]["rows"] == []
+    assert coach("plan", "apply", draft, "--dry-run").envelope["result"]["resumes"] is None
+
+
+def test_yes_at_the_terminal_pushes_the_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = a_hevy_instance(tmp_path, monkeypatch)
+    with_hevy = hevy_on(FakeHevy(CLOCK))
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    monkeypatch.setattr(sys, "stdin", typed("y"))
+
+    run = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert run.code == 0, run.stdout
+    assert run.envelope["result"]["week_plan_id"] == "wp-2026-11-02"
+    assert [o["outcome"] for o in run.envelope["result"]["outcomes"]] == ["verified"]
+
+
+def test_a_resume_at_the_terminal_prompts_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = a_hevy_instance(tmp_path, monkeypatch)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+    monkeypatch.setattr(sys, "stdin", typed("y"))
+    with_hevy("plan", "apply", draft, "--expect", digest)
+    monkeypatch.setattr(sys, "stdin", typed("n"))
+
+    declined = with_hevy("plan", "apply", draft, "--expect", digest)
+    monkeypatch.setattr(sys, "stdin", typed("y"))
+    resumed = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert declined.envelope["result"]["declined"] is True
+    assert "resuming wp-2026-11-02" in declined.stderr
+    assert "[y/N]" in resumed.stderr
+    assert resumed.envelope["result"]["resumed"] is True
+    assert [o["outcome"] for o in resumed.envelope["result"]["outcomes"]] == ["verified"]
+
+
+def test_off_a_terminal_the_approved_hash_pushes_without_asking(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = a_hevy_instance(tmp_path, monkeypatch)
+    with_hevy = hevy_on(FakeHevy(CLOCK))
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    monkeypatch.setattr(sys, "stdin", io.StringIO("n\n"))
+
+    run = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert run.code == 0, run.stdout
+    assert run.stderr == ""
+    assert run.envelope["result"]["week_plan_id"] == "wp-2026-11-02"
 
 
 def test_query_flags_on_a_draft_summarises_by_code_and_severity(instance: Path) -> None:

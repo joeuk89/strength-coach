@@ -5,10 +5,11 @@ from coach.cli.drafts import read_draft
 from coach.cli.hevy_key import api_key
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
+from coach.cli.terminal import Terminal
 from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.render.approval_prompt import approval_prompt
-from coach.services.plan_apply import DryRun, apply, dry_run
+from coach.services.plan_apply import DryRun, dry_run, expected, push_approved
 
 
 def run(call: Call) -> Outcome:
@@ -16,6 +17,7 @@ def run(call: Call) -> Outcome:
     instance = call.instance
     path = str(call.args["draft"])
     data = read_draft(path)
+    units = instance.config.athlete.units
     if call.args.get("dry_run") is True:
         with closing(open_instance_store(instance)) as conn:
             found = dry_run(
@@ -26,24 +28,26 @@ def run(call: Call) -> Outcome:
                 kits=read_kit_files(instance),
                 clock=call.clock,
             )
-        units = instance.config.athlete.units
         return Outcome(dry_run_result(found, units=units, full=call.full, last=call.last))
-    expect = call.args.get("expect")
+    given = call.args.get("expect")
+    expect = given if isinstance(given, str) else None
     client = None
     if instance.config.hevy is not None:
         key = api_key(call.env, instance.root / ".env")
         client = call.make_client(key, instance.audit_path, call.clock)
     with closing(open_instance_store(instance)) as conn:
-        result = apply(
+        found = expected(
             conn,
-            client,
             data,
             file=path,
-            expect=expect if isinstance(expect, str) else None,
+            expect=expect,
             config=instance.config,
             kits=read_kit_files(instance),
             clock=call.clock,
         )
+        if call.terminal.interactive and not _approved_at(call.terminal, found, units):
+            return Outcome({"declined": True, "write_plan_hash": found.write_plan_hash})
+        result = push_approved(conn, client, data, found, config=instance.config, clock=call.clock)
     outcomes = [o.to_json() for o in result.routines]
     kept = outcomes if call.full else outcomes[: call.last]
     return Outcome(
@@ -59,12 +63,14 @@ def run(call: Call) -> Outcome:
     )
 
 
-def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Json:
-    """The dry run's result: the Write plan, its hash and the approval prompt. By default each
-    flag is its key, severity and acknowledgement, since the prompt already carries its text."""
-    checked = found.checked
-    prompt = approval_prompt(
-        checked,
+def _approved_at(terminal: Terminal, found: DryRun, units: Units) -> bool:
+    terminal.say(_prompt(found, units=units, full=False))
+    return terminal.confirm("Push this Write plan?")
+
+
+def _prompt(found: DryRun, *, units: Units, full: bool) -> str:
+    return approval_prompt(
+        found.checked,
         found.actions,
         found.write_plan_hash,
         units=units,
@@ -72,6 +78,13 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Jso
         resumes=found.resumes,
         moved_routines=found.moved_routines,
     )
+
+
+def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Json:
+    """The dry run's result: the Write plan, its hash and the approval prompt. By default each
+    flag is its key, severity and acknowledgement, since the prompt already carries its text."""
+    checked = found.checked
+    prompt = _prompt(found, units=units, full=full)
     flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
     kept = flags if full else flags[:last]
     draft = checked.draft
@@ -105,7 +118,8 @@ DECLARATION = Declaration(
         "and warning with the acknowledgements that leave them, list the Hevy actions (folders, "
         "routine update, create and retire, templates), and print the Write plan hash and the "
         "approval prompt. Any violation is exit 1. With --expect <hash>: write the WeekPlan "
-        "approved, then push each routine, read it back and map it; a re-run resumes."
+        "approved, then push each routine, read it back and map it; a re-run resumes. On a "
+        "terminal it shows the approval prompt and asks [y/N] first; no writes nothing."
     ),
     writes="hevy",
     needs_instance=True,
@@ -121,6 +135,7 @@ DECLARATION = Declaration(
         "type": "object",
         "properties": {
             "week_plan_id": {"type": "string"},
+            "declined": {"type": "boolean"},
             "resumed": {"type": "boolean"},
             "outcomes": {"type": "array"},
             "outcome_count": {"type": "integer"},
