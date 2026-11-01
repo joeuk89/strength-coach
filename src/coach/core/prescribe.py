@@ -162,7 +162,7 @@ class _Derivation:
             bounded = bound(context, move.proposal, move.rounding, self.steps, self.flags)
         if pin is not None:
             self._check_increment(found.exposure, rack, before, bounded.load)
-        change = _change(line, before, bounded, move.change)
+        change = _change(line, before, bounded, move.change, moved)
         return self._bounded(line, found.derived_from, rack, bounded, change)
 
     def _bounded(
@@ -351,13 +351,15 @@ def _per_set(group: SetGroup, bounded: Bounded) -> tuple[PrescribedGroup, ...]:
     )
 
 
-def _change(line: Line, before: Load | None, bounded: Bounded, named: str | None) -> str:
+def _change(
+    line: Line, before: Load | None, bounded: Bounded, named: str | None, proposed: Load | None
+) -> str:
     """`4×6–8 @8: 120 → 125`; with the shape changed, `4×8 @8 rung 40 → 3×8 @≤8 rung 60`; the
-    scheme's own change (`reset 120 → 107.5`) when the cut and ceilings left the shape alone."""
+    scheme's own change (`reset 120 → 107.5`) when the later steps left its load and shape alone."""
     after = bounded.load
     authored = _shape(line.sets, None)
     shaped = _shape(bounded.sets, bounded.rpe_cap)
-    if shaped == authored and named is not None:
+    if shaped == authored and named is not None and after == proposed:
         return named
     if shaped == authored:
         if before is None or after is None or after == before:

@@ -1,3 +1,5 @@
+from typing import Any
+
 from support.exposures import an_exposure
 from support.prescribe import a_line, a_rack, a_request, working
 
@@ -5,7 +7,7 @@ from coach.core.exposure import Exposure
 from coach.core.linear import Reset, resets
 from coach.core.load import Load
 from coach.core.prescribe import prescribe
-from coach.core.prescription import LinePrescription, Step
+from coach.core.prescription import LinePrescription, NiggleConstraint, Step
 
 BENCH = a_line("bb_bench_press", working(4, 5), scheme="linear")
 RACK = a_rack(100, 105, 107.5, 110, 115, 120, 125)
@@ -15,9 +17,9 @@ def bench_on(on: str, load: float, *reps: int) -> Exposure:
     return an_exposure(on, *[(load, r, 8) for r in reps], session_id="lower")
 
 
-def derive(*exposures: Exposure) -> LinePrescription:
-    request = a_request(BENCH, exposures=exposures, racks={"barbell": RACK})
-    return prescribe(request).lines[0]
+def derive(*exposures: Exposure, **request: Any) -> LinePrescription:
+    built = a_request(BENCH, exposures=exposures, racks={"barbell": RACK}, **request)
+    return prescribe(built).lines[0]
 
 
 def test_one_miss_holds_at_the_anchor_load() -> None:
@@ -35,6 +37,18 @@ def test_the_second_consecutive_miss_at_one_load_resets_to_0_9_rounded_down() ->
     assert line.steps[0] == Step("scheme", 120, 107.5, "reset, misses 2")
     assert line.change == "reset 120 → 107.5"
     assert line.groups[0].load == Load(107.5, "total")
+
+
+def test_a_reset_lowered_further_by_a_niggle_cap_reports_the_load_prescribed() -> None:
+    cap = NiggleConstraint("n-0001", "load_cap", exercise_id="bb_bench_press", value=100)
+
+    line = derive(
+        bench_on("2026-10-19", 120, 5, 5, 5, 4),
+        bench_on("2026-10-26", 120, 5, 5, 4, 3),
+        niggle_constraints=(cap,),
+    )
+
+    assert (line.change, line.groups[0].load) == ("4×5 @8: 120 → 100", Load(100, "total"))
 
 
 def test_an_exposure_at_the_reset_load_restarts_the_miss_count() -> None:
