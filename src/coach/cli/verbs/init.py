@@ -4,7 +4,15 @@ from contextlib import closing
 from pathlib import Path
 
 from coach.cli import git, init_answers, registry
-from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
+from coach.cli.declaration import (
+    Argument,
+    ArgValue,
+    Call,
+    Declaration,
+    Example,
+    Json,
+    Outcome,
+)
 from coach.core.config import Config, Engine, Hevy
 from coach.core.errors import Invalid, Setup
 from coach.render.instance_files import GITIGNORE, claude_md, coach_toml, settings_json
@@ -83,7 +91,7 @@ def _refuse_an_instance(root: Path) -> None:
         )
 
 
-def _pin(running: str, requested: str | bool | None) -> str:
+def _pin(running: str, requested: ArgValue | None) -> str:
     if isinstance(requested, str) and not RELEASE_VERSION.fullmatch(requested):
         raise Invalid("invalid_argument", f"--pin takes a release X.Y.Z, not {requested!r}")
     if ".dev" in running:
