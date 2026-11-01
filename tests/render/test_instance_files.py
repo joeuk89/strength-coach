@@ -1,6 +1,8 @@
 import json
 import tomllib
 
+import pytest
+
 from coach.core.config import (
     Athlete,
     Config,
@@ -12,7 +14,13 @@ from coach.core.config import (
     RackImplement,
     parse_config,
 )
-from coach.render.instance_files import GITIGNORE, claude_md, coach_toml, settings_json
+from coach.render.instance_files import (
+    GITIGNORE,
+    claude_md,
+    coach_toml,
+    settings_json,
+    with_pin,
+)
 
 ATHLETE = Athlete(
     units="lb",
@@ -106,3 +114,29 @@ def test_settings_json_is_the_same_bytes_for_the_same_verbs() -> None:
 
 def test_the_gitignore_ignores_the_store_the_key_and_local_settings() -> None:
     assert GITIGNORE.splitlines() == [".coach/", ".env", ".claude/settings.local.json"]
+
+
+AUTHORED = """# my coach
+[athlete]
+units = "kg"  # the athlete's own comment
+
+[engine]
+# pinned by upgrade
+version = "0.3.0"
+
+[location.gym]
+version = "not the pin"
+"""
+
+
+def test_with_pin_moves_only_the_engine_version_and_keeps_every_other_byte() -> None:
+    moved = with_pin(AUTHORED, "0.4.0")
+
+    assert moved == AUTHORED.replace('version = "0.3.0"', 'version = "0.4.0"')
+    assert tomllib.loads(moved)["engine"]["version"] == "0.4.0"
+    assert tomllib.loads(moved)["location"]["gym"]["version"] == "not the pin"
+
+
+def test_with_pin_on_a_file_with_no_engine_version_raises() -> None:
+    with pytest.raises(ValueError):
+        with_pin('[athlete]\nunits = "kg"\n', "0.4.0")
