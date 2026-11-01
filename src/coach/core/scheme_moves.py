@@ -22,10 +22,10 @@ from coach.core.top_backoff import top_set
 from coach.core.wave_531 import (
     REP_OUTS,
     TrainingMax,
+    find_training_max,
     rep_out,
     rep_out_target,
     rep_outs_due,
-    training_max,
     wave_index,
     wave_of,
     wave_targets,
@@ -201,37 +201,42 @@ class SchemeMoves:
         return max((anchor_top, *(t for t in tops if t is not None)), key=lambda t: t.amount)
 
     def _wave(self, exposure: Exposure | None) -> Move:
-        tm = training_max(
+        training_max = find_training_max(
             self.given.request.decisions, self.line.exercise, self.line.start_load, self.given.mode
         )
-        if tm is None:
+        if training_max is None:
             self._start_load(StartLoad(None))
             return self._held(None)
         index = wave_index(self.given.request.hard_week_count)
         count = sum(group.count for group in self.given.sets if group.working)
         # Unrounded, so a cut multiplies the training max and the rack step rounds once.
-        targets = wave_targets(tm.load, index, count, rack=None)
+        targets = wave_targets(training_max.load, index, count, rack=None)
         wave = f"wave {index + 1}"
-        self.steps.append(Step("scheme", tm.load.amount, tuple(t.amount for t in targets), wave))
+        self.steps.append(
+            Step("scheme", training_max.load.amount, tuple(t.amount for t in targets), wave)
+        )
         if exposure is not None:
-            self._read_rep_outs(exposure, tm)
+            self._read_rep_outs(exposure, training_max)
         return Move(
-            targets, "cut", self._wave_sets(index), f"{wave}: training max {tm.load.amount:g}"
+            targets,
+            "cut",
+            self._wave_sets(index),
+            f"{wave}: training max {training_max.load.amount:g}",
         )
 
     def _wave_repeated(self, exposure: Exposure) -> Move | None:
         """The anchor's wave of the training max; off the waves, its logged loads at this
         week's reps. The training max stays put."""
-        tm = training_max(
+        training_max = find_training_max(
             self.given.request.decisions, self.line.exercise, self.line.start_load, self.given.mode
         )
-        if tm is None:
+        if training_max is None:
             return None
         rack = self.given.rack
         count = sum(group.count for group in self.given.sets if group.working)
-        index = wave_of(exposure, tm.load, rack)
+        index = wave_of(exposure, training_max.load, rack)
         if index is not None:
-            loads = wave_targets(tm.load, index, count, rack)
+            loads = wave_targets(training_max.load, index, count, rack)
         else:
             index = wave_index(self.given.request.hard_week_count)
             loads = loads_on_grid(exposure, count, rack, self.given.mode)
@@ -245,9 +250,9 @@ class SchemeMoves:
             for group in self.given.sets
         )
 
-    def _read_rep_outs(self, exposure: Exposure, tm: TrainingMax) -> None:
+    def _read_rep_outs(self, exposure: Exposure, training_max: TrainingMax) -> None:
         rack = self.given.rack
-        index = wave_of(exposure, tm.load, rack)
+        index = wave_of(exposure, training_max.load, rack)
         if index is not None and (reps := rep_out(exposure)) < (target := rep_out_target(index)):
             self._raise(
                 "rep_range_missed",
@@ -261,12 +266,16 @@ class SchemeMoves:
                 f"the rep-out logged {reps} reps, short of wave {index + 1}'s {target}",
             )
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
-        rep_outs = rep_outs_due(history, tm.load, rack)
+        rep_outs = rep_outs_due(history, training_max.load, rack)
         if rep_outs:
             self._raise(
                 "training_max_due",
-                {"training_max": tm.load.amount, "source": tm.source, "rep_outs": list(rep_outs)},
-                f"all three waves logged at training max {tm.load.amount:g}: rep-outs "
+                {
+                    "training_max": training_max.load.amount,
+                    "source": training_max.source,
+                    "rep_outs": list(rep_outs),
+                },
+                f"all three waves logged at training max {training_max.load.amount:g}: rep-outs "
                 f"{', '.join(map(str, rep_outs))}",
             )
 

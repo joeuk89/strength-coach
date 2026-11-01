@@ -15,7 +15,7 @@ from coach.core.import_flags import (
 from coach.core.instant import utc_instant
 from coach.core.mirror import BodyMeasurement, engine_folders, mirrored_routine
 from coach.core.routine_projection import routine_diff
-from coach.core.workout_import import Changes, event_since, event_pull_changes, full_pull_changes
+from coach.core.workout_import import Changes, event_pull_changes, event_since, full_pull_changes
 from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
 from coach.services.projections import projection, session_facts

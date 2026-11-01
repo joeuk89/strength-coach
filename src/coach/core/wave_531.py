@@ -25,7 +25,7 @@ class TrainingMax:
     source: str
 
 
-def training_max(
+def find_training_max(
     decisions: Iterable[DecisionInForce],
     exercise_id: str,
     start_load: float | None,
@@ -49,12 +49,15 @@ def wave_index(hard_week_count: int) -> int:
     return hard_week_count % len(WAVES)
 
 
-def wave_targets(tm: Load, index: int, count: int, rack: Rack | None) -> tuple[Load, ...]:
+def wave_targets(training_max: Load, index: int, count: int, rack: Rack | None) -> tuple[Load, ...]:
     """Each working set's share of the training max rounded down to the rack; sets past the
     wave's three repeat its heaviest."""
     percents = WAVES[index]
     shares = (
-        Load(round(tm.amount * percents[min(i, len(percents) - 1)] / 100, PRECISION), tm.mode)
+        Load(
+            round(training_max.amount * percents[min(i, len(percents) - 1)] / 100, PRECISION),
+            training_max.mode,
+        )
         for i in range(count)
     )
     if rack is None:
@@ -66,13 +69,13 @@ def rep_out_target(index: int) -> int:
     return int(REP_OUTS[index].rstrip("+"))
 
 
-def wave_of(exposure: Exposure, tm: Load, rack: Rack | None) -> int | None:
-    """Which wave of `tm` an exposure was, read from its top working load."""
-    logged = top_on_grid(exposure, rack, tm.mode)
+def wave_of(exposure: Exposure, training_max: Load, rack: Rack | None) -> int | None:
+    """Which wave of `training_max` an exposure was, read from its top working load."""
+    logged = top_on_grid(exposure, rack, training_max.mode)
     if logged is None:
         return None
     for index in range(len(WAVES)):
-        if wave_targets(tm, index, len(WAVES[index]), rack)[-1] == logged:
+        if wave_targets(training_max, index, len(WAVES[index]), rack)[-1] == logged:
             return index
     return None
 
@@ -81,11 +84,13 @@ def rep_out(exposure: Exposure) -> int:
     return exposure.working[-1].reps or 0
 
 
-def rep_outs_due(history: Sequence[Exposure], tm: Load, rack: Rack | None) -> tuple[int, ...]:
+def rep_outs_due(
+    history: Sequence[Exposure], training_max: Load, rack: Rack | None
+) -> tuple[int, ...]:
     """The three rep-outs, oldest first, when the newest three ordinary exposures were the third,
-    second and first waves at `tm`; empty otherwise."""
+    second and first waves at `training_max`; empty otherwise."""
     newest = history[: len(WAVES)]
-    waves = [wave_of(exposure, tm, rack) for exposure in newest]
+    waves = [wave_of(exposure, training_max, rack) for exposure in newest]
     if waves != list(reversed(range(len(WAVES)))):
         return ()
     return tuple(rep_out(exposure) for exposure in reversed(newest))
