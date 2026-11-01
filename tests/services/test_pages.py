@@ -1,12 +1,18 @@
+import datetime
 import re
 
-from support.closed_weeks import a_planned_squat_week, monday
+from support.blocks import BOUNDARY, two_closed_blocks
+from support.clock import FixedClock, at
+from support.closed_weeks import a_check_in, a_planned_squat_week, monday
 from support.kit_fixtures import kit_files
 from support.pages import the_pages
 from support.plans import a_frozen_prescription, a_squat_program
+from support.programs import a_config
 
 from coach.core.hevy_actions import MapStatus
 from coach.core.mirror import MirroredRoutine
+from coach.render.pages import render_pages
+from coach.services.pages import page_facts
 from coach.store import mirrors, routine_map
 from coach.store.connection import Connection
 
@@ -108,3 +114,31 @@ def test_every_page_carries_the_generated_header() -> None:
     pages = the_pages(a_written_squat_week(), kits=(kit_files(),))
 
     assert all("hand edits are overwritten" in text.splitlines()[0] for text in pages.values())
+
+
+def test_the_athlete_page_carries_the_profile_verbatim_and_the_last_three_reads() -> None:
+    conn = a_squat_program()
+    for end in ("2026-11-08", "2026-11-15", "2026-11-22", "2026-11-29"):
+        start = (datetime.date.fromisoformat(end) - datetime.timedelta(days=6)).isoformat()
+        a_check_in(conn, start, end)
+    profile = "Joe trains at home.\n\nNo spotter.\n"
+
+    page = the_pages(conn, profile=profile)["pages/athlete.md"]
+
+    assert f"## Profile\n\n{profile}" in page
+    assert [line for line in page.splitlines() if line.startswith("**2026-")] == [
+        "**2026-11-15**",
+        "**2026-11-22**",
+        "**2026-11-29**",
+    ]
+
+
+def test_the_progress_page_shows_each_priority_lifts_e1rm_now() -> None:
+    conn = two_closed_blocks(bench_tops=(100, 105, 105, 110, 115, 115), pull_up_reps=(6,) * 6)
+
+    page = render_pages(
+        page_facts(conn, FixedClock(at(BOUNDARY)), config=a_config(), kits=(), profile=None)
+    )["pages/progress.md"]
+
+    bench = next(line for line in page.splitlines() if line.startswith("| bb_bench_press"))
+    assert bench.split(" | ")[2] == "141.83"

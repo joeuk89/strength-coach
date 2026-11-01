@@ -3,7 +3,7 @@ to `render` whole, so no page reads the store itself."""
 
 import datetime
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from coach.core.check_in import Window
 from coach.core.check_in_card import Card
@@ -138,4 +138,4 @@ class Pages:
     progress: Progress
     week: WeekPage | None = None
     routines: tuple[RoutinePage, ...] = ()
-    check_ins: tuple[CheckInRecord, ...] = field(default_factory=tuple[CheckInRecord, ...])
+    check_ins: tuple[CheckInRecord, ...] = ()
