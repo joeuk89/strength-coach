@@ -102,6 +102,12 @@ class Fatigue:
         )
         return Opened(proposal, block)
 
+    def opened_on(self, window: Window, on: datetime.date) -> Opened:
+        """What a check-in dated `on` and reviewing `window` opens, after the rows before it."""
+        earlier = [r for r in self.check_ins if r.date < on]
+        windows = [*((r.window.start, r.window.end) for r in earlier), (window.start, window.end)]
+        return self.opened(window, earlier[-1].readiness if earlier else None, windows)
+
     def standing(
         self, before: datetime.date | None = None, *, superseding: datetime.date | None = None
     ) -> Standing | None:

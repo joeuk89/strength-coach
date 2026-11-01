@@ -9,7 +9,7 @@ from typing import cast
 from coach.core import check_in_card as card
 from coach.core.activity_rules import (
     QUALITY_CAP,
-    Bout,
+    LoggedActivity,
     activity_cap_exceeded,
     run_spikes,
 )
@@ -83,7 +83,7 @@ def checkin_open(
     windows = [*((r.window.start, r.window.end) for r in earlier), (window.start, window.end)]
     opened = fatigue.opened(window, previous.readiness if previous else None, windows)
     standing = fatigue.standing(before=on)
-    proposed = standing is not None or opened.proposal.state == "propose"
+    proposed = opened.proposal.state == "propose"
     due = check_in_due_on(conn, on, cadence_days, light_week_proposed=proposed)
     derived = "light" if window.catch_up else due.tier
     chosen = "deep" if tier == "deep" else derived
@@ -92,7 +92,7 @@ def checkin_open(
     plan = week_plans.in_force(conn, week_monday(on).isoformat())
     version = programs.latest(conn)
     weigh_ins = _weigh_ins(conn)
-    bouts = _bouts(conn, log)
+    activities = _activities(conn, log)
     phase = phases.in_force(conn)
     fields: list[CardField | None] = [
         card.header(window, chosen, None if plan is None else str(plan["id"])),
@@ -133,14 +133,14 @@ def checkin_open(
         ),
         card.activities(
             [
-                card.ActivityRead(b.id, b.date, b.kind, b.minutes, b.rpe, b.quality)
-                for b in bouts
-                if window.start <= b.date <= window.end
+                card.ActivityRead(a.id, a.date, a.kind, a.minutes, a.rpe, a.quality)
+                for a in activities
+                if window.start <= a.date <= window.end
             ],
             cap=QUALITY_CAP,
             spikes=[
                 str(f.scope.workout_id)
-                for f in run_spikes([b for b in bouts if b.date <= on], since=window.start)
+                for f in run_spikes([a for a in activities if a.date <= on], since=window.start)
             ],
         ),
         card.niggles(_niggle_reads(conn)),
@@ -151,7 +151,7 @@ def checkin_open(
     warnings = (
         *_ledger_warnings(conn, on),
         *_phase_warnings(conn, weigh_ins, on, units),
-        *_activity_warnings(bouts, window, on),
+        *_activity_warnings(activities, window, on),
         *_training_max_warnings(conn),
     )
     return Card(window, chosen, card.assemble(fields), warnings)
@@ -275,15 +275,17 @@ def _phase_warnings(
     return [flag for flag in raised if flag is not None]
 
 
-def _activity_warnings(bouts: Sequence[Bout], window: Window, on: datetime.date) -> list[Flag]:
+def _activity_warnings(
+    activities: Sequence[LoggedActivity], window: Window, on: datetime.date
+) -> list[Flag]:
     found: list[Flag] = []
     monday = week_monday(window.start)
     while monday <= window.end:
-        flag = activity_cap_exceeded(bouts, monday)
+        flag = activity_cap_exceeded(activities, monday)
         if flag is not None:
             found.append(flag)
         monday += WEEK
-    found.extend(run_spikes([b for b in bouts if b.date <= on], since=window.start))
+    found.extend(run_spikes([a for a in activities if a.date <= on], since=window.start))
     return found
 
 
@@ -313,11 +315,11 @@ def _weigh_ins(conn: Connection) -> dict[datetime.date, float]:
     }
 
 
-def _bouts(conn: Connection, log: WeekLog) -> list[Bout]:
+def _activities(conn: Connection, log: WeekLog) -> list[LoggedActivity]:
     """Activities, and the Activity view of every conditioning workout (week.md, "What an
     unmatched workout is")."""
     found = [
-        Bout(
+        LoggedActivity(
             str(r["id"]),
             datetime.date.fromisoformat(str(r["date"])),
             str(r["kind"]),
@@ -334,9 +336,11 @@ def _bouts(conn: Connection, log: WeekLog) -> list[Bout]:
         rated = [s.rpe for e in workout.exposures for s in e.sets if s.rpe is not None]
         view = conditioning_activity(workout.date, workout.minutes, rated)
         found.append(
-            Bout(workout.id, view.date, "conditioning", view.minutes, view.rpe, view.quality)
+            LoggedActivity(
+                workout.id, view.date, "conditioning", view.minutes, view.rpe, view.quality
+            )
         )
-    return sorted(found, key=lambda b: (b.date, b.id))
+    return sorted(found, key=lambda a: (a.date, a.id))
 
 
 def _priority_lifts(conn: Connection) -> tuple[str, ...]:

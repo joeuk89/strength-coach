@@ -10,7 +10,7 @@ from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.prescription import SessionPrescription, StatusSpan
 from coach.core.program.form import Reps
 
-# rn:running-load.5: quality bouts, runs and conditioning together, capped at 2 a week.
+# rn:running-load.5: quality activities, runs and conditioning together, capped at 2 a week.
 QUALITY_CAP = 2
 # rn:running-load.1: a run over 1.10 times the longest in the previous 30 days.
 SPIKE_RATIO = 1.10
@@ -28,7 +28,7 @@ DROP_SPANS = ("ill", "injured", "travel")
 
 
 @dataclass(frozen=True)
-class Bout:
+class LoggedActivity:
     """An Activity, or a conditioning workout's Activity view; `id` is the row's or the
     workout's."""
 
@@ -41,26 +41,28 @@ class Bout:
     distance_km: float | None = None
 
 
-def activity_cap_exceeded(bouts: Iterable[Bout], monday: datetime.date) -> Flag | None:
+def activity_cap_exceeded(
+    activities: Iterable[LoggedActivity], monday: datetime.date
+) -> Flag | None:
     sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
     quality = sorted(
-        (b for b in bouts if b.quality and monday <= b.date <= sunday), key=lambda b: b.date
+        (a for a in activities if a.quality and monday <= a.date <= sunday), key=lambda a: a.date
     )
     if len(quality) <= QUALITY_CAP:
         return None
     return raise_flag(
         "activity_cap_exceeded",
         Scope("week", monday),
-        {"cap": QUALITY_CAP, "observed": len(quality), "activities": [b.id for b in quality]},
-        f"{len(quality)} quality bouts in the week of {monday}, over the cap of {QUALITY_CAP}",
+        {"cap": QUALITY_CAP, "observed": len(quality), "activities": [a.id for a in quality]},
+        f"{len(quality)} quality activities in the week of {monday}, over the cap of {QUALITY_CAP}",
         rn="rn:running-load.5",
     )
 
 
-def run_spikes(bouts: Sequence[Bout], *, since: datetime.date) -> list[Flag]:
+def run_spikes(activities: Sequence[LoggedActivity], *, since: datetime.date) -> list[Flag]:
     """Every run on or after `since` over 1.10 times the longest run in the 30 days before it."""
-    first = min((b.date for b in bouts), default=None)
-    runs = [b for b in bouts if b.kind == RUN and b.distance_km is not None]
+    first = min((a.date for a in activities), default=None)
+    runs = [a for a in activities if a.kind == RUN and a.distance_km is not None]
     found: list[Flag] = []
     for run in runs:
         if run.date < since or first is None:

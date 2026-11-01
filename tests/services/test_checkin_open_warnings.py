@@ -121,7 +121,7 @@ def an_activity(conn: Connection, on: str, *, rpe: float = 5, distance_km: float
     )
 
 
-def test_three_quality_bouts_in_a_week_raise_activity_cap_exceeded() -> None:
+def test_three_quality_activities_in_a_week_raise_activity_cap_exceeded() -> None:
     conn = a_store()
     for on in ("2026-11-23", "2026-11-25", "2026-11-27"):
         an_activity(conn, on, rpe=8)

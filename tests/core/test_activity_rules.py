@@ -1,7 +1,7 @@
 import datetime
 
 from coach.core.activity_rules import (
-    Bout,
+    LoggedActivity,
     activity_cap_exceeded,
     quality_stack,
     run_spikes,
@@ -22,20 +22,20 @@ def day(n: int) -> datetime.date:
     return MONDAY + datetime.timedelta(days=n)
 
 
-def a_bout(
+def an_activity(
     id_: str, on: datetime.date, *, rpe: float = 6, distance_km: float | None = None
-) -> Bout:
-    return Bout(id_, on, "run", 30, rpe, rpe >= 7, distance_km)
+) -> LoggedActivity:
+    return LoggedActivity(id_, on, "run", 30, rpe, rpe >= 7, distance_km)
 
 
-def test_three_quality_bouts_in_a_week_exceed_the_cap_of_two() -> None:
-    bouts = [
-        a_bout("ac-0001", day(0), rpe=8),
-        a_bout("ac-0002", day(2), rpe=7),
-        a_bout("ac-0003", day(4), rpe=9),
+def test_three_quality_activities_in_a_week_exceed_the_cap_of_two() -> None:
+    activities = [
+        an_activity("ac-0001", day(0), rpe=8),
+        an_activity("ac-0002", day(2), rpe=7),
+        an_activity("ac-0003", day(4), rpe=9),
     ]
 
-    flag = activity_cap_exceeded(bouts, MONDAY)
+    flag = activity_cap_exceeded(activities, MONDAY)
 
     assert flag is not None
     assert flag.params == {
@@ -45,31 +45,34 @@ def test_three_quality_bouts_in_a_week_exceed_the_cap_of_two() -> None:
     }
 
 
-def test_two_quality_bouts_and_an_easy_one_are_inside_the_cap() -> None:
-    bouts = [
-        a_bout("ac-0001", day(0), rpe=8),
-        a_bout("ac-0002", day(2), rpe=7),
-        a_bout("ac-0003", day(4)),
+def test_two_quality_activities_and_an_easy_one_are_inside_the_cap() -> None:
+    activities = [
+        an_activity("ac-0001", day(0), rpe=8),
+        an_activity("ac-0002", day(2), rpe=7),
+        an_activity("ac-0003", day(4)),
     ]
 
-    assert activity_cap_exceeded(bouts, MONDAY) is None
+    assert activity_cap_exceeded(activities, MONDAY) is None
 
 
 def test_a_quality_bout_in_another_week_does_not_count() -> None:
-    bouts = [
-        a_bout("ac-0001", day(-1), rpe=8),
-        a_bout("ac-0002", day(2), rpe=7),
-        a_bout("ac-0003", day(4), rpe=9),
+    activities = [
+        an_activity("ac-0001", day(-1), rpe=8),
+        an_activity("ac-0002", day(2), rpe=7),
+        an_activity("ac-0003", day(4), rpe=9),
     ]
 
-    assert activity_cap_exceeded(bouts, MONDAY) is None
+    assert activity_cap_exceeded(activities, MONDAY) is None
 
 
-HISTORY = [a_bout("ac-0001", day(-20), distance_km=10), a_bout("ac-0002", day(-10), distance_km=8)]
+HISTORY = [
+    an_activity("ac-0001", day(-20), distance_km=10),
+    an_activity("ac-0002", day(-10), distance_km=8),
+]
 
 
 def test_a_run_1_2_times_the_30_day_longest_with_14_days_of_history_spikes() -> None:
-    run = a_bout("ac-0003", day(1), distance_km=12)
+    run = an_activity("ac-0003", day(1), distance_km=12)
 
     [flag] = run_spikes([*HISTORY, run], since=MONDAY)
 
@@ -78,13 +81,15 @@ def test_a_run_1_2_times_the_30_day_longest_with_14_days_of_history_spikes() -> 
 
 
 def test_without_14_days_of_history_a_run_is_not_judged() -> None:
-    recent = [a_bout("ac-0001", day(-10), distance_km=10)]
+    recent = [an_activity("ac-0001", day(-10), distance_km=10)]
 
-    assert run_spikes([*recent, a_bout("ac-0003", day(1), distance_km=12)], since=MONDAY) == []
+    assert run_spikes([*recent, an_activity("ac-0003", day(1), distance_km=12)], since=MONDAY) == []
 
 
 def test_a_run_1_1_times_the_longest_is_no_spike() -> None:
-    assert run_spikes([*HISTORY, a_bout("ac-0003", day(1), distance_km=11)], since=MONDAY) == []
+    assert (
+        run_spikes([*HISTORY, an_activity("ac-0003", day(1), distance_km=11)], since=MONDAY) == []
+    )
 
 
 def a_line(exercise: str, groups: tuple[PrescribedGroup, ...]) -> LinePrescription:

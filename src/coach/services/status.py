@@ -130,7 +130,8 @@ def status(
     stale = snapshot_stale(last, now) if hevy_on else None
     monday = week_monday(today)
     log = WeekLog(conn, units)
-    pending = Fatigue(conn, log).standing() is not None
+    fatigue = Fatigue(conn, log)
+    pending = fatigue.standing() is not None
     return StatusResult(
         engine_version=engine_version,
         pin=pin,
@@ -144,7 +145,7 @@ def status(
         program=_program(conn),
         goal=_current_goal(conn),
         phase=phases.open_phase(conn),
-        check_in=check_in_due_on(conn, today, cadence_days, light_week_proposed=pending),
+        check_in=_check_in_due(conn, fatigue, today, cadence_days),
         niggles=tuple(str(n["id"]) for n in open_niggles),
         follow_ups_due=_follow_ups_due(conn, today),
         decisions=_decisions_in_force(conn, today),
@@ -161,6 +162,15 @@ def status(
         rotation=_rotation(conn, monday),
         block=_block(conn, log, pending),
     )
+
+
+def _check_in_due(
+    conn: Connection, fatigue: Fatigue, today: datetime.date, cadence_days: int
+) -> CheckInDue:
+    due = check_in_due_on(conn, today, cadence_days)
+    if due.window is None or fatigue.opened_on(due.window, today).proposal.state != "propose":
+        return due
+    return check_in_due_on(conn, today, cadence_days, light_week_proposed=True)
 
 
 def check_in_due_on(

@@ -189,3 +189,17 @@ def test_status_reads_logged_loads_in_the_athletes_units() -> None:
     a_check_in(conn, "2026-11-23", "2026-11-29")
 
     assert not light_week_pending(conn, datetime.date(2026, 12, 1))
+
+
+def test_a_standing_proposal_leaves_the_next_check_ins_light() -> None:
+    conn = proposed_and_recorded()
+    with conn:
+        conn.execute("UPDATE check_in SET tier = 'deep' WHERE id = 'ci-2026-11-29'")
+
+    on = datetime.date(2026, 12, 6)
+
+    card = opened(conn, on)
+
+    assert (card.tier, status_on(conn, on).check_in.tier) == ("light", "light")
+    assert dict(field_of(card, "block").facts)["standing_from"] == "ci-2026-11-29"
+    assert light_week_pending(conn, on)
