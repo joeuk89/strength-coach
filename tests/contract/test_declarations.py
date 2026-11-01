@@ -9,7 +9,7 @@ from coach.cli import app
 from coach.cli.declaration import Declaration, Example
 from coach.cli.registry import declarations
 
-MAX_LEAVES = 16
+LEAVES = 16
 
 EXAMPLES = [
     pytest.param(declaration, example, id=" ".join(example.argv))
@@ -18,8 +18,8 @@ EXAMPLES = [
 ]
 
 
-def test_there_are_at_most_sixteen_leaves() -> None:
-    assert 0 < len(declarations()) <= MAX_LEAVES
+def test_there_are_exactly_sixteen_leaves() -> None:
+    assert len(declarations()) == LEAVES
 
 
 def test_leaf_names_are_unique() -> None:
