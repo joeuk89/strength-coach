@@ -25,7 +25,7 @@ from coach.cli.hook.in_process import run_in_process
 from coach.cli.registry import declarations
 from coach.cli.verbs.plan_apply import dry_run_result
 from coach.core.clock import Clock
-from coach.store import mirrors
+from coach.store import mirrors, week_plans
 
 PIN_OFF_RACK = """
 [[override]]
@@ -242,6 +242,58 @@ def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
     assert [(r["session"], r["folder"], r["status"]) for r in routines] == [
         ("lower", "Program", "active")
     ]
+
+
+def test_hevy_unreachable_at_the_guard_is_exit_4_with_the_week_plan_approved_and_a_rerun_resumes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = a_hevy_instance(tmp_path, monkeypatch)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.fail_next_get()
+
+    failed = with_hevy("plan", "apply", draft, "--expect", digest)
+    sent = [method for method, _ in hevy.calls]
+    conn = the_store(root)
+    plan = week_plans.in_force(conn, "2026-11-02")
+    conn.close()
+    rerun = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert (failed.code, failed.envelope["error"]["code"]) == (4, "hevy_unreachable")
+    assert plan is not None and plan["id"] == "wp-2026-11-02"
+    assert set(sent) == {"GET"}
+    assert rerun.code == 0, rerun.stdout
+    assert rerun.envelope["result"]["resumed"] is True
+    assert [o["outcome"] for o in rerun.envelope["result"]["outcomes"]] == ["verified"]
+
+
+def test_a_routine_moved_at_the_guard_is_exit_3_with_the_new_week_plan_approved_and_nothing_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = a_hevy_instance(tmp_path, monkeypatch)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    with_hevy("plan", "apply", draft, "--expect", digest)
+    [routine] = [r["routine"] for r in coach("query", "routines").envelope["result"]["rows"]]
+    hevy.move_routine(routine, "2026-10-31T09:00:00Z")
+    hevy.calls.clear()
+    with (root / draft).open("a") as changed:
+        changed.write("# changed after the first push\n")
+    dry = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]
+
+    run = with_hevy("plan", "apply", draft, "--expect", dry["write_plan_hash"])
+
+    assert dry["supersedes"] == "wp-2026-11-02"
+    assert (run.code, run.envelope["error"]["code"]) == (3, "routine_moved")
+    conn = the_store(root)
+    plan = week_plans.in_force(conn, "2026-11-02")
+    conn.close()
+    assert plan is not None and plan["id"] == "wp-2026-11-02-2"
+    assert {method for method, _ in hevy.calls} == {"GET"}
 
 
 def a_hevy_instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
