@@ -178,6 +178,10 @@ def test_a_command_that_writes_nothing_gated_gets_no_answer(command: str) -> Non
         "curl 'https://api.hevyapp.com/v1/{workouts,routines}'",
         "curl https://api.hevyapp.com/v1/[w]orkouts",
         "curl 'https://api.hevyapp.com/v1/*'",
+        "X=outs; curl -X DELETE https://api.hevyapp.com/v1/work$X/abc",
+        'curl -X DELETE "https://api.hevyapp.com/v1/$(echo workouts)/abc"',
+        "P=/v1/workouts/abc; curl -X DELETE https://api.hevyapp.com$P",
+        "curl -X DELETE https://api.hevyapp.com/v1/`echo workouts`/abc",
     ],
 )
 @pytest.mark.parametrize("mode", EVERY_MODE)

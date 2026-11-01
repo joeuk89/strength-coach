@@ -28,7 +28,7 @@ class CoachCall:
 class HevyCall:
     path: str
     pattern: bool = False
-    """True when curl or the shell can expand the path, such as `/v1/{a,b}` or `/v1/*`."""
+    """True when curl or the shell can expand the path, such as `/v1/{a,b}`, `/v1/*` or `/v1/$X`."""
 
 
 @dataclass(frozen=True)
@@ -54,9 +54,10 @@ PYTHON_OPTIONS_WITH_VALUE = frozenset({"-X", "-W", "--check-hash-based-pycs"})
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=", re.S)
 FD_BEFORE_REDIRECT = re.compile(r"(?<![\w-])\d+(?=[<>])")
 HEVY_URL = re.compile(
-    re.escape(HEVY_HOST) + r"\.?(?::\d+)?(?P<path>/[^\s'\"`;|&()<>]*)?", re.IGNORECASE
+    re.escape(HEVY_HOST) + r"\.?(?::\d+)?(?P<path>[/$`][^\s'\"`;|&()<>]*)?(?P<substituted>`)?",
+    re.IGNORECASE,
 )
-PATH_PATTERN = re.compile(r"[{}\[\]*]")
+PATH_PATTERN = re.compile(r"[{}\[\]*$`]")
 QUOTE_OR_ESCAPE = re.compile(r"\\(.)|['\"]", re.S)
 SUBSTITUTED = "__coach_hook_substituted__"
 
@@ -125,7 +126,8 @@ def _hevy_calls(text: str) -> Iterator[HevyCall]:
     for source in (text, unquoted):
         for match in HEVY_URL.finditer(source):
             path = _normalised(match.group("path") or "/")
-            yield HevyCall(path, bool(PATH_PATTERN.search(path)))
+            expands = bool(PATH_PATTERN.search(path) or match.group("substituted"))
+            yield HevyCall(path, expands)
 
 
 def _opaque(word: str) -> bool:
