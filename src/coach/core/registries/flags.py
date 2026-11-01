@@ -9,9 +9,10 @@ type ScopeKind = Literal[
     "week", "session", "line", "exposure", "routine", "workout", "instance", "version", "exercise"
 ]
 type Refs = tuple[str, ...]
-type AcknowledgementSource = Literal["weekplan", "decision"]
+type AcknowledgementSource = Literal["weekplan", "version", "decision"]
 
 ON_A_PLAN: tuple[AcknowledgementSource, ...] = ("weekplan", "decision")
+ON_A_VERSION: tuple[AcknowledgementSource, ...] = ("version", "decision")
 
 
 @dataclass(frozen=True)
@@ -81,9 +82,19 @@ def violation(
 
 
 def acknowledgeable_warning(
+    name: str,
+    scopes: tuple[ScopeKind, ...],
+    params: tuple[str, ...],
+    rn: Citation = (),
+    left_by: tuple[AcknowledgementSource, ...] = ON_A_PLAN,
+) -> FlagCode:
+    return FlagCode(name, "warning", left_by, scopes, params, rn)
+
+
+def adopt_warning(
     name: str, scopes: tuple[ScopeKind, ...], params: tuple[str, ...], rn: Citation = ()
 ) -> FlagCode:
-    return FlagCode(name, "warning", ON_A_PLAN, scopes, params, rn)
+    return acknowledgeable_warning(name, scopes, params, rn, ON_A_VERSION)
 
 
 def outside_warning(
@@ -295,55 +306,55 @@ PLAN_WARNINGS = (
 )
 
 ADOPT_WARNINGS = (
-    acknowledgeable_warning("emphasis_off_goal", ("version",), ("goal_kind", "emphasis")),
-    acknowledgeable_warning(
+    adopt_warning("emphasis_off_goal", ("version",), ("goal_kind", "emphasis")),
+    adopt_warning(
         "scheme_off_emphasis",
         ("line",),
         ("scheme", "emphasis", "expected_band"),
         ("rn:goal-programming §4",),
     ),
-    acknowledgeable_warning("priority_lift_absent", ("version",), ("exercise_id",)),
-    acknowledgeable_warning(
+    adopt_warning("priority_lift_absent", ("version",), ("exercise_id",)),
+    adopt_warning(
         "priority_lift_not_first",
         ("session",),
         ("exercise_id", "position"),
         ("rn:goal-programming §7",),
     ),
-    acknowledgeable_warning(
+    adopt_warning(
         "dose_off_band",
         ("version",),
         ("target_of", "target", "band", "phase"),
         ("rn:goal-programming §3",),
     ),
-    acknowledgeable_warning(
+    adopt_warning(
         "deload_off_emphasis",
         ("version",),
         ("deload_policy", "expected_shape"),
         ("rn:goal-programming §6",),
     ),
-    acknowledgeable_warning(
+    adopt_warning(
         "muscle_no_hard_sets",
         ("version",),
         ("muscle", "sessions_searched"),
         ("rn:volume-frequency.1",),
     ),
-    acknowledgeable_warning("session_over_minutes", ("session",), ("estimate", "minutes")),
-    acknowledgeable_warning(
+    adopt_warning("session_over_minutes", ("session",), ("estimate", "minutes")),
+    adopt_warning(
         "session_on_unavailable_day", ("session",), ("session_id", "weekday", "available_days")
     ),
-    acknowledgeable_warning("block_open_at_redesign", ("version",), ("block_id", "hard_weeks")),
-    acknowledgeable_warning(
+    adopt_warning("block_open_at_redesign", ("version",), ("block_id", "hard_weeks")),
+    adopt_warning(
         "start_load_ignored", ("line",), ("start_load", "last_exposure_load", "exposure")
     ),
-    acknowledgeable_warning("superset_rest_differs", ("session",), ("superset", "rest_values")),
-    acknowledgeable_warning("session_retired", ("version",), ("session_id", "routine_id")),
-    acknowledgeable_warning(
+    adopt_warning("superset_rest_differs", ("session",), ("superset", "rest_values")),
+    adopt_warning("session_retired", ("version",), ("session_id", "routine_id")),
+    adopt_warning(
         "scheme_change_off_signal",
         ("line",),
         ("previous_scheme", "new_scheme", "signal_key", "may_schemes"),
         ("rn:progression-methods §4",),
     ),
-    acknowledgeable_warning(
+    adopt_warning(
         "core_session_added_low_adherence",
         ("session",),
         ("session_id", "adherence", "weeks"),

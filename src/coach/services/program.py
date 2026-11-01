@@ -3,24 +3,27 @@
 import datetime
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractContextManager, nullcontext
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import cast
 
 from coach.core.clock import Clock
 from coach.core.config import Config
 from coach.core.errors import Invalid
+from coach.core.exposure import Exposure
+from coach.core.flag import Flag, FlagKey, Scope
 from coach.core.goal import Goal
 from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
-from coach.core.program.checks import AdoptContext, violations
+from coach.core.program.checks import AdoptContext, OpenBlock, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
+from coach.core.program.warnings import adopt_warnings, leave_warnings
 from coach.render.program_draft import program_draft
 from coach.services.history import read_history
 from coach.services.racks import racks_by_location
-from coach.store import exercises, goals, phases, programs
+from coach.store import exercises, goals, phases, programs, routine_map
 from coach.store.connection import Connection
 from coach.store.transaction import transaction
 
@@ -37,6 +40,7 @@ class AdoptResult:
     diff: ProgramDiff
     start_loads: tuple[Mapping[str, object], ...]
     acknowledgements: tuple[AcknowledgeEntry, ...] = ()
+    warnings: tuple[Flag, ...] = ()
     dry_run: bool = False
     no_op: bool = False
 
@@ -76,27 +80,40 @@ def adopt(
         goal = _current_goal(conn)
         library = _library(conn)
         _check_declared(draft.form, library)
+        phase = _open_phase_kind(conn)
+        filled = fill(
+            draft.form,
+            priority_lifts=goal.priority_lifts if goal else (),
+            phase=phase,
+            session_minutes=config.athlete.session_minutes,
+        )
         context = AdoptContext(
             version_id=version_id,
             library=library,
             racks=racks,
-            exposed=_exposed(conn, config),
+            last_exposures=_last_exposures(conn, config),
             goal=goal,
+            phase=phase,
+            available_days=config.athlete.available_days,
             hevy_on=config.hevy is not None,
+            previous=previous.form if previous else None,
+            routines=routine_map.mapped(conn),
+            open_block=_open_block(conn, previous),
         )
-        found = violations(draft.form, context, draft.unknown_keys)
+        raised = adopt_warnings(filled.form, context)
+        found = violations(
+            draft.form,
+            replace(context, raised_warnings=frozenset(flag.key for flag in raised)),
+            draft.unknown_keys,
+        )
         if found:
             raise Invalid(
                 found[0].code,
                 f"the Draft has {len(found)} violation(s); fix each and adopt again",
                 {"violations": [flag.to_json() for flag in found]},
             )
-        filled = fill(
-            draft.form,
-            priority_lifts=goal.priority_lifts if goal else (),
-            phase=_open_phase_kind(conn),
-            session_minutes=config.athlete.session_minutes,
-        )
+        warnings = leave_warnings(raised, draft.form.acknowledgements)
+        frozen = tuple(_frozen(flag) for flag in warnings if flag.left is not None)
         today = clock.today().isoformat()
         reset = draft.form.kind == "redesign"
         result = AdoptResult(
@@ -107,7 +124,8 @@ def adopt(
             block_reset=reset,
             diff=diff(previous.form if previous else None, filled.form, filled.filled),
             start_loads=_start_loads(filled.form, library, config),
-            acknowledgements=filled.form.acknowledgements,
+            acknowledgements=frozen,
+            warnings=warnings,
             dry_run=dry_run,
         )
         if dry_run:
@@ -121,11 +139,12 @@ def adopt(
                 sequence=int(version_id.removeprefix("pv-")),
                 position=start,
                 adopted=today,
-                form=filled.form,
+                form=replace(filled.form, acknowledgements=frozen),
                 draft_hash=draft.hash,
                 recorded_at=clock.now().astimezone(datetime.UTC).isoformat(timespec="seconds"),
             ),
         )
+        programs.freeze_acknowledgements(conn, version_id, frozen)
     return result
 
 
@@ -142,7 +161,19 @@ def show(conn: Connection) -> ShowResult:
 
 
 def show_draft(conn: Connection) -> str:
-    return program_draft(_in_force(conn).form)
+    """The version in force as a Draft for the next version; a version-scoped acknowledgement
+    names that next version and keeps its params hash, so it leaves only an unchanged warning."""
+    version = _in_force(conn)
+    next_scope = Scope("version", version_id=f"pv-{version.sequence + 1}")
+    carried = tuple(_carried(entry, next_scope) for entry in version.form.acknowledgements)
+    return program_draft(replace(version.form, acknowledgements=carried))
+
+
+def _carried(entry: AcknowledgeEntry, next_scope: Scope) -> AcknowledgeEntry:
+    key = FlagKey.parse(entry.flag)
+    if key.scope.kind != "version":
+        return entry
+    return replace(entry, flag=str(FlagKey(key.code, next_scope)))
 
 
 def _current_goal(conn: Connection) -> Goal | None:
@@ -163,10 +194,28 @@ def _in_force(conn: Connection) -> programs.VersionRow:
     return version
 
 
-def _exposed(conn: Connection, config: Config) -> frozenset[str]:
-    """Exercises with an Exposure anywhere, resolved as `prescribe` resolves them."""
-    history = read_history(conn, config.athlete.units)
-    return frozenset(exposure.exercise_id for exposure in history.exposures)
+def _last_exposures(conn: Connection, config: Config) -> dict[str, Exposure]:
+    """Each exercise with an Exposure anywhere, resolved as `prescribe` resolves them, to its
+    latest."""
+    latest: dict[str, Exposure] = {}
+    for exposure in read_history(conn, config.athlete.units).exposures:
+        held = latest.get(exposure.exercise_id)
+        if held is None or exposure.date >= held.date:
+            latest[exposure.exercise_id] = exposure
+    return latest
+
+
+def _open_block(conn: Connection, previous: programs.VersionRow | None) -> OpenBlock | None:
+    """The Block the version in force runs in. Its hard-week count reads closed weeks, which
+    nothing derives yet, so it stands at 0."""
+    if previous is None:
+        return None
+    return OpenBlock(f"b-{programs.block_opened(conn)}", 0)
+
+
+def _frozen(flag: Flag) -> AcknowledgeEntry:
+    assert flag.left is not None
+    return AcknowledgeEntry(flag.key, flag.left.because, flag.left.text, flag.params_hash)
 
 
 def _library(conn: Connection) -> dict[str, Mapping[str, object]]:
@@ -244,7 +293,7 @@ def _no_op(
         block_reset=False,
         diff=diff(stored.form, stored.form),
         start_loads=_start_loads(stored.form, _library(conn), config),
-        acknowledgements=stored.form.acknowledgements,
+        acknowledgements=programs.acknowledgements(conn, stored.id),
         dry_run=dry_run,
         no_op=True,
     )

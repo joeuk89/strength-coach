@@ -23,7 +23,7 @@ def run(call: Call) -> Outcome:
             dry_run=call.args.get("dry_run") is True,
             position=position if isinstance(position, str) else None,
         )
-    return Outcome(_result(result))
+    return Outcome(_result(result), warnings=result.warnings)
 
 
 def _result(result: AdoptResult) -> Json:
@@ -37,8 +37,6 @@ def _result(result: AdoptResult) -> Json:
         return summary | {
             "diff": result.diff.to_json(),
             "start_loads": [dict(load) for load in result.start_loads],
-            "violations": list[Json](),
-            "warnings": list[Json](),
             "no_op": result.no_op,
         }
     acknowledgements: list[Json] = [
@@ -61,8 +59,9 @@ DECLARATION = Declaration(
         Argument("draft", "path of the TOML program Draft", required=True),
         Argument(
             "--dry-run",
-            "show the diff against the version in force, filled defaults marked, and each "
-            "start load in athlete units with its Hevy kg; write nothing",
+            "show the diff against the version in force, filled defaults marked, each start "
+            "load in athlete units with its Hevy kg, and the warnings as left or not; write "
+            "nothing",
             takes_value=False,
         ),
         Argument("--position", "the rotation week a redesign starts at (default: the first)"),
@@ -82,8 +81,6 @@ DECLARATION = Declaration(
             "no_op": {"type": "boolean"},
             "diff": {"type": "object", "description": "dry run only"},
             "start_loads": {"type": "array", "description": "dry run only"},
-            "violations": {"type": "array", "description": "dry run only"},
-            "warnings": {"type": "array", "description": "dry run only"},
         },
         "required": ["version", "kind", "position", "block", "no_op"],
     },

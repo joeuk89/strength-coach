@@ -100,9 +100,18 @@ class Deload:
 
 @dataclass(frozen=True)
 class AcknowledgeEntry:
+    """`params_hash`, when stated, binds the entry to the warning's params as they were."""
+
     flag: str
     because: str
     text: str
+    params_hash: str | None = None
+
+    def to_document(self) -> dict[str, object]:
+        document: dict[str, object] = {"flag": self.flag}
+        if self.params_hash is not None:
+            document["params_hash"] = self.params_hash
+        return document | {"because": self.because, "text": self.text}
 
 
 @dataclass(frozen=True)
@@ -155,10 +164,7 @@ class ProgramForm:
         if self.exercises:
             document["exercise"] = {id_: dict(fields) for id_, fields in self.exercises.items()}
         if self.acknowledgements:
-            document["acknowledge"] = [
-                {"flag": a.flag, "because": a.because, "text": a.text}
-                for a in self.acknowledgements
-            ]
+            document["acknowledge"] = [a.to_document() for a in self.acknowledgements]
         return document
 
 

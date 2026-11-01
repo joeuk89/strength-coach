@@ -3,9 +3,15 @@
 import json
 from dataclasses import dataclass
 
-from coach.core.program.form import ProgramForm, line_document, scheme_document
+from coach.core.program.form import (
+    AcknowledgeEntry,
+    ProgramForm,
+    line_document,
+    scheme_document,
+)
 from coach.core.program.parse import parse_form
 from coach.store.connection import Connection
+from coach.store.ids import next_ids
 
 VERSION_COLUMNS = (
     "id",
@@ -97,6 +103,31 @@ def insert_version(conn: Connection, row: VersionRow) -> None:
                     line.superset,
                 ),
             )
+
+
+def freeze_acknowledgements(
+    conn: Connection, version_id: str, entries: tuple[AcknowledgeEntry, ...]
+) -> None:
+    ids = next_ids(conn, "acknowledgement", "ak-", len(entries))
+    conn.executemany(
+        "INSERT INTO acknowledgement (id, version_id, key, params_hash, because, text) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            (id_, version_id, entry.flag, entry.params_hash, entry.because, entry.text)
+            for id_, entry in zip(ids, entries, strict=True)
+        ],
+    )
+
+
+def acknowledgements(conn: Connection, version_id: str) -> tuple[AcknowledgeEntry, ...]:
+    return tuple(
+        AcknowledgeEntry(key, because, text, params_hash)
+        for key, params_hash, because, text in conn.execute(
+            "SELECT key, params_hash, because, text FROM acknowledgement "
+            "WHERE version_id = ? ORDER BY id",
+            (version_id,),
+        )
+    )
 
 
 def latest(conn: Connection) -> VersionRow | None:

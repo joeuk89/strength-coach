@@ -178,7 +178,11 @@ CUSTOM_EXERCISES: dict[str, dict[str, Any]] = {
     "custom_decline_lateral_raise": {"load_mode": "per_hand_x2", "equipment_kind": "dumbbell"},
     "custom_dip_negatives": {"load_mode": "bodyweight", "equipment_kind": "bodyweight"},
     "custom_flexed_arm_hang": {"load_mode": "duration", "equipment_kind": "bodyweight"},
-    "custom_hollow_hold": {"load_mode": "duration", "equipment_kind": "bodyweight"},
+    "custom_hollow_hold": {
+        "load_mode": "duration",
+        "equipment_kind": "bodyweight",
+        "muscles": {"primary": ["abdominals"], "secondary": []},
+    },
     "custom_jumping_pull_up": {"load_mode": "bodyweight", "equipment_kind": "bodyweight"},
     "custom_pallof_press_band": {"load_mode": "band", "equipment_kind": "band"},
     "custom_pull_up_top_hold": {"load_mode": "duration", "equipment_kind": "bodyweight"},
@@ -187,6 +191,7 @@ CUSTOM_EXERCISES: dict[str, dict[str, Any]] = {
     "custom_single_leg_standing_calf_raise_dumbbell": {
         "load_mode": "single_implement",
         "equipment_kind": "dumbbell",
+        "muscles": {"primary": ["calves"], "secondary": []},
     },
     "custom_scapular_pull_ups": {"load_mode": "bodyweight", "equipment_kind": "bodyweight"},
 }
@@ -243,15 +248,16 @@ def toml(draft: dict[str, Any]) -> bytes:
 
 
 # The sessions the worked Draft elides ("the remaining sessions follow the same pattern"),
-# one line each, so its schedule names no missing session.
+# one line each from the exercises its comments name, so its schedule names no missing session
+# and every muscle the version's dose is judged on has a hard set.
 _ELIDED = {
-    "a-wed-lower": ("bb_back_squat", "Week A · Wed — Lower"),
-    "a-fri-push": ("bb_bench_press", "Week A · Fri — Push"),
-    "a-sun-push": ("bb_bench_press", "Week A · Sun — Push"),
-    "b-mon-pull": ("bb_bent_over_row", "Week B · Mon — Pull"),
-    "b-wed-push": ("bb_bench_press", "Week B · Wed — Push"),
-    "b-fri-lower": ("bb_back_squat", "Week B · Fri — Lower"),
-    "b-sun-pull": ("bb_bent_over_row", "Week B · Sun — Pull"),
+    "a-wed-lower": ("bb_romanian_deadlift", "Week A · Wed — Lower", 100),
+    "a-fri-push": ("db_incline_bench_press", "Week A · Fri — Push", 15),
+    "a-sun-push": ("db_lateral_raise", "Week A · Sun — Push", 15),
+    "b-mon-pull": ("bb_bent_over_row", "Week B · Mon — Pull", 100),
+    "b-wed-push": ("db_overhead_triceps_extension", "Week B · Wed — Push", 20),
+    "b-fri-lower": ("bb_back_squat", "Week B · Fri — Lower", 100),
+    "b-sun-pull": ("db_hammer_curl", "Week B · Sun — Pull", 15),
 }
 WORKED_DRAFT_COMPLETE = WORKED_DRAFT + "".join(
     f"""
@@ -263,10 +269,10 @@ tier = "core"
 
   [[session.line]]
   exercise = "{exercise}"
-  sets = [{{ count = 3, reps = [6, 8], rpe = 8 }}]
-  rest_s = 150
+  sets = [{{ count = 3, reps = [8, 12], rpe = 8 }}]
+  rest_s = 120
   scheme = {{ name = "double_progression" }}
-  start_load = 100
+  start_load = {start_load}
 """
-    for id_, (exercise, title) in _ELIDED.items()
+    for id_, (exercise, title, start_load) in _ELIDED.items()
 )

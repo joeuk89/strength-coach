@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import tomllib
 from typing import Any, cast
 
 import pytest
@@ -11,8 +12,10 @@ from support.programs import a_config, a_goal, a_library_store, a_phase, the_wor
 
 from coach.core.errors import Invalid, Setup
 from coach.core.kit import KitFiles
+from coach.core.mirror import MirroredRoutine
+from coach.core.program.form import AcknowledgeEntry
 from coach.services.program import AdoptResult, adopt, show, show_draft
-from coach.store import exercises, programs
+from coach.store import exercises, mirrors, programs
 from coach.store.connection import Connection
 
 CLOCK = FixedClock()
@@ -346,7 +349,7 @@ def a_store_with_bench_history(*, set_type: str = "working", voided: bool = Fals
     conn = the_worked_store()
     with conn:
         exercises.update(conn, "bb_bench_press", {"hevy_template_id": "T-BENCH"})
-    a_logged_workout(conn, "h-1", "2026-10-20", ("T-BENCH", ((60, 8, 8),)), set_type=set_type)
+    a_logged_workout(conn, "h-1", "2026-10-20", ("T-BENCH", ((62.5, 8, 8),)), set_type=set_type)
     if voided:
         an_annotation(conn, "a-0001", "void", "workout:h-1/bb_bench_press")
     return conn
@@ -370,3 +373,197 @@ def test_history_that_resolves_to_no_exposure_still_needs_a_start_load(
         run(a_store_with_bench_history(**history), draft, dry_run=True)
 
     assert refused.value.code == "start_load_missing"
+
+
+EVERY_DAY = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def test_the_worked_draft_raises_one_warning_left_by_its_acknowledgement() -> None:
+    result = run(the_worked_store(), WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+
+    assert [(flag.key, flag.left is not None) for flag in result.warnings] == [
+        ("scheme_off_emphasis@line:a-sat-pull/pull_up", True)
+    ]
+    assert result.acknowledgements == (
+        AcknowledgeEntry(
+            "scheme_off_emphasis@line:a-sat-pull/pull_up",
+            "coach_judgement",
+            "The pull-up progresses through the assistance ladder and negatives; "
+            "the weekly single is the measure.",
+            result.warnings[0].params_hash,
+        ),
+    )
+
+
+def keys(result: AdoptResult) -> list[str]:
+    return [flag.key for flag in result.warnings]
+
+
+def test_the_acknowledgements_are_frozen_on_the_version_and_read_back_by_the_no_op() -> None:
+    conn = the_worked_store()
+    adopted = run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+
+    again = run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+
+    assert programs.acknowledgements(conn, "pv-1") == adopted.acknowledgements
+    assert again.no_op and again.acknowledgements == adopted.acknowledgements
+
+
+def test_a_dry_run_freezes_nothing() -> None:
+    conn = the_worked_store()
+
+    run(conn, WORKED_DRAFT_COMPLETE, dry_run=True)
+
+    assert programs.acknowledgements(conn, "pv-1") == ()
+
+
+def test_a_strength_version_under_a_goal_with_no_priority_lifts_is_refused() -> None:
+    conn = a_library_store()
+    a_goal(conn, "strength", ())
+
+    with pytest.raises(Invalid) as refused:
+        run(conn, toml(a_draft(emphasis="strength")))
+
+    assert refused.value.code == "priority_lifts_required"
+    assert programs.latest(conn) is None
+
+
+def test_a_maintenance_version_under_a_hypertrophy_goal_warns_and_adopts() -> None:
+    conn = the_worked_store()
+
+    result = run(conn, toml(a_draft(emphasis="maintenance")))
+
+    assert "emphasis_off_goal@version:pv-1" in keys(result)
+    assert show(conn).emphasis == "maintenance"
+
+
+def test_a_session_outside_the_available_days_warns_session_on_unavailable_day() -> None:
+    draft = toml(a_draft(a_session("push"), a_session("pull", a_line("bb_bent_over_row"))))
+
+    result = run(the_worked_store(), draft, available_days=["monday", "friday"])
+
+    [flag] = [f for f in result.warnings if f.code == "session_on_unavailable_day"]
+    assert (flag.key, flag.params) == (
+        "session_on_unavailable_day@session:pull",
+        {"session_id": "pull", "weekday": "wednesday", "available_days": ["monday", "friday"]},
+    )
+
+
+def test_a_start_load_beside_logged_history_warns_start_load_ignored() -> None:
+    result = run(a_store_with_bench_history(), toml(a_draft()), dry_run=True)
+
+    [flag] = [f for f in result.warnings if f.code == "start_load_ignored"]
+    assert (flag.key, flag.params) == (
+        "start_load_ignored@line:push/bb_bench_press",
+        {"start_load": 60, "last_exposure_load": 137.79, "exposure": "exposure:h-1/bb_bench_press"},
+    )
+
+
+def a_mapped_routine(conn: Connection, session_id: str, routine_id: str) -> None:
+    routine = MirroredRoutine(routine_id, "2026-10-01T00:00:00Z", "Pull", None, "{}")
+    with conn:
+        mirrors.upsert_routine(conn, routine, "2026-10-01T00:00:00Z")
+        conn.execute(
+            "INSERT INTO routine_map (session_id, routine_id, status, written_at) "
+            "VALUES (?, ?, 'active', '2026-10-01T00:00:00Z')",
+            (session_id, routine_id),
+        )
+
+
+def test_a_redesign_dropping_a_mapped_session_warns_session_retired_and_block_open() -> None:
+    conn = the_worked_store()
+    run(conn, rotation_draft())
+    a_mapped_routine(conn, "pull", "r-pull")
+
+    result = run(conn, toml(a_draft()))
+
+    flags = {flag.code: (flag.key, flag.params) for flag in result.warnings}
+    assert flags["session_retired"] == (
+        "session_retired@version:pv-2",
+        {"session_id": "pull", "routine_id": "r-pull"},
+    )
+    assert flags["block_open_at_redesign"] == (
+        "block_open_at_redesign@version:pv-2",
+        {"block_id": "b-2026-10-30", "hard_weeks": 0},
+    )
+
+
+def test_an_acknowledgement_whose_params_hash_moved_leaves_nothing_and_freezes_nothing() -> None:
+    conn = the_worked_store()
+    stale = WORKED_DRAFT_COMPLETE.replace(
+        'flag = "scheme_off_emphasis@line:a-sat-pull/pull_up"',
+        'flag = "scheme_off_emphasis@line:a-sat-pull/pull_up"\nparams_hash = "sha256:'
+        + "0" * 64
+        + '"',
+    )
+
+    result = run(conn, stale, available_days=EVERY_DAY)
+
+    assert [(flag.key, flag.left) for flag in result.warnings] == [
+        ("scheme_off_emphasis@line:a-sat-pull/pull_up", None)
+    ]
+    assert result.acknowledgements == () == programs.acknowledgements(conn, "pv-1")
+
+
+def test_a_stale_acknowledgement_is_refused_as_acknowledgement_unmatched() -> None:
+    stale = WORKED_DRAFT_COMPLETE.replace("a-sat-pull/pull_up", "b-sat-push/bb_bench_press")
+
+    with pytest.raises(Invalid) as refused:
+        run(the_worked_store(), stale, available_days=EVERY_DAY)
+
+    assert refused.value.code == "acknowledgement_unmatched"
+
+
+def test_a_carried_acknowledgement_leaves_nothing_once_its_warning_params_change() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+    draft = tomllib.loads(show_draft(conn))
+    [pull] = [s for s in draft["session"] if s["id"] == "a-sat-pull"]
+    [line] = [x for x in pull["line"] if x["exercise"] == "pull_up"]
+    line["sets"] = [{"count": 3, "reps": [8, 12], "rpe": 8}]
+    line["scheme"] = {"name": "double_progression"}
+
+    result = run(conn, toml(draft), available_days=EVERY_DAY)
+
+    [flag] = [f for f in result.warnings if f.code == "scheme_off_emphasis"]
+    assert (flag.key, flag.params["scheme"], flag.left) == (
+        "scheme_off_emphasis@line:a-sat-pull/pull_up",
+        "double_progression",
+        None,
+    )
+    assert result.acknowledgements == () == programs.acknowledgements(conn, "pv-2")
+
+
+def test_a_carried_acknowledgement_still_leaves_its_unchanged_warning() -> None:
+    conn = the_worked_store()
+    adopted = run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+
+    again = run(conn, show_draft(conn), available_days=EVERY_DAY)
+
+    assert again.version_id == "pv-2"
+    assert again.acknowledgements == adopted.acknowledgements
+    assert programs.acknowledgements(conn, "pv-2") == adopted.acknowledgements
+
+
+def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version() -> None:
+    conn = the_worked_store()
+    draft = a_draft(emphasis="maintenance")
+    draft["acknowledge"] = [
+        {
+            "flag": "emphasis_off_goal@version:pv-1",
+            "because": "coach_judgement",
+            "text": "A maintenance block while travelling.",
+        }
+    ]
+    adopted = run(conn, toml(draft))
+
+    again = run(conn, show_draft(conn))
+
+    [left] = [f for f in again.warnings if f.code == "emphasis_off_goal"]
+    assert left.key == "emphasis_off_goal@version:pv-2"
+    assert left.left is not None and left.left.text == "A maintenance block while travelling."
+    [entry] = programs.acknowledgements(conn, "pv-2")
+    assert (entry.flag, entry.params_hash) == (
+        "emphasis_off_goal@version:pv-2",
+        adopted.acknowledgements[0].params_hash,
+    )
