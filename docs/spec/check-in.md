@@ -16,7 +16,7 @@ closed week, Match, adherence, the fatigue triggers and the due rules are `week.
 | `date` | The day the check-in was recorded |
 | `tier` | `light` or `deep` |
 | `window_start`, `window_end` | The span it reviews: the day after the previous `current` check-in's `window_end` to `date`. Derived once by the engine at `checkin record` and then stored, because it is a fact of the event. The first row has no previous one: its `window_start` is the first approved WeekPlan's Monday, or `date` with no plan, and the record file may set it on the first row only (`week.md`, `cutover.md`) |
-| `readiness` | The athlete's reported readiness, `poor`, `ok` or `good`, asked on every card. The one typed input the fatigue triggers need (`week.md`); null when the athlete gave none |
+| `readiness` | The athlete's reported readiness, `poor`, `ok` or `good`, asked before the card and passed to `checkin open --readiness`; `checkin record` stores it. The one typed input the fatigue triggers need (`week.md`); null when the athlete gave none |
 | `read` | The coach's read, prose, inserted verbatim wherever it is shown |
 | `status` | `current` or `superseded` (see Correcting) |
 

@@ -158,8 +158,9 @@ description: The weekly review. Use when a check-in is due, when the athlete rep
 ---
 
 ## Read first
-The profile, once. The card from `coach checkin open`: it states what the store already knows
-and asks only what it cannot. Never change its figures or the order of its fields.
+The profile, once. Ask the athlete's readiness (`poor`, `ok`, `good`) first and pass it to
+`coach checkin open --readiness`. The card it returns states what the store already knows and
+asks only what it cannot. Never change its figures or the order of its fields.
 
 ## Ask
 Send the card as one message in the coach's voice; the athlete answers by number. A fact the log

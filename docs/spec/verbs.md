@@ -31,7 +31,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `status` | read | where we stand and what needs attention; what the SessionStart hook shows |
 | `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
 | `import [--full]` | store write | Hevy workouts append-only with tombstones (ADR 0011); kit is a committed file, never imported (ADR 0021); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
-| `checkin open [--date <d>] [--tier light\|deep]` | read | the check-in card (`check-in.md`) |
+| `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | read | the check-in card (`check-in.md`) |
 | `checkin record <draft>` | store write | the Check-in row plus every record the file carries |
 | `record <draft>` | store write | ledger writes outside a check-in, any mix of record kinds |
 | `plan draft [--week <monday>] [--out <path>]` | read, writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context), returns its path and summary |
