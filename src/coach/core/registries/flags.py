@@ -8,6 +8,9 @@ type ScopeKind = Literal[
     "week", "session", "line", "exposure", "routine", "workout", "instance", "version", "exercise"
 ]
 type Refs = tuple[str, ...]
+type AcknowledgementSource = Literal["weekplan", "decision"]
+
+ON_A_PLAN: tuple[AcknowledgementSource, ...] = ("weekplan", "decision")
 
 
 @dataclass(frozen=True)
@@ -29,7 +32,7 @@ type Citation = Refs | ByCase
 class FlagCode:
     name: str
     severity: Severity
-    acknowledgeable: bool
+    left_by: tuple[AcknowledgementSource, ...]
     scopes: tuple[ScopeKind, ...]
     params: tuple[str, ...]
     rn: Citation = ()
@@ -44,7 +47,7 @@ class FlagCode:
         row: Row = {
             "code": self.name,
             "severity": self.severity,
-            "acknowledgeable": self.acknowledgeable,
+            "left_by": list(self.left_by),
             "scope": list(self.scopes),
             "params": list(self.params),
             "rn": _citation(self.rn),
@@ -73,19 +76,23 @@ def violation(
     cleared_by: tuple[str, ...],
     rn: Citation = (),
 ) -> FlagCode:
-    return FlagCode(name, "violation", False, scopes, params, rn, cleared_by)
+    return FlagCode(name, "violation", (), scopes, params, rn, cleared_by)
 
 
 def acknowledgeable_warning(
     name: str, scopes: tuple[ScopeKind, ...], params: tuple[str, ...], rn: Citation = ()
 ) -> FlagCode:
-    return FlagCode(name, "warning", True, scopes, params, rn)
+    return FlagCode(name, "warning", ON_A_PLAN, scopes, params, rn)
 
 
 def outside_warning(
-    name: str, scopes: tuple[ScopeKind, ...], params: tuple[str, ...], rn: Citation = ()
+    name: str,
+    scopes: tuple[ScopeKind, ...],
+    params: tuple[str, ...],
+    rn: Citation = (),
+    left_by: tuple[AcknowledgementSource, ...] = (),
 ) -> FlagCode:
-    return FlagCode(name, "warning", False, scopes, params, rn)
+    return FlagCode(name, "warning", left_by, scopes, params, rn)
 
 
 # docs/spec/validation.md, "Code registry": one row per code, in the spec's order.
@@ -359,12 +366,14 @@ OUTSIDE_WARNINGS = (
         ("exercise",),
         ("scheme", "metric", "blocks", "may_schemes", "may", "never"),
         ("rn:training-level §2",),
+        ("decision",),
     ),
     outside_warning(
         "cadence_fast",
         ("exercise",),
         ("scheme", "metric", "may_schemes", "may", "never"),
         ("rn:training-level §2",),
+        ("decision",),
     ),
     outside_warning("phase_condition_met", ("instance",), ("phase_id", "condition", "value")),
     outside_warning(

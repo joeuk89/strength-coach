@@ -300,3 +300,48 @@ def test_a_violation_cannot_be_built_already_left() -> None:
 
     with pytest.raises(ValueError):
         dataclasses.replace(violation, left=left)
+
+
+@pytest.mark.parametrize("source", ["weekplan", "decision"])
+def test_a_warning_outside_a_plan_is_never_left(source: AcknowledgementSource) -> None:
+    drift = raise_flag(
+        "routine_drift", Scope("routine", routine_id="r1"), {"drift_class": "load"}, "drifted"
+    )
+    acknowledgement = an_acknowledgement(drift.key, drift.params_hash, source=source)
+
+    assert leave(drift, [acknowledgement]).left is None
+
+
+def test_an_activity_cap_exceeded_is_never_left() -> None:
+    week = Scope("week", monday=MONDAY)
+    capped = raise_flag(
+        "activity_cap_exceeded", week, {"cap": 3, "observed": 4}, "over", rn="rn:running-load.5"
+    )
+
+    assert leave(capped, [an_acknowledgement(capped.key, capped.params_hash)]).left is None
+
+
+def a_cadence_slow() -> Flag:
+    return raise_flag(
+        "cadence_slow",
+        Scope("exercise", exercise_id="bb_bench_press"),
+        {"scheme": "linear", "blocks": 2},
+        "bench is slow",
+    )
+
+
+def test_a_leave_warning_decision_leaves_a_cadence_signal() -> None:
+    slow = a_cadence_slow()
+    decision = an_acknowledgement(
+        "cadence_slow@exercise:bb_bench_press", slow.params_hash, source="decision"
+    )
+
+    left = leave(slow, [decision]).left
+    assert left is not None
+    assert left.source == "decision"
+
+
+def test_a_weekplan_acknowledgement_does_not_leave_a_cadence_signal() -> None:
+    slow = a_cadence_slow()
+
+    assert leave(slow, [an_acknowledgement(slow.key, slow.params_hash)]).left is None

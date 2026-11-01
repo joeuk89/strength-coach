@@ -57,6 +57,18 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
     assert rows["override_conflict"]["scope"] == ["week", "session", "line"]
 
 
+def test_the_flags_registry_names_what_may_leave_each_code() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["stall_streak"]["left_by"] == ["weekplan", "decision"]
+    assert rows["cadence_slow"]["left_by"] == ["decision"]
+    assert rows["cadence_fast"]["left_by"] == ["decision"]
+    assert rows["routine_drift"]["left_by"] == []
+    assert rows["load_off_grid"]["left_by"] == []
+    assert "acknowledgeable" not in rows["stall_streak"]
+
+
 def test_the_default_flags_envelope_truncates_under_3_kb() -> None:
     run = run_coach("schema", "--registry", "flags")
 

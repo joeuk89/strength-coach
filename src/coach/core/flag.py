@@ -4,13 +4,11 @@ import json
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
-from typing import Literal, get_args
+from typing import get_args
 
 from coach.core.errors import Invalid
-from coach.core.registries.flags import FLAGS, ScopeKind, Severity
+from coach.core.registries.flags import FLAGS, AcknowledgementSource, ScopeKind, Severity
 from coach.core.registries.ledger import Reason
-
-type AcknowledgementSource = Literal["weekplan", "decision"]
 
 CODE = re.compile(r"[a-z][a-z0-9_]*")
 SCOPE_KINDS: tuple[ScopeKind, ...] = get_args(ScopeKind.__value__)
@@ -222,7 +220,9 @@ class Acknowledgement:
                 )
 
     def binds(self, flag: Flag) -> bool:
-        if flag.severity != "warning" or flag.params_hash != self.params_hash:
+        if self.source not in FLAGS.get(flag.code).left_by:
+            return False
+        if flag.params_hash != self.params_hash:
             return False
         key = FlagKey(flag.code, flag.scope)
         if self.source == "weekplan":
