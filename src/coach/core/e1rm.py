@@ -75,6 +75,23 @@ def model_load(e1rm: Load, reps: int, rpe: float) -> Load:
     return Load(round(e1rm.amount / (1 + reps_to_failure(reps, rpe) / 30), PRECISION), e1rm.mode)
 
 
+def implied_rpe(e1rm: Load, load: Load, reps: int) -> float:
+    """The RPE the model gives `reps` at `load`: the inverse of `model_load`."""
+    to_failure = 30 * (e1rm.as_mode(load.mode).amount / load.amount - 1)
+    return round(10 + reps - to_failure, PRECISION)
+
+
+def most_reps_over_cap(exposure: Exposure) -> float | None:
+    """The most reps to failure among the working sets the cap keeps out of the e1RM."""
+    over = [
+        to_failure
+        for logged in exposure.working
+        if _estimable(logged)
+        and (to_failure := reps_to_failure(logged.reps or 0, logged.rpe)) > MAX_REPS_TO_FAILURE
+    ]
+    return max(over, default=None)
+
+
 def _estimable(logged: ExposureSet) -> bool:
     return (
         logged.load is not None

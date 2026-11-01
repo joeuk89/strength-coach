@@ -3,7 +3,14 @@ import datetime
 from support.exposures import an_exposure
 
 from coach.core.config import IncrementImplement
-from coach.core.e1rm import E1rm, e1rm, load_for, reps_to_failure
+from coach.core.e1rm import (
+    E1rm,
+    e1rm,
+    implied_rpe,
+    load_for,
+    most_reps_over_cap,
+    reps_to_failure,
+)
 from coach.core.load import Load
 from coach.core.rack import grid_rack
 
@@ -90,3 +97,25 @@ def test_load_for_inverts_the_model_and_rounds_down_to_the_rack() -> None:
     assert load_for(Load(133.33, "total"), 8, 8, BAR) == Load(100, "total")
     assert load_for(Load(133.33, "total"), 5, 8, BAR) == Load(107.5, "total")
     assert load_for(Load(120, "total"), 1, 9, BAR) == Load(112.5, "total")
+
+
+def test_a_load_on_the_model_implies_its_own_rpe() -> None:
+    assert implied_rpe(Load(160, "total"), Load(120, "total"), 8) == 8
+
+
+def test_a_load_past_the_model_implies_an_rpe_past_10() -> None:
+    assert implied_rpe(Load(160, "total"), Load(150, "total"), 6) == 14
+
+
+def test_an_e1rm_in_total_reads_a_per_hand_load_as_its_total() -> None:
+    assert implied_rpe(Load(160, "total"), Load(60, "per_hand_x2"), 8) == 8
+
+
+def test_the_most_reps_to_failure_past_the_cap_are_reported() -> None:
+    exposure = an_exposure("2026-10-26", (100, 8, 8), (100, 8, 5), (100, 15, None))
+
+    assert most_reps_over_cap(exposure) == 15
+
+
+def test_an_exposure_inside_the_cap_has_no_reps_over_it() -> None:
+    assert most_reps_over_cap(an_exposure("2026-10-26", (100, 12, 10), (100, 8, 6))) is None
