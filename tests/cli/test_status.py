@@ -99,7 +99,19 @@ def test_a_dev_engine_against_a_release_pin_runs_with_engine_pin_dev(
     run = run_coach("status")
 
     assert run.code == 0
-    assert [w["code"] for w in run.envelope["warnings"]] == ["engine_pin_dev"]
+    [warning] = run.envelope["warnings"]
+    assert warning["params_hash"].startswith("sha256:")
+    assert warning == {
+        "key": "engine_pin_dev@instance",
+        "code": "engine_pin_dev",
+        "severity": "warning",
+        "scope": {"kind": "instance"},
+        "params": {"pinned_version": "0.2.0", "running_version": DEV_ENGINE},
+        "params_hash": warning["params_hash"],
+        "rn": None,
+        "message": f"engine {DEV_ENGINE} is a development build running against pin 0.2.0",
+        "left": None,
+    }
     assert run.envelope["result"]["engine"] == {"version": DEV_ENGINE, "pin": "0.2.0"}
 
 

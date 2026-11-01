@@ -12,7 +12,10 @@ def test_a_dev_engine_runs_against_any_release_pin_with_a_warning() -> None:
     warning = check_pin("1.3.0.dev0", "1.2.0")
 
     assert warning is not None
-    assert warning.code == "engine_pin_dev"
+    assert warning.key == "engine_pin_dev@instance"
+    assert warning.severity == "warning"
+    assert warning.params == {"pinned_version": "1.2.0", "running_version": "1.3.0.dev0"}
+    assert warning.rn is None
     assert "1.3.0.dev0" in warning.message
     assert "1.2.0" in warning.message
 

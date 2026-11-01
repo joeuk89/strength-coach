@@ -8,7 +8,7 @@ from coach.cli.declaration import Instance
 from coach.core.config import parse_config
 from coach.core.engine_pin import check_pin
 from coach.core.errors import Setup
-from coach.core.message import Message
+from coach.core.flag import Flag
 from coach.store.connection import open_store
 from coach.store.export import read_manifest, tables_behind
 from coach.store.rebuild import Rebuilt, rebuild_missing
@@ -26,7 +26,7 @@ def find_root(start: Path) -> Path:
 
 def load_instance(
     root: Path, running: str, *, upgrading: bool = False
-) -> tuple[Instance, Message | None]:
+) -> tuple[Instance, Flag | None]:
     """Check the pin first, so an engine too old or too new to know a key says so, then parse."""
     path = root / CONFIG
     try:
