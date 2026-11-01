@@ -44,7 +44,9 @@ def run(call: Call) -> Outcome:
         config.write_text(with_pin(config.read_text(encoding="utf-8"), running), encoding="utf-8")
     summary = _summary(instance.pin, running, upgraded, regenerated, to_make)
     paths = [exported.EXPORT, CONFIG, *generated_files(running)]
-    commit = git.commit(root, paths, f"coach upgrade v{running}")
+    commit = (
+        git.commit(root, paths, f"coach upgrade v{running}") if git.changed(root, paths) else None
+    )
     return Outcome({**summary, "commit": commit})
 
 

@@ -125,6 +125,30 @@ def test_upgrade_run_again_is_a_no_op(instance: Path, monkeypatch: pytest.Monkey
     assert files_of(instance) == before
 
 
+def test_a_second_machine_with_the_pin_current_and_its_store_behind_migrates_without_a_commit(
+    instance: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_a_newer_schema(monkeypatch)
+    database = instance / ".coach" / "coach.db"
+    behind = database.read_bytes()
+    assert run_coach("upgrade").code == 0
+    database.write_bytes(behind)
+    before = files_of(instance)
+    subjects = commit_subjects(instance)
+
+    run = run_coach("upgrade")
+
+    assert run.code == 0, run.stdout
+    result = run.envelope["result"]
+    assert result["migrations"] == ["m0001"]
+    assert result["commit"] is None
+    assert store_version(instance) == 2
+    assert commit_subjects(instance) == subjects
+    assert {k: v for k, v in files_of(instance).items() if not k.startswith(".coach/")} == {
+        k: v for k, v in before.items() if not k.startswith(".coach/")
+    }
+
+
 def test_a_dry_run_lists_the_migrations_and_files_and_changes_nothing(
     instance: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
