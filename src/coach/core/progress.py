@@ -65,7 +65,7 @@ def best_set(exposures: Iterable[Exposure], exercise_id: str) -> BestSet | None:
     ]
     if not found:
         return None
-    day, logged = max(found, key=lambda pair: (_heaviness(pair[1]), pair[1].reps or 0))
+    day, logged = max(found, key=lambda pair: (_load(pair[1]), pair[1].reps or 0))
     return BestSet(day, None if logged.load is None else logged.load.amount, logged.reps or 0)
 
 
@@ -132,11 +132,7 @@ def _weigh_ins_before(weigh_ins: WeighIns, on: datetime.date) -> int:
 
 
 def _load(logged: ExposureSet) -> float:
-    """An unloaded bodyweight set counts as load 0."""
-    return 0 if logged.load is None else logged.load.amount
-
-
-def _heaviness(logged: ExposureSet) -> float:
+    """An unloaded bodyweight set counts as load 0, an assisted one as minus its assistance."""
     if logged.load is None:
         return 0
     return -logged.load.amount if logged.load.mode == "assisted" else logged.load.amount

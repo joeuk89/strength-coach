@@ -123,6 +123,31 @@ def test_a_rising_e1rm_on_top_backoff_raises_nothing() -> None:
     assert cadence_signal(a_read(TOP_BACKOFF, *exposures)) is None
 
 
+def in_session(session_id: str, load: float, *days: str) -> tuple[Exposure, ...]:
+    return tuple(
+        an_exposure(on, (load, 5, 8), *[(85, 5, 7)] * 3, session_id=session_id) for on in days
+    )
+
+
+def test_a_rising_second_session_keeps_a_flat_first_session_line_from_cadence_slow() -> None:
+    flat = in_session("push", 100, "2026-08-31", *WEEKS)
+    rising = in_session("upper", 110, *WEEKS[4:])
+    read = CadenceRead(TOP_BACKOFF, (BEFORE, CLOSED), (*flat, *rising), 0.9, session_id="push")
+
+    assert cadence_signal(read) is None
+
+
+def test_a_line_stall_is_read_on_its_own_session_only() -> None:
+    stalled = tuple(an_exposure(on, *FLAT, session_id="push") for on in WEEKS)
+    other = tuple(an_exposure(on, *[(105, 8, 8)] * 3, session_id="upper") for on in WEEKS[4:])
+    read = CadenceRead(DOUBLE, (BEFORE, CLOSED), (*stalled, *other), 0.9, session_id="push")
+
+    flag = cadence_signal(read)
+
+    assert flag is not None
+    assert flag.code == "cadence_slow"
+
+
 def topped(*days: str) -> tuple[Exposure, ...]:
     return tuple(bench(on, *[(100 + 5 * i, 8, 8)] * 3) for i, on in enumerate(days))
 

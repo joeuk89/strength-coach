@@ -40,13 +40,15 @@ class BlockSpan:
 class CadenceRead:
     """`blocks` are the Block before and the closed one. `exposures` are the exercise's, every
     one. `adherence` is trained over planned core sessions across both Blocks' ordinary weeks.
-    `capped` is, per Prescription frozen in the closed Block, whether the one-row cap bound."""
+    `capped` is, per Prescription frozen in the closed Block, whether the one-row cap bound.
+    `session_id` is the line's session: per-line reads skip Exposures matched to another."""
 
     line: Line
     blocks: tuple[BlockSpan, BlockSpan]
     exposures: Sequence[Exposure]
     adherence: float | None
     capped: Sequence[bool] = ()
+    session_id: str | None = None
 
 
 def cadence_signal(read: CadenceRead) -> Flag | None:
@@ -125,7 +127,11 @@ def _inside(read: CadenceRead, start: datetime.date, end: datetime.date) -> tupl
     exercise = read.line.exercise
     return ordinary(
         newest_first(
-            e for e in read.exposures if e.exercise_id == exercise and start <= e.date <= end
+            e
+            for e in read.exposures
+            if e.exercise_id == exercise
+            and start <= e.date <= end
+            and (read.session_id is None or e.session_id in (None, read.session_id))
         )
     )
 

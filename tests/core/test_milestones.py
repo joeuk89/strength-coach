@@ -2,7 +2,9 @@ import datetime
 
 from support.exposures import an_exposure
 
+from coach.core.exposure import Exposure
 from coach.core.goal import Milestone, Target
+from coach.core.load import LoadMode
 from coach.core.progress import milestone_read
 
 HISTORY = (
@@ -71,3 +73,29 @@ def test_a_bodyweight_multiple_reads_the_14_day_average_on_the_exposures_date() 
 
     assert reached.reached == day("2026-09-22")
     assert (short.computable, short.to_go) == (True, {"multiple": 0.35})
+
+
+PULL_UP_8 = Milestone("pull_up", Target("load_x_reps", load=0, reps=8))
+
+
+def pull_ups(on: str, load: float | None, reps: int) -> Exposure:
+    mode: LoadMode = "assisted" if load is not None else "bodyweight"
+    return an_exposure(on, (load, reps, 8), exercise_id="pull_up", mode=mode)
+
+
+def test_an_assisted_set_does_not_reach_an_unassisted_bodyweight_milestone() -> None:
+    read = milestone_read(PULL_UP_8, (pull_ups("2026-09-01", 30, 8),), {}, "kg")
+
+    assert (read.reached, read.to_go) == (None, {"load": 30})
+
+
+def test_an_unassisted_set_reaches_the_bodyweight_milestone() -> None:
+    history = (pull_ups("2026-09-01", 30, 8), pull_ups("2026-09-08", None, 8))
+
+    assert milestone_read(PULL_UP_8, history, {}, "kg").reached == day("2026-09-08")
+
+
+def test_the_load_to_go_under_assistance_is_the_least_assistance_used() -> None:
+    history = (pull_ups("2026-09-01", 30, 8), pull_ups("2026-09-08", 20, 8))
+
+    assert milestone_read(PULL_UP_8, history, {}, "kg").to_go == {"load": 20}

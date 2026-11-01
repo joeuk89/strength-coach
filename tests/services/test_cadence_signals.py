@@ -1,4 +1,4 @@
-from support.blocks import BOUNDARY, PULL_UP_LINE, two_closed_blocks
+from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, two_closed_blocks
 from support.check_in_cards import opened
 from support.clock import FixedClock, at
 from support.kit_fixtures import kit_files
@@ -74,7 +74,7 @@ def test_a_leave_warning_decision_leaves_the_signal() -> None:
     assert (left.source, left.text) == ("decision", "a test week first")
 
 
-def test_a_version_giving_the_exercise_another_scheme_clears_its_signal() -> None:
+def test_a_version_giving_the_exercise_another_scheme_clears_the_signals() -> None:
     conn = two_closed_blocks()
     wave = a_line("bb_bench_press", sets=[{"count": 3}], scheme={"name": "wave_531"})
     adopt(
@@ -86,7 +86,22 @@ def test_a_version_giving_the_exercise_another_scheme_clears_its_signal() -> Non
         clock=FixedClock(at(BOUNDARY)),
     )
 
-    assert set(signals_at_check_in(conn)) == {"pull_up"}
+    assert signals_at_check_in(conn) == {}
+
+
+def test_a_version_keeping_the_scheme_clears_the_signals() -> None:
+    conn = two_closed_blocks()
+    more_sets = {**PULL_UP_LINE, "sets": [{"count": 4, "reps": [5, 8], "rpe": 8}]}
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, more_sets), kind="amend", because="slow")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert signals_at_check_in(conn) == {}
 
 
 def test_adopt_reads_the_open_signals_for_scheme_change_off_signal() -> None:

@@ -30,12 +30,16 @@ def closed_spans(closed: ClosedWeeks) -> tuple[BlockSpan, ...]:
 def cadence_signals(
     conn: Connection, closed: ClosedWeeks, *, units: Units, on: datetime.date
 ) -> tuple[Flag, ...]:
-    """Each signal left by a `leave_warning` Decision in force on `on`."""
+    """Each signal left by a `leave_warning` Decision in force on `on`; none once a version is
+    adopted after the closed Block's end, since a new version clears them."""
     spans = closed_spans(closed)
     version = programs.latest(conn)
     if len(spans) < 2 or version is None:
         return ()
     before, last = spans[-2:]
+    answered = programs.in_force_at(conn, f"{last.end.isoformat()}T23:59:59")
+    if answered is not None and version.sequence > answered.sequence:
+        return ()
     forms = [_form_at(conn, span) for span in (before, last)]
     adherence = _adherence(closed, before, last)
     exposures = read_history(conn, units).exposures
@@ -49,9 +53,10 @@ def cadence_signals(
         read = CadenceRead(
             line,
             (before, last),
-            [e for e in exposures if e.session_id in (None, session_id)],
+            [e for e in exposures if e.exercise_id == line.exercise],
             adherence,
             _capped(conn, closed, last, line) if line.scheme.name == "top_backoff" else (),
+            session_id,
         )
         flag = cadence_signal(read)
         if flag is not None:
