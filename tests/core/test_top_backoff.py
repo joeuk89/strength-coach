@@ -106,3 +106,11 @@ def test_a_light_cut_lowers_the_back_offs_with_their_top() -> None:
     line = derive(bench_on("2026-10-26", top_rpe=7.5), overrides=(light,))
 
     assert working_loads(line) == [(1, Load(90, "total")), (2, Load(77.5, "total"))]
+
+
+def test_a_heavier_top_in_another_session_never_lifts_the_cap_past_one_row() -> None:
+    upper = an_exposure("2026-10-23", (110, 3, 8), *[(92.5, 5, 7)] * 3, session_id="upper")
+
+    line = derive(bench_on("2026-10-19", top_rpe=8), upper, bench_on("2026-10-26", top_rpe=8))
+
+    assert working_loads(line)[0] == (1, Load(102.5, "total"))

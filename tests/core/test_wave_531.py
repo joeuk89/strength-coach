@@ -157,3 +157,24 @@ def test_a_pin_on_a_wave_after_an_exposure_leaves_only_the_last_set_open() -> No
     line = derive(*THREE_WAVES, overrides=(pin(80),), hard_week_count=1)
 
     assert working(line) == [(1, 80, 3), (1, 80, 3), (1, 80, "3+")]
+
+
+HOLD = PlanOverride("hold", "lower", "bb_bench_press")
+
+
+def test_a_hold_after_a_logged_wave_repeats_that_wave() -> None:
+    line = derive(
+        wave_logged("2026-10-26", (65, 75, 85), 5, 8), overrides=(HOLD,), hard_week_count=1
+    )
+
+    assert working(line) == [(1, 65, 5), (1, 75, 5), (1, 85, "5+")]
+    assert line.change == "held"
+    assert not any(step.step == "scheme" for step in line.steps)
+
+
+def test_a_hold_after_an_exposure_off_the_waves_repeats_its_loads_at_this_weeks_reps() -> None:
+    line = derive(
+        wave_logged("2026-10-26", (60, 70, 80), 5, 8), overrides=(HOLD,), hard_week_count=1
+    )
+
+    assert working(line) == [(1, 60, 3), (1, 70, 3), (1, 80, "3+")]

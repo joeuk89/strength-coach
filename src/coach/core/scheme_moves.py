@@ -7,10 +7,10 @@ from dataclasses import dataclass, replace
 from coach.core.anchor import StartLoad, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
-from coach.core.e1rm import e1rm
+from coach.core.e1rm import WINDOW_DAYS, e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
-from coach.core.line_history import line_history, ordinary, top_on_grid
+from coach.core.line_history import line_history, loads_on_grid, ordinary, top_on_grid
 from coach.core.linear import misses_at, misses_before_reset, reset_load
 from coach.core.load import Load, LoadMode
 from coach.core.prescription import PrescribeRequest, Step
@@ -118,11 +118,19 @@ class SchemeMoves:
                 f"{self.line.scheme.name} metric",
             )
 
+    def held(self, exposure: Exposure, before: Load | None) -> Move:
+        """A `hold` override: the anchor's dose repeated with no scheme step."""
+        if self.line.scheme.name == "wave_531":
+            repeated = self._wave_repeated(exposure)
+            if repeated is not None:
+                return repeated
+        return self._held(before)
+
     def move(self, exposure: Exposure, before: Load | None) -> Move:
         if self.line.scheme.name == "assistance_ladder":
             return self._climb(exposure, before)
         if self.line.scheme.name == "top_backoff":
-            return self._top(before)
+            return self._top(exposure, before)
         if self.line.scheme.name == "wave_531":
             return self._wave(exposure)
         verdict = self._judge(exposure, before)
@@ -165,7 +173,7 @@ class SchemeMoves:
         self.steps.append(Step("scheme", rung.amount, up, "hit"))
         return Move(Load(up, "assisted"), "step_up", self.given.sets)
 
-    def _top(self, before: Load | None) -> Move:
+    def _top(self, exposure: Exposure, before: Load | None) -> Move:
         found = e1rm(self.given.request.exposures, self.line.exercise, self.given.on)
         if found is None:
             self._raise(
@@ -176,24 +184,21 @@ class SchemeMoves:
             return self._held(before)
         if before is None:
             return self._held(before)
-        floor = self._heavier(before, self._top_of(found.exposure))
+        floor = self._heaviest_top(exposure, before)
         top = top_set(found.load.as_mode(self.given.mode), self.line, floor, self.given.rack)
         if top.load != before:
             self.steps.append(Step("scheme", before.amount, top.load.amount, top.cause))
         return Move(top.load, "hold", self.given.sets)
 
-    def _top_of(self, ref: str) -> Load | None:
-        """The top working load of the exposure an e1RM point came from."""
-        exposure = next(e for e in self.given.request.exposures if e.ref == ref)
-        return top_on_grid(exposure, self.given.rack, self.given.mode)
-
-    @staticmethod
-    def _heavier(anchor_top: Load, best_top: Load | None) -> Load:
-        """The one-row cap counts from the best point's top too, so a lighter bad day as the
-        anchor never lowers the top set (docs/spec/prescription.md, "The move, per scheme")."""
-        if best_top is None or best_top.amount <= anchor_top.amount:
-            return anchor_top
-        return best_top
+    def _heaviest_top(self, exposure: Exposure, anchor_top: Load) -> Load:
+        """The one-row cap counts from the line's heaviest top in the e1RM window, so a lighter
+        bad day as the anchor never lowers the top set, and another session never lifts it."""
+        start = self.given.on - datetime.timedelta(days=WINDOW_DAYS)
+        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        tops = (
+            top_on_grid(e, self.given.rack, self.given.mode) for e in history if e.date >= start
+        )
+        return max((anchor_top, *(t for t in tops if t is not None)), key=lambda t: t.amount)
 
     def _wave(self, exposure: Exposure | None) -> Move:
         tm = training_max(
@@ -209,11 +214,35 @@ class SchemeMoves:
         self.steps.append(Step("scheme", tm.load.amount, tuple(t.amount for t in targets), wave))
         if exposure is not None:
             self._read_rep_outs(exposure, tm)
-        sets = tuple(
+        return Move(
+            targets, "cut", self._wave_sets(index), f"{wave}: training max {tm.load.amount:g}"
+        )
+
+    def _wave_repeated(self, exposure: Exposure) -> Move | None:
+        """The anchor's wave of the training max; off the waves, its logged loads at this
+        week's reps. The training max stays put."""
+        tm = training_max(
+            self.given.request.decisions, self.line.exercise, self.line.start_load, self.given.mode
+        )
+        if tm is None:
+            return None
+        rack = self.given.rack
+        count = sum(group.count for group in self.given.sets if group.working)
+        index = wave_of(exposure, tm.load, rack)
+        if index is not None:
+            loads = wave_targets(tm.load, index, count, rack)
+        else:
+            index = wave_index(self.given.request.hard_week_count)
+            loads = loads_on_grid(exposure, count, rack, self.given.mode)
+        if not loads:
+            return None
+        return Move(loads, "hold", self._wave_sets(index), "held")
+
+    def _wave_sets(self, index: int) -> tuple[SetGroup, ...]:
+        return tuple(
             replace(group, reps=REP_OUTS[index]) if group.working else group
             for group in self.given.sets
         )
-        return Move(targets, "cut", sets, f"{wave}: training max {tm.load.amount:g}")
 
     def _read_rep_outs(self, exposure: Exposure, tm: TrainingMax) -> None:
         rack = self.given.rack

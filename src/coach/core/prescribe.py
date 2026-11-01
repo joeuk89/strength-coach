@@ -183,7 +183,7 @@ class _Derivation:
             return schemes.move(exposure, before)
         step, _ = overrides["hold"]
         self.steps.append(Step(step, None, _amount(before), "hold"))
-        return Move(before, "hold", schemes.given.sets)
+        return schemes.held(exposure, before)
 
     def _overrides(self) -> dict[str, Applied]:
         """The line's override Decisions in force, then the plan's own: the plan wins on the same

@@ -41,3 +41,16 @@ def top_on_grid(exposure: Exposure, rack: Rack | None, mode: LoadMode) -> Load |
         return None
     top = top.as_mode(mode)
     return top if rack is None else round_to_rack(rack, top, "hold").load
+
+
+def loads_on_grid(
+    exposure: Exposure, count: int, rack: Rack | None, mode: LoadMode
+) -> tuple[Load, ...]:
+    """The exposure's working loads, one per set of `count`, each the rack row at or below it;
+    sets past the logged ones repeat the last."""
+    logged = [s.load.as_mode(mode) for s in exposure.working if s.load is not None]
+    if rack is not None:
+        logged = [round_to_rack(rack, load, "hold").load for load in logged]
+    if not logged:
+        return ()
+    return tuple(logged[min(i, len(logged) - 1)] for i in range(count))
