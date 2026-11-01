@@ -8,7 +8,7 @@ from coach.core.days_off import DaysOff, SessionTrained, line_days_off
 from coach.core.exposure import Annotation, Exposure, LoggedWorkout, Matched, resolve
 from coach.core.log import WorkoutVersion
 from coach.core.ref import Ref
-from coach.store import annotations, exercises, week_plans, workouts
+from coach.store import annotations, exercises, workouts
 from coach.store.connection import Connection
 
 
@@ -20,12 +20,10 @@ class History:
 
 def read_history(conn: Connection, units: Units) -> History:
     sessions = workouts.sessions_of_current(conn)
-    light = week_plans.light_weeks(conn)
     current = workouts.current_workouts(conn)
     live = annotations.live(conn)
     logged = [
-        LoggedWorkout(v.id, _day(v.date), v.sets, _match(sessions.get(v.id), _day(v.date), light))
-        for v in current
+        LoggedWorkout(v.id, _day(v.date), v.sets, _match(sessions.get(v.id))) for v in current
     ]
     exposures = resolve(logged, exercises.library(conn), live, units)
     return History(exposures, (*_trained_unlogged(live), *_without_sets(current, sessions)))
@@ -44,16 +42,12 @@ def days_off_for_line(
     )
 
 
-def _match(
-    session_id: str | None,
-    on: datetime.date,
-    light: tuple[tuple[datetime.date, datetime.date], ...],
-) -> Matched | None:
+def _match(session_id: str | None) -> Matched | None:
     """The Match seam: a manual coach-led workout names its session; nothing here derives a
     Hevy workout's Match."""
     if session_id is None:
         return None
-    return Matched(session_id, any(start <= on <= end for start, end in light))
+    return Matched(session_id)
 
 
 def _trained_unlogged(live: tuple[Annotation, ...]) -> list[SessionTrained]:
