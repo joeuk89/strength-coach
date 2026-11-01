@@ -136,7 +136,9 @@ def test_a_pin_over_the_top_of_the_rack_names_the_top_row_alone() -> None:
 
     [off_grid] = [f for f in line.flags if f.code == "load_off_grid"]
     assert off_grid.params["nearest_grid_loads"] == [190]
-    assert off_grid.message == "the pinned 195 is not on the barbell grid at home; nearest 190"
+    assert off_grid.message == (
+        "the pinned 195 is not a row of the barbell rack at home; nearest 190"
+    )
 
 
 def test_a_pin_one_row_above_the_anchor_raises_nothing() -> None:

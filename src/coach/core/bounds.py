@@ -326,7 +326,7 @@ class _Bounding:
         ceiling = safety_ceiling(self.context.request.decisions, self.context.line.exercise)
         if ceiling is None or not self.loads:
             if pin is not None and rack is not None:
-                self._pin_on_grid(pin, rack)
+                self._pin_on_rack(pin, rack)
             return
         limit = Load(ceiling, self.loads[0].mode)
         if rack is not None:
@@ -339,11 +339,11 @@ class _Bounding:
                 f"the pinned {pin.amount:g} is over the safety ceiling of {ceiling:g}",
             )
         elif pin is not None and rack is not None:
-            self._pin_on_grid(pin, rack)
+            self._pin_on_rack(pin, rack)
         if not self._limit("rack", limit, "safety_ceiling", lowers_rounding=False):
             self.steps.append(Step("rack", ceiling, self._amounts(), "not_binding"))
 
-    def _pin_on_grid(self, pin: Load, rack: Rack) -> None:
+    def _pin_on_rack(self, pin: Load, rack: Rack) -> None:
         if on_rack(rack, pin.amount):
             return
         nearest = list(rows_beside(rack, pin.amount))
@@ -352,7 +352,7 @@ class _Bounding:
         self._off_grid(
             pin,
             nearest,
-            f"the pinned {pin.amount:g} is not on the {implement} grid at {location}; "
+            f"the pinned {pin.amount:g} is not a row of the {implement} rack at {location}; "
             f"nearest {', '.join(f'{load:g}' for load in nearest)}",
         )
 
