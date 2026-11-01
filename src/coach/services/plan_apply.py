@@ -189,7 +189,6 @@ def apply(
     kits: Sequence[KitFiles],
     clock: Clock,
 ) -> ApplyResult:
-    """The approved push: `expected`, then `push_approved`."""
     found = expected(conn, data, file=file, expect=expect, config=config, kits=kits, clock=clock)
     return push_approved(conn, client, data, found, config=config, clock=clock)
 

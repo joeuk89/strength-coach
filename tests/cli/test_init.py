@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 from support.instances import an_instance
-from support.terminal import TerminalInput
+from support.terminal import typed
 
 from coach.cli import app
 from coach.cli.registry import declarations
@@ -329,7 +329,7 @@ def test_on_a_terminal_init_asks_each_fact_and_confirms_the_files(
     empty_directory: Path, release: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     answers = ["lb", "", "stone", "sunday", "Asia/Tokyo", "monday,friday", "50", "", "no", "y"]
-    monkeypatch.setattr(sys, "stdin", TerminalInput("\n".join(answers) + "\n"))
+    monkeypatch.setattr(sys, "stdin", typed(*answers))
 
     run = run_coach("init")
 
@@ -351,7 +351,7 @@ def test_on_a_terminal_init_asks_each_fact_and_confirms_the_files(
 def test_saying_no_at_the_terminal_writes_nothing(
     empty_directory: Path, release: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sys, "stdin", TerminalInput("n\n"))
+    monkeypatch.setattr(sys, "stdin", typed("n"))
 
     run = run_coach("init", "--defaults")
 
