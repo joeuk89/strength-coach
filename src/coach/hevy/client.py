@@ -22,7 +22,6 @@ from coach.core.mirror import (
     WorkoutEvent,
 )
 from coach.hevy import audit
-from coach.hevy.key import KEY_NAME
 from coach.hevy.parse import (
     parse_body_measurement_page,
     parse_exercise_template_page,
@@ -37,6 +36,7 @@ from coach.hevy.protocol import Payload, ReadBack, RoutineDiff, WriteContext
 from coach.hevy.throttle import TokenBucket
 
 BASE_URL = "https://api.hevyapp.com"
+KEY_NAME = "HEVY_API_KEY"
 TIMEOUT_S = 30.0
 RETRY_AFTER_429_S = 30
 ATTEMPTS_ON_429 = 3
@@ -255,7 +255,7 @@ class HevyApiClient:
                 reply.close()
         except urllib.error.HTTPError as error:
             with error:
-                said = error.read().decode("utf-8", errors="replace").strip()[:200]
+                said = self._scrub(error.read().decode("utf-8", errors="replace")).strip()[:200]
             raise _Failed(
                 error.code, f"HTTP {error.code}" + (f": {said}" if said else "")
             ) from None

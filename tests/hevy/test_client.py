@@ -276,6 +276,7 @@ def test_a_rejected_key_names_the_variable_to_check(tmp_path: Path) -> None:
     [
         Reply(401, {"error": f"invalid api-key {KEY}"}),
         Reply(400, f"bad request for key {KEY}"),
+        Reply(401, "x" * 180 + KEY),
         urllib.error.URLError(f"proxy refused {KEY}"),
     ],
 )
@@ -289,9 +290,9 @@ def test_the_key_appears_in_no_error_envelope_or_audit_line(
         client.create_folder({"routine_folder": {"title": f"echo {KEY}"}}, CONTEXT)
 
     failed = envelope.failure(1, "plan apply", Message(raised.value.code, raised.value.message), [])
-    assert KEY not in str(raised.value)
-    assert KEY not in envelope.render(failed, pretty=False)
-    assert KEY not in (tmp_path / "hevy" / "writes.jsonl").read_text(encoding="utf-8")
+    audit_text = (tmp_path / "hevy" / "writes.jsonl").read_text(encoding="utf-8")
+    for shown in (str(raised.value), envelope.render(failed, pretty=False), audit_text):
+        assert KEY[:8] not in shown
     assert opener.sent[0].headers["api-key"] == KEY
     assert KEY not in opener.sent[0].url
 
