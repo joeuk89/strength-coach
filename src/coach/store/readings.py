@@ -10,7 +10,7 @@ TABLES = tuple(kind.store_table for kind in RECORD_KINDS.entries if kind.reading
 DAY_COLUMN = {
     kind.store_table: kind.day_column
     for kind in RECORD_KINDS.entries
-    if kind.reading and kind.day_column is not None
+    if kind.day_column is not None
 }
 
 
