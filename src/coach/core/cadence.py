@@ -65,7 +65,8 @@ def cadence_signal(read: CadenceRead) -> Flag | None:
 def _two_resets(read: CadenceRead) -> Metric | None:
     before, closed = read.blocks
     history = _inside(read, before.start, closed.end)
-    mode: LoadMode = next((e.top_load.mode for e in history if e.top_load), "total")
+    loads = [e.top_load for e in history if e.top_load is not None]
+    mode: LoadMode = loads[0].mode if loads else "total"
     found = resets(read.line, history, None, mode)
     return {"resets": len(found)} if len(found) >= RESETS_SLOW else None
 
