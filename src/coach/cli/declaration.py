@@ -95,6 +95,8 @@ class Declaration:
     run: Callable[[Call], Outcome]
     arguments: tuple[Argument, ...] = ()
     examples: tuple[Example, ...] = ()
+    # The one verb that writes [engine]: it runs on an engine newer than the pin (ADR 0007).
+    moves_pin: bool = False
 
     def input_schema(self) -> Json:
         properties: Json = {

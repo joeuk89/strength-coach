@@ -61,7 +61,9 @@ def main(
             instance = None
             rebuilt = None
             if declaration.needs_instance:
-                instance, pin_warning = load_instance(find_root(Path.cwd()), running)
+                instance, pin_warning = load_instance(
+                    find_root(Path.cwd()), running, upgrading=declaration.moves_pin
+                )
                 if pin_warning:
                     warnings.append(pin_warning)
                 clock = clock or clock_for(instance.config.athlete.timezone)

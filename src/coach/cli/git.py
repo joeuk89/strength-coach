@@ -32,6 +32,12 @@ def changed(root: Path, paths: Sequence[str]) -> bool:
     return bool(_git(root, "status", "--porcelain", "--untracked-files=all", "--", *paths))
 
 
+def dirty(root: Path) -> tuple[str, ...]:
+    """Every path git sees changed or untracked anywhere in the tree."""
+    listed = _git(root, "status", "--porcelain", "--untracked-files=all")
+    return tuple(line[3:] for line in listed.splitlines())
+
+
 def tracks(root: Path, path: str) -> bool:
     """Whether git tracks `path` or any file under it."""
     return bool(_git(root, "ls-files", "--", path))

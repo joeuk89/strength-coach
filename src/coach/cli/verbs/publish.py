@@ -1,14 +1,13 @@
 from contextlib import closing
 from pathlib import Path
 
+from coach.cli import export_dir as exported
 from coach.cli import git
 from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Setup
 from coach.services.publish import publish
-from coach.store.export import on_disk
 
-EXPORT = "export"
 ATHLETE_FILES = ("coach.toml", "profile.md")
 KIT = "kit"
 WRITE_AUDIT = "hevy/writes.jsonl"
@@ -21,13 +20,11 @@ def run(call: Call) -> Outcome:
     with closing(open_instance_store(call.instance)) as conn:
         publication = publish(conn, engine_version=call.engine_version)
     export_dir = call.instance.export_path
-    current = on_disk(export_dir)
-    written = sorted(name for name, text in publication.files.items() if current.get(name) != text)
-    deleted = sorted(name for name in current if name not in publication.files)
+    to_make = exported.changes(export_dir, publication.files)
     athlete_files = _athlete_files(root)
     summary: Json = {
-        "written": [f"{EXPORT}/{name}" for name in written],
-        "deleted": [f"{EXPORT}/{name}" for name in deleted],
+        "written": [f"{exported.EXPORT}/{name}" for name in to_make.written],
+        "deleted": [f"{exported.EXPORT}/{name}" for name in to_make.deleted],
         "athlete_files": athlete_files,
         "rows": dict(publication.rows),
     }
@@ -36,14 +33,10 @@ def run(call: Call) -> Outcome:
     if not git.is_repo(root):
         raise Setup("git_failed", f"{root} is not a git repository; publish commits there")
     git.check_can_commit(root)
-    export_dir.mkdir(exist_ok=True)
-    for name in written:
-        (export_dir / name).write_text(publication.files[name], encoding="utf-8")
-    for name in deleted:
-        (export_dir / name).unlink()
+    exported.write(export_dir, publication.files, to_make)
     paths = [
         path
-        for path in (EXPORT, *ATHLETE_FILES, KIT, WRITE_AUDIT)
+        for path in (exported.EXPORT, *ATHLETE_FILES, KIT, WRITE_AUDIT)
         if _has_files(root / path) or git.tracks(root, path)
     ]
     commit = git.commit(root, paths, MESSAGE) if git.changed(root, paths) else None

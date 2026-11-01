@@ -24,14 +24,16 @@ def find_root(start: Path) -> Path:
     raise Setup("no_instance", f"no {CONFIG} in {start} or any directory above it")
 
 
-def load_instance(root: Path, running: str) -> tuple[Instance, Message | None]:
+def load_instance(
+    root: Path, running: str, *, upgrading: bool = False
+) -> tuple[Instance, Message | None]:
     """Check the pin first, so an engine too old or too new to know a key says so, then parse."""
     path = root / CONFIG
     try:
         document = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as error:
         raise Setup("config_unknown_key", f"{path} is not valid TOML: {error}") from error
-    pin_warning = check_pin(running, _pin(document, path))
+    pin_warning = check_pin(running, _pin(document, path), upgrading=upgrading)
     return Instance(root=root, config=parse_config(document)), pin_warning
 
 
