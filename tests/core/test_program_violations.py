@@ -279,3 +279,95 @@ def test_every_violation_is_reported_in_one_run() -> None:
         "start_load_off_rack@line:push/bb_bench_press",
         "start_load_missing@line:push/db_curl",
     ]
+
+
+TOP_BACKOFF_SETS = [{"count": 1, "reps": 5, "rpe": 8}, {"count": 3, "reps": 5}]
+EMOM = {
+    "name": "emom_density",
+    "minutes": 12,
+    "minutes_cap": 16,
+    "minutes_step": 2,
+    "reps": {"kb_swing": 12},
+    "reps_cap": {"kb_swing": 15},
+    "rpe_target": 7,
+}
+
+
+def an_emom_draft(**params: Any) -> dict[str, Any]:
+    return a_draft(
+        a_session(
+            "swings",
+            a_line("pull_up", scheme={"name": "hold"}, start_load=None),
+            kind="conditioning",
+            tier="optional",
+            cadence="standing",
+            scheme={**EMOM, **params},
+        )
+    )
+
+
+LINE = "line:push/bb_bench_press"
+SWINGS = "session:swings"
+
+
+@pytest.mark.parametrize(
+    ("draft", "scope", "param"),
+    [
+        (
+            one_line(scheme={"name": "linear", "misses_before_reset": 1.5}),
+            LINE,
+            "misses_before_reset",
+        ),
+        (
+            one_line(scheme={"name": "linear", "misses_before_reset": 0}),
+            LINE,
+            "misses_before_reset",
+        ),
+        (one_line(scheme={"name": "linear", "reset_factor": 3}), LINE, "reset_factor"),
+        (one_line(scheme={"name": "linear", "reset_factor": "0.9"}), LINE, "reset_factor"),
+        (
+            one_line(sets=TOP_BACKOFF_SETS, scheme={"name": "top_backoff", "pct_of_top": 850}),
+            LINE,
+            "pct_of_top",
+        ),
+        (
+            one_line(sets=TOP_BACKOFF_SETS, scheme={"name": "top_backoff", "pct_of_top": "eighty"}),
+            LINE,
+            "pct_of_top",
+        ),
+        (
+            one_line(
+                exercise="assisted_pull_up",
+                sets=[{"count": 3, "reps": 8, "rpe": 8}],
+                scheme={"name": "assistance_ladder", "rungs": [20, 30]},
+                start_load=20,
+            ),
+            "line:push/assisted_pull_up",
+            "rungs",
+        ),
+        (an_emom_draft(rpe_target=0), SWINGS, "rpe_target"),
+        (an_emom_draft(reps=12), SWINGS, "reps"),
+        (an_emom_draft(reps={"kb_swing": "twelve"}), SWINGS, "reps"),
+        (an_emom_draft(reps_cap=True), SWINGS, "reps_cap"),
+        (an_emom_draft(minutes=True), SWINGS, "minutes"),
+    ],
+)
+def test_a_scheme_param_of_the_wrong_type_names_the_param(
+    draft: dict[str, Any], scope: str, param: str
+) -> None:
+    [flag] = flags_of(draft)
+
+    assert flag.key == f"unknown_scheme@{scope}"
+    assert flag.params["param"] == param
+
+
+@pytest.mark.parametrize(
+    "draft",
+    [
+        one_line(scheme={"name": "linear", "misses_before_reset": 3, "reset_factor": 0.95}),
+        one_line(sets=TOP_BACKOFF_SETS, scheme={"name": "top_backoff", "pct_of_top": 100}),
+        an_emom_draft(reps_cap=15, rpe_target=7.5),
+    ],
+)
+def test_a_scheme_param_of_the_right_type_passes(draft: dict[str, Any]) -> None:
+    assert keyed(draft) == []

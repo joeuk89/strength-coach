@@ -20,7 +20,7 @@ from coach.core.program.form import (
 from coach.core.rack import Rack
 from coach.core.registries.flags import ADOPT_WARNINGS
 from coach.core.registries.program import LOAD_MODES
-from coach.core.registries.schemes import SCHEMES, Scheme
+from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
@@ -201,9 +201,10 @@ class _Checks:
         for param in scheme.params:
             if param.required and param.name not in ref.params:
                 return self._bad_param(scheme, param.name, scope, "is required by")
-        rungs = ref.params.get("rungs")
-        if "rungs" in ref.params and not _descending_loads(rungs):
-            return self._bad_param(scheme, "rungs", scope, "must list loads, descending, for")
+        for name, value in ref.params.items():
+            param = cast(Param, scheme.param(name))
+            if not _PARAM_TYPES[param.type](value):
+                return self._bad_param(scheme, name, scope, f"must be {param.type} for")
         return scheme
 
     def _bad_param(self, scheme: Scheme, name: str, scope: Scope, why: str) -> None:
@@ -430,11 +431,37 @@ def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:
             return None
 
 
+def _number(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool)
+
+
+def _positive(value: object) -> bool:
+    return _number(value) and cast(float, value) > 0
+
+
 def _descending_loads(value: object) -> bool:
     if not isinstance(value, list) or not value:
         return False
     loads = cast(list[object], value)
-    if not all(isinstance(v, int | float) and not isinstance(v, bool) for v in loads):
+    if not all(_number(v) for v in loads):
         return False
     numbers = [float(cast(float, v)) for v in loads]
     return all(a > b for a, b in itertools.pairwise(numbers))
+
+
+def _per_exercise(value: object) -> bool:
+    if not isinstance(value, dict) or not value:
+        return False
+    table = cast(dict[object, object], value)
+    return all(isinstance(k, str) and _positive(v) for k, v in table.items())
+
+
+_PARAM_TYPES: Mapping[ParamType, Callable[[object], bool]] = {
+    "integer": lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 1,
+    "fraction": lambda v: _positive(v) and cast(float, v) <= 1,
+    "percent": lambda v: _positive(v) and cast(float, v) <= 100,
+    "number": _positive,
+    "loads": _descending_loads,
+    "per_exercise": _per_exercise,
+    "number_or_per_exercise": lambda v: _positive(v) or _per_exercise(v),
+}
