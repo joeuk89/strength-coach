@@ -47,7 +47,8 @@ def test_a_session_keeps_the_version_that_first_named_it() -> None:
 
     a_version(conn, 2, kind="amend")
 
-    assert programs.latest(conn).sequence == 2  # type: ignore[union-attr]
+    latest = programs.latest(conn)
+    assert latest is not None and latest.sequence == 2
     assert conn.execute("SELECT introduced_in FROM session").fetchall() == [("pv-1",)]
 
 
