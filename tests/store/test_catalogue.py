@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+from support.scenarios import a_catalogue_without
+
 from coach.store.catalogue import merge_catalogue, seed_catalogue
 from coach.store.connection import open_store
 
@@ -98,15 +100,16 @@ def row(conn: Any, exercise_id: str) -> tuple[Any, ...]:
 def test_the_merge_inserts_a_catalogue_id_the_store_lacks_and_leaves_an_edited_row_as_it_is() -> (
     None
 ):
+    seeded_whole = open_store(":memory:")
+    seed_catalogue(seeded_whole)
+    shipped = row(seeded_whole, "assisted_dip")
     conn = open_store(":memory:")
-    seed_catalogue(conn)
+    a_catalogue_without(conn, "assisted_dip")
     conn.execute(
         "UPDATE exercise SET name = 'Rollout, kneeling', hevy_template_id = 'A1B2C3D4',"
         " source = 'record' WHERE id = 'ab_wheel'"
     )
     edited = row(conn, "ab_wheel")
-    shipped = row(conn, "assisted_dip")
-    conn.execute("DELETE FROM exercise WHERE id = 'assisted_dip'")
 
     inserted = merge_catalogue(conn)
 

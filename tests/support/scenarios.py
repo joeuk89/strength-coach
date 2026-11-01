@@ -1,16 +1,27 @@
 """Scenario builders: each writes one piece of history through `store` functions only."""
 
 import json
+from importlib.resources import files
 from typing import Any
 
 from coach.store import rows
 from coach.store.connection import Connection
+from coach.store.jsonl import load_rows
 
 RECORDED_AT = "2026-11-01T09:00:00Z"
 
 
 def a_session(conn: Connection, session_id: str, *, introduced_in: str = "pv-1") -> None:
     rows.insert(conn, "session", {"id": session_id, "introduced_in": introduced_in})
+
+
+def a_catalogue_without(conn: Connection, *missing: str) -> None:
+    """The store an older engine seeded, whose catalogue lacked the `missing` ids."""
+    catalogue = files("coach.store").joinpath("catalogue.jsonl").read_text(encoding="utf-8")
+    lines = [line for line in catalogue.splitlines() if line.strip()]
+    kept = [line for line in lines if json.loads(line)["id"] not in missing]
+    assert len(lines) - len(kept) == len(set(missing)), "every missing id is a catalogue id"
+    load_rows(conn, "exercise", "\n".join(kept))
 
 
 def an_exercise(conn: Connection, exercise_id: str, **columns: Any) -> None:
