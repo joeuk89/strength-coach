@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from coach.core.errors import Invalid
 from coach.core.registries.agent import RECORD_KINDS
 from coach.services.ledger import ID_PREFIX
-from coach.store import exercises, notes, workouts
+from coach.store import annotations, decisions, exercises, follow_ups, niggles, notes, workouts
 from coach.store import readings as stored
 from coach.store.connection import Connection
 from coach.store.rows import Row
@@ -93,12 +93,14 @@ def _newest_first(rows: list[Row], day: str) -> list[Row]:
     return sorted(rows, key=lambda r: (str(r[day]), str(r["id"])), reverse=True)
 
 
+def _unwithdrawn(rows: list[Row]) -> list[Row]:
+    return [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
+
+
 def _withdrawable(table: str, day: str) -> Callable[[Connection, bool, datetime.date], list[Row]]:
     def read(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
         rows = stored.with_withdrawals(conn, table)
-        if open_:
-            rows = [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
-        return _newest_first(rows, day)
+        return _newest_first(_unwithdrawn(rows) if open_ else rows, day)
 
     return read
 
@@ -126,8 +128,36 @@ def _exercises(conn: Connection, open_: bool, today: datetime.date) -> list[Row]
     return exercises.every(conn)
 
 
+def _niggles(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = niggles.every(conn)
+    if open_:
+        rows = [r for r in rows if r["status"] != "resolved"]
+    return _newest_first(rows, "opened")
+
+
+def _follow_ups(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = follow_ups.every(conn)
+    if open_:
+        rows = [r for r in rows if r["kind"] not in ("resolved", "dropped")]
+    return _newest_first(rows, "raised")
+
+
+def _decisions(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = decisions.in_force(conn, today.isoformat()) if open_ else decisions.every(conn)
+    return sorted(rows, key=lambda r: str(r["id"]), reverse=True)
+
+
+def _annotations(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = annotations.every(conn)
+    return sorted(_unwithdrawn(rows) if open_ else rows, key=lambda r: str(r["id"]), reverse=True)
+
+
 # Notes, Activities and Exercises have no lifecycle, so `--open` keeps every row of them.
 LEDGER_READERS: dict[str, Callable[[Connection, bool, datetime.date], list[Row]]] = {
+    "niggle": _niggles,
+    "followup": _follow_ups,
+    "decision": _decisions,
+    "annotation": _annotations,
     "note": _notes,
     "weigh_in": _withdrawable("weigh_in", "date"),
     "sleep_night": _withdrawable("sleep_night", "night"),

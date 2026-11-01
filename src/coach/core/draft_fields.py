@@ -72,6 +72,12 @@ class Fields:
             return value
         raise self.wrong(name, f"one of {', '.join(registry.names())}")
 
+    def choice(self, name: str, values: tuple[str, ...], *, required: bool = False) -> str | None:
+        value = self.text(name, required=required)
+        if value is None or value in values:
+            return value
+        raise self.wrong(name, f"one of {', '.join(values)}")
+
     def ref(self, name: str, kinds: tuple[str, ...]) -> Ref | None:
         value = self.text(name)
         if value is None:
@@ -80,6 +86,16 @@ class Fields:
         if ref.kind not in kinds:
             raise self.wrong(name, f"a ref to one of {', '.join(kinds)}")
         return ref
+
+    def refs(self, name: str) -> tuple[Ref, ...]:
+        value = self.raw(name)
+        if value is None:
+            return ()
+        if not isinstance(value, list) or not all(
+            isinstance(v, str) for v in cast(list[object], value)
+        ):
+            raise self.wrong(name, "a list of refs")
+        return tuple(Ref.parse(v) for v in cast(list[str], value))
 
     def tables(self, name: str) -> list["Fields"]:
         value = self.raw(name)

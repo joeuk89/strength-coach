@@ -4,6 +4,17 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import cast
 
+from coach.core.coaching_records import (
+    AnnotationRecord,
+    DecisionRecord,
+    FollowUpRecord,
+    NiggleRecord,
+    annotation_refs,
+    parse_annotation,
+    parse_decision,
+    parse_follow_up,
+    parse_niggle,
+)
 from coach.core.draft_fields import Fields, Table, draft_hash, required
 from coach.core.errors import Invalid
 from coach.core.ref import KEY, Ref
@@ -114,7 +125,11 @@ class ExerciseRecord:
 
 
 type LedgerRecord = (
-    NoteRecord
+    NiggleRecord
+    | FollowUpRecord
+    | DecisionRecord
+    | AnnotationRecord
+    | NoteRecord
     | WeighInRecord
     | SleepNightRecord
     | ActivityRecord
@@ -200,11 +215,20 @@ def _check_keys(draft: LedgerDraft) -> None:
 
 
 def local_refs(draft: LedgerDraft) -> list[Ref]:
-    return [
-        r.about
-        for r in draft.records
-        if isinstance(r, NoteRecord) and r.about and r.about.local_key
-    ]
+    return [ref for r in draft.records for ref in refs_of(r) if ref.local_key]
+
+
+def refs_of(record: LedgerRecord) -> tuple[Ref, ...]:
+    """The refs a record cites, each checked against the store or the Draft's keys."""
+    match record:
+        case NoteRecord(about=Ref() as about) | FollowUpRecord(about=Ref() as about):
+            return (about,)
+        case DecisionRecord():
+            return record.evidence
+        case AnnotationRecord():
+            return annotation_refs(record)
+        case _:
+            return ()
 
 
 def _note(f: Fields) -> NoteRecord:
@@ -340,6 +364,10 @@ def _muscles(value: object, f: Fields) -> dict[str, list[str]]:
 
 
 PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
+    "niggle": parse_niggle,
+    "followup": parse_follow_up,
+    "decision": parse_decision,
+    "annotation": parse_annotation,
     "note": _note,
     "weigh_in": _weigh_in,
     "sleep_night": _sleep_night,
@@ -349,6 +377,10 @@ PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
     "exercise": _exercise,
 }
 KIND_OF: dict[type, str] = {
+    NiggleRecord: "niggle",
+    FollowUpRecord: "followup",
+    DecisionRecord: "decision",
+    AnnotationRecord: "annotation",
     NoteRecord: "note",
     WeighInRecord: "weigh_in",
     SleepNightRecord: "sleep_night",
