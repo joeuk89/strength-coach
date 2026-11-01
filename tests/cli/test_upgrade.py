@@ -266,3 +266,28 @@ def test_upgrade_on_a_release_build_clears_engine_pin_dev(
     assert [w["code"] for w in on_dev] == ["engine_pin_dev"]
     assert run.code == 0, run.stdout
     assert run_coach("status").envelope["warnings"] == []
+
+
+def test_an_export_ahead_of_the_store_refuses_with_store_behind_export_and_changes_nothing(
+    instance: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    running(monkeypatch, PINNED)
+    assert run_coach("publish").code == 0
+    running(monkeypatch, NEWER)
+    with_a_newer_schema(monkeypatch)
+    manifest_path = instance / "export" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["tables"]["exercise"] += 1
+    manifest_path.write_text(json.dumps(manifest))
+    commit_everything(instance, "another machine published a row")
+    before = files_of(instance)
+
+    for argv in (("upgrade", "--dry-run"), ("upgrade",)):
+        run = run_coach(*argv)
+
+        assert run.code == 5
+        assert run.envelope["error"]["code"] == "store_behind_export"
+        assert "exercise" in run.envelope["error"]["message"]
+    assert files_of(instance) == before
+    assert store_version(instance) == 1
+    assert commit_subjects(instance)[0] == "another machine published a row"

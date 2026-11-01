@@ -57,11 +57,13 @@ def rebuild_missing_store(instance: Instance) -> Rebuilt | None:
 
 
 def refuse_a_store_behind_the_export(instance: Instance) -> None:
-    manifest = read_manifest(instance.export_path)
-    if manifest is None:
-        return
     with closing(open_instance_store(instance)) as conn:
-        behind = tables_behind(conn, manifest)
+        refuse_tables_behind_the_export(instance, conn)
+
+
+def refuse_tables_behind_the_export(instance: Instance, conn: sqlite3.Connection) -> None:
+    manifest = read_manifest(instance.export_path)
+    behind = tables_behind(conn, manifest) if manifest is not None else ()
     if behind:
         raise Setup(
             "store_behind_export",

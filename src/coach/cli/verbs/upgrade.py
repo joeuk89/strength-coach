@@ -5,6 +5,7 @@ from coach.cli import export_dir as exported
 from coach.cli import git
 from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
 from coach.cli.generated import drifted, generated_files
+from coach.cli.instance import refuse_tables_behind_the_export
 from coach.core.engine_pin import notes_between
 from coach.core.errors import Setup
 from coach.render.instance_files import with_pin
@@ -25,6 +26,7 @@ def run(call: Call) -> Outcome:
         version = schema_version(live)
         if running == instance.pin and not engine().pending(version) and not regenerated:
             return Outcome(_unchanged(instance.pin, version))
+        refuse_tables_behind_the_export(instance, live)
         _refuse_a_dirty_tree(root)
         if call.args.get("dry_run") is True:
             with closing(copy_to_memory(live)) as copy:
