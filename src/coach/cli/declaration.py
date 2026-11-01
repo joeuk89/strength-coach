@@ -5,7 +5,7 @@ from typing import Literal
 
 from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
-from coach.core.config import Config
+from coach.core.config import Config, Units
 from coach.core.flag import Flag
 from coach.core.message import Message
 from coach.hevy.protocol import HevyClient
@@ -52,6 +52,18 @@ class Instance:
     @property
     def pin(self) -> str:
         return self.config.engine.version
+
+    @property
+    def units(self) -> Units:
+        return self.config.athlete.units
+
+    @property
+    def bodyweight_units(self) -> Units:
+        return self.config.athlete.bodyweight_units
+
+    @property
+    def checkin_cadence_days(self) -> int:
+        return self.config.athlete.checkin_cadence_days
 
     @property
     def store_path(self) -> Path:
