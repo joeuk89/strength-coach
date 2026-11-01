@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(coach:*)"
+    ],
+    "ask": [
+      "Bash(coach init:*)",
+      "Bash(coach plan apply:*)",
+      "Bash(coach publish:*)",
+      "Bash(coach upgrade:*)"
+    ],
+    "deny": [
+      "Bash(*api.hevyapp.com/v1/workouts*)",
+      "WebFetch(domain:api.hevyapp.com)"
+    ]
+  }
+}

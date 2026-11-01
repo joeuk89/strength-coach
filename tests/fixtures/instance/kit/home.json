@@ -1,0 +1,172 @@
+{
+  "$schema": "./inventory.schema.json",
+  "plateTypes": [
+    {
+      "id": "plate",
+      "name": "Synthetic plate",
+      "unit": "lb"
+    },
+    {
+      "id": "vest-block",
+      "name": "Synthetic vest block",
+      "unit": "kg"
+    }
+  ],
+  "plates": [
+    {
+      "id": "p-25",
+      "name": "25 lb",
+      "type": "plate",
+      "count": 4,
+      "weight": {
+        "listed": 25,
+        "status": "verified"
+      }
+    },
+    {
+      "id": "p-10",
+      "name": "10 lb",
+      "type": "plate",
+      "count": 4,
+      "weight": {
+        "listed": 10,
+        "status": "verified"
+      }
+    },
+    {
+      "id": "p-5",
+      "name": "5 lb",
+      "type": "plate",
+      "count": 4,
+      "weight": {
+        "listed": 5,
+        "status": "verified"
+      }
+    },
+    {
+      "id": "p-2.5",
+      "name": "2.5 lb",
+      "type": "plate",
+      "count": 4,
+      "weight": {
+        "listed": 2.5,
+        "status": "verified"
+      }
+    },
+    {
+      "id": "vest-1",
+      "name": "1 kg",
+      "type": "vest-block",
+      "count": 6,
+      "weight": {
+        "listed": 1,
+        "status": "verified"
+      }
+    }
+  ],
+  "hardware": [
+    {
+      "id": "collar-clamp",
+      "name": "Clamp collar",
+      "kind": "collar",
+      "count": 2,
+      "unit": "lb",
+      "weight": {
+        "listed": 0,
+        "status": "verified"
+      }
+    },
+    {
+      "id": "collar-spinlock",
+      "name": "Spin-lock collar",
+      "kind": "collar",
+      "count": 2,
+      "unit": "lb",
+      "weight": {
+        "listed": 1.25,
+        "status": "verified"
+      }
+    },
+    {
+      "id": "screw-standard",
+      "name": "Locking screw",
+      "kind": "screw",
+      "count": 4,
+      "unit": "lb",
+      "weight": {
+        "listed": 2.5,
+        "status": "verified"
+      }
+    }
+  ],
+  "implements": [
+    {
+      "id": "barbell",
+      "name": "Bar",
+      "count": 1,
+      "unit": "lb",
+      "base": {
+        "listed": 20,
+        "status": "verified"
+      },
+      "positions": [
+        "left",
+        "right"
+      ]
+    },
+    {
+      "id": "dumbbell",
+      "name": "Dumbbell handle",
+      "count": 2,
+      "unit": "lb",
+      "base": {
+        "listed": 5,
+        "status": "verified"
+      },
+      "positions": [
+        "end-a",
+        "end-b"
+      ]
+    },
+    {
+      "id": "kettlebell",
+      "name": "Kettlebell handle",
+      "count": 1,
+      "unit": "lb",
+      "base": {
+        "listed": 10,
+        "status": "verified"
+      },
+      "positions": [
+        "stack"
+      ]
+    },
+    {
+      "id": "leg",
+      "name": "Leg attachment",
+      "count": 1,
+      "unit": "lb",
+      "base": {
+        "listed": 0,
+        "status": "verified"
+      },
+      "positions": [
+        "stack"
+      ]
+    },
+    {
+      "id": "vest",
+      "name": "Vest",
+      "count": 1,
+      "unit": "kg",
+      "base": {
+        "listed": 0,
+        "status": "verified"
+      },
+      "positions": [
+        "front",
+        "back"
+      ]
+    }
+  ]
+}
