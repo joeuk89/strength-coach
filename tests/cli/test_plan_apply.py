@@ -256,13 +256,11 @@ def test_hevy_unreachable_at_the_guard_is_exit_4_with_the_week_plan_approved_and
 
     failed = with_hevy("plan", "apply", draft, "--expect", digest)
     sent = [method for method, _ in hevy.calls]
-    conn = the_store(root)
-    plan = week_plans.in_force(conn, "2026-11-02")
-    conn.close()
+    approved = the_plan_in_force(root)
     rerun = with_hevy("plan", "apply", draft, "--expect", digest)
 
     assert (failed.code, failed.envelope["error"]["code"]) == (4, "hevy_unreachable")
-    assert plan is not None and plan["id"] == "wp-2026-11-02"
+    assert approved == "wp-2026-11-02"
     assert set(sent) == {"GET"}
     assert rerun.code == 0, rerun.stdout
     assert rerun.envelope["result"]["resumed"] is True
@@ -289,11 +287,15 @@ def test_a_routine_moved_at_the_guard_is_exit_3_with_the_new_week_plan_approved_
 
     assert dry["supersedes"] == "wp-2026-11-02"
     assert (run.code, run.envelope["error"]["code"]) == (3, "routine_moved")
+    assert the_plan_in_force(root) == "wp-2026-11-02-2"
+    assert {method for method, _ in hevy.calls} == {"GET"}
+
+
+def the_plan_in_force(root: Path) -> object:
     conn = the_store(root)
     plan = week_plans.in_force(conn, "2026-11-02")
     conn.close()
-    assert plan is not None and plan["id"] == "wp-2026-11-02-2"
-    assert {method for method, _ in hevy.calls} == {"GET"}
+    return None if plan is None else plan["id"]
 
 
 def a_hevy_instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
