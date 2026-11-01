@@ -36,6 +36,7 @@ def adopt_warnings(form: ProgramForm, context: AdoptContext) -> tuple[Flag, ...]
     raised.block()
     raised.retired()
     raised.core_session_added()
+    raised.scheme_changes()
     for session in form.sessions:
         raised.session(session)
     return raised.flags()
@@ -202,6 +203,39 @@ class _Warnings:
                         "weeks": adherence.weeks,
                     },
                     f"{session.id} adds a core session while adherence is {adherence.state}",
+                )
+
+    def scheme_changes(self) -> None:
+        """goals.md, "Response to a cadence signal": a scheme changes only where a cadence signal
+        lists the new one."""
+        previous = self.context.previous
+        if previous is None:
+            return
+        before = {line.exercise: line.scheme.name for s in previous.sessions for line in s.lines}
+        for session in self.form.sessions:
+            for line in session.lines:
+                was = before.get(line.exercise)
+                if was is None or was == line.scheme.name:
+                    continue
+                signal = self.context.signals.get(line.exercise)
+                may = cast(list[str], signal.params["may_schemes"]) if signal else []
+                if line.scheme.name in may:
+                    continue
+                self.raise_(
+                    "scheme_change_off_signal",
+                    Scope("line", session_id=session.id, exercise_id=line.exercise),
+                    {
+                        "previous_scheme": was,
+                        "new_scheme": line.scheme.name,
+                        "signal_key": signal.key if signal else None,
+                        "may_schemes": may,
+                    },
+                    f"{line.exercise} moves from {was} to {line.scheme.name}"
+                    + (
+                        f", outside {signal.key}'s may_schemes {may}"
+                        if signal
+                        else " with no cadence signal open"
+                    ),
                 )
 
     def session(self, session: Session) -> None:

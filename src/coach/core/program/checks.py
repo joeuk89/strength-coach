@@ -9,7 +9,7 @@ from coach.core.closed_week.adherence import Adherence
 from coach.core.config import WEEKDAYS, Weekday
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag, FlagKey, Scope, raise_flag
+from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.goal import Goal
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
@@ -21,15 +21,11 @@ from coach.core.program.form import (
     SetGroup,
 )
 from coach.core.rack import Rack
-from coach.core.registries.flags import ADOPT_WARNINGS
 from coach.core.registries.program import LOAD_MODES
 from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
-# Adopt cannot raise this one yet (it reads cadence signals), so an acknowledgement of it
-# passes while it names the Draft.
-UNJUDGED_ADOPT_WARNINGS = frozenset({"scheme_change_off_signal"})
 
 
 @dataclass(frozen=True)
@@ -42,7 +38,8 @@ class OpenBlock:
 class AdoptContext:
     """What the checks read beside the form, as values. `racks` maps each location in
     `coach.toml` to the rack of every equipment kind it supplies; `last_exposures` each exercise
-    with an Exposure anywhere to its latest; `routines` each mapped session to its routine id."""
+    with an Exposure anywhere to its latest; `routines` each mapped session to its routine id;
+    `signals` each exercise with an open cadence signal to that signal."""
 
     version_id: str
     library: Mapping[str, Mapping[str, object]]
@@ -57,6 +54,7 @@ class AdoptContext:
     open_block: OpenBlock | None = None
     adherence: Adherence | None = None
     raised_warnings: frozenset[str] = field(default_factory=frozenset[str])
+    signals: Mapping[str, Flag] = field(default_factory=dict[str, Flag])
 
 
 def violations(
@@ -393,36 +391,7 @@ class _Checks:
                 return
 
     def _matches(self, text: str) -> bool:
-        try:
-            key = FlagKey.parse(text)
-        except Invalid:
-            return False
-        if key.code not in UNJUDGED_ADOPT_WARNINGS:
-            return text in self.context.raised_warnings
-        return (
-            key.scope.kind in _adopt_scopes(key.code)
-            and not key.scope.dated
-            and self._names_the_draft(key.scope)
-        )
-
-    def _names_the_draft(self, scope: Scope) -> bool:
-        resolvers: dict[str, Callable[[Scope], bool]] = {
-            "version": lambda s: s.version_id == self.context.version_id,
-            "session": lambda s: self.form.session(str(s.session_id)) is not None,
-            "line": self._names_a_line,
-        }
-        resolve = resolvers.get(scope.kind)
-        return resolve is not None and resolve(scope)
-
-    def _names_a_line(self, scope: Scope) -> bool:
-        session = self.form.session(str(scope.session_id))
-        return session is not None and any(
-            line.exercise == scope.exercise_id for line in session.lines
-        )
-
-
-def _adopt_scopes(code: str) -> tuple[str, ...]:
-    return next((row.scopes for row in ADOPT_WARNINGS if row.name == code), ())
+        return text in self.context.raised_warnings
 
 
 def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:

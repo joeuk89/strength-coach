@@ -4,7 +4,7 @@ from typing import Any
 from support.program_drafts import a_draft, a_line, a_session, toml
 
 from coach.core.exposure import Exposure, ExposureSet
-from coach.core.flag import Flag
+from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.goal import Goal
 from coach.core.load import Load
 from coach.core.program.checks import AdoptContext, OpenBlock
@@ -391,3 +391,81 @@ def test_an_acknowledgement_whose_params_hash_no_longer_matches_is_not_left() ->
     assert left_by({**ACKNOWLEDGED, "params_hash": "sha256:" + "0" * 64}) == [
         ("scheme_off_emphasis@line:push/bb_bench_press", None)
     ]
+
+
+def a_form(draft: dict[str, Any]) -> Any:
+    return parse_program_draft(toml(draft), file="d.toml").form
+
+
+def a_signal(code: str, scheme: str, may_schemes: list[str]) -> Flag:
+    return raise_flag(
+        code,
+        Scope("exercise", exercise_id="bb_bench_press"),
+        {"scheme": scheme, "metric": {}, "may_schemes": may_schemes, "may": "", "never": ""},
+        "signal",
+    )
+
+
+TOP_BACKOFF = {"name": "top_backoff", "pct_of_top": 85}
+TOP_SETS = [{"count": 1, "reps": 5, "rpe": 8}, {"count": 3, "reps": 5, "rpe": 7}]
+WAVE_SETS = [{"count": 3, "reps": 5}]
+
+
+def moved(previous: dict[str, Any], now: dict[str, Any], *signals: Flag) -> list[Any]:
+    context = a_context(
+        version_id="pv-2",
+        previous=a_form(bench(**previous)),
+        signals={s.scope.exercise_id: s for s in signals},
+    )
+    return the("scheme_change_off_signal", warnings_of(bench(**now), context))
+
+
+def test_moving_top_backoff_to_wave_531_under_an_open_cadence_slow_raises_nothing() -> None:
+    slow = a_signal("cadence_slow", "top_backoff", ["wave_531"])
+    previous = {"scheme": TOP_BACKOFF, "sets": TOP_SETS}
+    now = {"scheme": {"name": "wave_531"}, "sets": WAVE_SETS}
+
+    assert moved(previous, now, slow) == []
+
+
+def test_the_same_move_with_no_signal_warns_scheme_change_off_signal() -> None:
+    previous = {"scheme": TOP_BACKOFF, "sets": TOP_SETS}
+    now = {"scheme": {"name": "wave_531"}, "sets": WAVE_SETS}
+
+    assert moved(previous, now) == [
+        (
+            "scheme_change_off_signal@line:push/bb_bench_press",
+            {
+                "previous_scheme": "top_backoff",
+                "new_scheme": "wave_531",
+                "signal_key": None,
+                "may_schemes": [],
+            },
+        )
+    ]
+
+
+def test_a_move_outside_the_signals_may_schemes_warns_scheme_change_off_signal() -> None:
+    slow = a_signal("cadence_slow", "double_progression", [])
+
+    assert moved({}, {"scheme": {"name": "linear"}}, slow) == [
+        (
+            "scheme_change_off_signal@line:push/bb_bench_press",
+            {
+                "previous_scheme": "double_progression",
+                "new_scheme": "linear",
+                "signal_key": "cadence_slow@exercise:bb_bench_press",
+                "may_schemes": [],
+            },
+        )
+    ]
+
+
+def test_an_unchanged_scheme_or_an_exercise_new_to_the_version_raises_nothing() -> None:
+    new_exercise = a_context(
+        version_id="pv-2", previous=a_form(a_draft(a_session("push", a_line("db_curl"))))
+    )
+    linear = bench(scheme={"name": "linear"})
+
+    assert moved({}, {}) == []
+    assert the("scheme_change_off_signal", warnings_of(linear, new_exercise)) == []

@@ -274,18 +274,6 @@ def test_an_acknowledgement_of_a_warning_adopt_did_not_raise_is_unmatched() -> N
     assert keyed(a_draft(acknowledge=[entry])) == ["acknowledgement_unmatched@version:pv-1"]
 
 
-def test_an_adopt_warning_adopt_cannot_raise_yet_passes_while_it_names_the_draft() -> None:
-    entry = {
-        "flag": "scheme_change_off_signal@line:push/bb_bench_press",
-        "because": "coach_judgement",
-        "text": "x",
-    }
-
-    assert keyed(a_draft(acknowledge=[entry])) == []
-    stale = {**entry, "flag": "scheme_change_off_signal@line:push/pull_up"}
-    assert keyed(a_draft(acknowledge=[stale])) == ["acknowledgement_unmatched@version:pv-1"]
-
-
 def test_every_violation_is_reported_in_one_run() -> None:
     draft = a_draft(
         a_session("push", a_line(start_load=61), a_line("db_curl", start_load=None)),
