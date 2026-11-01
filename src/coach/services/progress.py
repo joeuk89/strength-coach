@@ -47,7 +47,6 @@ def progress(
     bodyweight_units: Units,
     full: bool = False,
 ) -> Progress:
-    today = on
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
@@ -56,7 +55,7 @@ def progress(
     form = versions[0].form if versions else None
     stored = _goal(conn)
     priority = stored.goal.priority_lifts if stored else ()
-    signals = cadence_signals(conn, closed, units=units, on=today)
+    signals = cadence_signals(conn, closed, units=units, on=on)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
     weigh_ins = {
         datetime.date.fromisoformat(str(r["date"])): float(str(r["kg"]))
@@ -71,7 +70,7 @@ def progress(
                 exposures,
                 spans,
                 _scheme_since(versions, exercise),
-                today,
+                on,
                 by_exercise.get(exercise),
             )
             for exercise in priority
@@ -83,7 +82,7 @@ def progress(
         dose=_dose(closed, block, exposures, priority),
         dose_target=_dose_target(form, priority),
         adherence=_adherence(conn, closed, block),
-        phase=_phase(conn, weigh_ins, today, bodyweight_units),
+        phase=_phase(conn, weigh_ins, on, bodyweight_units),
         goal=GoalRead(stored.goal.kind, stored.adopted, stored.goal.why) if stored else None,
         history=_history(form, exposures, block) if full and form else (),
         signals=signals,

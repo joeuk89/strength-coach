@@ -54,8 +54,11 @@ def page_facts(
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
     names = _exercise_names(conn)
-    recorded = check_ins.current(conn)
-    records = tuple(_record(conn, row, units, bodyweight_units) for row in recorded)
+    every_decision = decisions.every(conn)
+    records = tuple(
+        _record(conn, row, every_decision, units, bodyweight_units)
+        for row in check_ins.current(conn)
+    )
     return Pages(
         units=units,
         bodyweight_units=bodyweight_units,
@@ -198,7 +201,11 @@ def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> Plat
 
 
 def _record(
-    conn: Connection, row: check_ins.StoredCheckIn, units: Units, bodyweight_units: Units
+    conn: Connection,
+    row: check_ins.StoredCheckIn,
+    every_decision: Sequence[Row],
+    units: Units,
+    bodyweight_units: Units,
 ) -> CheckInRecord:
     return CheckInRecord(
         id=row.id,
@@ -208,7 +215,7 @@ def _record(
         readiness=row.readiness,
         read=check_ins.read_of(conn, row.id),
         card=record_card(conn, row, units=units, bodyweight_units=bodyweight_units),
-        decisions=tuple(_decision(d) for d in decisions.every(conn) if d["check_in"] == row.id),
+        decisions=tuple(_decision(d) for d in every_decision if d["check_in"] == row.id),
     )
 
 
