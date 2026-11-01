@@ -3,7 +3,7 @@ import datetime
 from support.clock import FixedClock
 from support.closed_weeks import a_hard_squat_week, closed_through, monday
 from support.kit_fixtures import kit_files
-from support.plans import SQUAT_LINE, a_squat_program
+from support.plans import SQUAT_LINE, a_plan_override, a_squat_program, an_approved_plan
 from support.program_drafts import a_line, a_session
 from support.programs import a_config
 
@@ -75,6 +75,19 @@ def test_a_light_week_in_the_proposed_shape_warns_neither() -> None:
     )
 
     flags = flags_of(hard_weeks(6), monday(6), restated)
+
+    assert not {"light_week_unprompted", "light_week_shape_off_trigger"} & set(flags)
+
+
+def test_a_superseding_draft_judges_its_light_week_against_the_proposal_it_replaces() -> None:
+    restated = PlanOverride(
+        "light_week", params={"load_cut_pct": 10}, because="fatigue", text="As proposed."
+    )
+    conn = hard_weeks(6)
+    plan_id = an_approved_plan(conn, monday(6), approved_at="2026-12-13T21:00:00+00:00")
+    a_plan_override(conn, plan_id, "light_week", None, None)
+
+    flags = flags_of(conn, monday(6), restated)
 
     assert not {"light_week_unprompted", "light_week_shape_off_trigger"} & set(flags)
 

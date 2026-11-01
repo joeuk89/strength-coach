@@ -23,6 +23,7 @@ def run(call: Call) -> Outcome:
             hevy_on=call.instance.config.hevy is not None,
             kits=read_kit_files(call.instance),
             exported=on_disk(call.instance.export_path),
+            units=call.instance.config.athlete.units,
             cadence_days=call.instance.config.athlete.checkin_cadence_days,
         )
     pin = call.instance.pin

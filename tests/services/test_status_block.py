@@ -9,7 +9,13 @@ from coach.store.connection import Connection
 
 def block_of(conn: Connection) -> BlockStatus | None:
     result = status(
-        conn, FixedClock(), engine_version="0.4.0", pin="0.4.0", hevy_on=False, exported={}
+        conn,
+        FixedClock(),
+        engine_version="0.4.0",
+        pin="0.4.0",
+        hevy_on=False,
+        exported={},
+        units="lb",
     )
     return result.block
 

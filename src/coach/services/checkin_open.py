@@ -82,8 +82,9 @@ def checkin_open(
     earlier = [r for r in fatigue.check_ins if r.date < on]
     windows = [*((r.window.start, r.window.end) for r in earlier), (window.start, window.end)]
     opened = fatigue.opened(window, previous.readiness if previous else None, windows)
-    standing = None if opened.proposal.state == "propose" else fatigue.standing(before=on)
-    due = check_in_due_on(conn, on, cadence_days, light_week_proposed=standing is not None)
+    standing = fatigue.standing(before=on)
+    proposed = standing is not None or opened.proposal.state == "propose"
+    due = check_in_due_on(conn, on, cadence_days, light_week_proposed=proposed)
     derived = "light" if window.catch_up else due.tier
     chosen = "deep" if tier == "deep" else derived
     closed = log.closed_by(windows)
@@ -93,7 +94,6 @@ def checkin_open(
     weigh_ins = _weigh_ins(conn)
     bouts = _bouts(conn, log)
     phase = phases.in_force(conn)
-    shown = standing.proposal if standing else opened.proposal
     fields: list[CardField | None] = [
         card.header(window, chosen, None if plan is None else str(plan["id"])),
         card.sessions(_session_reads(log, window, closing)),
@@ -101,8 +101,9 @@ def checkin_open(
         None
         if version is None
         else card.block(
-            shown,
+            opened.proposal,
             block_id=opened.block.id if opened.block else None,
+            standing=standing.proposal if standing else None,
             standing_from=standing.check_in if standing else None,
         ),
         None if version is None else card.adherence(adherence(closed.weeks, on)),

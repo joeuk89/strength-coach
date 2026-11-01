@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from coach.core.check_in import CheckInDue, LastCheckIn, check_in_due
 from coach.core.clock import Clock
-from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS
+from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Units
 from coach.core.flag import Flag
 from coach.core.import_flags import snapshot_stale
 from coach.core.instant import utc_instant
@@ -118,6 +118,7 @@ def status(
     pin: str,
     hevy_on: bool,
     exported: Mapping[str, str],
+    units: Units,
     kits: Sequence[KitFiles] = (),
     cadence_days: int = DEFAULT_CHECKIN_CADENCE_DAYS,
 ) -> StatusResult:
@@ -128,7 +129,7 @@ def status(
     last = last_import_at(conn)
     stale = snapshot_stale(last, now) if hevy_on else None
     monday = week_monday(today)
-    log = WeekLog(conn)
+    log = WeekLog(conn, units)
     pending = Fatigue(conn, log).standing() is not None
     return StatusResult(
         engine_version=engine_version,

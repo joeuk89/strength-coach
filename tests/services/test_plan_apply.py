@@ -363,6 +363,7 @@ def test_status_shows_the_plan_in_force_with_its_routines_verified_and_unverifie
         pin="0.3.0",
         hevy_on=True,
         exported={},
+        units="lb",
     ).plan
 
     assert shown is not None
@@ -395,6 +396,7 @@ def test_a_session_in_force_but_unplanned_this_week_keeps_its_routine_verified()
         pin="0.3.0",
         hevy_on=True,
         exported={},
+        units="lb",
     ).plan
 
     assert shown is not None

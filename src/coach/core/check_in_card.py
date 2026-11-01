@@ -179,25 +179,33 @@ def _week_row(week: ClosedWeek) -> Facts:
     }
 
 
-def block(proposal: Proposal, *, block_id: str | None, standing_from: str | None) -> CardField:
-    """`standing_from` names the earlier check-in whose proposal still stands, when this
-    window's own triggers propose nothing."""
+def block(
+    current: Proposal,
+    *,
+    block_id: str | None,
+    standing: Proposal | None = None,
+    standing_from: str | None = None,
+) -> CardField:
+    """The hard weeks and triggers are this window's. `standing` is the proposal of the earlier
+    check-in `standing_from` that nothing has answered; it is the proposal shown unless this
+    window proposes afresh."""
+    shown = standing if standing is not None and current.state != "propose" else current
     facts: dict[str, object] = {
         "block": block_id,
-        "hard_weeks": proposal.hard_weeks,
-        "ceiling": proposal.ceiling,
-        "triggers": [{"trigger": t.name, "evidence": list(t.evidence)} for t in proposal.triggers],
-        "proposal": proposal.line,
+        "hard_weeks": current.hard_weeks,
+        "ceiling": current.ceiling,
+        "triggers": [{"trigger": t.name, "evidence": list(t.evidence)} for t in current.triggers],
+        "proposal": shown.line,
     }
-    if proposal.state == "watch":
-        facts["watch"] = proposal.triggers[0].name
-    if proposal.shape is not None:
+    if current.state == "watch":
+        facts["watch"] = current.triggers[0].name
+    if shown.shape is not None:
         facts["shape"] = {
-            "set_cut_pct": proposal.shape.set_cut_pct,
-            "load_cut_pct": proposal.shape.load_cut_pct,
-            "rpe_cap": proposal.shape.rpe_cap,
+            "set_cut_pct": shown.shape.set_cut_pct,
+            "load_cut_pct": shown.shape.load_cut_pct,
+            "rpe_cap": shown.shape.rpe_cap,
         }
-        facts["reasons"] = list(proposal.reasons)
+        facts["reasons"] = list(shown.reasons)
     if standing_from is not None:
         facts["standing_from"] = standing_from
     return CardField("block", facts)

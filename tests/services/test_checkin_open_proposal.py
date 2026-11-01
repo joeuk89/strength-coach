@@ -4,10 +4,16 @@ from typing import cast
 from support.check_in_cards import field_of, opened
 from support.clock import FixedClock
 from support.closed_weeks import a_check_in, a_hard_squat_week, a_planned_squat_week, monday
-from support.plans import a_plan_override, a_squat_program, an_approved_plan, squat_logged
+from support.plans import (
+    a_frozen_prescription,
+    a_plan_override,
+    a_squat_program,
+    an_approved_plan,
+    squat_logged,
+)
 
 from coach.services.record import record
-from coach.services.status import status
+from coach.services.status import StatusResult, status
 from coach.store.connection import Connection
 
 FOURTH_SUNDAY = datetime.date(2026, 11, 29)
@@ -36,10 +42,16 @@ def block_of(conn: Connection, on: datetime.date = FOURTH_SUNDAY) -> dict[str, o
 
 
 def light_week_pending(conn: Connection, on: datetime.date) -> bool:
-    clock = FixedClock(datetime.datetime(on.year, on.month, on.day, 12, tzinfo=datetime.UTC))
-    result = status(conn, clock, engine_version="0.4.0", pin="0.4.0", hevy_on=False, exported={})
+    result = status_on(conn, on)
     assert result.block is not None
     return result.block.light_week_pending
+
+
+def status_on(conn: Connection, on: datetime.date) -> StatusResult:
+    clock = FixedClock(datetime.datetime(on.year, on.month, on.day, 12, tzinfo=datetime.UTC))
+    return status(
+        conn, clock, engine_version="0.4.0", pin="0.4.0", hevy_on=False, exported={}, units="lb"
+    )
 
 
 def test_poor_readiness_and_an_aggravated_niggle_propose_a_light_week_with_a_load_cut() -> None:
@@ -130,3 +142,50 @@ def test_rpe_drift_on_two_exposures_after_a_steady_one_is_a_trigger() -> None:
 
 def test_a_set_longer_than_prescribed_is_not_read_as_drift() -> None:
     assert triggers_of(drifting_squat(last_reps=10)) == []
+
+
+def test_a_fresh_proposal_keeps_the_standing_one_and_the_deep_tier() -> None:
+    conn = four_hard_weeks(readiness="poor")
+    aggravated(conn, "2026-11-25")
+    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="poor")
+    on = datetime.date(2026, 12, 6)
+
+    card = opened(conn, on)
+    block = dict(field_of(card, "block").facts)
+
+    assert (card.tier, status_on(conn, on).check_in.tier) == ("deep", "deep")
+    assert block["standing_from"] == "ci-2026-11-29"
+
+
+def test_a_standing_proposal_shows_this_windows_hard_weeks_and_triggers() -> None:
+    conn = proposed_and_recorded()
+    a_hard_squat_week(conn, monday(4))
+
+    block = block_of(conn, datetime.date(2026, 12, 6))
+
+    assert block["hard_weeks"] == 5
+    assert block["triggers"] == [{"trigger": "niggle", "evidence": ["niggle:n-0001"]}]
+    assert block["watch"] == "niggle"
+    assert (block["proposal"], block["standing_from"]) == ("light_week", "ci-2026-11-29")
+    assert block["shape"] == {"set_cut_pct": 40, "load_cut_pct": 10, "rpe_cap": 8}
+
+
+def test_status_reads_logged_loads_in_the_athletes_units() -> None:
+    """Sets heavier than prescribed are not judged for drift, so poor readiness stays a watch."""
+    conn = a_squat_program()
+    for n, (lb, rpe) in enumerate(((120, 8), (120, 8), (125, 9), (125, 9))):
+        plan_id = an_approved_plan(conn, monday(n))
+        a_frozen_prescription(
+            conn,
+            plan_id,
+            "lower",
+            monday(n),
+            "bb_back_squat",
+            set_groups=[{"type": "working", "count": 2, "load": 120.0, "range": [6, 8], "rpe": 8}],
+            change="held",
+        )
+        squat_logged(conn, f"h-{n}", monday(n), (lb, 8, rpe), (lb, 8, rpe))
+    a_check_in(conn, monday(0), "2026-11-22", readiness="poor")
+    a_check_in(conn, "2026-11-23", "2026-11-29")
+
+    assert not light_week_pending(conn, datetime.date(2026, 12, 1))

@@ -133,7 +133,7 @@ def plan_draft(
         for session in planned
     )
     in_force = week_plans.in_force(conn, monday.isoformat())
-    standing = Fatigue(conn, log).standing()
+    standing = Fatigue(conn, log).standing(superseding=monday)
     draft = PlanDraft(
         week=monday,
         position=rotation,

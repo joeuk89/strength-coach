@@ -79,15 +79,12 @@ class Fatigue:
             for r in readings.live(conn, "sleep_night")
         }
         self.check_ins = check_ins.current(conn)
-        cleared = [
-            *week_plans.light_week_approvals(conn),
-            *(
-                datetime.date.fromisoformat(str(d["recorded_at"])[:10])
-                for d in decisions.every(conn)
-                if d["kind"] == "decline_ceiling"
-            ),
+        self.light_weeks = week_plans.light_week_approvals(conn)
+        self.declines = [
+            datetime.date.fromisoformat(str(d["recorded_at"])[:10])
+            for d in decisions.every(conn)
+            if d["kind"] == "decline_ceiling"
         ]
-        self.cleared_on = max(cleared, default=None)
 
     def opened(self, window: Window, readiness: str | None, windows: WindowList) -> Opened:
         """`windows` are the check-in windows closed so far, this one included."""
@@ -105,14 +102,22 @@ class Fatigue:
         )
         return Opened(proposal, block)
 
-    def standing(self, before: datetime.date | None = None) -> Standing | None:
+    def standing(
+        self, before: datetime.date | None = None, *, superseding: datetime.date | None = None
+    ) -> Standing | None:
         """The newest proposal from a recorded check-in that no light-week plan or
-        `decline_ceiling` Decision has answered since."""
+        `decline_ceiling` Decision has answered since. A plan for the week `superseding` does
+        not count: the Draft that supersedes it answers the proposal afresh."""
+        skipped = superseding.isoformat() if superseding else None
+        cleared_on = max(
+            (*(day for week, day in self.light_weeks if week != skipped), *self.declines),
+            default=None,
+        )
         rows = [r for r in self.check_ins if before is None or r.date < before]
         windows = [(r.window.start, r.window.end) for r in rows]
         for i in reversed(range(len(rows))):
             row = rows[i]
-            if self.cleared_on is not None and self.cleared_on >= row.date:
+            if cleared_on is not None and cleared_on >= row.date:
                 return None
             readiness = rows[i - 1].readiness if i else None
             proposal = self.opened(row.window, readiness, windows[: i + 1]).proposal
@@ -153,7 +158,3 @@ class Fatigue:
                         )
                     )
         return found
-
-
-def standing_proposal(conn: Connection, log: WeekLog) -> Standing | None:
-    return Fatigue(conn, log).standing()
