@@ -168,14 +168,14 @@ class HevyApiClient:
             raise EndpointNotAllowed(f"{method} {path} is not on the Hevy allow-list")
         if method == "GET":
             try:
-                return self._send(method, path, query, None)[1]
+                return self._send(method, path, query, None)[2]
             except _Failed as failure:
                 raise self._unreachable(method, path, failure) from None
         if body is None or context is None:
             raise EndpointNotAllowed(f"{method} {path} needs a body and a WriteContext")
         self._append_audit([audit.request_line(self._clock.now(), method, path, body, context)])
         try:
-            attempts, answer = self._send(method, path, query, body)
+            attempts, status, answer = self._send(method, path, query, body)
         except _Failed as failure:
             error = self._unreachable(method, path, failure)
             line = audit.response_line(
@@ -189,7 +189,7 @@ class HevyApiClient:
             self._append_audit([line])
             raise error from None
         line = audit.response_line(
-            self._clock.now(), method, path, body, attempts=attempts, status=200
+            self._clock.now(), method, path, body, attempts=attempts, status=status
         )
         self._append_audit([line])
         return answer
@@ -215,7 +215,7 @@ class HevyApiClient:
 
     def _send(
         self, method: str, path: str, query: Mapping[str, str | int] | None, body: Payload | None
-    ) -> tuple[int, object]:
+    ) -> tuple[int, int, object]:
         request = self._build(method, path, query, body)
         attempts = 0
         while True:
@@ -223,7 +223,7 @@ class HevyApiClient:
                 self._bucket.take()
             attempts += 1
             try:
-                return attempts, self._attempt(request)
+                return (attempts, *self._attempt(request))
             except _Failed as failure:
                 if failure.status == 429 and attempts < ATTEMPTS_ON_429:
                     self._sleeper(RETRY_AFTER_429_S)
@@ -246,9 +246,13 @@ class HevyApiClient:
             headers["content-type"] = "application/json"
         return urllib.request.Request(url, data=data, method=method, headers=headers)
 
-    def _attempt(self, request: urllib.request.Request) -> object:
+    def _attempt(self, request: urllib.request.Request) -> tuple[int, object]:
         try:
             reply = self._opener(request, TIMEOUT_S)
+            try:
+                raw = reply.read()
+            finally:
+                reply.close()
         except urllib.error.HTTPError as error:
             with error:
                 said = error.read().decode("utf-8", errors="replace").strip()[:200]
@@ -261,13 +265,9 @@ class HevyApiClient:
                 None, f"could not reach Hevy ({reason or type(error).__name__})"
             ) from None
         try:
-            raw = reply.read()
-        finally:
-            reply.close()
-        try:
-            return json.loads(raw) if raw.strip() else None
+            return reply.status, json.loads(raw) if raw.strip() else None
         except json.JSONDecodeError:
-            return raw.decode("utf-8", errors="replace").strip()
+            return reply.status, raw.decode("utf-8", errors="replace").strip()
 
     def _append_audit(self, lines: list[audit.AuditLine]) -> None:
         try:

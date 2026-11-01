@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 class Reply:
     status: int
     body: object = None
+    read_error: Exception | None = None
 
 
 @dataclass(frozen=True)
@@ -25,8 +26,11 @@ class ScriptedResponse:
     def __init__(self, reply: Reply) -> None:
         self.status = reply.status
         self._bytes = b"" if reply.body is None else json.dumps(reply.body).encode()
+        self._read_error = reply.read_error
 
     def read(self) -> bytes:
+        if self._read_error is not None:
+            raise self._read_error
         return self._bytes
 
     def close(self) -> None:

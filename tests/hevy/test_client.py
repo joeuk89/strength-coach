@@ -3,6 +3,7 @@ import json
 import time
 import urllib.error
 import urllib.request
+from http.client import IncompleteRead
 from pathlib import Path
 from typing import Any
 
@@ -113,6 +114,16 @@ def test_a_write_appends_one_request_line_before_the_send_and_one_response_line_
         "status": 200,
         "attempts": 1,
     }
+
+
+def test_the_response_line_carries_the_status_hevy_answered(tmp_path: Path) -> None:
+    folder = {"id": 7, "index": 0, "title": "Program"}
+    client = a_client(tmp_path, RecordingOpener([Reply(201, {"routine_folder": folder})]))
+
+    client.create_folder(FOLDER_BODY, CONTEXT)
+
+    _, response_line = audit_lines(tmp_path)
+    assert response_line["status"] == 201
 
 
 def test_the_body_digest_names_the_body_not_its_key_order(tmp_path: Path) -> None:
@@ -231,6 +242,9 @@ def test_a_read_is_retried_on_429_too(tmp_path: Path) -> None:
         Reply(404, {"error": "Routine not found"}),
         urllib.error.URLError("connection refused"),
         TimeoutError("timed out"),
+        Reply(200, read_error=TimeoutError("read timed out")),
+        Reply(200, read_error=ConnectionResetError("connection reset by peer")),
+        Reply(200, read_error=IncompleteRead(b"{", 10)),
     ],
 )
 def test_a_failed_write_is_hevy_unreachable_with_a_response_line(
