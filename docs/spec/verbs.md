@@ -80,7 +80,9 @@ The envelope is ADR 0002's: `schema_version`, `ok`, `verb`, `result` or `error {
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
 - **3 KB default on every envelope.** Reads, write results, dry runs (the permission prompt shows
-  one) and errors all fit it. `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
+  one) and errors all fit it. Three verbs are allowed over it, because their whole default
+  output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
+  0006's approval prompt) and `program adopt --dry-run` (every adopt warning). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
   paths into `result`, allowed on every verb, and excludes `--full`. One generated size test per
   declaration.
 - **Lists truncate, fields never drop.** A row list defaults to the newest 10 (`--last <n>`) and
@@ -255,8 +257,9 @@ Generated from the declarations, none hand-written per verb:
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope is under 3 KB on the fixture instance, which overflows every list a
-  default summary truncates (`testing.md`); this test lives in `tests/contract/` only.
+- Every default envelope but the three allowed over it is under 3 KB on the fixture instance,
+  which overflows every list a default summary truncates (`testing.md`); this test lives in
+  `tests/contract/` only.
 - Every verb declared `writes: hevy` or `git` declares `--dry-run`, and its dry run on the
   fixture instance writes no file and opens no transaction.
 - Every violation code's clearing verb or record exists (`validation.md`).

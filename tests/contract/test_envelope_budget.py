@@ -107,14 +107,14 @@ def declared(argv: tuple[str, ...]) -> Declaration:
     )
 
 
-# Envelopes the spec does not yet let fit 3 KB, each with the conflict that holds it over. Remove
-# one when its verb fits, or the size test fails.
+# Envelopes allowed over 3 KB because cutting them would cut what the agent needs to act
+# (docs/spec/verbs.md). The size test fails if one of them fits again, so the list stays true.
 OVER_BUDGET: dict[tuple[str, ...], str] = {
-    ("checkin", "open"): "the card's sessions, dose and notes lists carry no list rule",
+    ("checkin", "open"): "the card's sessions, dose and notes are the check-in itself",
     ("checkin", "open", "--date", "2026-11-01", "--tier", "deep"): "as checkin open",
-    ("plan", "apply", PLAN, "--dry-run"): "ADR 0006's 40-line prompt alone is about 3 KB",
+    ("plan", "apply", PLAN, "--dry-run"): "ADR 0006's 40-line approval prompt alone is about 3 KB",
     ("program", "adopt", ".coach/drafts/2026-10-30-program.toml", "--dry-run"): (
-        "envelope warnings[] carry no list rule"
+        "every adopt warning needs an answer before the version is adopted"
     ),
 }
 

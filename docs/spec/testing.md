@@ -201,8 +201,8 @@ every core (`-n auto` in the pytest config), so `uv run pytest` stays the one co
 in strict mode run in the same `uv run` step. One GitHub Actions workflow runs the three on
 every push and pull request. No pre-commit framework.
 
-The whole suite runs in under ten seconds on a laptop. A guard fails any single test that takes
-longer than one second, so a slow test is fixed where it is written rather than tolerated. A
+The whole suite runs in under ten seconds on an idle laptop. A guard fails any single test that
+takes longer than one second (three on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated. A
 module- or session-scoped fixture is setup the tests share, so the guard does not charge it to
 whichever test asks for it first. The
 old suite's eleven minutes against on-disk instances is the anti-pattern this budget rules out.
