@@ -21,10 +21,10 @@ def run(call: InstanceCall) -> Outcome:
             hevy_on=call.instance.config.hevy is not None,
             kits=read_kit_files(call.instance),
             exported=on_disk(call.instance.export_path),
-            units=call.instance.config.athlete.units,
-            bodyweight_units=call.instance.config.athlete.bodyweight_units,
+            units=call.instance.units,
+            bodyweight_units=call.instance.bodyweight_units,
             locations=call.instance.config.locations,
-            cadence_days=call.instance.config.athlete.checkin_cadence_days,
+            cadence_days=call.instance.checkin_cadence_days,
         )
     pin = call.instance.pin
     drift = tuple(

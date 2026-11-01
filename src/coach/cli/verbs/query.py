@@ -42,7 +42,7 @@ def run(call: InstanceCall) -> Outcome:
                 exercises=_texts(call, "exercise"),
                 since=_date(call, "since"),
                 last=last,
-                units=call.instance.config.athlete.units,
+                units=call.instance.units,
             )
         elif view == "readings":
             result = readings(conn, kind=kind, last=last)
@@ -71,7 +71,7 @@ def run(call: InstanceCall) -> Outcome:
                 conn,
                 draft=_draft(call, conn),
                 today=call.clock.today(),
-                units=call.instance.config.athlete.units,
+                units=call.instance.units,
                 exercises=_texts(call, "exercise"),
                 session=_text(call, "session"),
                 date=_date(call, "date"),

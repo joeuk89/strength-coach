@@ -14,13 +14,12 @@ from coach.services.progress import progress
 
 
 def run(call: InstanceCall) -> Outcome:
-    athlete = call.instance.config.athlete
     with open_instance_store(call.instance) as conn:
         found = progress(
             conn,
             on=call.clock.today(),
-            units=athlete.units,
-            bodyweight_units=athlete.bodyweight_units,
+            units=call.instance.units,
+            bodyweight_units=call.instance.bodyweight_units,
             full=call.full,
         )
     block = found.block
