@@ -25,6 +25,16 @@ def run(call: Call) -> Outcome:
                 {"location": kit.location, "kit": kit.kit, "tables": kit.tables}
                 for kit in result.kit
             ],
+            "program": (
+                None
+                if result.program is None
+                else {
+                    "version": result.program.version,
+                    "kind": result.program.kind,
+                    "emphasis": result.program.emphasis,
+                    "adopted": result.program.adopted,
+                }
+            ),
         }
     )
 
@@ -33,7 +43,8 @@ DECLARATION = Declaration(
     name="status",
     summary=(
         "Where the instance stands: the engine version against its pin, Hevy on or off, "
-        "the schema version, each plate-pool location's kit tables current or stale."
+        "the schema version, each plate-pool location's kit tables current or stale, "
+        "the program version in force."
     ),
     writes="none",
     needs_instance=True,
@@ -63,8 +74,18 @@ DECLARATION = Declaration(
                     "required": ["location", "kit", "tables"],
                 },
             },
+            "program": {
+                "description": "the Program version in force, or null before the first",
+                "type": ["object", "null"],
+                "properties": {
+                    "version": {"type": "string"},
+                    "kind": {"type": "string"},
+                    "emphasis": {"type": "string"},
+                    "adopted": {"type": "string"},
+                },
+            },
         },
-        "required": ["engine", "hevy", "schema_version", "kit"],
+        "required": ["engine", "hevy", "schema_version", "kit", "program"],
     },
     run=run,
     examples=(Example(("status",), "Where the instance stands."),),

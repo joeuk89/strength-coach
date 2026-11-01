@@ -52,6 +52,7 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
             "hevy": {"on": False},
             "schema_version": 1,
             "kit": [],
+            "program": None,
         },
         "warnings": [],
     }
