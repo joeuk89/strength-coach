@@ -1,5 +1,7 @@
 import io
 import json
+import os
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -356,3 +358,84 @@ def test_saying_no_at_the_terminal_writes_nothing(
     assert run.code == 0
     assert run.envelope["result"]["declined"] is True
     assert tree(empty_directory) == set()
+
+
+def global_gitconfig(text: str) -> None:
+    Path(os.environ["GIT_CONFIG_GLOBAL"]).write_text(text, encoding="utf-8")
+
+
+def committed_paths(root: Path) -> set[str]:
+    listed = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return set(listed.stdout.splitlines())
+
+
+def test_init_commits_the_settings_a_global_excludes_file_ignores(
+    empty_directory: Path, release: None
+) -> None:
+    excludes = empty_directory.parent / "global-excludes"
+    excludes.write_text(".claude/\n", encoding="utf-8")
+    global_gitconfig(f"[core]\n\texcludesFile = {excludes}\n")
+
+    run = run_coach("init", "--defaults")
+
+    assert run.code == 0, run.stdout
+    assert committed_paths(empty_directory) == {
+        ".gitignore",
+        ".claude/settings.json",
+        "CLAUDE.md",
+        "coach.toml",
+    }
+
+
+def test_init_without_a_git_identity_stops_before_writing(
+    empty_directory: Path, release: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("NAME", "EMAIL"):
+        monkeypatch.delenv(f"GIT_AUTHOR_{name}")
+        monkeypatch.delenv(f"GIT_COMMITTER_{name}")
+    global_gitconfig("[user]\n\tuseConfigOnly = true\n")
+
+    run = run_coach("init", "--defaults")
+
+    assert run.code == 5
+    assert run.envelope["error"]["code"] == "git_identity_missing"
+    assert "user.email" in run.envelope["error"]["message"]
+    assert tree(empty_directory) == set()
+    assert not (empty_directory / ".git").exists()
+
+
+def test_init_without_git_on_the_path_stops_before_writing(
+    empty_directory: Path, release: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PATH", str(empty_directory.parent / "no-git-here"))
+
+    run = run_coach("init", "--defaults")
+
+    assert run.code == 5
+    assert run.envelope["error"]["code"] == "git_unavailable"
+    assert tree(empty_directory) == set()
+
+
+def test_a_commit_git_refuses_is_a_setup_error_that_says_how_to_finish(
+    empty_directory: Path, release: None
+) -> None:
+    hooks = empty_directory.parent / "hooks"
+    hooks.mkdir()
+    pre_commit = hooks / "pre-commit"
+    pre_commit.write_text("#!/bin/sh\necho hook says no >&2\nexit 1\n", encoding="utf-8")
+    pre_commit.chmod(0o755)
+    global_gitconfig(f"[core]\n\thooksPath = {hooks}\n")
+
+    run = run_coach("init", "--defaults")
+
+    assert run.code == 5
+    error = run.envelope["error"]
+    assert error["code"] == "git_commit_failed"
+    assert "hook says no" in error["message"]
+    assert f"git commit -m 'coach init v{RELEASE}'" in error["message"]

@@ -50,13 +50,14 @@ def run(call: Call) -> Outcome:
     git_init = not git.is_repo(root)
     if args.get("dry_run") is True:
         return Outcome({"dry_run": True, **summary, "git_init": git_init})
+    git.check_can_commit(root)
     if call.terminal.interactive:
         call.terminal.say("coach init will write:\n" + "\n".join(f"  {f}" for f in files))
         if not call.terminal.confirm("Write these files and commit them?"):
             return Outcome({"declined": True, **summary})
-    _write(root, texts)
     if git_init:
         git.init(root)
+    _write(root, texts)
     committed = [path for path in texts if path != ".env"]
     commit = git.commit(root, committed, f"coach init v{pin}")
     return Outcome(
