@@ -130,7 +130,7 @@ class _Log:
         self.cancelled = _planned_refs(live, "cancelled")
         self.spans = status_spans(conn)
         self.routines = routine_map.mapped(conn)
-        self.rehab = niggles.open_rehab_sessions(conn)
+        self.rehab = niggles.rehab_histories(conn)
         self.muscles = muscle_map(conn)
 
     def facts(self, monday: datetime.date) -> WeekFacts:
@@ -170,8 +170,12 @@ class _Log:
         overrides: Sequence[PlanOverride],
         monday: datetime.date,
     ) -> tuple[PlannedWork, ...]:
-        """A drop stays in the week as a Miss, so the sessions derive without it."""
+        """A drop stays in the week as a Miss, so the sessions derive without it. The rehab
+        sessions are those open when the plan was approved, so a later niggle event leaves the
+        week as it closed."""
         plan_id = str(plan["id"])
+        approved_on = str(plan["approved_at"])[:10]
+        rehab = tuple(r.session for r in self.rehab if r.open_on(approved_on))
         dropped = {o.session_id for o in overrides if o.kind == "drop_session"}
         held = {(o.session_id, o.exercise_id) for o in overrides if o.kind == "hold"}
         sessions = choose_sessions(
@@ -179,13 +183,13 @@ class _Log:
                 form,
                 position=str(plan["position"]),
                 monday=monday,
-                rehab=self.rehab,
+                rehab=rehab,
                 parked=parked_sessions(self.conn, monday),
             ),
             [o for o in overrides if o.kind != "drop_session"],
             form=form,
             monday=monday,
-            rehab=self.rehab,
+            rehab=rehab,
         )
         hold_lines = held | {
             (s.session_id, line.exercise)

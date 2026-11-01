@@ -1,3 +1,6 @@
+import datetime
+
+from support.clock import FixedClock
 from support.closed_weeks import (
     a_check_in,
     a_hard_squat_week,
@@ -6,9 +9,12 @@ from support.closed_weeks import (
     monday,
 )
 from support.history import a_logged_workout, an_annotation
+from support.ledger import an_exercise
 from support.plans import a_plan_override, a_squat_program, squat_logged
 
+from coach.core.closed_week.adherence import adherence
 from coach.services.closed_weeks import closed_weeks
+from coach.services.record import record
 from coach.store.connection import Connection
 
 
@@ -101,3 +107,57 @@ def test_a_hand_entered_workout_with_no_sets_is_a_lifting_date_so_the_next_week_
 
     assert found.weeks[2].kind == "hard"
     assert [(b.id, b.hard_weeks) for b in found.blocks] == [("b-2026-10-30", 2)]
+
+
+def a_core_rehab_niggle(conn: Connection, opened: str) -> None:
+    an_exercise(conn, "band_external_rotation", load_mode="band", equipment_kind="band")
+    niggle = f"""
+[[niggle]]
+site = "left shoulder"
+date = {opened}
+status = "reported"
+
+[niggle.rehab]
+session = "shoulder_rehab"
+title = "Shoulder rehab"
+tier = "core"
+cadence = "standing"
+
+[[niggle.rehab.line]]
+exercise = "band_external_rotation"
+rest_s = 30
+
+[[niggle.rehab.line.sets]]
+count = 2
+reps = 15
+"""
+    record(conn, niggle.encode(), file="n.toml", clock=FixedClock())
+
+
+def adherence_counts(conn: Connection) -> list[tuple[int, int]]:
+    return [(w.adherence_trained, w.adherence_planned) for w in closed_weeks(conn).weeks]
+
+
+def test_a_niggle_opened_after_the_weeks_closed_leaves_their_planned_sessions_alone() -> None:
+    conn = a_squat_program()
+    for n in range(4):
+        a_hard_squat_week(conn, monday(n))
+    closed_through(conn, 4)
+
+    a_core_rehab_niggle(conn, "2026-11-30")
+
+    assert adherence_counts(conn) == [(1, 1)] * 4
+    assert adherence(closed_weeks(conn).weeks, datetime.date(2026, 11, 30)).state == "ok"
+
+
+def test_resolving_a_niggle_keeps_its_rehab_session_in_the_weeks_planned_before() -> None:
+    conn = a_squat_program()
+    a_core_rehab_niggle(conn, "2026-10-24")
+    for n in range(2):
+        a_hard_squat_week(conn, monday(n))
+    closed_through(conn, 2)
+
+    resolved = '[[niggle]]\nniggle = "n-0001"\ndate = 2026-11-30\nstatus = "resolved"\n'
+    record(conn, resolved.encode(), file="r.toml", clock=FixedClock())
+
+    assert adherence_counts(conn) == [(1, 2)] * 2
