@@ -1,5 +1,6 @@
 import os
 import re
+from contextlib import closing
 from pathlib import Path
 
 from coach.cli import git, init_answers, registry
@@ -7,6 +8,7 @@ from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Ou
 from coach.core.config import Config, Engine, Hevy
 from coach.core.errors import Invalid, Setup
 from coach.render.instance_files import GITIGNORE, claude_md, coach_toml, settings_json
+from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
 
 RELEASE_VERSION = re.compile(r"\d+\.\d+\.\d+")
@@ -133,7 +135,8 @@ def _write(root: Path, texts: dict[str, str]) -> None:
             os.chmod(path, 0o600)
     for directory in DIRECTORIES:
         (root / directory).mkdir(parents=True, exist_ok=True)
-    open_store(root / STORE).close()
+    with closing(open_store(root / STORE)) as conn, conn:
+        seed_catalogue(conn)
 
 
 ANSWER_ARGUMENTS = tuple(
