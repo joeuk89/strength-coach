@@ -2,7 +2,7 @@ import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from coach.core.coaching_records import NiggleRecord
+from coach.core.coaching_records import FollowUpRecord, NiggleRecord
 from coach.core.errors import Invalid
 from coach.core.ledger_draft import (
     EXERCISE_EDITABLE,
@@ -21,7 +21,7 @@ from coach.core.ledger_draft import (
     kind_of,
 )
 from coach.core.ref import Ref
-from coach.services.coaching_ledger import Writing, write_niggle
+from coach.services.coaching_ledger import Writing, write_follow_up, write_niggle
 from coach.store import exercises, notes, readings, refs, workouts
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
@@ -29,6 +29,7 @@ from coach.store.ids import next_ids
 # schema.md, "Ids". An Athlete note's prefix is not in that table: `an-`, since `n-` is a niggle's.
 ID_PREFIX = {
     "niggle": ("niggle", "n-"),
+    "followup": ("follow_up", "f-"),
     "note": ("athlete_note", "an-"),
     "weigh_in": ("weigh_in", "wi-"),
     "sleep_night": ("sleep_night", "sn-"),
@@ -128,6 +129,8 @@ class _Writer:
                 return self._withdraw(kind_of(record), id_, target)
             case NiggleRecord():
                 write_niggle(self.writing, record, id_)
+            case FollowUpRecord():
+                write_follow_up(self.writing, record, id_)
             case NoteRecord():
                 self._note(record, id_)
             case WeighInRecord():
@@ -302,7 +305,7 @@ def _named_id(record: LedgerRecord) -> str | None:
     match record:
         case ExerciseRecord():
             return record.id
-        case NiggleRecord(niggle=str(named)):
+        case NiggleRecord(niggle=str(named)) | FollowUpRecord(followup=str(named)):
             return named
         case _:
             return None

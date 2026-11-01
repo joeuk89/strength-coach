@@ -10,7 +10,10 @@ TABLES = {
     "workout": "workout",
 }
 # A record kind written as events: the event table and the column naming the record's id.
-EVENTS = {"niggle": ("niggle_event", "niggle_id")}
+EVENTS = {
+    "niggle": ("niggle_event", "niggle_id"),
+    "followup": ("follow_up_event", "follow_up_id"),
+}
 WITHDRAWABLE = ("weigh_in", "sleep_night", "status_span")
 
 

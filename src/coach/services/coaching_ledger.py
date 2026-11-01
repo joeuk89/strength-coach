@@ -2,10 +2,10 @@ import datetime
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
-from coach.core.coaching_records import NiggleRecord
+from coach.core.coaching_records import FollowUpRecord, NiggleRecord
 from coach.core.errors import Invalid
 from coach.core.ref import Ref
-from coach.store import exercises, niggles, sessions
+from coach.store import exercises, follow_ups, niggles, refs, sessions
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 
@@ -21,6 +21,15 @@ class Writing:
 
     def row(self, **columns: object) -> dict[str, object]:
         return {**columns, **self.stamp}
+
+    def stored_ref(self, ref: Ref, where: str) -> Ref:
+        """The ref with any Draft-local key resolved, refused unless it names a stored row."""
+        resolved = self.resolve(ref)
+        if not refs.exists(self.conn, resolved):
+            raise Invalid(
+                "invalid_argument", f"{where} cites {resolved}, which names no stored row"
+            )
+        return resolved
 
 
 def write_niggle(w: Writing, record: NiggleRecord, niggle_id: str) -> None:
@@ -99,4 +108,45 @@ def _library_exercise(conn: Connection, exercise_id: str, where: str) -> None:
         raise Invalid(
             "invalid_argument",
             f"{where} names exercise {exercise_id!r}, which is not in the library",
+        )
+
+
+def write_follow_up(w: Writing, record: FollowUpRecord, follow_up_id: str) -> None:
+    if record.followup is None:
+        about = w.stored_ref(record.about, "[[followup]] about") if record.about else None
+        follow_ups.insert_follow_up(
+            w.conn,
+            w.row(
+                id=follow_up_id,
+                raised=record.date.isoformat(),
+                text=record.raised_text,
+                about=str(about) if about else None,
+            ),
+        )
+    elif not follow_ups.exists(w.conn, follow_up_id):
+        raise Invalid("invalid_argument", f"[[followup]] names {follow_up_id}, which is not stored")
+    elif record.kind == "deferred":
+        _check_deferred(w.conn, follow_up_id, record)
+    (event_id,) = next_ids(w.conn, "follow_up_event", "fe-", 1)
+    follow_ups.insert_event(
+        w.conn,
+        w.row(
+            id=event_id,
+            follow_up_id=follow_up_id,
+            date=record.date.isoformat(),
+            kind=record.kind,
+            due=record.due.isoformat() if record.due else None,
+            text=record.text,
+        ),
+    )
+
+
+def _check_deferred(conn: Connection, follow_up_id: str, record: FollowUpRecord) -> None:
+    previous = follow_ups.last_due(conn, follow_up_id)
+    due = record.due.isoformat() if record.due else ""
+    if previous is not None and due <= previous:
+        raise Invalid(
+            "invalid_argument",
+            f"[[followup]] deferred {follow_up_id} to {due}, which is not later than its "
+            f"due date {previous}; a deferral moves the due date later",
         )

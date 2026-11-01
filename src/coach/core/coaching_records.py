@@ -6,7 +6,8 @@ from typing import cast
 
 from coach.core.draft_fields import Fields, required
 from coach.core.errors import Invalid
-from coach.core.registries.ledger import CONSTRAINT_KINDS, NIGGLE_STATUSES
+from coach.core.ref import REF_KINDS, Ref
+from coach.core.registries.ledger import CONSTRAINT_KINDS, FOLLOW_UP_EVENTS, NIGGLE_STATUSES
 from coach.core.registries.program import LOAD_MODES, SET_TYPES
 
 type Json = Mapping[str, object]
@@ -47,6 +48,20 @@ class NiggleRecord:
     site: str | None = None
     opened: datetime.date | None = None
     rehab: RehabSession | None = None
+    text: str | None = None
+    key: str | None = None
+
+
+@dataclass(frozen=True)
+class FollowUpRecord:
+    """A follow-up event. With `text` and no `followup` it raises one as a `kept` event."""
+
+    kind: str
+    date: datetime.date
+    due: datetime.date | None = None
+    followup: str | None = None
+    raised_text: str | None = None
+    about: Ref | None = None
     text: str | None = None
     key: str | None = None
 
@@ -171,3 +186,33 @@ def _reps(value: object, f: Fields) -> object:
         if len(bounds) == 2 and all(type(n) is int for n in bounds):
             return bounds
     raise f.wrong("reps", 'a whole number, a range [6, 8] or an open top "8+"')
+
+
+def parse_follow_up(f: Fields) -> FollowUpRecord:
+    named = f.text("followup")
+    if named is None:
+        return f.done(
+            FollowUpRecord(
+                kind="kept",
+                date=required(f.date("raised", required=True)),
+                due=required(f.date("due", required=True)),
+                raised_text=required(f.text("text", required=True)),
+                about=f.ref("about", REF_KINDS),
+                key=f.key(),
+            )
+        )
+    kind = required(f.term("kind", FOLLOW_UP_EVENTS, required=True))
+    # schema.md, follow_up_event: kept and deferred carry the due date, the others none.
+    due = f.date("due", required=kind in ("kept", "deferred"))
+    if due is not None and kind not in ("kept", "deferred"):
+        raise f.wrong("due", f"left out of a {kind} event")
+    return f.done(
+        FollowUpRecord(
+            kind=kind,
+            date=required(f.date("date", required=True)),
+            due=due,
+            followup=named,
+            text=f.text("text"),
+            key=f.key(),
+        )
+    )
