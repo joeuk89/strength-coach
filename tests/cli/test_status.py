@@ -35,7 +35,7 @@ def test_status_outside_an_instance_stops_with_no_instance(
     assert run.stdout.count("\n") == 1
 
 
-def test_status_with_a_matching_pin_reports_engine_and_schema_version(
+def test_status_with_a_matching_pin_reports_engine_and_store_schema_version(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(an_instance(tmp_path, pin=RELEASE_ENGINE))
@@ -51,7 +51,7 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
             "engine": {"version": RELEASE_ENGINE, "pin": RELEASE_ENGINE},
             "hevy": {"on": False, "last_import": None, "last_import_age_days": None},
             "workouts": {"hevy": 0, "manual": 0},
-            "schema_version": 1,
+            "store_schema_version": 1,
             "kit": [],
             "export": {"behind_store": True, "store_behind_export": False},
             "plan": None,

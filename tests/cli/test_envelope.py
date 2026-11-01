@@ -49,10 +49,10 @@ def test_terminal_output_is_pretty_printed(instance: Path) -> None:
 
 
 def test_fields_projects_dotted_paths_of_the_result(instance: Path) -> None:
-    run = run_coach("status", "--fields", "engine.version,schema_version")
+    run = run_coach("status", "--fields", "engine.version,store_schema_version")
 
     assert run.code == 0
-    assert run.envelope["result"] == {"engine": {"version": "0.3.0"}, "schema_version": 1}
+    assert run.envelope["result"] == {"engine": {"version": "0.3.0"}, "store_schema_version": 1}
 
 
 def test_fields_naming_a_path_the_result_lacks_is_invalid(instance: Path) -> None:
@@ -64,7 +64,11 @@ def test_fields_naming_a_path_the_result_lacks_is_invalid(instance: Path) -> Non
 
 @pytest.mark.parametrize(
     "fields",
-    ["schema_version,schema_version.x", "schema_version.x,schema_version", "engine.version.x"],
+    [
+        "store_schema_version,store_schema_version.x",
+        "store_schema_version.x,store_schema_version",
+        "engine.version.x",
+    ],
 )
 def test_fields_naming_a_path_below_a_scalar_is_invalid(instance: Path, fields: str) -> None:
     run = run_coach("status", "--fields", fields)
