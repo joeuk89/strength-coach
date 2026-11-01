@@ -53,3 +53,22 @@ def test_a_second_file_setting_window_start_is_exit_1(instance: Path) -> None:
 
     assert run.code == 1
     assert run.envelope["error"]["code"] == "invalid_argument"
+
+
+def test_status_shows_the_check_in_due_and_the_ledger_counts(instance: Path) -> None:
+    (instance / "ci.toml").write_text(FILE, encoding="utf-8")
+    coach("checkin", "record", "ci.toml")
+
+    result = coach("status").envelope["result"]
+
+    assert result["check_in"] == {
+        "due": False,
+        "due_on": "2026-11-06",
+        "tier": "light",
+        "catch_up": False,
+        "window": None,
+    }
+    assert result["observations"] == {"count": 1, "ids": ["o-0001"]}
+    assert result["niggles"] == {"count": 0, "ids": []}
+    assert result["follow_ups_due"] == {"count": 0, "ids": []}
+    assert result["decisions"] == {}

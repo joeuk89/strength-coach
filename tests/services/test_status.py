@@ -11,6 +11,7 @@ from support.program_drafts import a_draft, toml
 from support.programs import a_config, the_worked_store
 from support.scenarios import a_session
 
+from coach.core.check_in import CheckInDue
 from coach.core.clock import Clock
 from coach.core.goal import Until
 from coach.core.kit import KitFiles
@@ -77,6 +78,11 @@ def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> N
         program=None,
         goal=None,
         phase=None,
+        check_in=CheckInDue(due=False, due_on=None, tier="light", window=None),
+        niggles=(),
+        follow_ups_due=(),
+        decisions={},
+        observations=(),
         warnings=(),
         plan=None,
         rotation=None,

@@ -5,6 +5,7 @@ from coach.cli.declaration import Call, Declaration, Example, Json, Outcome
 from coach.cli.generated import drifted
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
+from coach.core.check_in import CheckInDue
 from coach.core.message import Message
 from coach.services.status import CurrentGoal, PlanInForce, WeekPosition, status
 from coach.store.export import on_disk
@@ -22,6 +23,7 @@ def run(call: Call) -> Outcome:
             hevy_on=call.instance.config.hevy is not None,
             kits=read_kit_files(call.instance),
             exported=on_disk(call.instance.export_path),
+            cadence_days=call.instance.config.athlete.checkin_cadence_days,
         )
     pin = call.instance.pin
     drift = tuple(
@@ -63,9 +65,33 @@ def run(call: Call) -> Outcome:
             ),
             "goal": _goal(result.goal),
             "phase": _phase(result.phase),
+            "check_in": _check_in(result.check_in),
+            "niggles": _ids(result.niggles),
+            "follow_ups_due": _ids(result.follow_ups_due),
+            "decisions": {kind: _ids(ids) for kind, ids in result.decisions.items()},
+            "observations": _ids(result.observations),
         },
         warnings=(*result.warnings, *drift),
     )
+
+
+def _check_in(due: CheckInDue) -> Json:
+    window = due.window
+    return {
+        "due": due.due,
+        "due_on": due.due_on.isoformat() if due.due_on else None,
+        "tier": due.tier,
+        "catch_up": due.catch_up,
+        "window": (
+            None
+            if window is None
+            else {"start": window.start.isoformat(), "end": window.end.isoformat()}
+        ),
+    }
+
+
+def _ids(ids: tuple[str, ...]) -> Json:
+    return {"count": len(ids), "ids": list(ids)}
 
 
 def _plan(plan: PlanInForce | None) -> Json | None:
@@ -107,6 +133,16 @@ def _phase(phase: OpenPhase | None) -> Json | None:
     return {"id": phase.id, "kind": phase.kind, "until": {"kind": phase.until.kind, "value": shown}}
 
 
+IDS: Json = {
+    "type": "object",
+    "properties": {
+        "count": {"type": "integer"},
+        "ids": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["count", "ids"],
+}
+
+
 DECLARATION = Declaration(
     name="status",
     summary=(
@@ -114,7 +150,9 @@ DECLARATION = Declaration(
         "the age of the last import, workouts stored by source, the schema version, each "
         "plate-pool location's kit tables current or stale, whether the export is behind "
         "the store or the store behind it, the WeekPlan in force and this week's rotation "
-        "position, the program version in force, the current Goal and the open Phase."
+        "position, the program version in force, the current Goal and the open Phase, whether "
+        "a check-in is due and its tier, open niggles, due follow-ups, Decisions in force by "
+        "kind and current Observations as counts with ids."
     ),
     writes="none",
     needs_instance=True,
@@ -228,6 +266,33 @@ DECLARATION = Declaration(
                 },
                 "required": ["id", "kind", "until"],
             },
+            "check_in": {
+                "description": "whether a check-in is due today, its derived tier and the "
+                "window it would review (null before that window opens)",
+                "type": "object",
+                "properties": {
+                    "due": {"type": "boolean"},
+                    "due_on": {"type": ["string", "null"], "format": "date"},
+                    "tier": {"enum": ["light", "deep"]},
+                    "catch_up": {"type": "boolean"},
+                    "window": {
+                        "type": ["object", "null"],
+                        "properties": {
+                            "start": {"type": "string", "format": "date"},
+                            "end": {"type": "string", "format": "date"},
+                        },
+                    },
+                },
+                "required": ["due", "due_on", "tier", "catch_up", "window"],
+            },
+            "niggles": {"description": "open niggles", **IDS},
+            "follow_ups_due": {"description": "follow-ups due today or earlier", **IDS},
+            "decisions": {
+                "description": "Decisions in force, by kind",
+                "type": "object",
+                "additionalProperties": IDS,
+            },
+            "observations": {"description": "current Observations", **IDS},
         },
         "required": [
             "engine",
@@ -241,6 +306,11 @@ DECLARATION = Declaration(
             "program",
             "goal",
             "phase",
+            "check_in",
+            "niggles",
+            "follow_ups_due",
+            "decisions",
+            "observations",
         ],
     },
     run=run,

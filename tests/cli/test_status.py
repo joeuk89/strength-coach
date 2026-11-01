@@ -59,6 +59,17 @@ def test_status_with_a_matching_pin_reports_engine_and_schema_version(
             "program": None,
             "goal": None,
             "phase": None,
+            "check_in": {
+                "due": False,
+                "due_on": None,
+                "tier": "light",
+                "catch_up": False,
+                "window": None,
+            },
+            "niggles": {"count": 0, "ids": []},
+            "follow_ups_due": {"count": 0, "ids": []},
+            "decisions": {},
+            "observations": {"count": 0, "ids": []},
         },
         "warnings": [],
     }
