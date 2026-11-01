@@ -6,7 +6,7 @@ import pytest
 
 LIMIT_S = 2.0
 # Shared CI runners are about three times slower than a laptop and vary run to run.
-CI_LIMIT_S = 3.0
+CI_LIMIT_S = 6.0
 
 clock_key = pytest.StashKey[Callable[[], float]]()
 _elapsed_key = pytest.StashKey[float]()

@@ -171,7 +171,7 @@ def test_a_slow_test_using_a_shared_fixture_still_fails(pytester: pytest.Pyteste
     result.stdout.fnmatch_lines(["*2.50 s*over the 2.0 s budget*"])
 
 
-def test_on_ci_a_test_over_one_second_and_under_three_passes(
+def test_on_ci_a_test_over_two_seconds_and_under_six_passes(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CI", "true")
@@ -179,7 +179,7 @@ def test_on_ci_a_test_over_one_second_and_under_three_passes(
     pytester.makepyfile(
         """
         def test_slowish(fake_clock):
-            fake_clock.seconds += 2.5
+            fake_clock.seconds += 5.0
         """
     )
 
@@ -188,7 +188,7 @@ def test_on_ci_a_test_over_one_second_and_under_three_passes(
     result.assert_outcomes(passed=1)
 
 
-def test_on_ci_a_test_over_three_seconds_fails(
+def test_on_ci_a_test_over_six_seconds_fails(
     pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CI", "true")
@@ -196,11 +196,11 @@ def test_on_ci_a_test_over_three_seconds_fails(
     pytester.makepyfile(
         """
         def test_slow(fake_clock):
-            fake_clock.seconds += 3.5
+            fake_clock.seconds += 6.5
         """
     )
 
     result = pytester.runpytest("-p", "support.wall_time")
 
     result.assert_outcomes(failed=1)
-    result.stdout.fnmatch_lines(["*3.50 s*over the 3.0 s budget*"])
+    result.stdout.fnmatch_lines(["*6.50 s*over the 6.0 s budget*"])
