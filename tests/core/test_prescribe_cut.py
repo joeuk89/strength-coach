@@ -343,10 +343,11 @@ def test_with_no_usable_e1rm_a_capped_line_is_clipped_to_the_anchor_and_warns() 
     line = derive(a_line(), logged, overrides=(LIGHT_WEEK,))
 
     assert [(f.code, dict(f.params)) for f in line.flags] == [
+        ("over_rep_cap", {"reps": 18, "cap": 12}),
         (
             "rpe_ceiling_unchecked",
             {"cap": 8, "clipped_load": 120, "anchor_exposure": "exposure:h-1/bb_back_squat"},
-        )
+        ),
     ]
     assert line.groups[-1].load == Load(120, "total")
 

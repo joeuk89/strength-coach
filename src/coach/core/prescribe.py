@@ -11,6 +11,8 @@ from coach.core.anchor import StartLoad, anchor
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
 from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs
+from coach.core.e1rm import e1rm
+from coach.core.e1rm_checks import over_rep_cap, top_set_above_e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
@@ -138,6 +140,7 @@ class _Derivation:
             bounded = bound(context, proposal, move.rounding, self.steps, self.flags)
             change = "first prescription"
             return self._bounded(line, found.derived_from, rack, bounded, change)
+        self._keep(over_rep_cap(authored, found.exposure))
         before = schemes.anchor_top(found.exposure)
         move = self._move_or_hold(schemes, found.exposure, before, overrides)
         schemes.stall(found.exposure)
@@ -170,7 +173,10 @@ class _Derivation:
     ) -> LinePrescription:
         if bounded.dropped:
             return self._prescription(line, derived_from, (), "dropped")
-        return self._prescription(line, derived_from, self._groups(line, rack, bounded), change)
+        groups = self._groups(line, rack, bounded)
+        found = e1rm(self.request.exposures, line.exercise, self.request.planned.date)
+        self._keep(top_set_above_e1rm(groups, found, self.scope))
+        return self._prescription(line, derived_from, groups, change)
 
     def _move_or_hold(
         self,
@@ -313,6 +319,10 @@ class _Derivation:
 
     def _raise(self, code: str, params: dict[str, object], message: str) -> None:
         self.flags.append(raise_flag(code, self.scope, params, message))
+
+    def _keep(self, flag: Flag | None) -> None:
+        if flag is not None:
+            self.flags.append(flag)
 
 
 def _convertible(exercise_mode: LoadMode, line_mode: LoadMode) -> bool:
