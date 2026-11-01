@@ -5,15 +5,13 @@ from coach.cli import export_dir as exported
 from coach.cli import git
 from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Outcome
 from coach.cli.generated import drifted, generated_files
-from coach.cli.instance import refuse_tables_behind_the_export
+from coach.cli.instance import CONFIG, refuse_tables_behind_the_export
 from coach.core.engine_pin import notes_between
 from coach.core.errors import Setup
 from coach.render.instance_files import with_pin
 from coach.services.upgrade import Upgraded, upgrade
 from coach.store.chain import engine
 from coach.store.connection import copy_to_memory, open_store_behind, schema_version
-
-CONFIG = "coach.toml"
 
 
 def run(call: Call) -> Outcome:

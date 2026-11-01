@@ -40,17 +40,12 @@ def step_name(from_version: int) -> str:
 def packaged() -> Chain:
     store = files("coach.store")
     history = store / "schema_history"
-    frozen = (
-        {
-            int(entry.name.removeprefix("v").removesuffix(".sql")): entry.read_text(
-                encoding="utf-8"
-            )
-            for entry in history.iterdir()
-            if entry.name.startswith("v") and entry.name.endswith(".sql")
-        }
-        if history.is_dir()
-        else {}
-    )
+    entries = history.iterdir() if history.is_dir() else ()
+    frozen = {
+        int(entry.name.removeprefix("v").removesuffix(".sql")): entry.read_text(encoding="utf-8")
+        for entry in entries
+        if entry.name.startswith("v") and entry.name.endswith(".sql")
+    }
     current = (store / "schema.sql").read_text(encoding="utf-8")
     return Chain(current=current, frozen=frozen, steps=MIGRATIONS)
 
@@ -59,7 +54,6 @@ ENGINE = packaged()
 
 
 def engine() -> Chain:
-    """The engine's chain, read at call time."""
     return ENGINE
 
 

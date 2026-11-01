@@ -14,14 +14,11 @@ def merge_catalogue(conn: sqlite3.Connection) -> tuple[str, ...]:
     """Insert each catalogue id the store lacks and return them; a row the store has may carry
     the athlete's edit or a verified template id, so it is never touched."""
     have = {found for (found,) in conn.execute("SELECT id FROM exercise")}
-    missing = [line for line in _catalogue().splitlines() if line.strip() and _id(line) not in have]
-    load_rows(conn, "exercise", "\n".join(missing))
-    return tuple(_id(line) for line in missing)
+    by_id = {json.loads(line)["id"]: line for line in _catalogue().splitlines() if line.strip()}
+    missing = {found: line for found, line in by_id.items() if found not in have}
+    load_rows(conn, "exercise", "\n".join(missing.values()))
+    return tuple(missing)
 
 
 def _catalogue() -> str:
     return files("coach.store").joinpath("catalogue.jsonl").read_text(encoding="utf-8")
-
-
-def _id(line: str) -> str:
-    return json.loads(line)["id"]
