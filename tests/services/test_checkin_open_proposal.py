@@ -1,9 +1,10 @@
 import datetime
+from typing import cast
 
 from support.check_in_cards import field_of, opened
 from support.clock import FixedClock
-from support.closed_weeks import a_check_in, a_hard_squat_week, monday
-from support.plans import a_plan_override, a_squat_program, an_approved_plan
+from support.closed_weeks import a_check_in, a_hard_squat_week, a_planned_squat_week, monday
+from support.plans import a_plan_override, a_squat_program, an_approved_plan, squat_logged
 
 from coach.services.record import record
 from coach.services.status import status
@@ -100,3 +101,32 @@ def test_a_plan_carrying_light_week_clears_the_proposal() -> None:
 
     assert "standing_from" not in block
     assert not light_week_pending(conn, datetime.date(2026, 12, 1))
+
+
+def drifting_squat(*, last_reps: int = 8) -> Connection:
+    """Two steady squat weeks at RPE 8, then two with two sets at RPE 9."""
+    conn = a_squat_program()
+    sets = {0: (8, 8, 8, 8), 1: (8, 8, 8, 8), 2: (9, 9, 8, 8), 3: (9, 9, 8, 8)}
+    for n, rpes in sets.items():
+        a_planned_squat_week(conn, monday(n))
+        reps = last_reps if n == 3 else 8
+        squat_logged(conn, f"h-{n}", monday(n), *[(120, reps, rpe) for rpe in rpes])
+    a_check_in(conn, monday(0), "2026-11-22")
+    return conn
+
+
+def triggers_of(conn: Connection) -> list[object]:
+    return cast(list[object], block_of(conn)["triggers"])
+
+
+def test_rpe_drift_on_two_exposures_after_a_steady_one_is_a_trigger() -> None:
+    assert triggers_of(drifting_squat()) == [
+        {
+            "trigger": "rpe_drift",
+            "evidence": ["exposure:h-2/bb_back_squat", "exposure:h-3/bb_back_squat"],
+        }
+    ]
+
+
+def test_a_set_longer_than_prescribed_is_not_read_as_drift() -> None:
+    assert triggers_of(drifting_squat(last_reps=10)) == []

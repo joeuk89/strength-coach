@@ -7,9 +7,11 @@ from support.check_in_cards import (
     monday,
     opened,
 )
+from support.clock import FixedClock
 from support.plans import squat_logged
 
 from coach.core.check_in_card import Ask
+from coach.services.record import record
 
 
 def test_one_closing_week_gives_the_card_its_fields_in_order_with_the_empty_ones_dropped() -> None:
@@ -72,3 +74,46 @@ def test_deep_raises_the_tier_and_adds_the_deep_field() -> None:
 
     assert card.tier == "deep"
     assert card.fields[-1].name == "deep_tier"
+
+
+def test_activities_niggles_follow_ups_and_notes_appear_in_order_when_they_have_content() -> None:
+    conn = a_two_session_program()
+    a_planned_two_session_week(conn, monday(0))
+    record(
+        conn,
+        b"""
+[[activity]]
+date = 2026-11-05
+kind = "run"
+minutes = 30
+rpe = 6
+quality = false
+
+[[niggle]]
+site = "left knee"
+opened = 2026-11-03
+date = 2026-11-03
+status = "reported"
+constraints = [{ kind = "rpe_cap", pattern = "squat", value = 7 }]
+
+[[followup]]
+raised = 2026-11-01
+text = "retest the bench"
+due = 2026-11-07
+
+[[note]]
+date = 2026-11-06
+text = "the knee felt fine on stairs"
+""",
+        file="d.toml",
+        clock=FixedClock(),
+    )
+
+    card = opened(conn)
+
+    assert [f.name for f in card.fields][-4:] == ["activities", "niggles", "follow_ups", "notes"]
+    assert field_of(card, "notes").facts == {
+        "notes": [{"date": "2026-11-06", "text": "the knee felt fine on stairs", "about": None}]
+    }
+    assert field_of(card, "niggles").asks == (Ask("niggle_status", "niggle:n-0001"),)
+    assert [w.code for w in card.warnings] == ["followup_due"]
