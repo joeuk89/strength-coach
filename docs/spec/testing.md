@@ -107,8 +107,8 @@ the acceptance check, nothing else.
 
 One repo is the package and the plugin (ADR 0007). `pyproject.toml` at the root declares the
 `coach` package under `src/`, two console scripts (`coach` and `coach-hook`), no runtime
-dependencies, a Python 3.12 floor, and a `dev` dependency group holding pytest, ruff and
-pyright. Two installs: `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for
+dependencies, a Python 3.12 floor, and a `dev` dependency group holding pytest, pytest-xdist,
+ruff and pyright. Two installs: `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for
 the instances on this machine, and `uv sync` in the checkout makes the dev environment that
 `uv run pytest`, `uv run ruff` and `uv run pyright` use. The suite needs only the second.
 
@@ -196,10 +196,13 @@ interpreter the suite runs under, never the `coach` on PATH.
 
 ## Runner, tooling and wall time
 
-pytest, dev group only; the athlete's install stays stdlib. ruff (lint and format) and pyright
+pytest, dev group only; the athlete's install stays stdlib. pytest-xdist runs the suite across
+every core (`-n auto` in the pytest config), so `uv run pytest` stays the one command. ruff (lint and format) and pyright
 in strict mode run in the same `uv run` step. One GitHub Actions workflow runs the three on
 every push and pull request. No pre-commit framework.
 
 The whole suite runs in under ten seconds on a laptop. A guard fails any single test that takes
-longer than one second, so a slow test is fixed where it is written rather than tolerated. The
+longer than one second, so a slow test is fixed where it is written rather than tolerated. A
+module- or session-scoped fixture is setup the tests share, so the guard does not charge it to
+whichever test asks for it first. The
 old suite's eleven minutes against on-disk instances is the anti-pattern this budget rules out.

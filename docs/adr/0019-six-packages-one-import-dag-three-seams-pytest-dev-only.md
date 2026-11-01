@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
-amended: 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
+amended: 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
 ---
 
 # The engine is six packages on one import DAG, with three injected seams; the suite is pytest, dev-only, under ten seconds
@@ -55,7 +55,7 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
 - **Layout.** `src/coach/` with `__main__.py` so `python3 -m coach` works, `tests/` beside it,
   plugin files (`.claude-plugin/`, `skills/`, `hooks/`) at the repo root. `pyproject.toml`
   declares two scripts, `coach` and `coach-hook`, zero runtime dependencies, Python 3.12 floor,
-  and `[dependency-groups] dev` with pytest, ruff and pyright. Two installs, each for one job:
+  and `[dependency-groups] dev` with pytest, pytest-xdist, ruff and pyright. Two installs, each for one job:
   `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for the instances on the
   machine, and `uv sync` in the checkout creates the dev environment that `uv run pytest`, ruff
   and pyright use. The suite never depends on the first: its one subprocess smoke test runs
@@ -111,8 +111,8 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
   `main` per exit class with the fixture instance, a `FakeHevy` factory and a fixed clock; the
   one subprocess smoke test), `tests/contract/` (the generated tests the spec lists, the 3 KB
   envelope test, the `rn:` registry test, the import DAG).
-- **Budget.** The whole suite runs in under ten seconds locally; a guard fails any single test
-  over one second. One GitHub Actions workflow runs ruff, pyright strict and pytest on every push
+- **Budget.** The whole suite runs in under ten seconds locally, across every core under
+  pytest-xdist; a guard fails any single test over one second. One GitHub Actions workflow runs ruff, pyright strict and pytest on every push
   and pull request through `uv run`. No pre-commit framework.
 - **Where the spec stops.** The module split inside each package, builder and fixture names, the
   CI file and the porting order from the old `coach/` are the first build ticket's own calls.
