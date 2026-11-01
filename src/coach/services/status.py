@@ -11,7 +11,8 @@ from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.ledger_flags import niggle_unconstrained
 from coach.core.planned_week import RotationPosition, week_monday
-from coach.services.closed_weeks import WeekLog
+from coach.services.cadence import cadence_signals
+from coach.services.closed_weeks import ClosedWeeks, WeekLog
 from coach.services.fatigue import Fatigue
 from coach.services.rotation import rotation_position
 from coach.store import (
@@ -132,6 +133,7 @@ def status(
     log = WeekLog(conn, units)
     fatigue = Fatigue(conn, log)
     pending = fatigue.standing() is not None
+    closed = log.closed_by(check_ins.current_windows(conn))
     return StatusResult(
         engine_version=engine_version,
         pin=pin,
@@ -157,10 +159,11 @@ def status(
                 for n in open_niggles
                 if not n["constraints"]
             ),
+            *cadence_signals(conn, closed, units=units, on=today),
         ),
         plan=_plan_in_force(conn, monday),
         rotation=_rotation(conn, monday),
-        block=_block(conn, log, pending),
+        block=_block(conn, closed, pending),
     )
 
 
@@ -265,11 +268,11 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     )
 
 
-def _block(conn: Connection, log: WeekLog, pending: bool) -> BlockStatus | None:
+def _block(conn: Connection, closed: ClosedWeeks, pending: bool) -> BlockStatus | None:
     version = programs.latest(conn)
     if version is None:
         return None
-    block = log.closed_by(check_ins.current_windows(conn)).open_block
+    block = closed.open_block
     if block is None:
         return None
     deload = version.form.deload

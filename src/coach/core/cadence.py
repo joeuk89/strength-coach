@@ -83,7 +83,7 @@ def _stalled_at_both_ends(read: CadenceRead) -> Metric | None:
 
 def _flat_e1rm(read: CadenceRead) -> Metric | None:
     before, closed = read.blocks
-    start = e1rm(read.exposures, read.line.exercise, before.start)
+    start = e1rm(read.exposures, read.line.exercise, before.end + _DAY)
     end = e1rm(read.exposures, read.line.exercise, closed.end + _DAY)
     if start is None or end is None or end.load.amount > start.load.amount:
         return None

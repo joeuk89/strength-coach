@@ -33,6 +33,7 @@ from coach.core.phase_trend import (
 )
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.units import from_kg
+from coach.services.cadence import cadence_signals
 from coach.services.closed_weeks import WeekLog
 from coach.services.fatigue import COMPOUND_PATTERNS, Fatigue
 from coach.services.status import check_in_due_on
@@ -154,6 +155,7 @@ def checkin_open(
         *_phase_warnings(conn, weigh_ins, on, bodyweight_units),
         *_activity_warnings(activities, window, on),
         *_training_max_warnings(conn),
+        *cadence_signals(conn, closed, units=units, on=on),
     )
     return Card(window, chosen, card.assemble(fields), warnings)
 
