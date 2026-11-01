@@ -1,5 +1,4 @@
 import datetime
-from contextlib import closing
 
 from coach.cli.declaration import (
     Argument,
@@ -22,7 +21,7 @@ from coach.services.plan_draft import plan_draft
 def run(call: InstanceCall) -> Outcome:
     require_current_kit(call.instance)
     out = call.args.get("out")
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         drafted = plan_draft(
             conn,
             config=call.instance.config,

@@ -1,4 +1,3 @@
-from contextlib import closing
 from dataclasses import asdict
 
 from coach.cli.declaration import (
@@ -24,7 +23,7 @@ def run(call: InstanceCall) -> Outcome:
         return Outcome({"skipped": True, "rebuilt": rebuilt})
     key = api_key(call.env, instance.root / ".env")
     client = call.make_client(key, instance.audit_path, call.clock)
-    with closing(open_instance_store(instance)) as conn:
+    with open_instance_store(instance) as conn:
         # The global --full also names the full pull here (verbs.md, `import [--full]`).
         result = import_hevy(
             conn, client, call.clock, full=call.full, units=instance.config.athlete.units

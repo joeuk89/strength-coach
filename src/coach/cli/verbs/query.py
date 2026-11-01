@@ -1,5 +1,4 @@
 import datetime
-from contextlib import closing
 
 from coach.cli.declaration import (
     Argument,
@@ -35,7 +34,7 @@ def run(call: InstanceCall) -> Outcome:
         raise Invalid("invalid_argument", f"no view {view!r}; one of {', '.join(VIEWS.names())}")
     last = None if call.full else call.last
     kind = _text(call, "kind")
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         if view == "exposures":
             result = exposures(
                 conn,

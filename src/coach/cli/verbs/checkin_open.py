@@ -1,5 +1,4 @@
 import datetime
-from contextlib import closing
 from typing import cast
 
 from coach.cli.declaration import (
@@ -33,7 +32,7 @@ def run(call: InstanceCall) -> Outcome:
             "invalid_argument",
             f"--readiness {readiness!r} is not one of {', '.join(READINESS.names())}",
         )
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         card = checkin_open(
             conn,
             call.clock,

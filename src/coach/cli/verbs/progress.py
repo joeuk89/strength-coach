@@ -1,5 +1,3 @@
-from contextlib import closing
-
 from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.instance import open_instance_store
 from coach.core.progress import (
@@ -17,7 +15,7 @@ from coach.services.progress import progress
 
 def run(call: InstanceCall) -> Outcome:
     athlete = call.instance.config.athlete
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         found = progress(
             conn,
             on=call.clock.today(),

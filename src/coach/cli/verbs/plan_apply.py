@@ -1,5 +1,3 @@
-from contextlib import closing
-
 from coach.cli.declaration import (
     Argument,
     Declaration,
@@ -27,7 +25,7 @@ def run(call: InstanceCall) -> Outcome:
     data = read_draft(path)
     units = instance.config.athlete.units
     if call.args.get("dry_run") is True:
-        with closing(open_instance_store(instance)) as conn:
+        with open_instance_store(instance) as conn:
             found = dry_run(
                 conn,
                 data,
@@ -43,7 +41,7 @@ def run(call: InstanceCall) -> Outcome:
     if instance.config.hevy is not None:
         key = api_key(call.env, instance.root / ".env")
         client = call.make_client(key, instance.audit_path, call.clock)
-    with closing(open_instance_store(instance)) as conn:
+    with open_instance_store(instance) as conn:
         found = expected(
             conn,
             data,

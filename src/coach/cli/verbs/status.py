@@ -1,5 +1,4 @@
 import datetime
-from contextlib import closing
 
 from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.generated import drifted
@@ -13,7 +12,7 @@ from coach.store.phases import OpenPhase
 
 
 def run(call: InstanceCall) -> Outcome:
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         result = status(
             conn,
             call.clock,

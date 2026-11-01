@@ -1,4 +1,3 @@
-from contextlib import closing
 from pathlib import Path
 
 from coach.cli import export_dir as exported
@@ -28,7 +27,7 @@ MESSAGE = "coach publish"
 def run(call: InstanceCall) -> Outcome:
     root = call.instance.root
     profile = root / PROFILE
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         publication = publish(
             conn,
             engine_version=call.engine_version,

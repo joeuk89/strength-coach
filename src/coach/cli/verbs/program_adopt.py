@@ -1,5 +1,3 @@
-from contextlib import closing
-
 from coach.cli.declaration import (
     Argument,
     Declaration,
@@ -20,7 +18,7 @@ def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
     position = call.args.get("position")
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         result = adopt(
             conn,
             data,

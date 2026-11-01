@@ -1,6 +1,7 @@
 import sqlite3
 import tomllib
-from contextlib import closing
+from collections.abc import Generator
+from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import cast
 
@@ -45,9 +46,11 @@ def _pin(document: dict[str, object], path: Path) -> str:
     return version
 
 
-def open_instance_store(instance: Instance) -> sqlite3.Connection:
+@contextmanager
+def open_instance_store(instance: Instance) -> Generator[sqlite3.Connection]:
     instance.store_path.parent.mkdir(exist_ok=True)
-    return open_store(instance.store_path)
+    with closing(open_store(instance.store_path)) as conn:
+        yield conn
 
 
 def rebuild_missing_store(instance: Instance) -> Rebuilt | None:
@@ -57,7 +60,7 @@ def rebuild_missing_store(instance: Instance) -> Rebuilt | None:
 
 
 def refuse_a_store_behind_the_export(instance: Instance) -> None:
-    with closing(open_instance_store(instance)) as conn:
+    with open_instance_store(instance) as conn:
         refuse_tables_behind_the_export(instance, conn)
 
 

@@ -1,5 +1,3 @@
-from contextlib import closing
-
 from coach.cli.declaration import Argument, Declaration, Example, InInstance, InstanceCall, Outcome
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
@@ -9,7 +7,7 @@ from coach.services.checkin_record import checkin_record
 def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
-    with closing(open_instance_store(call.instance)) as conn:
+    with open_instance_store(call.instance) as conn:
         result = checkin_record(conn, data, file=path, clock=call.clock)
     return Outcome(
         {
