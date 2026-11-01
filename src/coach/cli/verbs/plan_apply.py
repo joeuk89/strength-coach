@@ -76,7 +76,7 @@ def _approved_at(terminal: Terminal, found: DryRun, units: Units) -> bool:
 
 def _prompt(found: DryRun, *, units: Units, full: bool) -> str:
     return approval_prompt(
-        found.checked,
+        found.summary,
         found.actions,
         found.write_plan_hash,
         units=units,
@@ -89,17 +89,16 @@ def _prompt(found: DryRun, *, units: Units, full: bool) -> str:
 def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Json:
     """The dry run's result: the Write plan, its hash and the approval prompt. By default each
     flag is its key, severity and acknowledgement, since the prompt already carries its text."""
-    checked = found.checked
+    summary = found.summary
     prompt = _prompt(found, units=units, full=full)
     flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
     kept = flags if full else flags[:last]
-    draft = checked.draft
     return {
-        "week": draft.week.isoformat(),
-        "supersedes": draft.supersedes,
+        "week": summary.week.isoformat(),
+        "supersedes": summary.supersedes,
         "resumes": found.resumes,
         "moved_routines": list(found.moved_routines),
-        "position": {"week": draft.position.week, "source": draft.position.source},
+        "position": {"week": summary.position.week, "source": summary.position.source},
         **found.actions.to_json(),
         "flags": kept,
         "flag_count": len(flags),

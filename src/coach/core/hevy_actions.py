@@ -153,6 +153,19 @@ def projected_sessions(sessions: Sequence[SessionPrescription]) -> tuple[Project
     return tuple(found.values())
 
 
+def frozen_sessions(
+    lines: Sequence[tuple[str, str]], *, standing: Collection[str]
+) -> tuple[ProjectedSession, ...]:
+    """The sessions a WeekPlan's frozen (session, exercise) lines project, in their order."""
+    found: dict[str, list[str]] = {}
+    for session_id, exercise_id in lines:
+        found.setdefault(session_id, []).append(exercise_id)
+    return tuple(
+        ProjectedSession(session_id, session_id in standing, tuple(dict.fromkeys(exercises)))
+        for session_id, exercises in found.items()
+    )
+
+
 def _standing(session: PlannedSession) -> bool:
     """Standing, daily and rehab sessions live in the Standing folder."""
     return session.cadence in STANDING_CADENCES or session.kind == "rehab"

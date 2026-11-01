@@ -15,6 +15,7 @@ from support.programs import a_config
 from coach.core.errors import Invalid, Refused
 from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
 from coach.services.program import adopt
+from coach.services.record import record
 from coach.services.status import status
 from coach.store import exercises, mirrors, routine_map, week_plans
 from coach.store.connection import Connection
@@ -197,7 +198,7 @@ def test_a_superseding_plan_flips_the_earlier_row_and_inherits_no_acknowledgemen
     )
     result = approved(conn, data, hevy)
 
-    assert dry.checked.draft.supersedes == "wp-2026-11-02"
+    assert dry.summary.supersedes == "wp-2026-11-02"
     assert result.week_plan_id == "wp-2026-11-02-2"
     rows = {r["id"]: r for r in week_plans.every_of_week(conn, "2026-11-02")}
     assert (rows["wp-2026-11-02"]["status"], rows["wp-2026-11-02"]["superseded_by"]) == (
@@ -478,7 +479,7 @@ def test_the_dry_run_after_a_failed_verify_resumes_the_plan_and_does_not_superse
 
     found = a_rerun_dry_run(conn, data)
 
-    assert (found.resumes, found.checked.draft.supersedes) == ("wp-2026-11-02", None)
+    assert (found.resumes, found.summary.supersedes) == ("wp-2026-11-02", None)
 
 
 def test_resuming_a_superseding_plan_keeps_the_plan_it_superseded() -> None:
@@ -492,7 +493,7 @@ def test_resuming_a_superseding_plan_keeps_the_plan_it_superseded() -> None:
 
     found = a_rerun_dry_run(conn, superseding)
 
-    assert (found.resumes, found.checked.draft.supersedes) == (
+    assert (found.resumes, found.summary.supersedes) == (
         "wp-2026-11-02-2",
         "wp-2026-11-02",
     )
@@ -621,3 +622,90 @@ def test_a_settled_rerun_on_a_later_day_keeps_the_approved_hash_for_the_next_res
     assert (found.write_plan_hash, found.moved_routines) == (digest, ())
     assert again.resumed
     assert [o.outcome for o in again.routines] == ["unchanged", "unchanged"]
+
+
+def a_failed_push(conn: Connection, hevy: FakeHevy, data: bytes) -> str:
+    """The Draft approved and its push failed on the first read-back; returns the hash."""
+    digest = the_hash(conn, data)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        push(conn, hevy, data, digest)
+    return digest
+
+
+def test_a_resumed_dry_run_shows_the_frozen_prescriptions_after_an_import_moved_the_anchor() -> (
+    None
+):
+    conn = a_squat_week()
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = a_failed_push(conn, hevy, data)
+    squat_logged(conn, "h-2", "2026-10-30", *[(140, 8, 8)] * 4)
+
+    found = a_rerun_dry_run(conn, data)
+
+    shown = [
+        (session.session_id, line.exercise_id, line.change)
+        for session in found.summary.sessions
+        for line in session.lines
+    ]
+    assert shown == [("lower", "bb_back_squat", "4×6–8 @8: 120 → 125")]
+    [frozen] = week_plans.prescriptions(conn, "wp-2026-11-02")
+    assert [line.set_groups for s in found.summary.sessions for line in s.lines] == [
+        frozen["set_groups"]
+    ]
+    assert found.write_plan_hash == digest
+
+
+def test_a_resume_works_out_its_hevy_actions_from_the_frozen_week_plan() -> None:
+    conn = a_squat_week(a_session("lower", a_line("bb_back_squat")), a_session("upper"))
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = a_failed_push(conn, hevy, data)
+    adopt(
+        conn,
+        toml(a_draft(a_session("lower", a_line("bb_back_squat")))),
+        file="next.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(datetime.datetime(2026, 10, 31, 12, tzinfo=datetime.UTC)),
+    )
+
+    found = a_rerun_dry_run(conn, data)
+    resumed = push(conn, hevy, data, digest)
+
+    assert found.actions.to_json()["routines"] == {
+        "update": [{"session": "lower", "routine": lower_routine(conn)}],
+        "create": [{"session": "upper", "routine": None}],
+        "retire": [],
+    }
+    assert [(o.session_id, o.action, o.outcome) for o in resumed.routines] == [
+        ("lower", "update", "verified"),
+        ("upper", "create", "verified"),
+    ]
+
+
+AGGRAVATED_KNEE = """
+[[niggle]]
+site = "left knee"
+date = 2026-10-30
+status = "aggravated"
+
+[[niggle.constraints]]
+kind = "load_cap"
+exercise = "bb_back_squat"
+value = 100
+"""
+
+
+def test_a_flag_that_became_a_violation_after_approval_does_not_block_the_resume() -> None:
+    conn = a_squat_week()
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True, overrides=PIN_115)
+    digest = a_failed_push(conn, hevy, data)
+    record(conn, AGGRAVATED_KNEE.encode(), file="knee.toml", clock=FixedClock())
+
+    resumed = push(conn, hevy, data, digest)
+
+    assert resumed.resumed
+    assert [(o.session_id, o.outcome) for o in resumed.routines] == [("lower", "verified")]

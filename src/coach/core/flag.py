@@ -4,7 +4,7 @@ import json
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
-from typing import get_args
+from typing import cast, get_args
 
 from coach.core.errors import Invalid
 from coach.core.registries.flags import FLAGS, AcknowledgementSource, ScopeKind, Severity
@@ -172,6 +172,22 @@ class Flag:
             "left": self.left.to_json() if self.left else None,
         }
 
+    @classmethod
+    def from_json(cls, document: Mapping[str, object]) -> "Flag":
+        """A flag as `to_json` wrote it, such as one frozen on a prescription row."""
+        key = FlagKey.parse(str(document["key"]))
+        left = document.get("left")
+        rn = document.get("rn")
+        return cls(
+            key.code,
+            cast(Severity, document["severity"]),
+            key.scope,
+            cast(Mapping[str, object], document["params"]),
+            None if rn is None else str(rn),
+            str(document["message"]),
+            None if left is None else _left(cast(Mapping[str, object], left)),
+        )
+
     def to_summary(self) -> dict[str, object]:
         """The flag in a default summary: its key and what it says, the params left out."""
         return {
@@ -181,6 +197,15 @@ class Flag:
             "message": self.message,
             "left": self.left.to_json() if self.left else None,
         }
+
+
+def _left(document: Mapping[str, object]) -> Left:
+    return Left(
+        cast(Reason, document["because"]),
+        str(document["text"]),
+        cast(AcknowledgementSource, document["source"]),
+        tuple(str(ref) for ref in cast(list[object], document["evidence"])),
+    )
 
 
 def raise_flag(

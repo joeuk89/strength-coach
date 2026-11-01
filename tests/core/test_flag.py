@@ -363,3 +363,12 @@ def test_a_weekplan_acknowledgement_does_not_leave_a_cadence_signal() -> None:
     slow = a_cadence_slow()
 
     assert leave(slow, [an_acknowledgement(slow.key, slow.params_hash)]).left is None
+
+
+@pytest.mark.parametrize("left", [False, True], ids=["standing", "left"])
+def test_a_flag_reads_back_from_its_json(left: bool) -> None:
+    flag = a_stall(streak=3)
+    if left:
+        flag = leave(flag, [an_acknowledgement(flag.key, flag.params_hash)])
+
+    assert Flag.from_json(flag.to_json()) == flag
