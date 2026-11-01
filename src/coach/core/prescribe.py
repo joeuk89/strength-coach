@@ -223,21 +223,19 @@ class _Derivation:
         self, exposure: Exposure, tm: TrainingMax, count: int, rack: Rack | None
     ) -> None:
         index = wave_of(exposure, tm.load, count, rack)
-        if index is not None and rep_out(exposure) < rep_out_target(index):
-            target = rep_out_target(index)
+        if index is not None and (reps := rep_out(exposure)) < (target := rep_out_target(index)):
             self._raise(
                 "rep_range_missed",
                 {
                     "set_index": len(exposure.working),
-                    "reps": rep_out(exposure),
+                    "reps": reps,
                     "range": [target, target],
                     "logged_rpe": exposure.working[-1].rpe,
                     "authored_rpe": None,
                 },
-                f"the rep-out logged {rep_out(exposure)} reps, short of wave {index + 1}'s "
-                f"{target}",
+                f"the rep-out logged {reps} reps, short of wave {index + 1}'s {target}",
             )
-        history = ordinary(line_history(self.request.exposures, exposure, on=self.on))
+        history = self._history(exposure)
         rep_outs = rep_outs_due(history, tm.load, count, rack)
         if rep_outs is not None:
             self._raise(
@@ -263,7 +261,7 @@ class _Derivation:
         return f"{_working(self.line)}: {_n(before)} → {_n(after)}"
 
     def _reset(self, exposure: Exposure, before: Load, rack: Rack | None) -> Load | None:
-        history = ordinary(line_history(self.request.exposures, exposure, on=self.on))
+        history = self._history(exposure)
         misses = misses_at(self.line, history, before, rack)
         if misses < misses_before_reset(self.line):
             return None
@@ -271,8 +269,11 @@ class _Derivation:
         self.steps.append(Step("scheme", before.amount, reset.amount, f"reset, misses {misses}"))
         return self._round(rack, reset, "cut")
 
+    def _history(self, anchor_exposure: Exposure) -> tuple[Exposure, ...]:
+        return ordinary(line_history(self.request.exposures, anchor_exposure, on=self.on))
+
     def _stall(self, anchor_exposure: Exposure) -> None:
-        history = ordinary(line_history(self.request.exposures, anchor_exposure, on=self.on))
+        history = self._history(anchor_exposure)
         streak = stall_streak(self.line, history)
         if streak:
             self._raise(

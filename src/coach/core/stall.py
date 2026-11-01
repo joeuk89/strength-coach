@@ -9,7 +9,6 @@ from coach.core.linear import missed
 from coach.core.program.form import Line
 
 STREAK = 3
-STREAK_RN = None
 
 type Metric = Callable[[Line, Exposure], float]
 type Run = Callable[[Line, Sequence[Exposure]], int]

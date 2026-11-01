@@ -80,8 +80,7 @@ class StatusSpan:
 
 @dataclass(frozen=True)
 class MatchedActivity:
-    """A conditioning session's last matched workout: its minutes, RPE, the reps logged per
-    exercise and the rounds done."""
+    """A conditioning session's last matched workout."""
 
     date: datetime.date
     minutes: int | None

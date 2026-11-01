@@ -17,16 +17,17 @@ def conditioning_dose(
         return None
     params = scheme.params
     authored = _per_exercise(params.get("reps"))
+    volume_key = _volume_key(scheme)
     if activity is None:
-        return _dose(scheme, _int(params, _volume_key(scheme)), authored, "params", "as authored")
+        return _dose(scheme, _int(params, volume_key), authored, "params", "as authored")
     volume = activity.rounds if scheme.name == "circuit_rounds" else activity.minutes
-    volume = _int(params, _volume_key(scheme)) if volume is None else volume
+    volume = _int(params, volume_key) if volume is None else volume
     reps = {**authored, **activity.reps}
     derived_from = f"activity:{activity.date.isoformat()}"
     over = activity.rpe is not None and activity.rpe > float(cast(float, params["rpe_target"]))
     if over:
         return _dose(scheme, volume, reps, derived_from, "held")
-    cap = _int(params, f"{_volume_key(scheme)}_cap")
+    cap = _int(params, f"{volume_key}_cap")
     if volume < cap:
         step = _int(params, "minutes_step") if scheme.name == "emom_density" else 1
         stepped = min(volume + step, cap)
