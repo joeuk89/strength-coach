@@ -77,14 +77,15 @@ def frozen_summary(
     """The WeekPlan as its prescription rows froze it, in their order. The rows carry no
     location, so each session's comes from `locations` with the plan's overrides folded in. A
     flag is frozen on every line it bears on; the summary shows it once."""
-    days: dict[tuple[str, str], list[Json]] = {}
+    days: dict[tuple[datetime.date, str], list[Json]] = {}
     for row in rows:
-        days.setdefault((str(row["date"]), str(row["session_id"])), []).append(row)
+        day = datetime.date.fromisoformat(str(row["date"]))
+        days.setdefault((day, str(row["session_id"])), []).append(row)
     sessions = tuple(
         SummarySession(
             session_id,
-            datetime.date.fromisoformat(day),
-            _location(session_id, datetime.date.fromisoformat(day), locations, overrides),
+            day,
+            _location(session_id, day, locations, overrides),
             tuple(_line(row) for row in found),
         )
         for (day, session_id), found in days.items()

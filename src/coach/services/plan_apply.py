@@ -41,6 +41,7 @@ from coach.services.projections import session_facts
 from coach.services.routine_push import Push, RoutineOutcome, guard
 from coach.store import exercises, mirrors, niggles, programs, routine_map, week_plans
 from coach.store.connection import Connection
+from coach.store.programs import VersionRow
 from coach.store.rows import Row
 from coach.store.transaction import transaction
 
@@ -155,16 +156,16 @@ def _resumed(conn: Connection, approved: Row, *, hevy: bool) -> DryRun:
     the approved hash, or a new one when a touched routine moved in Hevy since approval."""
     plan_id = str(approved["id"])
     rows = week_plans.prescriptions(conn, plan_id)
-    overrides = week_plans.stored_overrides(conn, plan_id)
+    version = programs.in_force_at(conn, str(approved["approved_at"]))
     summary = frozen_summary(
         week=datetime.date.fromisoformat(str(approved["week"])),
         position=str(approved["position"]),
         supersedes=week_plans.superseded(conn, plan_id),
         rows=rows,
-        overrides=overrides,
-        locations=_locations(conn, approved),
+        overrides=week_plans.stored_overrides(conn, plan_id),
+        locations=_locations(conn, version),
     )
-    actions = _frozen_actions(conn, approved, rows) if hevy else HevyActions()
+    actions = _frozen_actions(conn, approved, version, rows) if hevy else HevyActions()
     moved = moved_routines(
         actions.touched_routines,
         approved_at=str(approved["approved_at"]),
@@ -178,15 +179,16 @@ def _resumed(conn: Connection, approved: Row, *, hevy: bool) -> DryRun:
     return DryRun(summary, actions, digest, resumes=plan_id, moved_routines=moved)
 
 
-def _locations(conn: Connection, approved: Row) -> dict[str, str]:
+def _locations(conn: Connection, version: VersionRow | None) -> dict[str, str]:
     """Each session at its own location, else the default of the version in force at approval."""
-    version = programs.in_force_at(conn, str(approved["approved_at"]))
     default = version.form.location if version else None
     sessions = (*niggles.every_rehab_session(conn), *(version.form.sessions if version else ()))
     return {s.id: s.location or default or "" for s in sessions}
 
 
-def _frozen_actions(conn: Connection, approved: Row, rows: Sequence[Row]) -> HevyActions:
+def _frozen_actions(
+    conn: Connection, approved: Row, version: VersionRow | None, rows: Sequence[Row]
+) -> HevyActions:
     """The frozen WeekPlan's sessions against the routines, folders and templates as they are
     now. Every session the plan projects stays in force, so a resume never retires one."""
     facts = session_facts(conn, approved)
@@ -198,17 +200,14 @@ def _frozen_actions(conn: Connection, approved: Row, rows: Sequence[Row]) -> Hev
         projected,
         routine_map=routine_map.rows(conn),
         folders={folder.role for folder in mirrors.folders(conn)},
-        sessions_in_force=_in_force(conn, approved, projected),
+        sessions_in_force=_in_force(conn, version, projected),
         templates=_templates(conn),
     )
 
 
 def _in_force(
-    conn: Connection,
-    approved: Row,
-    projected: Sequence[ProjectedSession],
+    conn: Connection, version: VersionRow | None, projected: Sequence[ProjectedSession]
 ) -> set[str]:
-    version = programs.in_force_at(conn, str(approved["approved_at"]))
     return {
         *(s.id for s in (version.form.sessions if version else ())),
         *(s.id for s in niggles.open_rehab_sessions(conn)),
