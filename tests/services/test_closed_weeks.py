@@ -5,7 +5,7 @@ from support.closed_weeks import (
     closed_through,
     monday,
 )
-from support.history import an_annotation
+from support.history import a_logged_workout, an_annotation
 from support.plans import a_plan_override, a_squat_program, squat_logged
 
 from coach.services.closed_weeks import closed_weeks
@@ -71,3 +71,33 @@ def test_a_light_week_closes_the_block_and_the_next_hard_week_counts_1_in_a_new_
         ("b-2026-10-30", 1),
         ("b-2026-11-16", 1),
     ]
+
+
+def test_a_trained_unlogged_session_is_a_lifting_date_so_the_next_week_is_no_return() -> None:
+    conn = a_squat_program()
+    a_hard_squat_week(conn, monday(0))
+    a_planned_squat_week(conn, monday(1))
+    an_annotation(conn, "a-0001", "trained_unlogged", f"planned_session:{monday(1)}/lower")
+    a_hard_squat_week(conn, monday(2))
+    closed_through(conn, 3)
+
+    found = closed_weeks(conn)
+
+    assert found.weeks[2].kind == "hard"
+    assert [(b.id, b.hard_weeks) for b in found.blocks] == [("b-2026-10-30", 2)]
+
+
+def test_a_hand_entered_workout_with_no_sets_is_a_lifting_date_so_the_next_week_is_no_return() -> (
+    None
+):
+    conn = a_squat_program()
+    a_hard_squat_week(conn, monday(0))
+    a_planned_squat_week(conn, monday(1))
+    a_logged_workout(conn, "w-1", monday(1), session_id="lower")
+    a_hard_squat_week(conn, monday(2))
+    closed_through(conn, 3)
+
+    found = closed_weeks(conn)
+
+    assert found.weeks[2].kind == "hard"
+    assert [(b.id, b.hard_weeks) for b in found.blocks] == [("b-2026-10-30", 2)]

@@ -20,6 +20,7 @@ from coach.core.planned_week import DAYS_IN_WEEK, choose_sessions, planned_sessi
 from coach.core.prescription import PlanOverride, StatusSpan
 from coach.core.program.form import ProgramForm
 from coach.core.ref import Ref
+from coach.services.history import trained_without_sets
 from coach.store import (
     annotations,
     check_ins,
@@ -104,6 +105,7 @@ class _Log:
         library = exercises.library(conn)
         live = annotations.live(conn)
         current = workouts.current_workouts(conn)
+        sessions = workouts.sessions_of_current(conn)
         exposures = resolve(
             (LoggedWorkout(v.id, _day(v.date), v.sets) for v in current), library, live, units
         )
@@ -119,8 +121,11 @@ class _Log:
             )
             for v in current
         )
-        self.lifting_dates = [w.date for w in self.workouts if w.kind == "lifting"]
-        self.claims = _claims(live, self.workouts, workouts.sessions_of_current(conn))
+        self.lifting_dates = [
+            *(w.date for w in self.workouts if w.kind == "lifting"),
+            *(t.date for t in trained_without_sets(live, current, sessions)),
+        ]
+        self.claims = _claims(live, self.workouts, sessions)
         self.trained_unlogged = _planned_refs(live, "trained_unlogged")
         self.cancelled = _planned_refs(live, "cancelled")
         self.spans = status_spans(conn)
