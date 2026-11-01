@@ -115,12 +115,12 @@ def short_nights(conn: Connection, *nights: str) -> None:
     record(conn, draft.encode(), file="s.toml", clock=FixedClock())
 
 
-def proposed_and_recorded() -> Connection:
+def proposed_and_recorded(*, tier: str = "light") -> Connection:
     """The proposal above, then the check-in that opened it recorded with the readiness given at
     its open, `poor`, after a row reporting `ok`."""
     conn = four_hard_weeks(readiness="ok")
     aggravated(conn, "2026-11-25")
-    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="poor")
+    a_check_in(conn, "2026-11-23", "2026-11-29", readiness="poor", tier=tier)
     return conn
 
 
@@ -277,9 +277,7 @@ def test_status_reads_logged_loads_in_the_athletes_units() -> None:
 
 
 def test_a_standing_proposal_leaves_the_next_check_ins_light() -> None:
-    conn = proposed_and_recorded()
-    with conn:
-        conn.execute("UPDATE check_in SET tier = 'deep' WHERE id = 'ci-2026-11-29'")
+    conn = proposed_and_recorded(tier="deep")
 
     on = datetime.date(2026, 12, 6)
 

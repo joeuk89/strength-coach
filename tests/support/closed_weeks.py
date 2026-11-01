@@ -31,7 +31,9 @@ def a_hard_squat_week(conn: Connection, week: str) -> str:
     return plan_id
 
 
-def a_check_in(conn: Connection, start: str, end: str, *, readiness: str | None = None) -> None:
+def a_check_in(
+    conn: Connection, start: str, end: str, *, readiness: str | None = None, tier: str = "light"
+) -> None:
     with conn:
         rows.insert(
             conn,
@@ -39,7 +41,7 @@ def a_check_in(conn: Connection, start: str, end: str, *, readiness: str | None 
             {
                 "id": f"ci-{end}",
                 "date": end,
-                "tier": "light",
+                "tier": tier,
                 "window_start": start,
                 "window_end": end,
                 "read": "A steady block.",
