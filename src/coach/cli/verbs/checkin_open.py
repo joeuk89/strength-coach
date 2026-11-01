@@ -1,5 +1,6 @@
 import datetime
 from contextlib import closing
+from typing import cast
 
 from coach.cli.declaration import Argument, ArgValue, Call, Declaration, Example, Json, Outcome
 from coach.cli.instance import open_instance_store
@@ -31,20 +32,30 @@ def run(call: Call) -> Outcome:
             "tier": card.tier,
             "window": {"start": card.window.start.isoformat(), "end": card.window.end.isoformat()},
             "catch_up": card.catch_up,
-            "card": [_field(f) for f in card.fields],
+            "card": [_field(f, None if call.full else call.last) for f in card.fields],
         },
         warnings=card.warnings,
     )
 
 
-def _field(found: CardField) -> Json:
+def _field(found: CardField, last: int | None) -> Json:
     return {
         "field": found.name,
         **found.facts,
+        **_row_list(found.facts.get("rows"), last),
         "asks": [
             {"ask": ask.kind, **({"about": ask.about} if ask.about else {})} for ask in found.asks
         ],
     }
+
+
+def _row_list(rows: object, last: int | None) -> Json:
+    """A field's `rows` follow the list rule (verbs.md, "Envelope and budget")."""
+    if not isinstance(rows, list):
+        return {}
+    every = cast(list[object], rows)
+    kept = every if last is None else every[:last]
+    return {"rows": kept, "count": len(every), "truncated": len(kept) < len(every)}
 
 
 def _date(value: ArgValue | None) -> datetime.date | None:
