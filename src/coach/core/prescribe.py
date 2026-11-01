@@ -26,6 +26,7 @@ from coach.core.prescription import (
 from coach.core.program.form import LOAD_BEARING_MODES, RACK_MODES, Line, Number, SetGroup
 from coach.core.rack import Rack, next_row_up
 from coach.core.scheme_moves import Move, SchemeInput, SchemeMoves
+from coach.core.top_backoff import back_off_load
 from coach.core.warm_up import warm_up_loads
 
 
@@ -262,6 +263,7 @@ class _Derivation:
             warm_ups = list(loads)
         groups: list[PrescribedGroup] = []
         test = bounded.test
+        top = True
         for group in bounded.sets:
             if group.type == "warm_up":
                 groups.extend(_group(group, warm_ups.pop(0), count=1) for _ in range(group.count))
@@ -272,8 +274,16 @@ class _Derivation:
             if not group.working:
                 groups.append(_group(group, None))
                 continue
-            groups.append(_group(group, working, rpe_cap=bounded.rpe_cap))
+            load = working if top else self._back_off(line, rack, working)
+            top = False
+            groups.append(_group(group, load, rpe_cap=bounded.rpe_cap))
         return tuple(groups)
+
+    def _back_off(self, line: Line, rack: Rack | None, top: Load | None) -> Load | None:
+        """Under `top_backoff` every working group after the first follows the bounded top."""
+        if top is None or line.scheme.name != "top_backoff":
+            return top
+        return back_off_load(top, line, rack)
 
     def _raise(self, code: str, params: dict[str, object], message: str) -> None:
         self.flags.append(raise_flag(code, self.scope, params, message))

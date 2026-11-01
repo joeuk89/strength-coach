@@ -244,11 +244,12 @@ def test_a_priority_lift_under_top_backoff_gets_one_test_single_in_a_light_week(
 
     line = derive(TOP_BACKOFF, logged, overrides=(LIGHT_WEEK,), dose=PRIORITY)
 
-    # e1RM 100 × (1 + 5/30) = 116.67; one rep at RPE 9 is 116.67 / (1 + 2/30) = 109.4, down to 105
+    # e1RM 100 × (1 + 5/30) = 116.67; one rep at RPE 9 is 116.67 / (1 + 2/30) = 109.4, down to 105;
+    # the back-offs are 85 % of the top
     assert [(g.type, g.count, g.load, g.reps, g.rpe) for g in line.groups[1:]] == [
         ("test", 1, Load(105, "total"), 1, 9),
         ("working", 1, Load(100, "total"), 3, 8),
-        ("working", 2, Load(100, "total"), 5, 8),
+        ("working", 2, Load(85, "total"), 5, 8),
     ]
     assert line.groups[0].type == "warm_up"
 

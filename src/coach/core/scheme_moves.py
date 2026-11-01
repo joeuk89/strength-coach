@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from coach.core.anchor import StartLoad, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
+from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.line_history import line_history, ordinary
@@ -16,6 +17,7 @@ from coach.core.prescription import PrescribeRequest, Step
 from coach.core.program.form import LOAD_BEARING_MODES, Line, SetGroup
 from coach.core.progression import Verdict, judge
 from coach.core.rack import Rack, Rounding, next_row_up
+from coach.core.top_backoff import top_set
 
 
 @dataclass(frozen=True)
@@ -93,6 +95,8 @@ class SchemeMoves:
     def move(self, exposure: Exposure, before: Load | None) -> Move:
         if self.line.scheme.name == "assistance_ladder":
             return self._climb(exposure, before)
+        if self.line.scheme.name == "top_backoff":
+            return self._top(before)
         verdict = self._judge(exposure, before)
         rack = self.given.rack
         if verdict.hit and before is not None and rack is not None:
@@ -132,6 +136,22 @@ class SchemeMoves:
             return self._held(rung)
         self.steps.append(Step("scheme", rung.amount, up, "hit"))
         return Move(Load(up, "assisted"), "step_up", self.given.sets)
+
+    def _top(self, before: Load | None) -> Move:
+        found = e1rm(self.given.request.exposures, self.line.exercise, self.given.on)
+        if found is None:
+            self._raise(
+                "no_e1rm",
+                {"exercise_id": self.line.exercise, "scheme": self.line.scheme.name},
+                f"no e1RM for {self.line.exercise} in the window, so the top set holds",
+            )
+            return self._held(before)
+        if before is None:
+            return self._held(before)
+        top = top_set(found.load.as_mode(self.given.mode), self.line, before, self.given.rack)
+        if top.load != before:
+            self.steps.append(Step("scheme", before.amount, top.load.amount, top.cause))
+        return Move(top.load, "hold", self.given.sets)
 
     def _reset(self, exposure: Exposure, before: Load) -> Move | None:
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
