@@ -1,9 +1,8 @@
 import os
-import re
 from contextlib import closing
 from pathlib import Path
 
-from coach.cli import git, init_answers, registry
+from coach.cli import git, init_answers
 from coach.cli.declaration import (
     Argument,
     ArgValue,
@@ -13,13 +12,14 @@ from coach.cli.declaration import (
     Json,
     Outcome,
 )
+from coach.cli.generated import generated_files
 from coach.core.config import Config, Engine, Hevy
+from coach.core.engine_pin import is_release
 from coach.core.errors import Invalid, Setup
-from coach.render.instance_files import GITIGNORE, claude_md, coach_toml, settings_json
+from coach.render.instance_files import GITIGNORE, coach_toml
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
 
-RELEASE_VERSION = re.compile(r"\d+\.\d+\.\d+")
 # The engine-owned tier of ADR 0013, plus the append-only audit.
 ENGINE_OWNED = (
     "coach.toml",
@@ -92,7 +92,7 @@ def _refuse_an_instance(root: Path) -> None:
 
 
 def _pin(running: str, requested: ArgValue | None) -> str:
-    if isinstance(requested, str) and not RELEASE_VERSION.fullmatch(requested):
+    if isinstance(requested, str) and not is_release(requested):
         raise Invalid("invalid_argument", f"--pin takes a release X.Y.Z, not {requested!r}")
     if ".dev" in running:
         if not isinstance(requested, str):
@@ -111,11 +111,9 @@ def _pin(running: str, requested: ArgValue | None) -> str:
 
 
 def _texts(root: Path, config: Config, pin: str, key: str | None) -> dict[str, str]:
-    asked = [d.name for d in registry.declarations() if d.writes in ("hevy", "git")]
     texts = {
         ".gitignore": _gitignore(root / ".gitignore"),
-        ".claude/settings.json": settings_json(asked),
-        "CLAUDE.md": claude_md(pin),
+        **generated_files(pin),
         "coach.toml": coach_toml(config),
     }
     if key is not None:

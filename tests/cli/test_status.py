@@ -288,3 +288,21 @@ def test_status_keeps_no_kit_hash_in_the_store(
     store.close()
     assert hashlib.sha256(INVENTORY.read_bytes()).hexdigest()[:8] not in dump
     assert "sha256" not in dump
+
+
+def test_a_hand_edit_to_a_generated_file_warns_generated_file_drift_naming_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: pytest.MonkeyPatch
+) -> None:
+    root = an_instance(tmp_path, pin=RELEASE_ENGINE)
+    with (root / "CLAUDE.md").open("a", encoding="utf-8") as claude_md:
+        claude_md.write("Always answer in French.\n")
+    (root / ".claude" / "settings.json").unlink()
+    monkeypatch.chdir(root)
+
+    run = run_coach("status")
+
+    assert run.code == 0
+    drift = [w["message"] for w in run.envelope["warnings"] if w["code"] == "generated_file_drift"]
+    assert len(drift) == 2
+    assert drift[0].startswith(".claude/settings.json ")
+    assert drift[1].startswith("CLAUDE.md ")
