@@ -139,7 +139,7 @@ def adopt(
                 sequence=int(version_id.removeprefix("pv-")),
                 position=start,
                 adopted=today,
-                form=filled.form,
+                form=replace(filled.form, acknowledgements=frozen),
                 draft_hash=draft.hash,
                 recorded_at=clock.now().astimezone(datetime.UTC).isoformat(timespec="seconds"),
             ),

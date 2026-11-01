@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import tomllib
 from typing import Any, cast
 
 import pytest
@@ -511,3 +512,34 @@ def test_a_stale_acknowledgement_is_refused_as_acknowledgement_unmatched() -> No
         run(the_worked_store(), stale, available_days=EVERY_DAY)
 
     assert refused.value.code == "acknowledgement_unmatched"
+
+
+def test_a_carried_acknowledgement_leaves_nothing_once_its_warning_params_change() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+    draft = tomllib.loads(show_draft(conn))
+    [pull] = [s for s in draft["session"] if s["id"] == "a-sat-pull"]
+    [line] = [x for x in pull["line"] if x["exercise"] == "pull_up"]
+    line["sets"] = [{"count": 3, "reps": [8, 12], "rpe": 8}]
+    line["scheme"] = {"name": "double_progression"}
+
+    result = run(conn, toml(draft), available_days=EVERY_DAY)
+
+    [flag] = [f for f in result.warnings if f.code == "scheme_off_emphasis"]
+    assert (flag.key, flag.params["scheme"], flag.left) == (
+        "scheme_off_emphasis@line:a-sat-pull/pull_up",
+        "double_progression",
+        None,
+    )
+    assert result.acknowledgements == () == programs.acknowledgements(conn, "pv-2")
+
+
+def test_a_carried_acknowledgement_still_leaves_its_unchanged_warning() -> None:
+    conn = the_worked_store()
+    adopted = run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+
+    again = run(conn, show_draft(conn), available_days=EVERY_DAY)
+
+    assert again.version_id == "pv-2"
+    assert again.acknowledgements == adopted.acknowledgements
+    assert programs.acknowledgements(conn, "pv-2") == adopted.acknowledgements
