@@ -1,7 +1,7 @@
 import shutil
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import pytest
 from support.cli import Run, run_coach
@@ -108,7 +108,7 @@ def declared(argv: tuple[str, ...]) -> Declaration:
 
 
 # Envelopes the spec does not yet let fit 3 KB, each with the conflict that holds it over. Remove
-# one when its verb fits, or the last test here fails.
+# one when its verb fits, or the size test fails.
 OVER_BUDGET: dict[tuple[str, ...], str] = {
     ("checkin", "open"): "the card's sessions, dose and notes lists carry no list rule",
     ("checkin", "open", "--date", "2026-11-01", "--tier", "deep"): "as checkin open",
@@ -119,36 +119,28 @@ OVER_BUDGET: dict[tuple[str, ...], str] = {
 }
 
 
-def every_call() -> list[Any]:
-    return [pytest.param(argv, id=" ".join(argv)) for argv in calls()]
+def size(run: Run) -> int:
+    return len(run.stdout.encode("utf-8"))
 
 
-@pytest.mark.parametrize("argv", [a for a in every_call() if a.values[0] not in OVER_BUDGET])
+# One test per check, not per call: the shared runs then build once, in one worker.
 def test_every_default_envelope_on_the_fixture_instance_is_under_3_kb(
-    envelopes: dict[tuple[str, ...], Run], argv: tuple[str, ...]
+    envelopes: dict[tuple[str, ...], Run],
 ) -> None:
-    run = envelopes[argv]
+    over = {" ".join(a): size(r) for a, r in envelopes.items() if size(r) > BUDGET_BYTES}
 
-    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
-
-
-@pytest.mark.parametrize("argv", list(OVER_BUDGET), ids=" ".join)
-def test_an_envelope_listed_over_budget_is_still_over_it(
-    envelopes: dict[tuple[str, ...], Run], argv: tuple[str, ...]
-) -> None:
-    assert len(envelopes[argv].stdout.encode("utf-8")) > BUDGET_BYTES
+    assert over.keys() == {" ".join(a) for a in OVER_BUDGET}, over
 
 
-@pytest.mark.parametrize("argv", every_call())
-def test_no_declared_field_is_dropped(
-    envelopes: dict[tuple[str, ...], Run], argv: tuple[str, ...]
-) -> None:
-    run = envelopes[argv]
-    if not run.envelope["ok"]:
-        return
+def test_no_declared_field_is_dropped(envelopes: dict[tuple[str, ...], Run]) -> None:
+    dropped = {
+        " ".join(argv): sorted(set(required) - set(run.envelope["result"]))
+        for argv, run in envelopes.items()
+        if run.envelope["ok"]
+        and (required := cast(list[str], declared(argv).output.get("required", [])))
+    }
 
-    required = cast(list[str], declared(argv).output.get("required", []))
-    assert set(required) <= set(run.envelope["result"])
+    assert {argv: fields for argv, fields in dropped.items() if fields} == {}
 
 
 def truncation_keys(schema: object) -> set[str]:
@@ -159,17 +151,17 @@ def truncation_keys(schema: object) -> set[str]:
     return found | {k for child in properties.values() for k in truncation_keys(child)}
 
 
-@pytest.mark.parametrize(
-    "declaration",
-    [d for d in declarations() if truncation_keys(d.output)],
-    ids=lambda d: d.name,
-)
 def test_every_list_a_summary_truncates_is_truncated_at_least_once(
-    envelopes: dict[tuple[str, ...], Run], declaration: Declaration
+    envelopes: dict[tuple[str, ...], Run],
 ) -> None:
-    seen: set[str] = set()
-    for argv, run in envelopes.items():
-        if run.envelope["ok"] and declared(argv) is declaration:
-            seen |= {key for key, value in run.envelope["result"].items() if value is True}
+    never: dict[str, set[str]] = {}
+    for declaration in declarations():
+        seen: set[str] = set()
+        for argv, run in envelopes.items():
+            if run.envelope["ok"] and declared(argv) is declaration:
+                seen |= {key for key, value in run.envelope["result"].items() if value is True}
+        missing = truncation_keys(declaration.output) - seen
+        if missing:
+            never[declaration.name] = missing
 
-    assert truncation_keys(declaration.output) <= seen
+    assert never == {}
