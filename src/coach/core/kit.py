@@ -4,9 +4,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from coach.core.config import Dumbbells, Units
+from coach.core.config import Dumbbells, GridLocation, Location, Units
 from coach.core.errors import Setup
-from coach.core.rack import ListedRack, Position, RackRow
+from coach.core.rack import ListedRack, Position, Rack, RackRow, grid_rack
 
 KIT_FORMATS = (1,)
 SHORT_HASH_LENGTH = 8
@@ -61,6 +61,19 @@ def parse_kit_tables(
         inventory_sha256=_text(document.get("inventory_sha256"), "inventory_sha256"),
         racks=racks,
     )
+
+
+def location_racks(location: Location, kit: KitRacks | None) -> dict[str, Rack]:
+    """The rack of each equipment kind the location's `implements` maps (instance.md)."""
+    if isinstance(location, GridLocation):
+        return {
+            kind: grid_rack(location.implement[name]) for kind, name in location.implements.items()
+        }
+    if kit is None:
+        return {}
+    return {
+        kind: kit.racks[name] for kind, name in location.implements.items() if name in kit.racks
+    }
 
 
 def tables_state(files: KitFiles) -> TablesState:

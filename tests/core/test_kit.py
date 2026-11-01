@@ -3,8 +3,15 @@ from itertools import pairwise
 import pytest
 from support.kit_fixtures import kit_tables
 
+from coach.core.config import GridLocation, IncrementImplement, PlatePoolLocation, RackImplement
 from coach.core.errors import Setup
-from coach.core.kit import KitFiles, parse_kit_tables, require_current_tables, tables_state
+from coach.core.kit import (
+    KitFiles,
+    location_racks,
+    parse_kit_tables,
+    require_current_tables,
+    tables_state,
+)
 from coach.core.load import Load
 from coach.core.rack import Position, RackRow, round_to_rack, warm_up_ladder
 
@@ -125,3 +132,36 @@ def test_stale_tables_refuse_naming_the_location_and_the_generator_command() -> 
     assert raised.value.code == "kit_tables_stale"
     assert "location home" in raised.value.message
     assert "npx plate-pool achievable --inventory kit/home.json" in raised.value.message
+
+
+def test_a_plate_pool_location_supplies_the_kit_rack_of_each_implement_it_maps() -> None:
+    location = PlatePoolLocation(
+        "home", kit="home", collars="clamp", dumbbells="pair", implements={"barbell": "barbell"}
+    )
+    kit = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="lb")
+
+    racks = location_racks(location, kit)
+
+    assert set(racks) == {"barbell"}
+    assert racks["barbell"].rows_within(120, 120)
+
+
+def test_a_grid_location_supplies_the_rack_of_each_implement_table() -> None:
+    location = GridLocation(
+        "gym",
+        implements={"barbell": "bar", "machine": "stack"},
+        implement={"bar": IncrementImplement(2.5, base=20), "stack": RackImplement((5, 10))},
+    )
+
+    racks = location_racks(location, None)
+
+    assert racks["barbell"].rows_within(22.5, 22.5)
+    assert racks["machine"].top == RackRow(10)
+
+
+def test_a_plate_pool_location_without_its_kit_supplies_nothing() -> None:
+    location = PlatePoolLocation(
+        "home", kit="home", collars="clamp", dumbbells="pair", implements={"barbell": "barbell"}
+    )
+
+    assert location_racks(location, None) == {}
