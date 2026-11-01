@@ -10,6 +10,7 @@ TABLES = {
     "activity": "activity",
     "status_span": "status_span",
     "workout": "workout",
+    "observation": "observation",
 }
 # A record kind written as events: the event table and the column naming the record's id.
 EVENTS = {

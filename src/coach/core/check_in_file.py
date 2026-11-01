@@ -2,7 +2,6 @@ import datetime
 from dataclasses import dataclass
 
 from coach.core.draft_fields import Fields, draft_hash, required
-from coach.core.errors import Invalid
 from coach.core.goal import PhaseClose, PhaseOpen, parse_phase_open
 from coach.core.ledger_draft import LedgerDraft, ledger_draft_of, load_draft
 from coach.core.registries.ledger import CHECK_IN_TIERS, READINESS

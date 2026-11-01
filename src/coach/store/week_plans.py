@@ -155,3 +155,9 @@ def stored_overrides(conn: Connection, plan_id: str) -> tuple[PlanOverride, ...]
             table["evidence"] = row["evidence"]
         tables.append(table)
     return parse_plan_overrides({"override": tables}, file=f"WeekPlan {plan_id}")
+
+
+def first_week(conn: Connection) -> str | None:
+    """The Monday of the first WeekPlan approved; a superseded one was approved too."""
+    (found,) = conn.execute("SELECT min(week) FROM week_plan").fetchone()
+    return found

@@ -381,9 +381,7 @@ def _observation(f: Fields) -> ObservationRecord:
         retire = required(f.text("retire", required=True))
         if not OBSERVATION_ID.fullmatch(retire):
             raise f.wrong("retire", "an Observation id, o-0001")
-        return f.done(
-            ObservationRecord(retire=retire, because=f.text("because", required=True))
-        )
+        return f.done(ObservationRecord(retire=retire, because=f.text("because", required=True)))
     return f.done(
         ObservationRecord(
             text=f.text("text", required=True), evidence=f.refs("evidence"), key=f.key()

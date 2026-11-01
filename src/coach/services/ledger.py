@@ -19,6 +19,7 @@ from coach.core.ledger_draft import (
     LedgerRecord,
     LoggedSetRecord,
     NoteRecord,
+    ObservationRecord,
     SleepNightRecord,
     StatusSpanRecord,
     WeighInRecord,
@@ -33,7 +34,7 @@ from coach.services.coaching_ledger import (
     write_follow_up,
     write_niggle,
 )
-from coach.store import exercises, notes, readings, refs, workouts
+from coach.store import exercises, notes, observations, readings, refs, workouts
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 
@@ -49,6 +50,7 @@ ID_PREFIX = {
     "activity": ("activity", "ac-"),
     "status_span": ("status_span", "ss-"),
     "workout": ("workout", "w-"),
+    "observation": ("observation", "o-"),
 }
 # What a withdrawing row restates from the row it withdraws (schema.md, "Views").
 RESTATED = {
@@ -164,6 +166,10 @@ class _Writer:
                 self._workout(record, id_)
             case ExerciseRecord():
                 self._exercise(record)
+            case ObservationRecord(retire=str(target)):
+                self._retire_observation(target, record)
+            case ObservationRecord():
+                self._observation(record, id_)
         return None
 
     def _note(self, record: NoteRecord, id_: str) -> None:
@@ -307,6 +313,31 @@ class _Writer:
         if changed:
             exercises.update(self.conn, record.id, changed)
 
+    def _observation(self, record: ObservationRecord, id_: str) -> None:
+        evidence = [
+            str(self.writing.stored_ref(ref, "[[observation]] evidence")) for ref in record.evidence
+        ]
+        row = {"id": id_, "raised": _iso(self.stamp.today), "text": record.text}
+        observations.insert(self.conn, self._stamped({**row, "evidence": evidence}))
+
+    def _retire_observation(self, target: str, record: ObservationRecord) -> None:
+        stored = observations.get(self.conn, target)
+        if stored is None:
+            raise Invalid("invalid_argument", f"[[observation]] retires {target}, not stored")
+        if stored["retired_at"] is not None:
+            raise Invalid(
+                "invalid_argument",
+                f"[[observation]] retires {target}, already retired at "
+                f"{stored['retired_check_in']}",
+            )
+        observations.retire(
+            self.conn,
+            target,
+            retired_at=str(_iso(self.stamp.today)),
+            because=str(record.because),
+            check_in=str(self.stamp.check_in),
+        )
+
     def _check_duplicates(self) -> None:
         for table in ("weigh_in", "sleep_night"):
             for duplicate in readings.duplicates(self.conn, table):
@@ -322,7 +353,11 @@ def _named_id(record: LedgerRecord) -> str | None:
     match record:
         case ExerciseRecord():
             return record.id
-        case NiggleRecord(niggle=str(named)) | FollowUpRecord(followup=str(named)):
+        case (
+            NiggleRecord(niggle=str(named))
+            | FollowUpRecord(followup=str(named))
+            | ObservationRecord(retire=str(named))
+        ):
             return named
         case _:
             return None
