@@ -14,12 +14,7 @@ from coach.core.draft_fields import draft_hash
 from coach.core.errors import Invalid, Refused
 from coach.core.flag import Acknowledgement, Flag, FlagKey
 from coach.core.frozen_prescription import frozen_groups
-from coach.core.hevy_actions import (
-    STANDING_CADENCES,
-    HevyActions,
-    hevy_actions,
-    projected_sessions,
-)
+from coach.core.hevy_actions import HevyActions, hevy_actions, projected_sessions
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles
 from coach.core.plan_check import CheckedPlan, TemplateFacts, check_plan
@@ -30,7 +25,8 @@ from coach.core.registries.ledger import Reason
 from coach.core.write_plan import override_params, write_plan_hash
 from coach.hevy.protocol import HevyClient
 from coach.services.plan_draft import plan_draft
-from coach.services.routine_push import Push, RoutineOutcome, SessionFacts, guard
+from coach.services.projections import session_facts
+from coach.services.routine_push import Push, RoutineOutcome, guard
 from coach.store import decisions, exercises, mirrors, niggles, programs, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.transaction import transaction
@@ -208,7 +204,7 @@ def apply(
     plan = week_plans.by_id(conn, plan_id)
     if client is None or guarded is None:
         return ApplyResult(plan_id, found.write_plan_hash, found.resumes is not None, (), 0)
-    push = Push(conn, client, plan, _session_facts(conn), config.athlete.units, now)
+    push = Push(conn, client, plan, session_facts(conn), config.athlete.units, now)
     try:
         push.run(found.actions, guarded)
     except Invalid as error:
@@ -310,18 +306,6 @@ def _acknowledgement_row(acknowledgement: Acknowledgement) -> dict[str, object]:
         "text": acknowledgement.text,
         "evidence": _json(list(acknowledgement.evidence)) if acknowledgement.evidence else None,
     }
-
-
-def _session_facts(conn: Connection) -> dict[str, SessionFacts]:
-    version = programs.latest(conn)
-    assert version is not None
-    facts = {
-        s.id: SessionFacts(s, standing=s.cadence in STANDING_CADENCES)
-        for s in version.form.sessions
-    }
-    for rehab in niggles.open_rehab_sessions(conn):
-        facts[rehab.id] = SessionFacts(rehab, standing=True)
-    return facts
 
 
 def _json(value: object) -> str:

@@ -1,6 +1,8 @@
 """The Routine map: which Hevy routine carries each session (schema.md, "Hevy"). A state table:
 `plan apply` writes a row after each write, import flips one to `missing`."""
 
+from dataclasses import dataclass
+
 from coach.core.hevy_actions import MappedRoutine, MapStatus
 from coach.store.connection import Connection
 from coach.store.rows import Row, select
@@ -70,4 +72,22 @@ def joined(conn: Connection) -> list[Row]:
         " m.status, m.last_verified FROM routine_map m"
         " LEFT JOIN routine r ON r.hevy_id = m.routine_id"
         " LEFT JOIN folder f ON f.hevy_id = r.folder_id ORDER BY m.session_id",
+    )
+
+
+@dataclass(frozen=True)
+class WrittenRow:
+    session_id: str
+    routine_id: str
+    plan_id: str
+
+
+def written(conn: Connection) -> tuple[WrittenRow, ...]:
+    """The live rows a WeekPlan wrote: what drift is judged against."""
+    return tuple(
+        WrittenRow(*row)
+        for row in conn.execute(
+            "SELECT session_id, routine_id, plan_id FROM routine_map"
+            " WHERE status IN ('active','unverified') AND plan_id IS NOT NULL ORDER BY session_id"
+        )
     )

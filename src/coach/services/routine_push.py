@@ -18,16 +18,10 @@ from coach.core.mirror import (
     Routine,
     mirrored_routine,
 )
-from coach.core.program.form import Session
-from coach.core.routine_projection import (
-    FrozenLine,
-    SessionRoutine,
-    project_routine,
-    retired_routine,
-    routine_diff,
-)
+from coach.core.routine_projection import retired_routine, routine_diff
 from coach.hevy.protocol import HevyClient, Payload, WriteContext
-from coach.store import exercises, mirrors, routine_map, week_plans
+from coach.services.projections import SessionFacts, projection
+from coach.store import exercises, mirrors, routine_map
 from coach.store.connection import Connection
 
 type Outcome = Literal["verified", "unverified", "unchanged"]
@@ -50,15 +44,6 @@ class RoutineOutcome:
             "action": self.action,
             "outcome": self.outcome,
         }
-
-
-@dataclass(frozen=True)
-class SessionFacts:
-    """What a routine needs of its session beyond the frozen rows: the title, the authored lines
-    and whether it lives in the Standing folder."""
-
-    session: Session
-    standing: bool
 
 
 @dataclass(frozen=True)
@@ -130,10 +115,9 @@ class Push:
             self._folder(role, adopted)
         for template in actions.templates:
             self._template(template.exercise_id)
-        rows = week_plans.prescriptions(self.conn, str(self.plan["id"]))
         linked = {row.session_id: row.status for row in routine_map.rows(self.conn)}
         for action in (*actions.updates, *actions.creates):
-            body = self._body(action.session_id, rows)
+            body = self._body(action.session_id)
             routine = guarded.live.get(action.routine_id or "")
             if action in actions.updates:
                 status = linked[action.session_id]
@@ -248,32 +232,8 @@ class Push:
             verified=verified,
         )
 
-    def _body(self, session_id: str, rows: Sequence[Mapping[str, object]]) -> Payload:
-        facts = self.sessions[session_id]
-        mine = [r for r in rows if r["session_id"] == session_id]
-        first = min(str(r["date"]) for r in mine)
-        role: FolderRole = "standing" if facts.standing else "program"
-        session = SessionRoutine(
-            title=facts.session.title,
-            folder_id=self._folder_id(role),
-            week_line=f"Week of {self.plan['week']}, rotation week {self.plan['position']}",
-            authored=facts.session.lines,
-            lines=[
-                FrozenLine(
-                    str(r["exercise_id"]),
-                    cast(list[Mapping[str, object]], r["set_groups"]),
-                    cast(list[Mapping[str, object]], r["steps"]),
-                )
-                for r in mine
-                if r["date"] == first
-            ],
-        )
-        templates = {
-            str(row["id"]): str(row["hevy_template_id"])
-            for row in exercises.every(self.conn)
-            if row["hevy_template_id"]
-        }
-        return project_routine(session, templates, self.units)
+    def _body(self, session_id: str) -> Payload:
+        return projection(self.conn, self.plan, session_id, self.sessions[session_id], self.units)
 
     def _folder_id(self, role: FolderRole) -> str:
         found = {f.role: f.hevy_id for f in mirrors.folders(self.conn)}

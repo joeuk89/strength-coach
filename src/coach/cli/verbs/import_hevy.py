@@ -19,7 +19,9 @@ def run(call: Call) -> Outcome:
     client = call.make_client(key, instance.audit_path, call.clock)
     with closing(open_instance_store(instance)) as conn:
         # The global --full also names the full pull here (verbs.md, `import [--full]`).
-        result = import_hevy(conn, client, call.clock, full=call.full)
+        result = import_hevy(
+            conn, client, call.clock, full=call.full, units=instance.config.athlete.units
+        )
     return Outcome({"rebuilt": rebuilt, **_summary(result)}, warnings=result.warnings)
 
 
