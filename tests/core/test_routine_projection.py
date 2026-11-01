@@ -69,7 +69,7 @@ def test_lines_follow_the_authored_order_and_only_the_first_carries_the_week_lin
 
     first, second = body["exercises"]
     assert first["exercise_template_id"] == "SQ-1"
-    assert second["notes"] == "Target: 1×12"
+    assert second["notes"] == "Target: 1×12, choose the load"
     assert second["superset_id"] == 0
     assert "weight_kg" not in second["sets"][0]
 
@@ -80,6 +80,40 @@ def test_a_swapped_line_keeps_the_authored_lines_place_rest_and_cues() -> None:
     [exercise] = projected(FrozenLine("db_hammer_curl", CURL_GROUPS, swap))["exercises"]
 
     assert (exercise["exercise_template_id"], exercise["rest_seconds"]) == ("HC-1", 60)
+
+
+REP_OUT_GROUPS = [
+    {"type": "working", "count": 2, "load": 225.0, "load_kg": 102.058283, "reps": 5},
+    {
+        "type": "working",
+        "count": 1,
+        "load": 225.0,
+        "load_kg": 102.058283,
+        "reps": "5+",
+        "rpe_cap": 9,
+    },
+]
+
+
+def test_a_rep_out_sends_its_floor_as_reps_and_names_its_stop_rpe_in_the_note() -> None:
+    [exercise] = projected(FrozenLine("bb_back_squat", REP_OUT_GROUPS))["exercises"]
+
+    assert [s["reps"] for s in exercise["sets"]] == [5, 5, 5]
+    assert "Target: 2×5 + 5+ (stop at RPE 9) at 225 lb" in exercise["notes"]
+
+
+def test_a_line_with_no_working_load_asks_the_athlete_to_choose_it_once() -> None:
+    groups = [
+        {"type": "working", "count": 3, "reps": 8},
+        {"type": "working", "count": 1, "reps": 6},
+    ]
+
+    [exercise] = projected(FrozenLine("db_curl", groups))["exercises"]
+
+    assert (
+        exercise["notes"]
+        == "Week of 2026-11-02, rotation week A\nTarget: 3×8 + 1×6, choose the load"
+    )
 
 
 def as_routine(body: dict[str, Any], **changed: Any) -> Routine:
@@ -155,3 +189,12 @@ def test_a_retired_routine_keeps_its_exercises_under_the_unused_title_in_the_ret
     assert (body["title"], body["folder_id"]) == ("(unused) Upper", 9002)
     assert routine_diff(body, as_routine(body)) == ()
     assert retired_routine(as_routine(body), "9002")["title"] == "(unused) Upper"
+
+
+def test_a_faithful_read_back_of_a_rep_out_has_no_diff() -> None:
+    body = projected(FrozenLine("bb_back_squat", REP_OUT_GROUPS))
+    hevy_holds = json.loads(json.dumps(body))
+    for one in hevy_holds["exercises"][0]["sets"]:
+        one["reps"] = 5
+
+    assert routine_diff(body, as_routine(hevy_holds)) == ()

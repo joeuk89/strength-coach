@@ -21,8 +21,8 @@ from coach.store.connection import Connection
 BENCH_TEMPLATE = "BP-0001"
 
 
-def a_squat_week(*sessions: dict[str, object]) -> Connection:
-    conn = a_squat_program(*sessions)
+def a_squat_week(*sessions: dict[str, object], **draft: object) -> Connection:
+    conn = a_squat_program(*sessions, **draft)
     with conn:
         exercises.update(conn, "bb_bench_press", {"hevy_template_id": BENCH_TEMPLATE})
     squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
@@ -371,6 +371,37 @@ def test_status_shows_the_plan_in_force_with_its_routines_verified_and_unverifie
         "2026-11-02",
         0,
         ("lower", "upper"),
+    )
+
+
+def test_a_session_in_force_but_unplanned_this_week_keeps_its_routine_verified() -> None:
+    conn = a_squat_week(
+        a_session("lower", a_line("bb_back_squat")),
+        a_session("upper"),
+        schedule={
+            "rotation": ["A", "B"],
+            "A": {"mon": "lower", "wed": "upper"},
+            "B": {"mon": "lower"},
+        },
+    )
+    hevy = FakeHevy(FixedClock())
+    approved(conn, a_plan_draft(conn, hevy=True), hevy)
+    approved(conn, a_plan_draft(conn, hevy=True, week=datetime.date(2026, 11, 9)), hevy)
+
+    shown = status(
+        conn,
+        FixedClock(datetime.datetime(2026, 11, 10, 9, 0, tzinfo=datetime.UTC)),
+        engine_version="0.3.0",
+        pin="0.3.0",
+        hevy_on=True,
+        exported={},
+    ).plan
+
+    assert shown is not None
+    assert (shown.week, shown.routines_verified, shown.routines_unverified) == (
+        "2026-11-09",
+        2,
+        (),
     )
 
 

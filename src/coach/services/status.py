@@ -146,7 +146,12 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
         return None
     plan_id = str(row["id"])
     live = routine_map.live(conn)
-    verified = [m for m in live if m.status == "active" and m.plan_id == plan_id]
+    projected = {str(r["session_id"]) for r in week_plans.prescriptions(conn, plan_id)}
+    verified = [
+        m
+        for m in live
+        if m.status == "active" and (m.plan_id == plan_id or m.session_id not in projected)
+    ]
     return PlanInForce(
         plan_id,
         str(row["week"]),

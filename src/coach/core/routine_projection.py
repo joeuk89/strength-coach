@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Literal, cast
 
 from coach.core.config import Units
-from coach.core.frozen_prescription import dose
 from coach.core.mirror import Routine, RoutineSet
 from coach.core.program.form import Line
 
@@ -127,14 +126,42 @@ def hevy_folder_id(folder_id: str) -> int | str:
 
 
 def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
-    target = dose(frozen.set_groups, units)
-    rpes = {g.get("rpe") for g in frozen.set_groups if g.get("type") != "warm_up"} - {None}
-    if len(rpes) == 1:
-        target += f" @{float(cast(float, rpes.pop())):g}"
-    notes = [f"Target: {target}"]
+    notes = [f"Target: {_target(frozen.set_groups, units)}"]
     if line is not None and line.cues:
         notes.append(f"Cues: {line.cues}")
     return notes
+
+
+def _target(groups: Sequence[Mapping[str, object]], units: Units) -> str:
+    """`2×5 + 5+ (stop at RPE 9) at 225 lb @8`; a line with no working load says
+    `choose the load` once."""
+    working = [g for g in groups if g.get("type") != "warm_up"]
+    target = " + ".join(_shape(g) for g in working) or "no working set"
+    loads = [float(str(g["load"])) for g in working if g.get("load") is not None]
+    if loads:
+        target += f" at {max(loads):g} {units}"
+    rpes = {g.get("rpe") for g in working} - {None}
+    if len(rpes) == 1:
+        target += f" @{float(cast(float, rpes.pop())):g}"
+    if not loads and any(g.get("reps") is not None or g.get("range") for g in working):
+        target += ", choose the load"
+    return target
+
+
+def _shape(group: Mapping[str, object]) -> str:
+    count = group["count"]
+    reps = group.get("reps")
+    rep_range = group.get("range")
+    if isinstance(rep_range, list):
+        low, high = cast(list[int], rep_range)
+        return f"{count}×{low}–{high}"
+    if isinstance(reps, str):
+        shape = reps if count == 1 else f"{count}×{reps}"
+        cap = group.get("rpe_cap")
+        return shape if cap is None else f"{shape} (stop at RPE {float(cast(float, cap)):g})"
+    if reps is not None:
+        return f"{count}×{reps}"
+    return f"{count}×{group.get('duration_s')} s"
 
 
 def _sets(group: Mapping[str, object]) -> list[Json]:
@@ -146,10 +173,15 @@ def _sets(group: Mapping[str, object]) -> list[Json]:
         low, high = cast(list[int], rep_range)
         one["rep_range"] = {"start": low, "end": high}
     elif group.get("reps") is not None:
-        one["reps"] = group["reps"]
+        one["reps"] = _floor(cast(int | str, group["reps"]))
     if group.get("duration_s") is not None:
         one["duration_seconds"] = group["duration_s"]
     return [dict(one) for _ in range(cast(int, group["count"]))]
+
+
+def _floor(reps: int | str) -> int:
+    """A rep-out such as `5+` goes to Hevy as its floor; the note carries the `+`."""
+    return int(reps.rstrip("+")) if isinstance(reps, str) else reps
 
 
 def _kept_set(kept: RoutineSet) -> Json:
