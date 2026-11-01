@@ -10,7 +10,7 @@ from coach.core.load import Load
 from coach.core.prescribe import prescribe
 from coach.core.prescription import LinePrescription, PlanOverride, Step
 
-RACK = a_rack(*[70 + 2.5 * i for i in range(21)])
+RACK = a_rack(*[70 + 2.5 * i for i in range(27)])
 BENCH = a_line(
     "bb_bench_press",
     warm_up(5),
@@ -114,3 +114,21 @@ def test_a_heavier_top_in_another_session_never_lifts_the_cap_past_one_row() -> 
     line = derive(bench_on("2026-10-19", top_rpe=8), upper, bench_on("2026-10-26", top_rpe=8))
 
     assert working_loads(line)[0] == (1, Load(102.5, "total"))
+
+
+def test_the_cap_counts_from_the_heaviest_top_in_the_window_not_the_anchors() -> None:
+    older = bench_on("2026-10-19", top_rpe=8, top=130)
+    bad_day = an_exposure("2026-10-26", (110, 3, 9.5), *[(95, 4, 9)] * 3, session_id="lower")
+
+    line = derive(older, bad_day)
+
+    assert working_loads(line)[0] == (1, Load(130, "total"))
+
+
+def test_with_no_heavier_top_in_the_window_the_cap_is_one_row_above_the_anchor() -> None:
+    # e1RM 110 × (1 + 7/30) = 135.67; three reps at RPE 8 is 116.29, down to 115: capped
+    expired = bench_on("2026-09-01", top_rpe=8, top=130)
+
+    line = derive(expired, bench_on("2026-10-26", top_rpe=6, top=110))
+
+    assert working_loads(line)[0] == (1, Load(112.5, "total"))
