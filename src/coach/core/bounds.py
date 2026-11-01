@@ -210,7 +210,9 @@ class _Bounding:
                 f"the pinned {pin.amount:g} is over niggle {by.niggle_id}'s "
                 f"{by.kind} of {strictest.amount:g}",
             )
-        if self.load is not None and harder(self.load, strictest):
+        if self.load is None:
+            return
+        if harder(self.load, strictest):
             self.steps.append(
                 Step(
                     "niggle", self.load.amount, strictest.amount, f"{by.kind} niggle:{by.niggle_id}"
@@ -218,6 +220,8 @@ class _Bounding:
             )
             self.load = strictest
             self.rounding = "cut"
+        else:
+            self.steps.append(Step("niggle", strictest.amount, self.load.amount, "not_binding"))
 
     def _rpe_ceiling(self, constraints: tuple[NiggleConstraint, ...]) -> Number | None:
         self.rpe_caps += [
@@ -262,9 +266,7 @@ class _Bounding:
             self._unchecked(cap)
             return
         self.sets = reps_within_model(self.sets, cap)
-        # The line's load is its first working group's; later groups follow it.
-        first = next((g for g in self.sets if g.working), None)
-        reps = None if first is None else fewest_reps(first.reps)
+        reps = self._limiting_reps()
         if reps is None:
             return
         limit = model_load(found.load, reps, cap).as_mode(self.load.mode)
@@ -272,6 +274,15 @@ class _Bounding:
             self.steps.append(Step("rpe_ceiling", self.load.amount, limit.amount, "e1rm"))
             self.load = limit
             self.rounding = "cut"
+
+    def _limiting_reps(self) -> int | None:
+        """Every working group carries the line's load, so the group with the most reps limits
+        it; under `top_backoff` the back-offs follow the top, so the top limits it."""
+        working = [g for g in self.sets if g.working]
+        if self.context.line.scheme.name == "top_backoff":
+            working = working[:1]
+        reps = [r for g in working if (r := fewest_reps(g.reps)) is not None]
+        return max(reps, default=None)
 
     def _unchecked(self, cap: Number) -> None:
         assert self.load is not None

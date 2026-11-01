@@ -286,6 +286,20 @@ def test_reps_are_cut_so_a_capped_set_stays_inside_the_model() -> None:
     assert line.groups[-1].reps == 9
 
 
+def test_an_rpe_ceiling_limits_the_load_to_fit_the_working_group_with_more_reps() -> None:
+    two_groups = a_line("bb_back_squat", working(1, (3, 5)), working(3, (8, 10)))
+    logged = squat_on("2026-10-26", (100, 5, 8), (100, 8, 8), (100, 8, 8), (100, 8, 8))
+
+    line = derive(two_groups, logged, status_spans=(ill("2026-10-28", "2026-10-30"),))
+
+    # e1RM 100 × (1 + 10/30) = 133.33; eight reps at RPE 7 is 133.33 / (1 + 11/30) = 97.56
+    assert Step("rpe_ceiling", 100, 97.56, "e1rm") in line.steps
+    assert [(g.load, g.reps) for g in line.groups] == [
+        (Load(95, "total"), (3, 5)),
+        (Load(95, "total"), (8, 9)),
+    ]
+
+
 def test_with_no_usable_e1rm_a_capped_line_is_clipped_to_the_anchor_and_warns() -> None:
     logged = squat_on("2026-10-26", *[(120, 15, 7)] * 4)
 
@@ -339,6 +353,19 @@ def test_the_strictest_of_two_open_niggles_binds() -> None:
     )
 
     assert line.groups[-1].load == Load(100, "total")
+
+
+def test_a_niggle_cap_looser_than_the_return_band_is_not_binding() -> None:
+    looser = NiggleConstraint("n-0004", "load_cap", exercise_id="bb_back_squat", value=110)
+
+    line = derive(a_line(), squat_on("2026-10-03", *SQUAT_HELD), niggle_constraints=(looser,))
+
+    assert line.steps[:3] == (
+        Step("cut", 120, 108, "return 22–42, 30 days off"),
+        Step("cut", 4, 3, "sets"),
+        Step("niggle", 110, 108, "not_binding"),
+    )
+    assert line.flags == ()
 
 
 def test_a_niggle_rpe_cap_on_the_pattern_is_an_rpe_ceiling() -> None:
