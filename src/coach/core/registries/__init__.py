@@ -3,12 +3,14 @@ from coach.core.registries.flags import FLAGS
 from coach.core.registries.hevy import ROUTINE_STATUSES
 from coach.core.registries.ledger import (
     CHECK_IN_STATUSES,
+    CHECK_IN_TIERS,
     CONSTRAINT_KINDS,
     DECISION_KINDS,
     FOLLOW_UP_EVENTS,
     GOAL_KINDS,
     GOAL_STATUSES,
     NIGGLE_STATUSES,
+    READINESS,
     REASONS,
 )
 from coach.core.registries.log import (
@@ -59,6 +61,8 @@ REGISTRIES: tuple[Registry[Entry], ...] = (
     SLEEP_NIGHT_SOURCES,
     STATUS_SPAN_KINDS,
     CHECK_IN_STATUSES,
+    CHECK_IN_TIERS,
+    READINESS,
     NIGGLE_STATUSES,
     FOLLOW_UP_EVENTS,
     GOAL_KINDS,

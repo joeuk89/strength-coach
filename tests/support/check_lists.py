@@ -27,6 +27,8 @@ COLUMN_REGISTRIES: Mapping[tuple[str, str], str] = {
     ("sleep_night", "source"): "sleep-night-sources",
     ("status_span", "kind"): "status-span-kinds",
     ("check_in", "status"): "check-in-statuses",
+    ("check_in", "tier"): "check-in-tiers",
+    ("check_in", "readiness"): "readiness",
     ("decision", "kind"): "decision-kinds",
     ("decision", "because"): "reasons",
     ("niggle_event", "status"): "niggle-statuses",

@@ -159,13 +159,13 @@ def _phase(f: Fields | None) -> tuple[PhaseOpen | None, PhaseClose | None]:
         raise Invalid("invalid_argument", f"{f.where}: [phase] carries open, close or both")
     return f.done(
         (
-            _phase_open(open_) if open_ else None,
+            parse_phase_open(open_) if open_ else None,
             _phase_close(close) if close else None,
         )
     )
 
 
-def _phase_open(f: Fields) -> PhaseOpen:
+def parse_phase_open(f: Fields) -> PhaseOpen:
     kind = required(f.term("kind", PHASE, required=True))
     rate = f.number("rate_pct_bw_per_week", low=float("-inf"))
     until = f.subtable("until")

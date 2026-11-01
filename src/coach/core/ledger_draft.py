@@ -1,4 +1,5 @@
 import datetime
+import re
 import tomllib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -24,6 +25,7 @@ from coach.core.registries.log import STATUS_SPAN_KINDS
 from coach.core.registries.program import EQUIPMENT_KINDS, LOAD_MODES, SET_TYPES
 
 NOTE_ABOUT = ("planned_session", "exercise", "niggle", "follow_up")
+OBSERVATION_ID = re.compile(r"o-\d+")
 EXERCISE_IDENTITY = ("name", "pattern", "muscles")
 EXERCISE_EDITABLE = (
     "load_mode",
@@ -117,6 +119,17 @@ class WorkoutRecord:
 
 
 @dataclass(frozen=True)
+class ObservationRecord:
+    """An Observation raised with its evidence, or with `retire` the one it retires."""
+
+    text: str | None = None
+    evidence: tuple[Ref, ...] = ()
+    retire: str | None = None
+    because: str | None = None
+    key: str | None = None
+
+
+@dataclass(frozen=True)
 class ExerciseRecord:
     """An edit to the Exercise `id`, or a new one: `fields` holds only the columns the file gave."""
 
@@ -137,6 +150,7 @@ type LedgerRecord = (
     | StatusSpanRecord
     | WorkoutRecord
     | ExerciseRecord
+    | ObservationRecord
 )
 
 
@@ -157,10 +171,19 @@ def kind_of(record: LedgerRecord) -> str:
 
 def parse_ledger_draft(data: bytes, *, verb: str, file: str) -> LedgerDraft:
     """A ledger Draft as typed records, one array of tables per kind (verbs.md, "Record kinds")."""
+    return ledger_draft_of(load_draft(data, file), hash=draft_hash(data), verb=verb, file=file)
+
+
+def load_draft(data: bytes, file: str) -> dict[str, object]:
     try:
-        document = tomllib.loads(data.decode("utf-8"))
+        return tomllib.loads(data.decode("utf-8"))
     except (UnicodeDecodeError, tomllib.TOMLDecodeError) as error:
         raise Invalid("invalid_argument", f"{file} is not valid TOML: {error}") from error
+
+
+def ledger_draft_of(
+    document: Mapping[str, object], *, hash: str, verb: str, file: str
+) -> LedgerDraft:
     records: list[LedgerRecord] = []
     for name, value in document.items():
         parser = _parser(name, verb)
@@ -172,7 +195,7 @@ def parse_ledger_draft(data: bytes, *, verb: str, file: str) -> LedgerDraft:
             )
         for index, table in enumerate(cast(list[Table], value), start=1):
             records.append(parser(Fields(table, f"{file}: [[{name}]] #{index}")))
-    draft = LedgerDraft(draft_hash(data), file, tuple(records))
+    draft = LedgerDraft(hash, file, tuple(records))
     _check_keys(draft)
     return draft
 
@@ -224,7 +247,7 @@ def refs_of(record: LedgerRecord) -> tuple[Ref, ...]:
     match record:
         case NoteRecord(about=Ref() as about) | FollowUpRecord(about=Ref() as about):
             return (about,)
-        case DecisionRecord():
+        case DecisionRecord() | ObservationRecord():
             return record.evidence
         case AnnotationRecord():
             return annotation_refs(record)
@@ -353,6 +376,21 @@ def _muscles(value: object, f: Fields) -> dict[str, list[str]]:
     return muscles
 
 
+def _observation(f: Fields) -> ObservationRecord:
+    if f.has("retire"):
+        retire = required(f.text("retire", required=True))
+        if not OBSERVATION_ID.fullmatch(retire):
+            raise f.wrong("retire", "an Observation id, o-0001")
+        return f.done(
+            ObservationRecord(retire=retire, because=f.text("because", required=True))
+        )
+    return f.done(
+        ObservationRecord(
+            text=f.text("text", required=True), evidence=f.refs("evidence"), key=f.key()
+        )
+    )
+
+
 PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
     "niggle": parse_niggle,
     "followup": parse_follow_up,
@@ -365,6 +403,7 @@ PARSERS: dict[str, Callable[[Fields], LedgerRecord]] = {
     "status_span": _status_span,
     "workout": _workout,
     "exercise": _exercise,
+    "observation": _observation,
 }
 KIND_OF: dict[type, str] = {
     NiggleRecord: "niggle",
@@ -378,4 +417,5 @@ KIND_OF: dict[type, str] = {
     StatusSpanRecord: "status_span",
     WorkoutRecord: "workout",
     ExerciseRecord: "exercise",
+    ObservationRecord: "observation",
 }
