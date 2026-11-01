@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 from support.clock import FixedClock
-from support.ledger import a_store, an_exercise
+from support.ledger import a_hevy_workout, a_store, an_exercise
 
 from coach.core.errors import Invalid
 from coach.services.query import ledger
@@ -11,6 +11,8 @@ from coach.services.record import RecordResult, record
 from coach.store.connection import Connection
 
 TODAY = datetime.date(2026, 10, 30)
+WORKOUT = "b7e2c1a0-5d3f-4e8a-9c21-7f0a4d6b9e13"
+EXPOSURE = f"exposure:{WORKOUT}/bb_bench_press"
 REASON = 'because = "coach_judgement"\ntext = "agreed"\n'
 
 
@@ -275,6 +277,26 @@ def test_evidence_naming_no_stored_record_is_refused() -> None:
         )
 
     assert "niggle:n-0004" in raised.value.message
+
+
+def test_evidence_may_cite_an_exposure_on_a_stored_workout() -> None:
+    conn = a_store_with_bench()
+    a_hevy_workout(conn, WORKOUT)
+
+    run(conn, training_max(100).replace(REASON, REASON + f'evidence = ["{EXPOSURE}"]\n'))
+
+    [row] = decisions(conn)
+    assert row["evidence"] == [EXPOSURE]
+
+
+def test_evidence_citing_an_exposure_on_an_unstored_workout_is_refused() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(
+            a_store_with_bench(),
+            training_max(100).replace(REASON, REASON + f'evidence = ["{EXPOSURE}"]\n'),
+        )
+
+    assert EXPOSURE in raised.value.message
 
 
 def test_ledger_open_keeps_decisions_in_force_today() -> None:
