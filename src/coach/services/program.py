@@ -18,7 +18,6 @@ from coach.core.program.diff import ProgramDiff, diff
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.rack import Rack
-from coach.core.registries.program import EQUIPMENT_KINDS, LOAD_MODES
 from coach.render.program_draft import program_draft
 from coach.services.history import read_history
 from coach.store import exercises, goals, phases, programs
@@ -229,12 +228,6 @@ def _check_declared(form: ProgramForm, library: Mapping[str, object]) -> None:
                 "invalid_argument",
                 f"[exercise.{id_}] is new to the library and lacks {', '.join(missing)}",
             )
-        for column, registry in (("load_mode", LOAD_MODES), ("equipment_kind", EQUIPMENT_KINDS)):
-            if column in fields and fields[column] not in registry:
-                raise Invalid(
-                    "invalid_argument",
-                    f"[exercise.{id_}] {column} must be one of {', '.join(registry.names())}",
-                )
 
 
 def _start_loads(

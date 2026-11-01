@@ -110,3 +110,35 @@ def test_a_session_of_a_kind_that_trains_lines_needs_at_least_one_line(kind: str
 
     assert raised.value.code == "invalid_argument"
     assert "line" in raised.value.message
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("muscles", "chest"),
+        ("muscles", {"primary": ["chest"]}),
+        ("muscles", {"primary": "chest", "secondary": []}),
+        ("name", 5),
+        ("name", ""),
+        ("hevy_title", []),
+        ("load_mode", "rocket"),
+        ("equipment_kind", "spaceship"),
+    ],
+)
+def test_a_malformed_declared_exercise_value_stops_the_read(key: str, value: object) -> None:
+    draft = a_draft(exercise={"custom_ring_push_up": {key: value}})
+
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(draft), file="d.toml")
+
+    assert raised.value.code == "invalid_argument"
+    assert f"exercise.custom_ring_push_up.{key}" in raised.value.message
+
+
+def test_a_declared_exercise_keeps_its_typed_values() -> None:
+    muscles = {"primary": ["chest"], "secondary": ["triceps"]}
+    draft = a_draft(exercise={"custom_ring_push_up": {"name": "Ring push-up", "muscles": muscles}})
+
+    form = parse_program_draft(toml(draft), file="d.toml").form
+
+    assert form.exercises["custom_ring_push_up"] == {"name": "Ring push-up", "muscles": muscles}

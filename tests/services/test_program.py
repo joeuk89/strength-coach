@@ -308,6 +308,29 @@ def test_a_new_declared_exercise_missing_a_library_column_is_invalid() -> None:
     assert refused.value.code == "invalid_argument"
 
 
+def test_a_declared_exercise_with_malformed_muscles_writes_nothing() -> None:
+    conn = the_worked_store()
+    ring = {
+        "name": "Ring push-up",
+        "load_mode": "bodyweight",
+        "equipment_kind": "bodyweight",
+        "pattern": "horizontal_push",
+        "muscles": "chest",
+        "hevy_title": "Ring Push Up",
+    }
+    draft = a_draft(
+        a_session("push", a_line("custom_ring_push_up", start_load=None)),
+        exercise={"custom_ring_push_up": ring},
+    )
+
+    with pytest.raises(Invalid) as refused:
+        run(conn, toml(draft))
+
+    assert refused.value.code == "invalid_argument"
+    assert exercises.get(conn, "custom_ring_push_up") is None
+    assert conn.execute("SELECT count(*) FROM program_version").fetchone()[0] == 0
+
+
 def test_a_surplus_phase_fills_the_upper_half_of_the_dose_band() -> None:
     conn = a_library_store()
     a_goal(conn)

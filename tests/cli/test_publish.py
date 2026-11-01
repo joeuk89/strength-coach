@@ -12,18 +12,31 @@ from coach.store.connection import open_store
 ENGINE = "0.3.0"
 
 
-@pytest.fixture
-def instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    isolate_git(monkeypatch, tmp_path)
-    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
-    root = tmp_path / "athlete"
+@pytest.fixture(scope="module")
+def initialised(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """One `coach init` per module, copied into each test; init alone costs a tenth of a second."""
+    home = tmp_path_factory.mktemp("home")
+    root = home / "athlete"
     root.mkdir()
-    monkeypatch.chdir(root)
-    assert run_coach("init", "--defaults").code == 0
+    with pytest.MonkeyPatch.context() as patch:
+        isolate_git(patch, home)
+        patch.setattr(app, "engine_version", lambda: ENGINE)
+        patch.chdir(root)
+        assert run_coach("init", "--defaults").code == 0
     with open_store(root / ".coach" / "coach.db") as conn:
         conn.execute("DELETE FROM exercise")
         a_history(conn)
     conn.close()
+    return root
+
+
+@pytest.fixture
+def instance(initialised: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    isolate_git(monkeypatch, tmp_path)
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = tmp_path / "athlete"
+    shutil.copytree(initialised, root)
+    monkeypatch.chdir(root)
     return root
 
 

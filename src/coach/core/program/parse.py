@@ -8,6 +8,7 @@ from typing import cast
 
 from coach.core.draft_fields import draft_hash
 from coach.core.errors import Invalid
+from coach.core.muscles import MUSCLES_WANTED, read_muscles
 from coach.core.program.form import (
     CADENCES,
     EMPHASES,
@@ -27,7 +28,12 @@ from coach.core.program.form import (
     SetGroup,
 )
 from coach.core.registries.ledger import REASONS
-from coach.core.registries.program import SESSION_KINDS, VERSION_KINDS
+from coach.core.registries.program import (
+    EQUIPMENT_KINDS,
+    LOAD_MODES,
+    SESSION_KINDS,
+    VERSION_KINDS,
+)
 
 type Table = Mapping[str, object]
 
@@ -192,10 +198,25 @@ def _exercises(reader: "_Reader | None") -> dict[str, Mapping[str, object]]:
         return {}
     declared: dict[str, Mapping[str, object]] = {}
     for id_ in reader.names():
-        fields = reader.table(id_)
-        declared[id_] = {key: fields.raw(key) for key in DECLARED_EXERCISE_KEYS if fields.has(key)}
-        fields.finish()
+        declared[id_] = _declared_exercise(reader.table(id_))
     return declared
+
+
+def _declared_exercise(reader: "_Reader") -> dict[str, object]:
+    fields: dict[str, object] = {}
+    for key in DECLARED_EXERCISE_KEYS:
+        if not reader.has(key):
+            continue
+        if key == "muscles":
+            fields[key] = reader.muscles(key)
+        elif key == "load_mode":
+            fields[key] = reader.optional_choice(key, LOAD_MODES.names())
+        elif key == "equipment_kind":
+            fields[key] = reader.optional_choice(key, EQUIPMENT_KINDS.names())
+        else:
+            fields[key] = reader.optional_text(key)
+    reader.finish()
+    return fields
 
 
 def _acknowledge(reader: "_Reader") -> AcknowledgeEntry:
@@ -310,6 +331,12 @@ class _Reader:
         if value is None or (_is_number(value) and cast(float, value) >= 0):
             return cast(Number | None, value)
         raise self.wrong(key, "a load of at least 0 in athlete units")
+
+    def muscles(self, key: str) -> dict[str, list[str]]:
+        muscles = read_muscles(self.raw(key))
+        if muscles is None:
+            raise self.wrong(key, MUSCLES_WANTED)
+        return muscles
 
     def boolean(self, key: str) -> bool:
         value = self.raw(key)
