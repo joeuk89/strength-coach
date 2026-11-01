@@ -372,3 +372,35 @@ def test_status_shows_the_plan_in_force_with_its_routines_verified_and_unverifie
         1,
         ("lower",),
     )
+
+
+SWAP = """
+[[override]]
+kind = "swap_exercise"
+session = "lower"
+exercise = "bb_back_squat"
+to = "goblet_squat"
+start_load = 50
+because = "pain"
+text = "The knee settles under a goblet."
+"""
+
+
+def persisting(conn: Connection, week: datetime.date) -> list[str]:
+    data = a_plan_draft(conn, overrides=SWAP, week=week)
+    found = dry_run(
+        conn, data, file="p.toml", config=a_config(), kits=(kit_files(),), clock=FixedClock()
+    )
+    push(conn, None, data, found.write_plan_hash)
+    return [f.key for f in found.flags if f.code == "override_persisting"]
+
+
+def test_the_third_consecutive_plan_with_the_same_swap_raises_override_persisting() -> None:
+    conn = a_squat_week()
+
+    first = persisting(conn, datetime.date(2026, 11, 2))
+    second = persisting(conn, datetime.date(2026, 11, 9))
+    third = persisting(conn, datetime.date(2026, 11, 16))
+
+    assert (first, second) == ([], [])
+    assert third == ["override_persisting@line:2026-11-16/lower/bb_back_squat"]

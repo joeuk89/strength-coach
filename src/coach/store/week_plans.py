@@ -2,7 +2,10 @@
 
 import json
 from collections.abc import Mapping, Sequence
+from typing import cast
 
+from coach.core.overrides import parse_plan_overrides
+from coach.core.prescription import PlanOverride
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 from coach.store.rows import Row, insert, select
@@ -131,3 +134,18 @@ def acknowledgements(conn: Connection, plan_id: str) -> list[tuple[str, str, str
         "SELECT key, params_hash, because FROM acknowledgement WHERE plan_id = ? ORDER BY id",
         (plan_id,),
     ).fetchall()
+
+
+def stored_overrides(conn: Connection, plan_id: str) -> tuple[PlanOverride, ...]:
+    """The plan's override rows read back through the Draft's own parser, so both carry one
+    typed shape."""
+    tables: list[dict[str, object]] = []
+    for row in overrides(conn, plan_id):
+        refs = {"session": row["session_id"], "exercise": row["exercise_id"], "date": row["date"]}
+        table = {"kind": row["kind"], **{k: v for k, v in refs.items() if v is not None}}
+        table |= cast(Mapping[str, object], row["params"])
+        table |= {"because": row["because"], "text": row["text"]}
+        if row["evidence"]:
+            table["evidence"] = row["evidence"]
+        tables.append(table)
+    return parse_plan_overrides({"override": tables}, file=f"WeekPlan {plan_id}")
