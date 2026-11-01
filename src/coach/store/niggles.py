@@ -1,6 +1,10 @@
 import json
 from collections.abc import Mapping, Sequence
+from typing import cast
 
+from coach.core.prescription import NiggleConstraint
+from coach.core.program.form import Session
+from coach.core.program.parse import parse_line
 from coach.store.connection import Connection
 from coach.store.rows import Row, insert, select
 
@@ -73,3 +77,59 @@ def _rehab_session(conn: Connection, session_id: object) -> Row | None:
     if not found:
         return None
     return {**found[0], "lines": json.loads(str(found[0]["lines"]))}
+
+
+def open_rehab_sessions(conn: Connection) -> tuple[Session, ...]:
+    """The rehab session of every niggle short of `resolved` (ADR 0010)."""
+    return tuple(
+        _rehab_as_session(cast(Row, niggle["rehab_session"]))
+        for niggle in every(conn)
+        if niggle["status"] != "resolved" and niggle["rehab_session"] is not None
+    )
+
+
+def open_constraints(conn: Connection) -> tuple[NiggleConstraint, ...]:
+    """The constraint set in force on every niggle short of `resolved`."""
+    return tuple(
+        NiggleConstraint(
+            niggle_id=str(niggle["id"]),
+            kind=str(row["kind"]),
+            exercise_id=cast(str | None, row["exercise_id"]),
+            pattern=cast(str | None, row["pattern"]),
+            value=cast(float | None, row["value"]),
+        )
+        for niggle in every(conn)
+        if niggle["status"] != "resolved"
+        for row in cast(list[Row], niggle["constraints"])
+    )
+
+
+def _rehab_as_session(row: Row) -> Session:
+    session_id = str(row["session_id"])
+    lines = tuple(
+        parse_line(_line_document(line), file=f"rehab_session {session_id}")
+        for line in cast(list[Mapping[str, object]], row["lines"])
+    )
+    return Session(
+        id=session_id,
+        title=str(row["title"]),
+        kind="rehab",
+        tier=str(row["tier"]),
+        cadence=str(row["cadence"]),
+        location=cast(str | None, row["location"]),
+        lines=lines,
+    )
+
+
+def _line_document(line: Mapping[str, object]) -> dict[str, object]:
+    document = {
+        "exercise": line["exercise_id"],
+        "sets": line["set_groups"],
+        "rest_s": line["rest_s"],
+        "scheme": line["scheme"],
+        "load_mode": line.get("load_mode"),
+        "cues": line.get("cues"),
+        "start_load": line.get("start_load"),
+        "superset": line.get("superset"),
+    }
+    return {key: value for key, value in document.items() if value is not None}

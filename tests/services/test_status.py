@@ -6,6 +6,7 @@ from support.fake_hevy import FakeHevy
 from support.goals import STRENGTH, WORKED, with_phase
 from support.hevy_payloads import a_workout
 from support.kit_fixtures import kit_files
+from support.plans import a_squat_program, an_approved_plan
 from support.program_drafts import a_draft, toml
 from support.programs import a_config, the_worked_store
 from support.scenarios import a_session
@@ -13,6 +14,7 @@ from support.scenarios import a_session
 from coach.core.clock import Clock
 from coach.core.goal import Until
 from coach.core.kit import KitFiles
+from coach.core.planned_week import RotationPosition
 from coach.services.goal_adopt import goal_adopt
 from coach.services.hevy_import import import_hevy
 from coach.services.program import adopt
@@ -21,8 +23,10 @@ from coach.services.status import (
     CurrentGoal,
     ExportState,
     KitTables,
+    PlanInForce,
     ProgramInForce,
     StatusResult,
+    WeekPosition,
     status,
 )
 from coach.store.catalogue import seed_catalogue
@@ -74,6 +78,8 @@ def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> N
         goal=None,
         phase=None,
         warnings=(),
+        plan=None,
+        rotation=None,
     )
 
 
@@ -202,3 +208,30 @@ def test_status_reports_the_program_version_in_force() -> None:
     result = status_of(conn, hevy_on=False)
 
     assert result.program == ProgramInForce("pv-1", "redesign", "hypertrophy", "2026-10-30")
+
+
+def test_status_shows_no_plan_in_force_and_the_rotation_position_for_this_week() -> None:
+    conn = a_squat_program(
+        schedule={"rotation": ["A", "B"], "A": {"mon": "lower"}, "B": {"wed": "lower"}}
+    )
+
+    before = status_of(conn, hevy_on=False)
+
+    assert before.plan is None
+    assert before.rotation == WeekPosition(
+        datetime.date(2026, 10, 26), RotationPosition("A", "program_adopt")
+    )
+
+
+def test_status_shows_the_plan_in_force_this_week() -> None:
+    conn = a_squat_program()
+    an_approved_plan(conn, "2026-10-26", approved_at="2026-10-25T18:00:00+00:00")
+
+    result = status_of(conn, hevy_on=False)
+
+    assert result.plan == PlanInForce(
+        "wp-2026-10-26", "2026-10-26", "2026-10-25T18:00:00+00:00", "sha256:w"
+    )
+    assert result.rotation == WeekPosition(
+        datetime.date(2026, 10, 26), RotationPosition("A", "plan_in_force")
+    )
