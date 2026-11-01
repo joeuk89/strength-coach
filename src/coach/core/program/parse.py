@@ -154,6 +154,11 @@ def _session(reader: "_Reader") -> Session:
     return session
 
 
+def parse_line(document: Table, *, file: str) -> Line:
+    """One line document in the form's shape; a rehab session's stored lines read through it."""
+    return _line(_Reader(document, ("line",), file, []))
+
+
 def _line(reader: "_Reader") -> Line:
     exercise = reader.text("exercise")
     reader.name_as((*reader.path[:-1], exercise))

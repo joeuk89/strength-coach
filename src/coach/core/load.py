@@ -30,6 +30,12 @@ class Load:
     def hevy_kg(self, units: Units) -> float:
         return to_kg(self.total, units)
 
+    def as_mode(self, mode: "LoadMode") -> "Load":
+        """The same weight in another rack mode: per hand halves the total."""
+        if mode == self.mode:
+            return self
+        return Load(self.total / 2 if mode == "per_hand_x2" else self.total, mode)
+
 
 PRECISION = 2
 UNLOADED: frozenset[LoadMode] = frozenset({"bodyweight", "band", "duration", "distance"})

@@ -7,7 +7,7 @@ from typing import Literal
 
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
-from coach.core.load import Load
+from coach.core.load import Load, LoadMode
 from coach.core.rack import Rack, round_to_rack
 
 SAME_SESSION_WINDOW_DAYS = 90
@@ -73,19 +73,27 @@ def _deload_log(exposure: Exposure) -> bool:
 
 
 def anchor_load(
-    exposure: Exposure, rack: Rack, *, session_id: str
+    exposure: Exposure,
+    rack: Rack,
+    *,
+    session_id: str,
+    monday: datetime.date | None = None,
+    mode: LoadMode | None = None,
 ) -> tuple[Load | None, Flag | None]:
     """The anchor's top working load, replaced by the rack row at or below it when it is not a
-    row: a historical load never defines the grid. A bodyweight anchor carries no load."""
+    row: a historical load never defines the grid. A bodyweight anchor carries no load. With
+    `mode` the logged load is read in the line's load mode first."""
     logged = exposure.top_load
     if logged is None:
         return None, None
+    if mode is not None:
+        logged = logged.as_mode(mode)
     on_grid = round_to_rack(rack, logged, "hold").load
     if on_grid == logged:
         return logged, None
     flag = raise_flag(
         "offgrid_anchor_ignored",
-        Scope("line", session_id=session_id, exercise_id=exposure.exercise_id),
+        Scope("line", monday, session_id=session_id, exercise_id=exposure.exercise_id),
         {"exposure": exposure.ref, "logged_load": logged.amount, "anchor_used": on_grid.amount},
         f"the logged {logged.amount:g} is not a rack row; the anchor uses {on_grid.amount:g}",
     )

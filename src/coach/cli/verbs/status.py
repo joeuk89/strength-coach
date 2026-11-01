@@ -6,7 +6,7 @@ from coach.cli.generated import drifted
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.core.message import Message
-from coach.services.status import CurrentGoal, status
+from coach.services.status import CurrentGoal, PlanInForce, WeekPosition, status
 from coach.store.export import on_disk
 from coach.store.phases import OpenPhase
 
@@ -49,6 +49,8 @@ def run(call: Call) -> Outcome:
                 "behind_store": result.export.behind_store,
                 "store_behind_export": result.export.store_behind_export,
             },
+            "plan": _plan(result.plan),
+            "rotation": _rotation(result.rotation),
             "program": (
                 None
                 if result.program is None
@@ -64,6 +66,27 @@ def run(call: Call) -> Outcome:
         },
         warnings=(*result.warnings, *drift),
     )
+
+
+def _plan(plan: PlanInForce | None) -> Json | None:
+    if plan is None:
+        return None
+    return {
+        "id": plan.id,
+        "week": plan.week,
+        "approved_at": plan.approved_at,
+        "hash": plan.write_plan_hash,
+    }
+
+
+def _rotation(rotation: WeekPosition | None) -> Json | None:
+    if rotation is None:
+        return None
+    return {
+        "week": rotation.week.isoformat(),
+        "position": rotation.position.week,
+        "source": rotation.position.source,
+    }
 
 
 def _goal(goal: CurrentGoal | None) -> Json | None:
@@ -86,8 +109,8 @@ DECLARATION = Declaration(
         "Where the instance stands: the engine version against its pin, Hevy on or off and "
         "the age of the last import, workouts stored by source, the schema version, each "
         "plate-pool location's kit tables current or stale, whether the export is behind "
-        "the store or the store behind it, the program version in force, the current Goal and "
-        "the open Phase."
+        "the store or the store behind it, the WeekPlan in force and this week's rotation "
+        "position, the program version in force, the current Goal and the open Phase."
     ),
     writes="none",
     needs_instance=True,
@@ -133,6 +156,26 @@ DECLARATION = Declaration(
                     "store_behind_export": {"type": "boolean"},
                 },
                 "required": ["behind_store", "store_behind_export"],
+            },
+            "plan": {
+                "description": "the WeekPlan in force this week, or null",
+                "type": ["object", "null"],
+                "properties": {
+                    "id": {"type": "string"},
+                    "week": {"type": "string", "format": "date"},
+                    "approved_at": {"type": "string"},
+                    "hash": {"type": "string"},
+                },
+            },
+            "rotation": {
+                "description": "this week's rotation position and its source, or null before "
+                "the first version",
+                "type": ["object", "null"],
+                "properties": {
+                    "week": {"type": "string", "format": "date"},
+                    "position": {"type": "string"},
+                    "source": {"enum": ["plan_in_force", "previous_plan", "program_adopt"]},
+                },
             },
             "program": {
                 "description": "the Program version in force, or null before the first",
@@ -180,6 +223,8 @@ DECLARATION = Declaration(
             "schema_version",
             "kit",
             "export",
+            "plan",
+            "rotation",
             "program",
             "goal",
             "phase",

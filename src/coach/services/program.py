@@ -7,19 +7,19 @@ from dataclasses import dataclass
 from typing import cast
 
 from coach.core.clock import Clock
-from coach.core.config import Config, PlatePoolLocation
+from coach.core.config import Config
 from coach.core.errors import Invalid
 from coach.core.goal import Goal
-from coach.core.kit import KitFiles, location_racks, parse_kit_tables, require_current_tables
+from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
 from coach.core.program.checks import AdoptContext, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
-from coach.core.rack import Rack
 from coach.render.program_draft import program_draft
 from coach.services.history import read_history
+from coach.services.racks import racks_by_location
 from coach.store import exercises, goals, phases, programs
 from coach.store.connection import Connection
 from coach.store.transaction import transaction
@@ -65,7 +65,7 @@ def adopt(
     """Validate, fill, upsert declared exercises and record the version in one transaction.
     A Draft whose hash matches the version in force writes nothing and returns that version."""
     draft = parse_program_draft(data, file=file)
-    racks = _racks(config, kits, draft.form)
+    racks = racks_by_location(config, kits, draft.form.locations())
     writing: AbstractContextManager[None] = nullcontext() if dry_run else transaction(conn)
     with writing:
         previous = programs.latest(conn)
@@ -161,29 +161,6 @@ def _in_force(conn: Connection) -> programs.VersionRow:
     if version is None:
         raise Invalid("invalid_argument", "no Program version is adopted yet; run program adopt")
     return version
-
-
-def _racks(
-    config: Config, kits: Sequence[KitFiles], form: ProgramForm
-) -> dict[str, Mapping[str, Rack]]:
-    """Each location's racks; a plate-pool location the Draft names must have current tables."""
-    files = {kit.location: kit for kit in kits}
-    named = set(form.locations())
-    racks: dict[str, Mapping[str, Rack]] = {}
-    for location in config.locations:
-        kit = None
-        if isinstance(location, PlatePoolLocation) and location.name in named:
-            tables = files.get(location.name) or KitFiles(location.name, location.kit, None, None)
-            require_current_tables(tables)
-            assert tables.tables is not None
-            kit = parse_kit_tables(
-                tables.tables,
-                collars=location.collars,
-                dumbbells=location.dumbbells,
-                units=config.athlete.units,
-            )
-        racks[location.name] = location_racks(location, kit)
-    return racks
 
 
 def _exposed(conn: Connection, config: Config) -> frozenset[str]:
