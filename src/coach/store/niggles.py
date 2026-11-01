@@ -88,6 +88,15 @@ def open_rehab_sessions(conn: Connection) -> tuple[Session, ...]:
     )
 
 
+def every_rehab_session(conn: Connection) -> tuple[Session, ...]:
+    """Every niggle's rehab session, resolved or not: the rows are never updated."""
+    return tuple(
+        _rehab_as_session(cast(Row, niggle["rehab_session"]))
+        for niggle in every(conn)
+        if niggle["rehab_session"] is not None
+    )
+
+
 def open_constraints(conn: Connection) -> tuple[NiggleConstraint, ...]:
     """The constraint set in force on every niggle short of `resolved`."""
     return tuple(

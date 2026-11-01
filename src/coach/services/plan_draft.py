@@ -27,6 +27,7 @@ from coach.core.prescription import (
 )
 from coach.render.plan_draft import plan_draft as render_plan_draft
 from coach.services.history import read_history
+from coach.services.previous_plans import second_week_flags
 from coach.services.racks import racks_by_location
 from coach.services.rotation import default_week, rotation_position
 from coach.store import decisions, exercises, niggles, notes, programs, readings, week_plans
@@ -109,6 +110,14 @@ def plan_draft(
         overrides=tuple(overrides),
         conflicts=override_conflicts(overrides, monday),
         confirmed=position is not None,
+        second_week=second_week_flags(
+            conn,
+            sessions,
+            overrides,
+            monday=monday,
+            racks=racks,
+            units=config.athlete.units,
+        ),
     )
     return PlanDraftResult(draft, render_plan_draft(draft, units=config.athlete.units))
 

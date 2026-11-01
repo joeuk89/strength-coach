@@ -9,7 +9,7 @@ from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.planned_week import RotationPosition, week_monday
 from coach.services.rotation import rotation_position
-from coach.store import goals, phases, programs, week_plans
+from coach.store import goals, phases, programs, routine_map, week_plans
 from coach.store.connection import Connection, schema_version
 from coach.store.export import MANIFEST, export, parse_manifest, tables_behind
 from coach.store.import_runs import last_import_at
@@ -51,6 +51,8 @@ class PlanInForce:
     week: str
     approved_at: str
     write_plan_hash: str
+    routines_verified: int = 0
+    routines_unverified: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -142,8 +144,21 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     row = week_plans.in_force(conn, monday.isoformat())
     if row is None:
         return None
+    plan_id = str(row["id"])
+    live = routine_map.live(conn)
+    projected = {str(r["session_id"]) for r in week_plans.prescriptions(conn, plan_id)}
+    verified = [
+        m
+        for m in live
+        if m.status == "active" and (m.plan_id == plan_id or m.session_id not in projected)
+    ]
     return PlanInForce(
-        str(row["id"]), str(row["week"]), str(row["approved_at"]), str(row["write_plan_hash"])
+        plan_id,
+        str(row["week"]),
+        str(row["approved_at"]),
+        str(row["write_plan_hash"]),
+        routines_verified=len(verified),
+        routines_unverified=tuple(m.session_id for m in live if m not in verified),
     )
 
 

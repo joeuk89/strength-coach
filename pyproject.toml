@@ -30,6 +30,8 @@ addopts = [
     "support.wall_time",
     "-p",
     "support.no_network",
+    "-p",
+    "support.hevy_writes",
 ]
 
 [tool.ruff]

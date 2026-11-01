@@ -14,8 +14,6 @@ from coach.core.flag import Flag, FlagKey, Scope
 from coach.core.goal import Goal
 from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
-from coach.core.overrides import parse_plan_overrides
-from coach.core.prescription import PlanOverride
 from coach.core.program.checks import AdoptContext, OpenBlock, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
@@ -183,8 +181,7 @@ def show_draft(conn: Connection, *, apply_plan: datetime.date | None = None) -> 
     plan = week_plans.in_force(conn, apply_plan.isoformat())
     if plan is None:
         raise Invalid("invalid_argument", f"the week of {apply_plan} has no approved WeekPlan")
-    stored = week_plans.overrides(conn, str(plan["id"]))
-    folded = fold_overrides(form, _plan_overrides(stored, str(plan["id"])))
+    folded = fold_overrides(form, week_plans.stored_overrides(conn, str(plan["id"])))
     return ShownDraft(program_draft(folded.form, folded_pins=folded.pins), folded.folded)
 
 
@@ -193,22 +190,6 @@ def _carried(entry: AcknowledgeEntry, next_scope: Scope) -> AcknowledgeEntry:
     if key.scope.kind != "version":
         return entry
     return replace(entry, flag=str(FlagKey(key.code, next_scope)))
-
-
-def _plan_overrides(
-    stored: Sequence[Mapping[str, object]], plan_id: str
-) -> tuple[PlanOverride, ...]:
-    """Stored rows read back through the Draft's own parser, so both carry one typed shape."""
-    tables: list[dict[str, object]] = []
-    for row in stored:
-        refs = {"session": row["session_id"], "exercise": row["exercise_id"], "date": row["date"]}
-        table = {"kind": row["kind"], **{k: v for k, v in refs.items() if v is not None}}
-        table |= cast(Mapping[str, object], row["params"])
-        table |= {"because": row["because"], "text": row["text"]}
-        if row["evidence"]:
-            table["evidence"] = row["evidence"]
-        tables.append(table)
-    return parse_plan_overrides({"override": tables}, file=f"WeekPlan {plan_id}")
 
 
 def _current_goal(conn: Connection) -> Goal | None:

@@ -19,6 +19,7 @@ def a_plan_draft(
     acknowledge: str = "",
     confirmed: bool = True,
     hevy: bool = False,
+    week: datetime.date = NEXT_MONDAY,
 ) -> bytes:
     """The engine's Draft for next week, its position confirmed, with the agent's
     `[[override]]` and `[[acknowledge]]` tables in place of the empty arrays."""
@@ -27,7 +28,7 @@ def a_plan_draft(
         config=a_config(hevy=hevy),
         kits=(kit_files(),),
         clock=FixedClock(),
-        week=NEXT_MONDAY,
+        week=week,
     ).text
     if confirmed:
         text = text.replace("confirmed = false", "confirmed = true")

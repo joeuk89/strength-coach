@@ -15,7 +15,16 @@ from coach.core.registries.agent import RECORD_KINDS
 from coach.core.registries.flags import Severity
 from coach.services.history import read_history
 from coach.services.ledger import ID_PREFIX
-from coach.store import annotations, decisions, follow_ups, niggles, notes, week_plans, workouts
+from coach.store import (
+    annotations,
+    decisions,
+    follow_ups,
+    niggles,
+    notes,
+    routine_map,
+    week_plans,
+    workouts,
+)
 from coach.store import exercises as library
 from coach.store import readings as stored
 from coach.store.connection import Connection
@@ -121,6 +130,11 @@ def _kind_of(conn: Connection, id_: str) -> str:
         if id_.startswith(prefix):
             return kind
     return "exercise" if library.get(conn, id_) else "workout"
+
+
+def routines(conn: Connection, *, last: int | None) -> QueryResult:
+    """`query routines`: the Routine map joined to folders, not the mirror (cutover.md)."""
+    return _newest(routine_map.joined(conn), last)
 
 
 def _newest(rows: list[Row], last: int | None) -> QueryResult:

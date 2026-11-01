@@ -1,14 +1,25 @@
+import json
 from collections.abc import Iterable
 from dataclasses import dataclass
 
 from coach.core.clock import Clock
+from coach.core.config import Units
 from coach.core.errors import Unreachable
 from coach.core.flag import Flag
-from coach.core.import_flags import exercise_unmapped, snapshot_stale, workout_reappeared
-from coach.core.instant import parse_instant, utc_instant
-from coach.core.mirror import BodyMeasurement, MirroredRoutine, Routine, engine_folders
+from coach.core.import_flags import (
+    exercise_unmapped,
+    routine_drift,
+    snapshot_stale,
+    workout_reappeared,
+)
+from coach.core.instant import utc_instant
+from coach.core.mirror import BodyMeasurement, engine_folders, mirrored_routine
+from coach.core.routine_projection import routine_diff
 from coach.core.workout_import import Changes, event_since, reconcile_events, reconcile_full
+from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
+from coach.services.projections import projection, session_facts
+from coach.store import mirrors, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.import_runs import last_import_at, record_import_run
 from coach.store.mirrors import upsert_folder, upsert_routine
@@ -43,7 +54,9 @@ class ImportResult:
     warnings: tuple[Flag, ...]
 
 
-def import_hevy(conn: Connection, client: HevyClient, clock: Clock, *, full: bool) -> ImportResult:
+def import_hevy(
+    conn: Connection, client: HevyClient, clock: Clock, *, full: bool, units: Units
+) -> ImportResult:
     """Pull Hevy append-only into the store (ADR 0011, "Import"). Every GET runs before the one
     write transaction, so an unreachable Hevy leaves the store as it was."""
     now = clock.now()
@@ -72,8 +85,9 @@ def import_hevy(conn: Connection, client: HevyClient, clock: Clock, *, full: boo
             append_version(conn, version, at)
         append_tombstones(conn, changes.tombstones)
         entered, withdrawn = _weigh_ins(conn, measurements, at)
-        routine_rows = sum(upsert_routine(conn, _mirrored(r), at) for r in pulled_routines)
+        routine_rows = sum(upsert_routine(conn, mirrored_routine(r), at) for r in pulled_routines)
         folder_rows = sum(upsert_folder(conn, f) for f in pulled_folders)
+        routine_map.flip_missing(conn, {r.id for r in pulled_routines})
         summary = {
             **_log_summary(changes),
             "weigh_in": entered + withdrawn,
@@ -91,14 +105,41 @@ def import_hevy(conn: Connection, client: HevyClient, clock: Clock, *, full: boo
         weigh_ins=entered,
         routines=routine_rows,
         folders=folder_rows,
-        warnings=standing_warnings(conn),
+        warnings=standing_warnings(conn, units),
     )
 
 
-def standing_warnings(conn: Connection) -> tuple[Flag, ...]:
+def standing_warnings(conn: Connection, units: Units) -> tuple[Flag, ...]:
     """The import warnings that stand on the store as it is now (validation.md)."""
     returned = tuple(workout_reappeared(*row) for row in reappeared(conn))
-    return returned + exercise_unmapped(current_workouts(conn), mapped_template_ids(conn))
+    unmapped = exercise_unmapped(current_workouts(conn), mapped_template_ids(conn))
+    return returned + unmapped + _drift(conn, units)
+
+
+def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
+    """Each live mapped routine against the projection of the WeekPlan that wrote it: the
+    mirror is what Hevy returned at the last import or read-back (ADR 0011, "Import")."""
+    live = {r.hevy_id: r for r in mirrors.routines(conn)}
+    flags: list[Flag] = []
+    for row in routine_map.written(conn):
+        mirrored = live.get(row.routine_id)
+        if mirrored is None:
+            continue
+        plan = week_plans.by_id(conn, row.plan_id)
+        session = session_facts(conn, plan).get(row.session_id)
+        if session is None or not _froze(conn, row.plan_id, row.session_id):
+            continue
+        body = projection(conn, plan, row.session_id, session, units)
+        diff = routine_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))
+        if diff:
+            flags.append(routine_drift(row.routine_id, row.plan_id, diff))
+    return tuple(flags)
+
+
+def _froze(conn: Connection, plan_id: str, session_id: str) -> bool:
+    """A routine its plan retired froze no line to project; its map row can stay live when
+    the retire read back differently."""
+    return any(r["session_id"] == session_id for r in week_plans.prescriptions(conn, plan_id))
 
 
 def _weigh_ins(
@@ -119,16 +160,6 @@ def _weigh_ins(
         enter_weigh_in(conn, date, kg, "hevy", at)
         entered += 1
     return entered, withdrawn
-
-
-def _mirrored(routine: Routine) -> MirroredRoutine:
-    return MirroredRoutine(
-        hevy_id=routine.id,
-        updated_at=utc_instant(parse_instant(routine.updated_at)),
-        title=routine.title,
-        folder_id=routine.folder_id,
-        raw=routine.raw,
-    )
 
 
 def _log_summary(changes: Changes) -> dict[str, int]:

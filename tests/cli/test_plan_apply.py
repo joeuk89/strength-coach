@@ -1,8 +1,12 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from support.cli import Run, run_coach
+from support.fake_hevy import FakeHevy
 from support.hook import a_bash_call, run_hook
 from support.planning_instance import (
+    CLOCK,
     ENGINE,
     a_planning_instance,
     adopt_the_squat_version,
@@ -16,6 +20,7 @@ from coach.cli import app, envelope
 from coach.cli.hook.in_process import run_in_process
 from coach.cli.registry import declarations
 from coach.cli.verbs.plan_apply import dry_run_result
+from coach.core.clock import Clock
 
 PIN_OFF_RACK = """
 [[override]]
@@ -104,11 +109,99 @@ def test_the_dry_run_writes_nothing(instance: Path) -> None:
     assert (instance / ".coach" / "coach.db").read_bytes() == store
 
 
-def test_without_dry_run_the_push_is_refused_in_this_build(instance: Path) -> None:
-    run = coach("plan", "apply", a_draft_file(instance), "--expect", "sha256:x")
+def test_without_expect_the_push_is_exit_3_expect_missing(instance: Path) -> None:
+    run = coach("plan", "apply", a_draft_file(instance))
+
+    assert run.code == 3
+    assert run.envelope["error"]["code"] == "expect_missing"
+
+
+def hevy_on(hevy: FakeHevy) -> Callable[..., Run]:
+    def serving(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
+        return hevy
+
+    def with_hevy(*argv: str) -> Run:
+        return run_coach(*argv, env={"HEVY_API_KEY": "k"}, clock=CLOCK, make_client=serving)
+
+    return with_hevy
+
+
+def test_a_read_back_that_differs_is_exit_1_verify_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+
+    run = with_hevy("plan", "apply", draft, "--expect", digest)
 
     assert run.code == 1
-    assert run.envelope["error"]["code"] == "invalid_argument"
+    assert run.envelope["error"]["code"] == "verify_failed"
+    routines = coach("query", "routines").envelope["result"]["rows"]
+    assert [r["status"] for r in routines] == ["unverified"]
+
+
+def test_the_dry_run_after_a_failed_verify_prompts_to_resume_the_approved_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+    with_hevy("plan", "apply", draft, "--expect", digest)
+
+    result = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]
+
+    assert (result["resumes"], result["supersedes"]) == ("wp-2026-11-02", None)
+    assert result["prompt"].splitlines()[0] == (
+        "Plan 2026-11-02 to 2026-11-08, rotation week A, resuming wp-2026-11-02"
+    )
+
+
+def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    first = with_hevy("plan", "apply", draft, "--expect", digest)
+    again = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert first.code == 0, first.stdout
+    result = first.envelope["result"]
+    assert (result["week_plan_id"], result["write_plan_hash"]) == ("wp-2026-11-02", digest)
+    [outcome] = result["outcomes"]
+    assert (outcome["session"], outcome["action"], outcome["outcome"]) == (
+        "lower",
+        "create",
+        "verified",
+    )
+    assert result["audit_lines"] == 5
+    assert (result["outcome_count"], result["outcomes_truncated"]) == (1, False)
+    assert again.code == 0, again.stdout
+    assert again.envelope["result"]["resumed"] is True
+    assert [o["outcome"] for o in again.envelope["result"]["outcomes"]] == ["unchanged"]
+    routines = coach("query", "routines").envelope["result"]["rows"]
+    assert [(r["session"], r["folder"], r["status"]) for r in routines] == [
+        ("lower", "Program", "active")
+    ]
 
 
 def test_query_flags_on_a_draft_summarises_by_code_and_severity(instance: Path) -> None:

@@ -86,8 +86,10 @@ def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> N
 def test_status_reports_the_age_of_the_last_import_and_the_workouts_read() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A), a_workout(B)]), clock, full=True)
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(B)]), clock, full=True)
+    import_hevy(
+        conn, FakeHevy(clock, workouts=[a_workout(A), a_workout(B)]), clock, full=True, units="kg"
+    )
+    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(B)]), clock, full=True, units="kg")
     later = FixedClock(clock.moment + datetime.timedelta(days=3, hours=2))
 
     result = status_of(conn, clock=later)
@@ -100,7 +102,7 @@ def test_status_reports_the_age_of_the_last_import_and_the_workouts_read() -> No
 def test_status_warns_snapshot_stale_past_seven_days_while_hevy_is_on() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock), clock, full=True)
+    import_hevy(conn, FakeHevy(clock), clock, full=True, units="kg")
     later = FixedClock(clock.moment + datetime.timedelta(days=8))
 
     on = status_of(conn, clock=later)

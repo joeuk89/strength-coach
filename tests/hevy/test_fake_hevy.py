@@ -57,7 +57,15 @@ def protocol_members() -> set[str]:
     return {name for name in vars(HevyClient) if not name.startswith("_")}
 
 
-FAULT_CONTROLS = {"audit", "move_routine", "fail_next_get", "differ_next_read_back"}
+FAULT_CONTROLS = {
+    "audit",
+    "calls",
+    "move_routine",
+    "edit_in_app",
+    "stop_returning",
+    "fail_next_get",
+    "differ_next_read_back",
+}
 
 
 def test_the_fake_has_the_protocol_and_its_fault_controls_and_nothing_more() -> None:

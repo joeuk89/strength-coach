@@ -76,6 +76,10 @@ def _plan(plan: PlanInForce | None) -> Json | None:
         "week": plan.week,
         "approved_at": plan.approved_at,
         "hash": plan.write_plan_hash,
+        "routines": {
+            "verified": plan.routines_verified,
+            "unverified": list(plan.routines_unverified),
+        },
     }
 
 
@@ -165,6 +169,15 @@ DECLARATION = Declaration(
                     "week": {"type": "string", "format": "date"},
                     "approved_at": {"type": "string"},
                     "hash": {"type": "string"},
+                    "routines": {
+                        "description": "Routine map rows verified, and the sessions left "
+                        "unverified",
+                        "type": "object",
+                        "properties": {
+                            "verified": {"type": "integer"},
+                            "unverified": {"type": "array", "items": {"type": "string"}},
+                        },
+                    },
                 },
             },
             "rotation": {

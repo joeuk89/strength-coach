@@ -2,6 +2,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
+from coach.core.instant import parse_instant, utc_instant
+
 SetType = Literal["warm_up", "working"]
 
 
@@ -143,3 +145,14 @@ def engine_folders(folders: Iterable[Folder]) -> tuple[MirroredFolder, ...]:
         if len(matches) == 1:
             mirrored.append(MirroredFolder(role, matches[0].id, title))
     return tuple(mirrored)
+
+
+def mirrored_routine(routine: Routine) -> MirroredRoutine:
+    """The routine as the mirror stores it, `updated_at` in UTC so versions compare as text."""
+    return MirroredRoutine(
+        hevy_id=routine.id,
+        updated_at=utc_instant(parse_instant(routine.updated_at)),
+        title=routine.title,
+        folder_id=routine.folder_id,
+        raw=routine.raw,
+    )

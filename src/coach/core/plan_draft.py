@@ -26,6 +26,7 @@ class PlanDraft:
     overrides: tuple[PlanOverride, ...] = ()
     conflicts: tuple[Flag, ...] = ()
     confirmed: bool = False
+    second_week: tuple[Flag, ...] = ()
 
     @property
     def week_flags(self) -> tuple[Flag, ...]:
@@ -45,7 +46,7 @@ class PlanDraft:
     @property
     def flags(self) -> tuple[Flag, ...]:
         line_flags = (f for s in self.sessions for line in s.lines for f in line.flags)
-        return (*self.week_flags, *self.conflicts, *line_flags)
+        return (*self.week_flags, *self.conflicts, *line_flags, *self.second_week)
 
     @property
     def line_count(self) -> int:

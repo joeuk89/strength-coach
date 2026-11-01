@@ -134,6 +134,16 @@ def latest(conn: Connection) -> VersionRow | None:
     return _one(conn, f"{READ} ORDER BY sequence DESC LIMIT 1", ())
 
 
+def in_force_at(conn: Connection, instant: str) -> VersionRow | None:
+    """The latest version recorded by `instant`; one recorded in the same second counts."""
+    return _one(
+        conn,
+        f"{READ} WHERE substr(recorded_at, 1, 19) <= substr(?, 1, 19) "
+        "ORDER BY sequence DESC LIMIT 1",
+        (instant,),
+    )
+
+
 def line_counts(conn: Connection, version_id: str) -> list[tuple[str, int]]:
     """Each session of the version with its line count, in the version's order."""
     return [

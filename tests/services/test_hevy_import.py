@@ -41,7 +41,7 @@ def test_a_full_import_stores_each_workout_with_its_sets_and_raw_payload() -> No
         workouts=[a_workout(A, exercises=[squat]), a_workout(B), a_workout(C)],
     )
 
-    result = import_hevy(conn, fake, clock, full=True)
+    result = import_hevy(conn, fake, clock, full=True, units="kg")
 
     assert result.workouts.new == 3
     stored = {w.id: w for w in current_workouts(conn)}
@@ -59,9 +59,9 @@ def test_a_second_identical_full_import_stores_nothing_and_reports_zeros() -> No
     conn = open_store(":memory:")
     clock = FixedClock()
     fake = FakeHevy(clock, workouts=[a_workout(A), a_workout(B), a_workout(C)])
-    import_hevy(conn, fake, clock, full=True)
+    import_hevy(conn, fake, clock, full=True, units="kg")
 
-    again = import_hevy(conn, fake, clock, full=True)
+    again = import_hevy(conn, fake, clock, full=True, units="kg")
 
     assert (again.workouts.new, again.workouts.versioned) == (0, 0)
     assert (again.workouts.gone, again.workouts.back) == (0, 0)
@@ -71,10 +71,16 @@ def test_a_second_identical_full_import_stores_nothing_and_reports_zeros() -> No
 def test_an_app_edit_appends_a_version_and_the_current_view_returns_the_latest() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A, title="Session A")]), clock, full=True)
+    import_hevy(
+        conn,
+        FakeHevy(clock, workouts=[a_workout(A, title="Session A")]),
+        clock,
+        full=True,
+        units="kg",
+    )
     edited = a_workout(A, title="Session A (edited)", updated_at="2026-10-27T08:00:00.000Z")
 
-    result = import_hevy(conn, FakeHevy(clock, workouts=[edited]), clock, full=True)
+    result = import_hevy(conn, FakeHevy(clock, workouts=[edited]), clock, full=True, units="kg")
 
     assert (result.workouts.new, result.workouts.versioned) == (0, 1)
     assert [v.title for v in workout_versions(conn, A)] == ["Session A", "Session A (edited)"]
@@ -84,9 +90,13 @@ def test_an_app_edit_appends_a_version_and_the_current_view_returns_the_latest()
 def test_a_workout_missing_from_a_full_pull_is_gone_and_keeps_its_sets() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A), a_workout(B)]), clock, full=True)
+    import_hevy(
+        conn, FakeHevy(clock, workouts=[a_workout(A), a_workout(B)]), clock, full=True, units="kg"
+    )
 
-    result = import_hevy(conn, FakeHevy(clock, workouts=[a_workout(B)]), clock, full=True)
+    result = import_hevy(
+        conn, FakeHevy(clock, workouts=[a_workout(B)]), clock, full=True, units="kg"
+    )
 
     assert result.workouts.gone == 1
     assert [w.id for w in current_workouts(conn)] == [B]
@@ -97,11 +107,11 @@ def test_a_workout_missing_from_a_full_pull_is_gone_and_keeps_its_sets() -> None
 def test_a_delete_event_marks_the_workout_gone_with_source_event() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A)]), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A)]), clock, full=True, units="kg")
     later = FixedClock(clock.moment + datetime.timedelta(days=1))
     deleted = a_deleted_event(A, utc(later.moment - datetime.timedelta(hours=1)))
 
-    result = import_hevy(conn, FakeHevy(later, events=[deleted]), later, full=False)
+    result = import_hevy(conn, FakeHevy(later, events=[deleted]), later, full=False, units="kg")
 
     assert (result.kind, result.workouts.gone) == ("event", 1)
     assert current_workouts(conn) == ()
@@ -112,11 +122,13 @@ def test_a_delete_event_marks_the_workout_gone_with_source_event() -> None:
 def test_a_returning_workout_appends_back_reads_again_and_warns() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A)]), clock, full=True)
-    import_hevy(conn, FakeHevy(clock, workouts=[]), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A)]), clock, full=True, units="kg")
+    import_hevy(conn, FakeHevy(clock, workouts=[]), clock, full=True, units="kg")
     later = FixedClock(clock.moment + datetime.timedelta(hours=1))
 
-    result = import_hevy(conn, FakeHevy(later, workouts=[a_workout(A)]), later, full=True)
+    result = import_hevy(
+        conn, FakeHevy(later, workouts=[a_workout(A)]), later, full=True, units="kg"
+    )
 
     assert result.workouts.back == 1
     assert [t.kind for t in tombstones(conn, A)] == ["gone", "back"]
@@ -133,13 +145,13 @@ def test_a_returning_workout_appends_back_reads_again_and_warns() -> None:
 def test_a_delete_then_an_edit_in_one_event_pull_keeps_the_workout_current() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A)]), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, workouts=[a_workout(A)]), clock, full=True, units="kg")
     later = FixedClock(clock.moment + datetime.timedelta(days=1))
     deleted = a_deleted_event(A, utc(later.moment - datetime.timedelta(hours=2)))
     edited = a_workout(A, updated_at=utc(later.moment - datetime.timedelta(hours=1)))
     events = [deleted, an_updated_event(edited)]
 
-    result = import_hevy(conn, FakeHevy(later, events=events), later, full=False)
+    result = import_hevy(conn, FakeHevy(later, events=events), later, full=False, units="kg")
 
     assert (result.workouts.versioned, result.workouts.gone, result.workouts.back) == (1, 0, 0)
     assert tombstones(conn, A) == ()
@@ -150,13 +162,13 @@ def test_a_delete_then_an_edit_in_one_event_pull_keeps_the_workout_current() -> 
 def test_an_event_pull_reaches_back_ten_minutes_past_the_last_import() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
-    import_hevy(conn, FakeHevy(clock), clock, full=True)
+    import_hevy(conn, FakeHevy(clock), clock, full=True, units="kg")
     later = FixedClock(clock.moment + datetime.timedelta(days=1))
     inside = a_workout(A, updated_at=utc(clock.moment - datetime.timedelta(minutes=5)))
     outside = a_workout(B, updated_at=utc(clock.moment - datetime.timedelta(minutes=15)))
     events = [an_updated_event(inside), an_updated_event(outside)]
 
-    result = import_hevy(conn, FakeHevy(later, events=events), later, full=False)
+    result = import_hevy(conn, FakeHevy(later, events=events), later, full=False, units="kg")
 
     assert result.since == "2026-10-30T11:50:00Z"
     assert [w.id for w in current_workouts(conn)] == [A]
@@ -173,7 +185,7 @@ def test_an_unknown_template_keeps_its_raw_id_and_title_and_warns_once_per_worko
     other = an_exercise("C0FFEE02", "Hollow Hold")
     fake = FakeHevy(clock, workouts=[a_workout(A, exercises=[custom, other]), a_workout(B)])
 
-    result = import_hevy(conn, fake, clock, full=True)
+    result = import_hevy(conn, fake, clock, full=True, units="kg")
 
     stored = {w.id: w for w in current_workouts(conn)}
     assert [(s.hevy_template_id, s.hevy_title) for s in stored[A].sets] == [
@@ -199,7 +211,7 @@ def test_hevy_warmup_lands_as_warm_up_and_every_other_set_type_as_working() -> N
     sets = [a_set(t) for t in ("warmup", "normal", "failure", "dropset")]
     fake = FakeHevy(clock, workouts=[a_workout(A, exercises=[an_exercise("X", "Row", *sets)])])
 
-    import_hevy(conn, fake, clock, full=True)
+    import_hevy(conn, fake, clock, full=True, units="kg")
 
     (workout,) = current_workouts(conn)
     assert [s.set_type for s in workout.sets] == ["warm_up", "working", "working", "working"]
@@ -222,10 +234,10 @@ def test_routines_are_upserted_by_hevy_id_and_never_deleted() -> None:
         a_routine(R1, updated_at="2026-10-01T10:00:00Z"),
         a_routine(R2, updated_at="2026-10-01T10:00:00Z"),
     ]
-    import_hevy(conn, FakeHevy(clock, routines=first), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, routines=first), clock, full=True, units="kg")
     moved = a_routine(R1, title="Session A v2", updated_at="2026-10-20T10:00:00Z")
 
-    result = import_hevy(conn, FakeHevy(clock, routines=[moved]), clock, full=True)
+    result = import_hevy(conn, FakeHevy(clock, routines=[moved]), clock, full=True, units="kg")
 
     assert result.routines == 1
     assert [(r.hevy_id, r.title, r.updated_at) for r in routines(conn)] == [
@@ -238,9 +250,11 @@ def test_the_engine_folders_are_mirrored_by_role_and_never_deleted() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
     hevy_folders = [a_folder(1, "Program"), a_folder(2, "Retired"), a_folder(3, "My stuff")]
-    import_hevy(conn, FakeHevy(clock, folders=hevy_folders), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, folders=hevy_folders), clock, full=True, units="kg")
 
-    result = import_hevy(conn, FakeHevy(clock, folders=[a_folder(1, "Program")]), clock, full=True)
+    result = import_hevy(
+        conn, FakeHevy(clock, folders=[a_folder(1, "Program")]), clock, full=True, units="kg"
+    )
 
     assert result.folders == 0
     assert [(f.role, f.hevy_id, f.title) for f in folders(conn)] == [
@@ -254,7 +268,7 @@ def test_two_folders_sharing_an_engine_title_are_not_mirrored() -> None:
     clock = FixedClock()
     hevy_folders = [a_folder(1, "Program"), a_folder(2, "Program")]
 
-    import_hevy(conn, FakeHevy(clock, folders=hevy_folders), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, folders=hevy_folders), clock, full=True, units="kg")
 
     assert folders(conn) == ()
 
@@ -263,9 +277,9 @@ def test_body_measurements_become_hevy_weigh_ins_once() -> None:
     conn = open_store(":memory:")
     clock = FixedClock()
     measured = [a_measurement("2026-10-20", 80.4), a_measurement("2026-10-27", None)]
-    import_hevy(conn, FakeHevy(clock, measurements=measured), clock, full=True)
+    import_hevy(conn, FakeHevy(clock, measurements=measured), clock, full=True, units="kg")
 
-    again = import_hevy(conn, FakeHevy(clock, measurements=measured), clock, full=True)
+    again = import_hevy(conn, FakeHevy(clock, measurements=measured), clock, full=True, units="kg")
 
     assert again.weigh_ins == 0
     assert [(w.id, w.date, w.kg, w.source) for w in live_weigh_ins(conn)] == [
@@ -277,11 +291,17 @@ def test_a_changed_measurement_withdraws_the_old_weigh_in_and_enters_the_new() -
     conn = open_store(":memory:")
     clock = FixedClock()
     import_hevy(
-        conn, FakeHevy(clock, measurements=[a_measurement("2026-10-20", 80.4)]), clock, full=True
+        conn,
+        FakeHevy(clock, measurements=[a_measurement("2026-10-20", 80.4)]),
+        clock,
+        full=True,
+        units="kg",
     )
 
     corrected = [a_measurement("2026-10-20", 80.9)]
-    result = import_hevy(conn, FakeHevy(clock, measurements=corrected), clock, full=True)
+    result = import_hevy(
+        conn, FakeHevy(clock, measurements=corrected), clock, full=True, units="kg"
+    )
 
     assert result.weigh_ins == 1
     assert [(w.date, w.kg) for w in live_weigh_ins(conn)] == [("2026-10-20", 80.9)]
@@ -296,7 +316,7 @@ def test_an_unreachable_hevy_writes_nothing() -> None:
     fake.fail_next_get()
 
     with pytest.raises(Unreachable):
-        import_hevy(conn, fake, clock, full=True)
+        import_hevy(conn, fake, clock, full=True, units="kg")
 
     assert (current_workouts(conn), routines(conn), last_import_at(conn)) == ((), (), None)
 
@@ -306,13 +326,19 @@ EIGHT_DAYS_AGO = NOON - datetime.timedelta(days=8)
 
 def test_an_unreachable_hevy_after_a_week_without_an_import_warns_snapshot_stale() -> None:
     conn = open_store(":memory:")
-    import_hevy(conn, FakeHevy(FixedClock(EIGHT_DAYS_AGO)), FixedClock(EIGHT_DAYS_AGO), full=True)
+    import_hevy(
+        conn,
+        FakeHevy(FixedClock(EIGHT_DAYS_AGO)),
+        FixedClock(EIGHT_DAYS_AGO),
+        full=True,
+        units="kg",
+    )
     clock = FixedClock()
     fake = FakeHevy(clock)
     fake.fail_next_get()
 
     with pytest.raises(Unreachable) as raised:
-        import_hevy(conn, fake, clock, full=False)
+        import_hevy(conn, fake, clock, full=False, units="kg")
 
     assert raised.value.code == "hevy_unreachable"
     assert [(w.code, w.params) for w in raised.value.warnings] == [
@@ -323,23 +349,29 @@ def test_an_unreachable_hevy_after_a_week_without_an_import_warns_snapshot_stale
 def test_an_unreachable_hevy_inside_the_week_raises_no_snapshot_stale() -> None:
     conn = open_store(":memory:")
     recent = NOON - datetime.timedelta(days=3)
-    import_hevy(conn, FakeHevy(FixedClock(recent)), FixedClock(recent), full=True)
+    import_hevy(conn, FakeHevy(FixedClock(recent)), FixedClock(recent), full=True, units="kg")
     clock = FixedClock()
     fake = FakeHevy(clock)
     fake.fail_next_get()
 
     with pytest.raises(Unreachable) as raised:
-        import_hevy(conn, fake, clock, full=False)
+        import_hevy(conn, fake, clock, full=False, units="kg")
 
     assert raised.value.warnings == ()
 
 
 def test_an_import_after_a_week_closes_the_gap_and_raises_no_snapshot_stale() -> None:
     conn = open_store(":memory:")
-    import_hevy(conn, FakeHevy(FixedClock(EIGHT_DAYS_AGO)), FixedClock(EIGHT_DAYS_AGO), full=True)
+    import_hevy(
+        conn,
+        FakeHevy(FixedClock(EIGHT_DAYS_AGO)),
+        FixedClock(EIGHT_DAYS_AGO),
+        full=True,
+        units="kg",
+    )
     clock = FixedClock()
 
-    result = import_hevy(conn, FakeHevy(clock), clock, full=False)
+    result = import_hevy(conn, FakeHevy(clock), clock, full=False, units="kg")
 
     assert [w.code for w in result.warnings] == []
 
@@ -351,7 +383,7 @@ def test_an_import_records_its_run_with_a_summary() -> None:
         clock, workouts=[a_workout(A)], measurements=[a_measurement("2026-10-20", 80.4)]
     )
 
-    import_hevy(conn, fake, clock, full=True)
+    import_hevy(conn, fake, clock, full=True, units="kg")
 
     (run,) = import_runs(conn)
     assert (run.id, run.at, run.since, run.kind) == (
@@ -382,8 +414,8 @@ def test_an_import_through_the_real_client_sends_only_gets(tmp_path: Path) -> No
     opener = RecordingOpener(Reply(200, page) for page in script)
     client = HevyApiClient("k", tmp_path / "writes.jsonl", clock, opener=opener)
 
-    import_hevy(conn, client, clock, full=True)
-    import_hevy(conn, client, clock, full=False)
+    import_hevy(conn, client, clock, full=True, units="kg")
+    import_hevy(conn, client, clock, full=False, units="kg")
 
     assert {s.method for s in opener.sent} == {"GET"}
     assert any("/v1/workouts/events" in s.url for s in opener.sent)

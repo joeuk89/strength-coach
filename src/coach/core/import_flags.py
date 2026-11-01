@@ -1,8 +1,9 @@
 import datetime
-from collections.abc import Collection, Iterable
+from collections.abc import Collection, Iterable, Sequence
 
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.log import WorkoutVersion
+from coach.core.routine_projection import drift_class
 
 # research-notes.md: a plan reads last week's exposures, so a mirror older than a week is stale.
 SNAPSHOT_AGE_LIMIT_DAYS = 7
@@ -51,4 +52,15 @@ def snapshot_stale(last_import: datetime.datetime | None, now: datetime.datetime
         Scope("instance"),
         {"last_import": last_import.date().isoformat(), "age_limit_days": SNAPSHOT_AGE_LIMIT_DAYS},
         f"the last Hevy import was {(now - last_import).days} days ago; run `coach import`",
+    )
+
+
+def routine_drift(routine_id: str, plan_id: str, diff: Sequence[str]) -> Flag:
+    found = drift_class(diff)
+    return raise_flag(
+        "routine_drift",
+        Scope("routine", routine_id=routine_id),
+        {"drift_class": found, "plan_in_force": plan_id, "diff": list(diff)},
+        f"routine {routine_id} differs from {plan_id} in Hevy ({found}: {', '.join(diff)}); "
+        "an override on the next WeekPlan or the next push resolves it",
     )

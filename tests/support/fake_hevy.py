@@ -27,6 +27,10 @@ from coach.hevy.parse import (
 from coach.hevy.protocol import Payload, ReadBack, RoutineDiff, WriteContext
 
 type Json = dict[str, Any]
+type Call = tuple[str, str]
+
+# Every call any FakeHevy saw in this process, for the suite-wide guard (`support.hevy_writes`).
+RECORDED: list[Call] = []
 
 
 class FakeHevy:
@@ -58,6 +62,7 @@ class FakeHevy:
         self._fail_next_get = False
         self._differ_next_read_back = False
         self.audit: list[audit.AuditLine] = []
+        self.calls: list[Call] = []
 
     def move_routine(self, routine_id: str, updated_at: str) -> None:
         self._routines[routine_id]["updated_at"] = updated_at
@@ -72,18 +77,21 @@ class FakeHevy:
         pass
 
     def create_routine(self, body: Payload, context: WriteContext) -> Routine:
+        self._record("POST", "/v1/routines")
         sent = _routine_body(body)
         routine_id = self._new_id("routine")
         self._routines[routine_id] = self._stored_routine(routine_id, sent, keep_notes=True)
         return self._write("POST", "/v1/routines", body, context, routine_id)
 
     def update_routine(self, routine_id: str, body: Payload, context: WriteContext) -> Routine:
+        self._record("PUT", f"/v1/routines/{routine_id}")
         self._require(routine_id)
         sent = _routine_body(body)
         self._routines[routine_id] = self._stored_routine(routine_id, sent, keep_notes=False)
         return self._write("PUT", f"/v1/routines/{routine_id}", body, context, routine_id)
 
     def create_folder(self, body: Payload, context: WriteContext) -> Folder:
+        self._record("POST", "/v1/routine_folders")
         sent = cast(Json, body["routine_folder"])
         folder: Json = {
             "id": 9000 + len(self._folders),
@@ -97,6 +105,7 @@ class FakeHevy:
         return parse_folder(folder)
 
     def create_exercise_template(self, body: Payload, context: WriteContext) -> str:
+        self._record("POST", "/v1/exercise_templates")
         sent = cast(Json, body["exercise"])
         template_id = self._new_id("template")
         self._templates.append(
@@ -114,16 +123,20 @@ class FakeHevy:
         return template_id
 
     def workouts(self) -> tuple[Workout, ...]:
+        self._record("GET", "/v1/workouts")
         return parse_workout_page(self._page("workouts", self._workouts)).items
 
     def workout_events(self, since: datetime.datetime) -> tuple[WorkoutEvent, ...]:
+        self._record("GET", "/v1/workouts/events")
         newer = [e for e in self._events if _event_moment(e) > since]
         return parse_workout_events_page(self._page("events", newer)).items
 
     def routines(self) -> tuple[Routine, ...]:
+        self._record("GET", "/v1/routines")
         return parse_routine_page(self._page("routines", list(self._routines.values()))).items
 
     def routine(self, routine_id: str) -> Routine:
+        self._record("GET", f"/v1/routines/{routine_id}")
         self._get()
         self._require(routine_id)
         return parse_routine({"routine": self._routines[routine_id]})
@@ -138,14 +151,31 @@ class FakeHevy:
         return ReadBack(routine=routine, diff=found)
 
     def folders(self) -> tuple[Folder, ...]:
+        self._record("GET", "/v1/routine_folders")
         return parse_folder_page(self._page("routine_folders", self._folders)).items
 
     def exercise_templates(self) -> tuple[ExerciseTemplate, ...]:
+        self._record("GET", "/v1/exercise_templates")
         return parse_exercise_template_page(self._page("exercise_templates", self._templates)).items
 
     def body_measurements(self) -> tuple[BodyMeasurement, ...]:
+        self._record("GET", "/v1/body_measurements")
         page = self._page("body_measurements", self._measurements)
         return parse_body_measurement_page(page).items
+
+    def stop_returning(self, routine_id: str) -> None:
+        """The routine is gone from the account, as when the athlete deletes it in the app."""
+        del self._routines[routine_id]
+
+    def edit_in_app(self, routine_id: str, weight_kg: float, updated_at: str) -> None:
+        """The athlete changes the first set's weight in the app."""
+        routine = self._routines[routine_id]
+        routine["exercises"][0]["sets"][0]["weight_kg"] = weight_kg
+        routine["updated_at"] = updated_at
+
+    def _record(self, method: str, path: str) -> None:
+        self.calls.append((method, path))
+        RECORDED.append((method, path))
 
     def _require(self, routine_id: str) -> None:
         if routine_id not in self._routines:
