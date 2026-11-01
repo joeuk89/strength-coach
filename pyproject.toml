@@ -39,6 +39,8 @@ extend-exclude = ["scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+# The change string is written in the spec's notation: `4×6–8 @8`.
+allowed-confusables = ["×", "–"]
 
 [tool.pyright]
 include = ["src", "tests"]

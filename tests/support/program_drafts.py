@@ -1,4 +1,4 @@
-# ruff: noqa: E501, RUF001
+# ruff: noqa: E501
 """Program Drafts for tests: the worked Draft of the program spec, and a small builder."""
 
 import copy

@@ -1,4 +1,4 @@
-# ruff: noqa: E501, RUF001
+# ruff: noqa: E501
 """Goal Drafts the tests adopt; WORKED is goals.md's worked Draft, copied by hand."""
 
 WORKED = '''kind = "hypertrophy"
