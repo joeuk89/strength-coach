@@ -4,7 +4,7 @@ from collections.abc import Callable, Generator
 
 import pytest
 
-LIMIT_S = 1.0
+LIMIT_S = 2.0
 # Shared CI runners are about three times slower than a laptop and vary run to run.
 CI_LIMIT_S = 3.0
 

@@ -31,27 +31,27 @@ def off_ci(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CI", raising=False)
 
 
-def test_a_test_over_one_second_fails(pytester: pytest.Pytester) -> None:
+def test_a_test_over_two_seconds_fails(pytester: pytest.Pytester) -> None:
     pytester.makeconftest(PLANTED_CONFTEST)
     pytester.makepyfile(
         """
         def test_slow(fake_clock):
-            fake_clock.seconds += 1.5
+            fake_clock.seconds += 2.5
         """
     )
 
     result = pytester.runpytest("-p", "support.wall_time")
 
     result.assert_outcomes(failed=1)
-    result.stdout.fnmatch_lines(["*1.50 s*over the 1.0 s budget*"])
+    result.stdout.fnmatch_lines(["*2.50 s*over the 2.0 s budget*"])
 
 
-def test_a_test_under_one_second_passes(pytester: pytest.Pytester) -> None:
+def test_a_test_under_two_seconds_passes(pytester: pytest.Pytester) -> None:
     pytester.makeconftest(PLANTED_CONFTEST)
     pytester.makepyfile(
         """
         def test_quick(fake_clock):
-            fake_clock.seconds += 0.5
+            fake_clock.seconds += 1.5
         """
     )
 
@@ -68,7 +68,7 @@ def test_slow_fixture_setup_fails(pytester: pytest.Pytester) -> None:
 
         @pytest.fixture
         def slow(fake_clock):
-            fake_clock.seconds += 1.5
+            fake_clock.seconds += 2.5
 
         def test_uses_slow(slow):
             pass
@@ -80,7 +80,7 @@ def test_slow_fixture_setup_fails(pytester: pytest.Pytester) -> None:
     result.assert_outcomes(errors=1)
 
 
-def test_setup_and_body_together_over_one_second_fail(pytester: pytest.Pytester) -> None:
+def test_setup_and_body_together_over_two_seconds_fail(pytester: pytest.Pytester) -> None:
     pytester.makeconftest(PLANTED_CONFTEST)
     pytester.makepyfile(
         """
@@ -88,17 +88,17 @@ def test_setup_and_body_together_over_one_second_fail(pytester: pytest.Pytester)
 
         @pytest.fixture
         def slowish(fake_clock):
-            fake_clock.seconds += 0.6
+            fake_clock.seconds += 1.2
 
         def test_uses_slowish(slowish, fake_clock):
-            fake_clock.seconds += 0.6
+            fake_clock.seconds += 1.2
         """
     )
 
     result = pytester.runpytest("-p", "support.wall_time")
 
     result.assert_outcomes(failed=1)
-    result.stdout.fnmatch_lines(["*1.20 s*over the 1.0 s budget*"])
+    result.stdout.fnmatch_lines(["*2.40 s*over the 2.0 s budget*"])
 
 
 def test_slow_teardown_counts_once_toward_the_budget(pytester: pytest.Pytester) -> None:
@@ -110,17 +110,17 @@ def test_slow_teardown_counts_once_toward_the_budget(pytester: pytest.Pytester) 
         @pytest.fixture
         def slow_teardown(fake_clock):
             yield
-            fake_clock.seconds += 0.6
+            fake_clock.seconds += 1.2
 
         def test_uses_slow_teardown(slow_teardown, fake_clock):
-            fake_clock.seconds += 0.6
+            fake_clock.seconds += 1.2
         """
     )
 
     result = pytester.runpytest("-p", "support.wall_time")
 
     result.assert_outcomes(passed=1, errors=1)
-    result.stdout.fnmatch_lines(["*1.20 s*over the 1.0 s budget*"])
+    result.stdout.fnmatch_lines(["*2.40 s*over the 2.0 s budget*"])
 
 
 def test_a_shared_fixture_does_not_count_toward_the_first_test_that_uses_it(
@@ -134,10 +134,10 @@ def test_a_shared_fixture_does_not_count_toward_the_first_test_that_uses_it(
 
         @pytest.fixture(scope="module")
         def shared():
-            CLOCK.seconds += 1.5
+            CLOCK.seconds += 2.5
 
         def test_first(shared, fake_clock):
-            fake_clock.seconds += 0.6
+            fake_clock.seconds += 1.2
 
         def test_second(shared):
             pass
@@ -161,14 +161,14 @@ def test_a_slow_test_using_a_shared_fixture_still_fails(pytester: pytest.Pyteste
             CLOCK.seconds += 0.5
 
         def test_slow(shared, fake_clock):
-            fake_clock.seconds += 1.5
+            fake_clock.seconds += 2.5
         """
     )
 
     result = pytester.runpytest("-p", "support.wall_time")
 
     result.assert_outcomes(failed=1)
-    result.stdout.fnmatch_lines(["*1.50 s*over the 1.0 s budget*"])
+    result.stdout.fnmatch_lines(["*2.50 s*over the 2.0 s budget*"])
 
 
 def test_on_ci_a_test_over_one_second_and_under_three_passes(
