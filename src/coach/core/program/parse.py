@@ -229,6 +229,7 @@ def _acknowledge(reader: "_Reader") -> AcknowledgeEntry:
         flag=reader.text("flag"),
         because=reader.choice("because", REASONS.names()),
         text=reader.text("text"),
+        params_hash=reader.optional_text("params_hash"),
     )
     reader.finish()
     return entry

@@ -5,7 +5,9 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import cast
 
+from coach.core.config import WEEKDAYS, Weekday
 from coach.core.errors import Invalid
+from coach.core.exposure import Exposure
 from coach.core.flag import Flag, FlagKey, Scope, raise_flag
 from coach.core.goal import Goal
 from coach.core.program.form import (
@@ -24,23 +26,36 @@ from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
-ADOPT_WARNING_CODES = frozenset(code.name for code in ADOPT_WARNINGS)
-# The adopt warnings this engine raises; an acknowledgement of any other adopt warning is not
-# judged yet, because adopt cannot tell whether it would have raised it.
-JUDGED_ADOPT_WARNINGS: frozenset[str] = frozenset()
+# Adopt cannot raise these two yet (they read cadence signals and adherence), so an
+# acknowledgement of either passes while it names the Draft.
+UNJUDGED_ADOPT_WARNINGS = frozenset(
+    {"scheme_change_off_signal", "core_session_added_low_adherence"}
+)
+
+
+@dataclass(frozen=True)
+class OpenBlock:
+    id: str
+    hard_weeks: int
 
 
 @dataclass(frozen=True)
 class AdoptContext:
     """What the checks read beside the form, as values. `racks` maps each location in
-    `coach.toml` to the rack of every equipment kind it supplies."""
+    `coach.toml` to the rack of every equipment kind it supplies; `last_exposures` each exercise
+    with an Exposure anywhere to its latest; `routines` each mapped session to its routine id."""
 
     version_id: str
     library: Mapping[str, Mapping[str, object]]
     racks: Mapping[str, Mapping[str, Rack]]
-    exposed: frozenset[str] = frozenset()
+    last_exposures: Mapping[str, Exposure] = field(default_factory=dict[str, Exposure])
     goal: Goal | None = None
+    phase: str | None = None
+    available_days: tuple[Weekday, ...] = WEEKDAYS
     hevy_on: bool = False
+    previous: ProgramForm | None = None
+    routines: Mapping[str, str] = field(default_factory=dict[str, str])
+    open_block: OpenBlock | None = None
     raised_warnings: frozenset[str] = field(default_factory=frozenset[str])
 
 
@@ -307,7 +322,7 @@ class _Checks:
             return
         if mode not in LOAD_BEARING_MODES:
             return
-        if line.start_load is None and line.exercise not in self.context.exposed:
+        if line.start_load is None and line.exercise not in self.context.last_exposures:
             self.raise_(
                 "start_load_missing",
                 scope,
@@ -382,12 +397,10 @@ class _Checks:
             key = FlagKey.parse(text)
         except Invalid:
             return False
-        if text in self.context.raised_warnings:
-            return True
-        code_row_scopes = _adopt_scopes(key.code)
+        if key.code not in UNJUDGED_ADOPT_WARNINGS:
+            return text in self.context.raised_warnings
         return (
-            key.code not in JUDGED_ADOPT_WARNINGS
-            and key.scope.kind in code_row_scopes
+            key.scope.kind in _adopt_scopes(key.code)
             and not key.scope.dated
             and self._names_the_draft(key.scope)
         )

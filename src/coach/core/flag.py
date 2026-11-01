@@ -196,8 +196,9 @@ def raise_flag(
 
 @dataclass(frozen=True)
 class Acknowledgement:
-    """The coach's typed reason for leaving a warning. On a WeekPlan it names the dated key; on a
-    `leave_warning` Decision it names the calendar-free key, so it outlasts the week."""
+    """The coach's typed reason for leaving a warning. On a WeekPlan it names the dated key, on a
+    program version the version's own key; on a `leave_warning` Decision it names the
+    calendar-free key, so it outlasts the week."""
 
     key: FlagKey
     params_hash: str
@@ -223,7 +224,7 @@ class Acknowledgement:
         if flag.params_hash != self.params_hash:
             return False
         key = FlagKey(flag.code, flag.scope)
-        if self.source == "weekplan":
+        if self.source != "decision":
             return key == self.key
         return flag.scope.kind != "week" and key.calendar_free() == self.key
 

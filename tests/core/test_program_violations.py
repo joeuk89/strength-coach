@@ -1,8 +1,10 @@
+import datetime
 from typing import Any
 
 import pytest
 from support.program_drafts import a_draft, a_line, a_session, toml
 
+from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Flag
 from coach.core.goal import Goal
 from coach.core.program.checks import AdoptContext, violations
@@ -36,6 +38,11 @@ def a_context(**fields: Any) -> AdoptContext:
     }
     values.update(fields)
     return AdoptContext(**values)
+
+
+def an_exposure() -> Exposure:
+    sets = (ExposureSet(0, "working", None, 5, 8),)
+    return Exposure("w-0001", "bb_bench_press", datetime.date(2026, 10, 20), sets)
 
 
 def flags_of(draft: dict[str, Any], context: AdoptContext | None = None) -> list[Flag]:
@@ -170,7 +177,8 @@ def test_start_load_off_rack_names_the_two_nearest_rows() -> None:
 
 def test_a_per_hand_start_load_on_the_rack_and_a_history_without_start_load_pass() -> None:
     assert keyed(one_line(exercise="db_curl", start_load=12.5)) == []
-    assert keyed(one_line(start_load=None), a_context(exposed=frozenset({"bb_bench_press"}))) == []
+    exposed = a_context(last_exposures={"bb_bench_press": an_exposure()})
+    assert keyed(one_line(start_load=None), exposed) == []
 
 
 def test_an_assisted_line_needs_a_start_load_and_reads_no_rack() -> None:
@@ -257,15 +265,24 @@ def test_a_conditioning_session_runs_a_session_scheme_and_its_lines_hold() -> No
     ]
 
 
-def test_an_adopt_warning_naming_a_line_of_the_draft_is_not_judged_yet() -> None:
+def test_an_acknowledgement_of_a_warning_adopt_did_not_raise_is_unmatched() -> None:
+    key = "scheme_off_emphasis@line:push/bb_bench_press"
+    entry = {"flag": key, "because": "coach_judgement", "text": "x"}
+    raised = a_context(raised_warnings=frozenset({key}))
+
+    assert keyed(a_draft(acknowledge=[entry]), raised) == []
+    assert keyed(a_draft(acknowledge=[entry])) == ["acknowledgement_unmatched@version:pv-1"]
+
+
+def test_an_adopt_warning_adopt_cannot_raise_yet_passes_while_it_names_the_draft() -> None:
     entry = {
-        "flag": "scheme_off_emphasis@line:push/bb_bench_press",
+        "flag": "scheme_change_off_signal@line:push/bb_bench_press",
         "because": "coach_judgement",
         "text": "x",
     }
 
     assert keyed(a_draft(acknowledge=[entry])) == []
-    stale = {**entry, "flag": "scheme_off_emphasis@line:push/pull_up"}
+    stale = {**entry, "flag": "scheme_change_off_signal@line:push/pull_up"}
     assert keyed(a_draft(acknowledge=[stale])) == ["acknowledgement_unmatched@version:pv-1"]
 
 

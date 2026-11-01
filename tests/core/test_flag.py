@@ -274,6 +274,24 @@ def test_a_weekplan_acknowledgement_needs_the_dated_key() -> None:
     assert leave(flag, [undated]).left is None
 
 
+def test_a_version_acknowledgement_leaves_an_adopt_warning_and_never_a_plan_warning() -> None:
+    adopt = raise_flag(
+        "emphasis_off_goal",
+        Scope("version", version_id="pv-2"),
+        {"goal_kind": "hypertrophy", "emphasis": "maintenance"},
+        "maintenance block",
+    )
+    stall = a_stall()
+
+    on_version = an_acknowledgement(
+        "emphasis_off_goal@version:pv-2", adopt.params_hash, source="version"
+    )
+    on_stall = an_acknowledgement(stall.key, stall.params_hash, source="version")
+
+    assert leave(adopt, [on_version]).left is not None
+    assert leave(stall, [on_stall]).left is None
+
+
 def test_a_week_scope_cannot_be_the_target_of_a_decision() -> None:
     with pytest.raises(Invalid):
         an_acknowledgement("block_ceiling_exceeded@week:2026-11-02", "sha256:x", source="decision")
