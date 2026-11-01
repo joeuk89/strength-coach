@@ -404,3 +404,46 @@ def test_the_third_consecutive_plan_with_the_same_swap_raises_override_persistin
 
     assert (first, second) == ([], [])
     assert third == ["override_persisting@line:2026-11-16/lower/bb_back_squat"]
+
+
+def test_after_a_failed_verify_the_rerun_sends_only_the_unverified_routine() -> None:
+    conn = a_squat_week()
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = the_hash(conn, data)
+    hevy.differ_next_read_back()
+    with pytest.raises(Invalid):
+        push(conn, hevy, data, digest)
+    sent = len(requests(hevy))
+
+    push(conn, hevy, data, digest)
+
+    assert requests(hevy)[sent:] == [("PUT", f"/v1/routines/{lower_routine(conn)}")]
+
+
+def test_a_superseding_plan_freezes_only_its_own_acknowledgements() -> None:
+    conn = a_squat_week()
+    squat_logged(conn, "h-2", "2026-10-28", *[(121, 8, 8)] * 4)
+    offgrid = "offgrid_anchor_ignored@line:2026-11-02/lower/bb_back_squat"
+    first = a_plan_draft(conn)
+    params_hash = next(
+        f.params_hash
+        for f in dry_run(
+            conn, first, file="p.toml", config=a_config(), kits=(kit_files(),), clock=FixedClock()
+        ).flags
+        if f.key == offgrid
+    )
+    acknowledge = (
+        f'[[acknowledge]]\nflag = "{offgrid}"\nparams_hash = "{params_hash}"\n'
+        'because = "kit"\ntext = "A mislabelled plate."\n'
+    )
+    acknowledged = a_plan_draft(conn, acknowledge=acknowledge)
+    earlier = push(conn, None, acknowledged, the_hash(conn, acknowledged, hevy=False))
+    superseding = a_plan_draft(conn, overrides=PIN_115)
+
+    later = push(conn, None, superseding, the_hash(conn, superseding, hevy=False))
+
+    assert len(week_plans.acknowledgements(conn, earlier.week_plan_id)) == 1
+    assert week_plans.acknowledgements(conn, later.week_plan_id) == []
+    [row] = week_plans.prescriptions(conn, later.week_plan_id)
+    assert [f["left"] for f in cast(list[dict[str, Any]], row["flags"])] == [None]

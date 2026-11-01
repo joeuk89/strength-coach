@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -115,6 +116,37 @@ def test_without_expect_the_push_is_exit_3_expect_missing(instance: Path) -> Non
     assert run.envelope["error"]["code"] == "expect_missing"
 
 
+def hevy_on(hevy: FakeHevy) -> Callable[..., Run]:
+    def serving(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
+        return hevy
+
+    def with_hevy(*argv: str) -> Run:
+        return run_coach(*argv, env={"HEVY_API_KEY": "k"}, clock=CLOCK, make_client=serving)
+
+    return with_hevy
+
+
+def test_a_read_back_that_differs_is_exit_1_verify_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
+    root = a_planning_instance(tmp_path / "athlete", hevy=True)
+    monkeypatch.chdir(root)
+    adopt_the_squat_version(root)
+    hevy = FakeHevy(CLOCK)
+    with_hevy = hevy_on(hevy)
+    draft = a_draft_file(root)
+    digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
+    hevy.differ_next_read_back()
+
+    run = with_hevy("plan", "apply", draft, "--expect", digest)
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == "verify_failed"
+    routines = coach("query", "routines").envelope["result"]["rows"]
+    assert [r["status"] for r in routines] == ["unverified"]
+
+
 def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -124,12 +156,7 @@ def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
     adopt_the_squat_version(root)
     hevy = FakeHevy(CLOCK)
 
-    def serving(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
-        return hevy
-
-    def with_hevy(*argv: str) -> Run:
-        return run_coach(*argv, env={"HEVY_API_KEY": "k"}, clock=CLOCK, make_client=serving)
-
+    with_hevy = hevy_on(hevy)
     draft = a_draft_file(root)
     digest = with_hevy("plan", "apply", draft, "--dry-run").envelope["result"]["write_plan_hash"]
     first = with_hevy("plan", "apply", draft, "--expect", digest)
@@ -145,6 +172,7 @@ def test_the_approved_hash_pushes_the_plan_to_hevy_and_a_rerun_is_a_no_op(
         "verified",
     )
     assert result["audit_lines"] == 5
+    assert (result["outcome_count"], result["outcomes_truncated"]) == (1, False)
     assert again.code == 0, again.stdout
     assert again.envelope["result"]["resumed"] is True
     assert [o["outcome"] for o in again.envelope["result"]["outcomes"]] == ["unchanged"]

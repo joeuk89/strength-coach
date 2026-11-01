@@ -44,12 +44,16 @@ def run(call: Call) -> Outcome:
             kits=read_kit_files(instance),
             clock=call.clock,
         )
+    outcomes = [o.to_json() for o in result.routines]
+    kept = outcomes if call.full else outcomes[: call.last]
     return Outcome(
         {
             "week_plan_id": result.week_plan_id,
             "write_plan_hash": result.write_plan_hash,
             "resumed": result.resumed,
-            "outcomes": [o.to_json() for o in result.routines],
+            "outcomes": kept,
+            "outcome_count": len(outcomes),
+            "outcomes_truncated": len(kept) < len(outcomes),
             "audit_lines": result.audit_lines,
         }
     )
@@ -108,6 +112,8 @@ DECLARATION = Declaration(
             "week_plan_id": {"type": "string"},
             "resumed": {"type": "boolean"},
             "outcomes": {"type": "array"},
+            "outcome_count": {"type": "integer"},
+            "outcomes_truncated": {"type": "boolean"},
             "audit_lines": {"type": "integer"},
             "week": {"type": "string", "format": "date"},
             "supersedes": {"type": ["string", "null"]},
