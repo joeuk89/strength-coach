@@ -27,7 +27,7 @@ def plan_draft(draft: PlanDraft, *, units: Units) -> str:
         "position": {
             "week": draft.position.week,
             "source": draft.position.source,
-            "confirmed": False,
+            "confirmed": draft.confirmed,
         },
         "flag": [_flag(flag) for flag in (*draft.week_flags, *draft.conflicts)],
         "session": [_session(session, draft.notes, units) for session in draft.sessions],

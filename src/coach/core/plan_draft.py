@@ -25,10 +25,13 @@ class PlanDraft:
     supersedes: str | None = None
     overrides: tuple[PlanOverride, ...] = ()
     conflicts: tuple[Flag, ...] = ()
+    confirmed: bool = False
 
     @property
     def week_flags(self) -> tuple[Flag, ...]:
         """The engine proposes the position; the Draft confirms it."""
+        if self.confirmed:
+            return ()
         return (
             raise_flag(
                 "rotation_unconfirmed",
