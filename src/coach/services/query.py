@@ -21,6 +21,7 @@ from coach.store import (
     follow_ups,
     niggles,
     notes,
+    observations,
     routine_map,
     week_plans,
     workouts,
@@ -213,6 +214,13 @@ def _follow_ups(conn: Connection, open_: bool, today: datetime.date) -> list[Row
     return _newest_first(rows, "raised")
 
 
+def _observations(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = observations.every(conn)
+    if open_:
+        rows = [r for r in rows if r["retired_at"] is None]
+    return _newest_first(rows, "raised")
+
+
 def _decisions(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
     rows = decisions.in_force(conn, today.isoformat()) if open_ else decisions.every(conn)
     return sorted(rows, key=lambda r: str(r["id"]), reverse=True)
@@ -236,6 +244,7 @@ LEDGER_READERS: dict[str, Callable[[Connection, bool, datetime.date], list[Row]]
     "status_span": _status_spans,
     "workout": _workouts,
     "exercise": _exercises,
+    "observation": _observations,
 }
 
 
