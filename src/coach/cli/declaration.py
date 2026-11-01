@@ -13,6 +13,7 @@ from coach.store.rebuild import Rebuilt
 
 type Writes = Literal["none", "store", "hevy", "git"]
 type Json = dict[str, object]
+type ArgValue = str | bool | tuple[str, ...]
 # The real client's wiring: the API key, the Write audit path and the clock (ADR 0019).
 type MakeClient = Callable[[str, Path, Clock], HevyClient]
 
@@ -25,6 +26,7 @@ class Argument:
     help: str
     takes_value: bool = True
     required: bool = False
+    repeatable: bool = False
 
     @property
     def positional(self) -> bool:
@@ -65,7 +67,7 @@ class Instance:
 
 @dataclass(frozen=True)
 class Call:
-    args: Mapping[str, str | bool]
+    args: Mapping[str, ArgValue]
     full: bool
     last: int
     engine_version: str
@@ -96,10 +98,7 @@ class Declaration:
 
     def input_schema(self) -> Json:
         properties: Json = {
-            argument.key: {
-                "type": "string" if argument.takes_value else "boolean",
-                "description": argument.help,
-            }
+            argument.key: {**_input_type(argument), "description": argument.help}
             for argument in self.arguments
         }
         return {
@@ -128,6 +127,12 @@ class Declaration:
         return " ".join(["coach", self.name, *(_usage_word(a) for a in self.arguments)])
 
 
+def _input_type(argument: Argument) -> Json:
+    if argument.repeatable:
+        return {"type": "array", "items": {"type": "string"}}
+    return {"type": "string" if argument.takes_value else "boolean"}
+
+
 def _usage_word(argument: Argument) -> str:
     if argument.positional:
         word = f"<{argument.name}>"
@@ -135,4 +140,6 @@ def _usage_word(argument: Argument) -> str:
         word = f"{argument.name} <{argument.key}>"
     else:
         word = argument.name
+    if argument.repeatable:
+        word = f"{word} ..."
     return word if argument.required else f"[{word}]"

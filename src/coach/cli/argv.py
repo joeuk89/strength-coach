@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from coach.cli.declaration import Argument, Declaration
+from coach.cli.declaration import Argument, ArgValue, Declaration
 from coach.core.errors import Invalid
 
 DEFAULT_LAST = 10
@@ -16,7 +16,7 @@ GLOBAL_OPTIONS = (
 
 @dataclass(frozen=True)
 class Options:
-    args: dict[str, str | bool]
+    args: dict[str, ArgValue]
     fields: tuple[str, ...] | None
     full: bool
     last: int
@@ -40,7 +40,7 @@ def parse_options(declaration: Declaration | None, tokens: Sequence[str]) -> Opt
     declared = declaration.arguments if declaration else ()
     options = {a.name: a for a in (*declared, *GLOBAL_OPTIONS) if not a.positional}
     positionals = [a for a in declared if a.positional]
-    values: dict[str, str | bool] = {}
+    values: dict[str, ArgValue] = {}
     queue = list(tokens)
     while queue:
         token = queue.pop(0)
@@ -53,10 +53,8 @@ def parse_options(declaration: Declaration | None, tokens: Sequence[str]) -> Opt
                 if has_inline:
                     raise Invalid("invalid_argument", f"{name} takes no value")
                 values[argument.key] = True
-            elif has_inline:
-                values[argument.key] = inline
-            elif queue:
-                values[argument.key] = queue.pop(0)
+            elif has_inline or queue:
+                _set(values, argument, inline if has_inline else queue.pop(0))
             else:
                 raise Invalid("invalid_argument", f"{name} needs a value")
         elif positionals:
@@ -66,7 +64,16 @@ def parse_options(declaration: Declaration | None, tokens: Sequence[str]) -> Opt
     return _split_globals(declared, values)
 
 
-def _split_globals(declared: Sequence[Argument], values: dict[str, str | bool]) -> Options:
+def _set(values: dict[str, ArgValue], argument: Argument, value: str) -> None:
+    if argument.repeatable:
+        earlier = values.get(argument.key, ())
+        assert isinstance(earlier, tuple)
+        values[argument.key] = (*earlier, value)
+    else:
+        values[argument.key] = value
+
+
+def _split_globals(declared: Sequence[Argument], values: dict[str, ArgValue]) -> Options:
     help_ = values.pop("help", False) is True
     full = values.pop("full", False) is True
     fields = _fields(values.pop("fields", None))
@@ -80,7 +87,7 @@ def _split_globals(declared: Sequence[Argument], values: dict[str, str | bool]) 
     return Options(args=values, fields=fields, full=full, last=last, help=help_)
 
 
-def _fields(raw: str | bool | None) -> tuple[str, ...] | None:
+def _fields(raw: ArgValue | None) -> tuple[str, ...] | None:
     if raw is None:
         return None
     paths = tuple(p.strip() for p in str(raw).split(","))
@@ -89,7 +96,7 @@ def _fields(raw: str | bool | None) -> tuple[str, ...] | None:
     return paths
 
 
-def _last(raw: str | bool | None) -> int:
+def _last(raw: ArgValue | None) -> int:
     if raw is None:
         return DEFAULT_LAST
     if isinstance(raw, str) and raw.isdigit() and int(raw) > 0:

@@ -2,6 +2,12 @@ import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from coach.core.coaching_records import (
+    AnnotationRecord,
+    DecisionRecord,
+    FollowUpRecord,
+    NiggleRecord,
+)
 from coach.core.errors import Invalid
 from coach.core.ledger_draft import (
     EXERCISE_EDITABLE,
@@ -20,12 +26,23 @@ from coach.core.ledger_draft import (
     kind_of,
 )
 from coach.core.ref import Ref
+from coach.services.coaching_ledger import (
+    Writing,
+    write_annotation,
+    write_decision,
+    write_follow_up,
+    write_niggle,
+)
 from coach.store import exercises, notes, readings, refs, workouts
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 
 # schema.md, "Ids". An Athlete note's prefix is not in that table: `an-`, since `n-` is a niggle's.
 ID_PREFIX = {
+    "niggle": ("niggle", "n-"),
+    "followup": ("follow_up", "f-"),
+    "decision": ("decision", "d-"),
+    "annotation": ("annotation", "a-"),
     "note": ("athlete_note", "an-"),
     "weigh_in": ("weigh_in", "wi-"),
     "sleep_night": ("sleep_night", "sn-"),
@@ -48,6 +65,7 @@ class Stamp:
     draft_hash: str
     recorded_at: str
     reading_source: str
+    today: datetime.date
     check_in: str | None = None
 
 
@@ -68,13 +86,22 @@ class _Writer:
         self.draft = draft
         self.stamp = stamp
         self.ids = self._assign_ids()
+        self.writing = Writing(
+            conn,
+            {
+                "check_in": stamp.check_in,
+                "draft_hash": stamp.draft_hash,
+                "recorded_at": stamp.recorded_at,
+            },
+            stamp.today,
+            self._resolve,
+        )
 
     def write(self) -> Written:
         written = Written()
         for record, id_ in zip(self.draft.records, self.ids, strict=True):
             written.ids.setdefault(kind_of(record), []).append(id_)
-        # Exercises first, so a logged set or a note in the same file can name one.
-        records = sorted(enumerate(self.draft.records), key=lambda p: kind_of(p[1]) != "exercise")
+        records = sorted(enumerate(self.draft.records), key=lambda p: _write_order(p[1]))
         for index, record in records:
             withdrawn = self._write(record, self.ids[index])
             if withdrawn:
@@ -83,13 +110,14 @@ class _Writer:
         return written
 
     def _assign_ids(self) -> list[str]:
-        kinds = [kind_of(r) for r in self.draft.records]
+        named = [_named_id(r) for r in self.draft.records]
+        kinds = [kind_of(r) for r, n in zip(self.draft.records, named, strict=True) if n is None]
         fresh = {
             kind: next_ids(self.conn, *ID_PREFIX[kind], kinds.count(kind)) for kind in ID_PREFIX
         }
         return [
-            record.id if isinstance(record, ExerciseRecord) else fresh[kind].pop(0)
-            for record, kind in zip(self.draft.records, kinds, strict=True)
+            n if n is not None else fresh[kind_of(r)].pop(0)
+            for r, n in zip(self.draft.records, named, strict=True)
         ]
 
     def _resolve(self, ref: Ref) -> Ref:
@@ -112,6 +140,14 @@ class _Writer:
                 | StatusSpanRecord(withdraws=str(target))
             ):
                 return self._withdraw(kind_of(record), id_, target)
+            case NiggleRecord():
+                write_niggle(self.writing, record, id_)
+            case FollowUpRecord():
+                write_follow_up(self.writing, record, id_)
+            case DecisionRecord():
+                write_decision(self.writing, record, id_)
+            case AnnotationRecord():
+                return write_annotation(self.writing, record, id_)
             case NoteRecord():
                 self._note(record, id_)
             case WeighInRecord():
@@ -279,6 +315,25 @@ class _Writer:
                     f"{table} {duplicate.day} from {duplicate.source} has two live rows, "
                     f"{' and '.join(duplicate.ids)}; withdraw one in the Draft",
                 )
+
+
+def _named_id(record: LedgerRecord) -> str | None:
+    """The stored id a record names rather than takes fresh."""
+    match record:
+        case ExerciseRecord():
+            return record.id
+        case NiggleRecord(niggle=str(named)) | FollowUpRecord(followup=str(named)):
+            return named
+        case _:
+            return None
+
+
+# Exercises, then niggles, follow-ups and workouts: the records later ones may cite.
+WRITE_ORDER = {"exercise": 0, "niggle": 1, "followup": 1, "workout": 1}
+
+
+def _write_order(record: LedgerRecord) -> int:
+    return WRITE_ORDER.get(kind_of(record), 2)
 
 
 def _iso(day: datetime.date | None) -> str | None:

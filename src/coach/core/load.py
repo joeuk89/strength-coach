@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from coach.core.config import Units
-from coach.core.units import to_kg
+from coach.core.units import from_kg, to_kg
 
 type LoadMode = Literal[
     "total",
@@ -29,3 +29,16 @@ class Load:
 
     def hevy_kg(self, units: Units) -> float:
         return to_kg(self.total, units)
+
+
+PRECISION = 2
+UNLOADED: frozenset[LoadMode] = frozenset({"bodyweight", "band", "duration", "distance"})
+
+
+def from_hevy_kg(kg: float | None, mode: LoadMode, units: Units) -> Load | None:
+    """A logged Hevy weight as a Load: Hevy holds the total in kg."""
+    if kg is None or mode in UNLOADED:
+        return None
+    total = from_kg(kg, units)
+    amount = total / 2 if mode == "per_hand_x2" else total
+    return Load(round(amount, PRECISION), mode)

@@ -28,5 +28,7 @@ def record(conn: Connection, data: bytes, *, file: str, clock: Clock) -> RecordR
                 stored["exercise"] = exercise_ids
             return RecordResult(draft.hash, stored, drafts.withdrawn_by_draft(conn, draft.hash))
         recorded_at = clock.now().astimezone(datetime.UTC).isoformat(timespec="seconds")
-        written = write_records(conn, draft, Stamp(draft.hash, recorded_at, "manual"))
+        written = write_records(
+            conn, draft, Stamp(draft.hash, recorded_at, "manual", clock.today())
+        )
     return RecordResult(draft.hash, written.ids, written.withdrawn)

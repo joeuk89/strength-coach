@@ -199,6 +199,14 @@ def workout_versions(conn: Connection, workout_id: str) -> tuple[WorkoutVersion,
     )
 
 
+def sessions_of_current(conn: Connection) -> dict[str, str]:
+    """The session a current manual coach-led workout names, by workout id."""
+    found = conn.execute(
+        "SELECT id, session_id FROM workout_current WHERE session_id IS NOT NULL"
+    ).fetchall()
+    return dict(found)
+
+
 def counts_by_source(conn: Connection) -> dict[str, int]:
     counts = {"hevy": 0, "manual": 0}
     for source, count in conn.execute(

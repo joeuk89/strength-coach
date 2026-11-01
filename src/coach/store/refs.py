@@ -20,8 +20,10 @@ def exists(conn: Connection, ref: Ref) -> bool:
     """Whether a ref names a row of the live tables (schema.md, "Refs")."""
     if ref.kind == "planned_session":
         return _planned_session(conn, ref.id)
-    if ref.kind == "workout":
+    if ref.kind in ("workout", "exposure"):
         workout_id, _, exercise_id = ref.id.partition("/")
+        if ref.kind == "exposure" and not exercise_id:
+            return False
         return _row(conn, "workout", workout_id) and (
             not exercise_id or _row(conn, "exercise", exercise_id)
         )

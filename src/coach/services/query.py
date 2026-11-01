@@ -2,10 +2,15 @@ import datetime
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from coach.core.config import Units
+from coach.core.e1rm import point
 from coach.core.errors import Invalid
+from coach.core.exposure import Exposure
 from coach.core.registries.agent import RECORD_KINDS
+from coach.services.history import read_history
 from coach.services.ledger import ID_PREFIX
-from coach.store import exercises, notes, workouts
+from coach.store import annotations, decisions, follow_ups, niggles, notes, workouts
+from coach.store import exercises as library
 from coach.store import readings as stored
 from coach.store.connection import Connection
 from coach.store.rows import Row
@@ -31,6 +36,49 @@ def readings(conn: Connection, *, kind: str | None, last: int | None) -> QueryRe
     ]
     rows.sort(key=lambda r: (str(r.get("date", r.get("night"))), str(r["id"])), reverse=True)
     return _newest(rows, last)
+
+
+def exposures(
+    conn: Connection,
+    *,
+    exercises: tuple[str, ...],
+    since: datetime.date | None,
+    last: int | None,
+    units: Units,
+) -> QueryResult:
+    """`query exposures`: each Exposure with its annotations applied, newest first."""
+    unknown = [e for e in exercises if library.get(conn, e) is None]
+    if unknown:
+        raise Invalid("invalid_argument", f"no exercise {', '.join(unknown)} in the library")
+    found = [
+        e
+        for e in read_history(conn, units).exposures
+        if (not exercises or e.exercise_id in exercises) and (since is None or e.date >= since)
+    ]
+    found.sort(key=lambda e: e.exercise_id)
+    found.sort(key=lambda e: (e.date, e.workout_id), reverse=True)
+    return _newest([_exposure(e) for e in found], last)
+
+
+def _exposure(exposure: Exposure) -> Row:
+    top = exposure.top_load
+    best = max(
+        (p for s in exposure.working if (p := point(exposure, s)) is not None),
+        key=lambda p: p.load.amount,
+        default=None,
+    )
+    return {
+        "exposure": exposure.ref,
+        "date": exposure.date.isoformat(),
+        "session": exposure.session_id,
+        "load": None if top is None else top.amount,
+        "load_mode": None if top is None else top.mode,
+        "reps": [s.reps for s in exposure.working],
+        "rpe": [s.rpe for s in exposure.working],
+        "e1rm": None if best is None else best.load.amount,
+        "e1rm_lower_bound": None if best is None else best.lower_bound,
+        "annotations": list(exposure.annotations),
+    }
 
 
 def ledger(
@@ -63,7 +111,7 @@ def _kind_of(conn: Connection, id_: str) -> str:
     for kind, (_, prefix) in ID_PREFIX.items():
         if id_.startswith(prefix):
             return kind
-    return "exercise" if exercises.get(conn, id_) else "workout"
+    return "exercise" if library.get(conn, id_) else "workout"
 
 
 def _newest(rows: list[Row], last: int | None) -> QueryResult:
@@ -93,12 +141,14 @@ def _newest_first(rows: list[Row], day: str) -> list[Row]:
     return sorted(rows, key=lambda r: (str(r[day]), str(r["id"])), reverse=True)
 
 
+def _unwithdrawn(rows: list[Row]) -> list[Row]:
+    return [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
+
+
 def _withdrawable(table: str, day: str) -> Callable[[Connection, bool, datetime.date], list[Row]]:
     def read(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
         rows = stored.with_withdrawals(conn, table)
-        if open_:
-            rows = [r for r in rows if r["withdraws"] is None and r["withdrawn_by"] is None]
-        return _newest_first(rows, day)
+        return _newest_first(_unwithdrawn(rows) if open_ else rows, day)
 
     return read
 
@@ -123,11 +173,39 @@ def _workouts(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
 
 
 def _exercises(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
-    return exercises.every(conn)
+    return library.every(conn)
+
+
+def _niggles(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = niggles.every(conn)
+    if open_:
+        rows = [r for r in rows if r["status"] != "resolved"]
+    return _newest_first(rows, "opened")
+
+
+def _follow_ups(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = follow_ups.every(conn)
+    if open_:
+        rows = [r for r in rows if r["kind"] not in ("resolved", "dropped")]
+    return _newest_first(rows, "raised")
+
+
+def _decisions(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = decisions.in_force(conn, today.isoformat()) if open_ else decisions.every(conn)
+    return sorted(rows, key=lambda r: str(r["id"]), reverse=True)
+
+
+def _annotations(conn: Connection, open_: bool, today: datetime.date) -> list[Row]:
+    rows = annotations.every(conn)
+    return sorted(_unwithdrawn(rows) if open_ else rows, key=lambda r: str(r["id"]), reverse=True)
 
 
 # Notes, Activities and Exercises have no lifecycle, so `--open` keeps every row of them.
 LEDGER_READERS: dict[str, Callable[[Connection, bool, datetime.date], list[Row]]] = {
+    "niggle": _niggles,
+    "followup": _follow_ups,
+    "decision": _decisions,
+    "annotation": _annotations,
     "note": _notes,
     "weigh_in": _withdrawable("weigh_in", "date"),
     "sleep_night": _withdrawable("sleep_night", "night"),
