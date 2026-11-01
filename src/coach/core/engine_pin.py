@@ -2,7 +2,7 @@ import re
 from collections.abc import Mapping
 
 from coach.core.errors import Setup
-from coach.core.message import Message
+from coach.core.flag import Flag, Scope, raise_flag
 
 RELEASE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
@@ -22,7 +22,7 @@ def release(version: str) -> tuple[int, int, int]:
     return major, minor, patch
 
 
-def check_pin(engine_version: str, pin: str, *, upgrading: bool = False) -> Message | None:
+def check_pin(engine_version: str, pin: str, *, upgrading: bool = False) -> Flag | None:
     """Compare the running engine with the instance's pin (ADR 0007: exact match, `.dev` warns).
 
     `upgrading` is `coach upgrade`'s rule: any release at or after the pin, never a `.dev` build.
@@ -36,8 +36,10 @@ def check_pin(engine_version: str, pin: str, *, upgrading: bool = False) -> Mess
                 f"engine {engine_version} is a development build and upgrade writes the pin; "
                 "install a release to upgrade",
             )
-        return Message(
+        return raise_flag(
             "engine_pin_dev",
+            Scope("instance"),
+            {"pinned_version": pin, "running_version": engine_version},
             f"engine {engine_version} is a development build running against pin {pin}",
         )
     if upgrading and is_release(engine_version) and is_release(pin):
@@ -51,6 +53,15 @@ def check_pin(engine_version: str, pin: str, *, upgrading: bool = False) -> Mess
         "engine_pin_mismatch",
         f"engine {engine_version} does not match the instance pin {pin}; "
         f"install engine {pin}, or run `coach upgrade` to move the pin to {engine_version}",
+    )
+
+
+def generated_file_drift(file: str, engine_version: str) -> Flag:
+    return raise_flag(
+        "generated_file_drift",
+        Scope("instance"),
+        {"file": file, "engine_version": engine_version},
+        f"{file} differs from what engine {engine_version} generates; `coach upgrade` rewrites it",
     )
 
 

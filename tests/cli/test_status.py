@@ -99,7 +99,19 @@ def test_a_dev_engine_against_a_release_pin_runs_with_engine_pin_dev(
     run = run_coach("status")
 
     assert run.code == 0
-    assert [w["code"] for w in run.envelope["warnings"]] == ["engine_pin_dev"]
+    [warning] = run.envelope["warnings"]
+    assert warning["params_hash"].startswith("sha256:")
+    assert warning == {
+        "key": "engine_pin_dev@instance",
+        "code": "engine_pin_dev",
+        "severity": "warning",
+        "scope": {"kind": "instance"},
+        "params": {"pinned_version": "0.2.0", "running_version": DEV_ENGINE},
+        "params_hash": warning["params_hash"],
+        "rn": None,
+        "message": f"engine {DEV_ENGINE} is a development build running against pin 0.2.0",
+        "left": None,
+    }
     assert run.envelope["result"]["engine"] == {"version": DEV_ENGINE, "pin": "0.2.0"}
 
 
@@ -316,7 +328,14 @@ def test_a_hand_edit_to_a_generated_file_warns_generated_file_drift_naming_it(
     run = run_coach("status")
 
     assert run.code == 0
-    drift = [w["message"] for w in run.envelope["warnings"] if w["code"] == "generated_file_drift"]
-    assert len(drift) == 2
-    assert drift[0].startswith(".claude/settings.json ")
-    assert drift[1].startswith("CLAUDE.md ")
+    drift = [w for w in run.envelope["warnings"] if w["code"] == "generated_file_drift"]
+    assert [(w["key"], w["severity"], w["scope"], w["rn"], w["left"]) for w in drift] == [
+        ("generated_file_drift@instance", "warning", {"kind": "instance"}, None, None)
+    ] * 2
+    assert [w["params"] for w in drift] == [
+        {"file": ".claude/settings.json", "engine_version": RELEASE_ENGINE},
+        {"file": "CLAUDE.md", "engine_version": RELEASE_ENGINE},
+    ]
+    assert all(w["params_hash"].startswith("sha256:") for w in drift)
+    assert drift[0]["message"].startswith(".claude/settings.json ")
+    assert drift[1]["message"].startswith("CLAUDE.md ")
