@@ -2,8 +2,7 @@ import json
 from collections.abc import Mapping
 
 from coach.store.connection import Connection
-
-type Row = dict[str, object]
+from coach.store.rows import Row, select
 
 COLUMNS = (
     "id",
@@ -54,3 +53,8 @@ def carrying_template(conn: Connection, hevy_template_id: str) -> str | None:
 
 def _column(name: str, value: object) -> object:
     return json.dumps(value) if name == "muscles" else value
+
+
+def every(conn: Connection) -> list[Row]:
+    rows = select(conn, f"SELECT {', '.join(COLUMNS)} FROM exercise ORDER BY id")
+    return [{**row, "muscles": json.loads(str(row["muscles"]))} for row in rows]

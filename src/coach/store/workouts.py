@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from dataclasses import astuple, dataclass
 
 from coach.store.connection import Connection
+from coach.store.rows import Row, select
 
 
 @dataclass(frozen=True)
@@ -66,3 +67,36 @@ def unmapped_sets(conn: Connection) -> list[UnmappedSet]:
         "ORDER BY w.date, w.id, s.position"
     ).fetchall()
     return [UnmappedSet(*row) for row in rows]
+
+
+def latest(conn: Connection, *, current_only: bool) -> list[Row]:
+    """The latest version of each workout with its sets and the times of its versions;
+    with `current_only`, tombstoned workouts are left out."""
+    source = (
+        "workout_current"
+        if current_only
+        else (
+            "(SELECT w.* FROM workout w WHERE w.updated_at = "
+            "(SELECT max(updated_at) FROM workout WHERE id = w.id))"
+        )
+    )
+    rows = select(
+        conn,
+        "SELECT id, updated_at, source, date, title, routine_id, session_id, minutes, "
+        f"session_rpe, notes, check_in, draft_hash, recorded_at FROM {source} ORDER BY id",
+    )
+    for row in rows:
+        row["sets"] = select(
+            conn,
+            "SELECT position, hevy_template_id, hevy_title, set_type, weight_kg, reps, "
+            "duration_s, distance_m, rpe, note FROM logged_set "
+            "WHERE workout_id = ? AND workout_updated_at = ? ORDER BY position",
+            (row["id"], row["updated_at"]),
+        )
+        row["versions"] = [
+            at
+            for (at,) in conn.execute(
+                "SELECT updated_at FROM workout WHERE id = ? ORDER BY updated_at", (row["id"],)
+            )
+        ]
+    return rows

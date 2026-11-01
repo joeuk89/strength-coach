@@ -2,8 +2,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from coach.store.connection import Connection
-
-type Row = dict[str, object]
+from coach.store.rows import Row, select
 
 # The withdrawable tables and the column naming the day a reading is about.
 DAY_COLUMN = {"weigh_in": "date", "sleep_night": "night", "status_span": "from_date"}
@@ -27,11 +26,25 @@ def insert(conn: Connection, table: str, row: Mapping[str, object]) -> None:
 
 def get(conn: Connection, table: str, id_: str) -> Row | None:
     assert table in TABLES
-    cursor = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (id_,))
-    found = cursor.fetchone()
-    if found is None:
-        return None
-    return dict(zip([d[0] for d in cursor.description], found, strict=True))
+    found = select(conn, f"SELECT * FROM {table} WHERE id = ?", (id_,))
+    return found[0] if found else None
+
+
+def live(conn: Connection, table: str) -> list[Row]:
+    """Rows neither withdrawn nor withdrawing; every activity row, since none is withdrawn."""
+    assert table in TABLES
+    source = f"{table}_current" if table in DAY_COLUMN else table
+    return select(conn, f"SELECT * FROM {source} ORDER BY id")
+
+
+def with_withdrawals(conn: Connection, table: str) -> list[Row]:
+    """Every row, each with the id of the row withdrawing it, if any."""
+    assert table in DAY_COLUMN
+    return select(
+        conn,
+        f"SELECT r.*, (SELECT b.id FROM {table} b WHERE b.withdraws = r.id) AS withdrawn_by "
+        f"FROM {table} r ORDER BY r.id",
+    )
 
 
 def withdrawn_by(conn: Connection, table: str, id_: str) -> str | None:
