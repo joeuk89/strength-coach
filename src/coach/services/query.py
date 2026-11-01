@@ -115,12 +115,9 @@ def ledger(
     kind = kind or _kind_of(conn, str(id_))
     if kind not in RECORD_KINDS:
         raise Invalid("invalid_argument", f"{kind!r} is not a record kind")
-    reader = LEDGER_READERS.get(kind)
-    if reader is None:
-        raise Invalid("invalid_argument", f"query ledger does not read {kind} yet")
     rows = [
         {"record_kind": kind, **row}
-        for row in reader(conn, open_, today)
+        for row in LEDGER_READERS[kind](conn, open_, today)
         if id_ is None or row["id"] == id_
     ]
     return _newest(rows, last)
