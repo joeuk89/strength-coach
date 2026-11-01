@@ -27,6 +27,8 @@ class CoachCall:
 @dataclass(frozen=True)
 class HevyCall:
     path: str
+    pattern: bool = False
+    """True when curl or the shell can expand the path, such as `/v1/{a,b}` or `/v1/*`."""
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,7 @@ MAX_DEPTH = 4
 PUNCTUATION = "();<>|&\n"
 SEPARATORS = set(";|&()\n")
 SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
+SHELL_OPTIONS_WITH_VALUE = frozenset({"-o", "+o", "-O", "+O", "--rcfile", "--init-file"})
 RESERVED_WORDS = frozenset(
     {"if", "then", "elif", "else", "fi", "do", "done", "while", "until", "for", "case", "esac"}
     | {"select", "function", "time", "{", "}", "!", "[[", "]]"}
@@ -53,6 +56,8 @@ FD_BEFORE_REDIRECT = re.compile(r"(?<![\w-])\d+(?=[<>])")
 HEVY_URL = re.compile(
     re.escape(HEVY_HOST) + r"\.?(?::\d+)?(?P<path>/[^\s'\"`;|&()<>]*)?", re.IGNORECASE
 )
+PATH_PATTERN = re.compile(r"[{}\[\]*]")
+QUOTE_OR_ESCAPE = re.compile(r"\\(.)|['\"]", re.S)
 SUBSTITUTED = "__coach_hook_substituted__"
 
 
@@ -94,6 +99,10 @@ def _command(words: list[str], text: str, cwd: Path, depth: int) -> Iterator[Fin
         if nested is not None:
             yield from _scan(nested, cwd, depth + 1)
             return
+        if program in SHELLS:
+            if _mentions(text):
+                yield Unreadable("it runs a shell whose script the hook cannot read")
+            return
         argv = _coach_argv(rest)
         if argv and os.path.basename(argv[0]) == "coach":
             continue
@@ -111,8 +120,12 @@ def _command(words: list[str], text: str, cwd: Path, depth: int) -> Iterator[Fin
 
 
 def _hevy_calls(text: str) -> Iterator[HevyCall]:
-    for match in HEVY_URL.finditer(text):
-        yield HevyCall(_normalised(match.group("path") or "/"))
+    """Each Hevy URL in `text`, read as written and again with its quotes and escapes removed."""
+    unquoted = QUOTE_OR_ESCAPE.sub(lambda match: match.group(1) or "", text)
+    for source in (text, unquoted):
+        for match in HEVY_URL.finditer(source):
+            path = _normalised(match.group("path") or "/")
+            yield HevyCall(path, bool(PATH_PATTERN.search(path)))
 
 
 def _opaque(word: str) -> bool:
@@ -231,13 +244,21 @@ def _nested_script(words: list[str]) -> str | None:
         return " ".join(words[1:])
     if name not in SHELLS:
         return None
-    rest = words[1:]
-    for position, option in enumerate(rest):
-        if not option.startswith("-") or option.startswith("--"):
+    reads_script = False
+    position = 1
+    while position < len(words):
+        word = words[position]
+        if word in ("-", "--"):
+            position += 1
             break
-        if "c" in option[1:] and position + 1 < len(rest):
-            return rest[position + 1]
-    return None
+        if word[:1] not in ("-", "+"):
+            break
+        if word.startswith("--"):
+            position += 2 if word in SHELL_OPTIONS_WITH_VALUE else 1
+            continue
+        reads_script = reads_script or (word.startswith("-") and "c" in word)
+        position += 1 + sum(word[1:].count(flag) for flag in "oO")
+    return words[position] if reads_script and position < len(words) else None
 
 
 def _coach_argv(words: list[str]) -> list[str] | None:

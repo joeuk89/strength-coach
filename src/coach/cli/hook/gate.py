@@ -95,6 +95,12 @@ def _raw_hevy(found: HevyCall) -> Answer:
             f"{url} is Hevy workout history, which no command may touch by any method; "
             "`coach import` is the one reader of it",
         )
+    if found.pattern:
+        return Answer(
+            "deny",
+            f"{url} is a pattern that can expand to {HEVY_HOST}{WORKOUTS_PATH}, Hevy workout "
+            "history, which no command may touch by any method",
+        )
     return Answer(
         "ask",
         f"This command calls the Hevy API directly ({url}), which skips the coach verbs' "

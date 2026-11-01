@@ -172,6 +172,12 @@ def test_a_command_that_writes_nothing_gated_gets_no_answer(command: str) -> Non
         "u.urlopen('https://api.hevyapp.com/v1/workouts')\nEOF\npython3 x.py",
         "python3 - <<'EOF'\n# don't log the key\n"
         "import urllib.request as u; u.urlopen('https://api.hevyapp.com/v1/workouts')\nEOF",
+        'curl https://api.hevyapp.com/v1/work"outs"',
+        "curl 'https://api.hevyapp.com/v1/'workouts",
+        "curl https://api.hevyapp.com/v1/work\\outs",
+        "curl 'https://api.hevyapp.com/v1/{workouts,routines}'",
+        "curl https://api.hevyapp.com/v1/[w]orkouts",
+        "curl 'https://api.hevyapp.com/v1/*'",
     ],
 )
 @pytest.mark.parametrize("mode", EVERY_MODE)
@@ -245,6 +251,12 @@ def test_a_raw_hevy_call_is_denied_where_no_prompt_exists() -> None:
         "timeout 5 python3 -m coach publish",
         "echo a#b; coach publish",
         "echo x # note\ncoach publish",
+        "bash -o pipefail -c 'coach publish'",
+        "bash -euo pipefail -c 'coach publish'",
+        "bash --norc -c 'coach publish'",
+        "bash --rcfile x -c 'coach publish'",
+        "bash +O extglob -c 'coach publish'",
+        "bash -c -e 'coach publish'",
     ],
 )
 def test_the_hook_finds_a_gated_verb_wherever_the_shell_runs_it(command: str) -> None:
@@ -292,6 +304,8 @@ def test_an_unreadable_command_asks_with_the_reason(command: str, why: str) -> N
         "H=api.hevyapp.com; curl https://$H/v1/workouts",
         "curl $(cat hevy-url)  # api.hevyapp.com",
         '"$(which coach)" publish',
+        "echo 'coach publish' | bash",
+        "bash -s < coach-publish.sh",
     ],
 )
 def test_a_program_or_hevy_url_known_only_when_the_shell_runs_asks(command: str) -> None:
