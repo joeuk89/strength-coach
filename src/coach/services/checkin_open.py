@@ -55,6 +55,7 @@ from coach.store.connection import Connection
 from coach.store.rows import Row
 
 WEEK = datetime.timedelta(days=DAYS_IN_WEEK)
+_DAY = datetime.timedelta(days=1)
 # The one v1 scheme that reads a training max (program.md, "Line schemes").
 READS_TRAINING_MAX = ("wave_531",)
 
@@ -153,9 +154,6 @@ def checkin_open(
         *_training_max_warnings(conn),
     )
     return Card(window, chosen, card.assemble(fields), warnings)
-
-
-_DAY = datetime.timedelta(days=1)
 
 
 def _session_reads(
