@@ -4,7 +4,9 @@ from coach.cli.declaration import Argument, Call, Declaration, Example, Json, Ou
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
+from coach.core.config import Units
 from coach.core.errors import Invalid
+from coach.core.flag import Flag
 from coach.render.approval_prompt import approval_prompt
 from coach.services.plan_apply import DryRun, dry_run
 
@@ -27,20 +29,18 @@ def run(call: Call) -> Outcome:
             kits=read_kit_files(call.instance),
             clock=call.clock,
         )
-    prompt = approval_prompt(
-        found.checked,
-        found.actions,
-        found.write_plan_hash,
-        units=call.instance.config.athlete.units,
-        full=call.full,
-    )
-    return Outcome(_summary(found, prompt, None if call.full else call.last, full=call.full))
+    units = call.instance.config.athlete.units
+    return Outcome(dry_run_result(found, units=units, full=call.full, last=call.last))
 
 
-def _summary(found: DryRun, prompt: str, last: int | None, *, full: bool) -> Json:
-    draft = found.checked.draft
-    flags = [flag.to_json() if full else flag.to_summary() for flag in found.flags]
-    kept = flags if last is None else flags[:last]
+def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Json:
+    """The dry run's result: the Write plan, its hash and the approval prompt. By default each
+    flag is its key, severity and acknowledgement, since the prompt already carries its text."""
+    checked = found.checked
+    prompt = approval_prompt(checked, found.actions, found.write_plan_hash, units=units, full=full)
+    flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
+    kept = flags if full else flags[:last]
+    draft = checked.draft
     return {
         "week": draft.week.isoformat(),
         "supersedes": draft.supersedes,
@@ -51,6 +51,14 @@ def _summary(found: DryRun, prompt: str, last: int | None, *, full: bool) -> Jso
         "flags_truncated": len(kept) < len(flags),
         "write_plan_hash": found.write_plan_hash,
         "prompt": prompt,
+    }
+
+
+def _brief(flag: Flag) -> Json:
+    return {
+        "key": flag.key,
+        "severity": flag.severity,
+        "left": flag.left.to_json() if flag.left else None,
     }
 
 

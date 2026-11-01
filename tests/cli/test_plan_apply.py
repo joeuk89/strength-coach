@@ -10,10 +10,12 @@ from support.planning_instance import (
     the_store,
 )
 from support.plans import squat_logged
+from support.worked_week import a_dry_run, the_worked_week
 
-from coach.cli import app
+from coach.cli import app, envelope
 from coach.cli.hook.in_process import run_in_process
 from coach.cli.registry import declarations
+from coach.cli.verbs.plan_apply import dry_run_result
 
 PIN_OFF_RACK = """
 [[override]]
@@ -179,3 +181,16 @@ def test_the_hook_asks_with_the_prompt_of_the_real_dry_run(instance: Path) -> No
 
     assert run.decision == "ask"
     assert f"Write plan hash {digest}" in run.reason
+
+
+def test_the_default_dry_run_of_the_worked_week_fits_the_envelope_budget() -> None:
+    found = a_dry_run(the_worked_week())
+    result = dry_run_result(found, units="lb", full=False, last=10)
+
+    document = envelope.render(envelope.success(1, "plan apply", result, []), pretty=False)
+
+    assert len(document.encode("utf-8")) < 3 * 1024
+    assert result["flag_count"] == len(found.flags) == 4
+    assert result["flags"] == [
+        {"key": flag.key, "severity": "warning", "left": None} for flag in found.flags
+    ]
