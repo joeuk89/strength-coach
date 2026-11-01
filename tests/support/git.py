@@ -33,3 +33,8 @@ def committed_files(root: Path) -> set[str]:
         check=True,
     )
     return set(listed.stdout.splitlines())
+
+
+def commit_everything(root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "--all"], cwd=root, check=True)
+    subprocess.run(["git", "commit", "--quiet", "-m", message], cwd=root, check=True)

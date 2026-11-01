@@ -24,14 +24,16 @@ def find_root(start: Path) -> Path:
     raise Setup("no_instance", f"no {CONFIG} in {start} or any directory above it")
 
 
-def load_instance(root: Path, running: str) -> tuple[Instance, Message | None]:
+def load_instance(
+    root: Path, running: str, *, upgrading: bool = False
+) -> tuple[Instance, Message | None]:
     """Check the pin first, so an engine too old or too new to know a key says so, then parse."""
     path = root / CONFIG
     try:
         document = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as error:
         raise Setup("config_unknown_key", f"{path} is not valid TOML: {error}") from error
-    pin_warning = check_pin(running, _pin(document, path))
+    pin_warning = check_pin(running, _pin(document, path), upgrading=upgrading)
     return Instance(root=root, config=parse_config(document)), pin_warning
 
 
@@ -55,11 +57,13 @@ def rebuild_missing_store(instance: Instance) -> Rebuilt | None:
 
 
 def refuse_a_store_behind_the_export(instance: Instance) -> None:
-    manifest = read_manifest(instance.export_path)
-    if manifest is None:
-        return
     with closing(open_instance_store(instance)) as conn:
-        behind = tables_behind(conn, manifest)
+        refuse_tables_behind_the_export(instance, conn)
+
+
+def refuse_tables_behind_the_export(instance: Instance, conn: sqlite3.Connection) -> None:
+    manifest = read_manifest(instance.export_path)
+    behind = tables_behind(conn, manifest) if manifest is not None else ()
     if behind:
         raise Setup(
             "store_behind_export",

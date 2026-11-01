@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from coach.cli.generated import generated_files
 from coach.render.toml import dumps
 
 ATHLETE: dict[str, Any] = {
@@ -25,4 +26,7 @@ def an_instance(root: Path, *, pin: str, hevy: bool = False, **tables: Any) -> P
     root.mkdir(parents=True, exist_ok=True)
     document = a_coach_toml(pin=pin, hevy=hevy, **tables)
     (root / "coach.toml").write_text(dumps(document), encoding="utf-8")
+    for relative, text in generated_files(pin).items():
+        (root / relative).parent.mkdir(parents=True, exist_ok=True)
+        (root / relative).write_text(text, encoding="utf-8")
     return root

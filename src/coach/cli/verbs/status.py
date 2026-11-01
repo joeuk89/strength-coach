@@ -2,8 +2,10 @@ import datetime
 from contextlib import closing
 
 from coach.cli.declaration import Call, Declaration, Example, Json, Outcome
+from coach.cli.generated import drifted
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
+from coach.core.message import Message
 from coach.services.status import CurrentGoal, status
 from coach.store.export import on_disk
 from coach.store.phases import OpenPhase
@@ -21,6 +23,14 @@ def run(call: Call) -> Outcome:
             kits=read_kit_files(call.instance),
             exported=on_disk(call.instance.export_path),
         )
+    pin = call.instance.pin
+    drift = tuple(
+        Message(
+            "generated_file_drift",
+            f"{relative} differs from what engine {pin} generates; `coach upgrade` rewrites it",
+        )
+        for relative in drifted(call.instance.root, pin)
+    )
     return Outcome(
         {
             "engine": {"version": result.engine_version, "pin": result.pin},
@@ -52,7 +62,7 @@ def run(call: Call) -> Outcome:
             "goal": _goal(result.goal),
             "phase": _phase(result.phase),
         },
-        warnings=result.warnings,
+        warnings=(*result.warnings, *drift),
     )
 
 

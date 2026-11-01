@@ -13,7 +13,6 @@ PENDING_LEAVES = frozenset(
         "plan draft",
         "plan apply",
         "progress",
-        "upgrade",
     }
 )
 

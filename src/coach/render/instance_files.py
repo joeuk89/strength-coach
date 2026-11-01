@@ -1,6 +1,7 @@
 """The files `init` writes and `upgrade` regenerates (docs/spec/instance.md)."""
 
 import json
+import re
 from collections.abc import Iterable
 
 from coach.core.config import (
@@ -13,6 +14,8 @@ from coach.core.config import (
 )
 from coach.core.hevy_api import HEVY_HOST, WORKOUTS_PATH
 from coach.render.toml import TomlValue, dumps
+
+PIN_LINE = re.compile(r"\s*version\s*=")
 
 GITIGNORE = ".coach/\n.env\n.claude/settings.local.json\n"
 
@@ -127,3 +130,18 @@ def _implement(rule: GridImplement) -> dict[str, TomlValue]:
             table["max"] = rule.max
         return table
     return {"rack": list(rule.rack)}
+
+
+def with_pin(coach_toml_text: str, version: str) -> str:
+    """`coach_toml_text` with `[engine] version` moved to `version`; every other byte kept."""
+    lines = coach_toml_text.splitlines(keepends=True)
+    table = None
+    for number, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("["):
+            table = stripped.split("#", 1)[0].strip()
+        elif table == "[engine]" and PIN_LINE.match(line):
+            ending = "\n" if line.endswith("\n") else ""
+            lines[number] = f"version = {json.dumps(version)}{ending}"
+            return "".join(lines)
+    raise ValueError("coach.toml has no [engine] version line")

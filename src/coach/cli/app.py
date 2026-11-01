@@ -22,7 +22,7 @@ from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 from coach.core.flag import Flag
 from coach.core.message import Message
 from coach.hevy.client import HevyApiClient
-from coach.store.connection import SCHEMA_VERSION
+from coach.store.chain import engine as engine_chain
 
 EXIT_CLASSES: tuple[tuple[type[CoachError], int], ...] = (
     (Invalid, 1),
@@ -61,7 +61,9 @@ def main(
             instance = None
             rebuilt = None
             if declaration.needs_instance:
-                instance, pin_warning = load_instance(find_root(Path.cwd()), running)
+                instance, pin_warning = load_instance(
+                    find_root(Path.cwd()), running, upgrading=declaration.moves_pin
+                )
                 if pin_warning:
                     warnings.append(pin_warning)
                 clock = clock or clock_for(instance.config.athlete.timezone)
@@ -83,17 +85,17 @@ def main(
             outcome = declaration.run(call)
             warnings.extend(outcome.warnings)
             result = _projected(outcome.result, options)
-        _write(stdout, envelope.success(SCHEMA_VERSION, verb, result, warnings))
+        _write(stdout, envelope.success(engine_chain().version, verb, result, warnings))
         return 0
     except CoachError as error:
         failed = Message(error.code, error.message, error.details)
         warnings.extend(error.warnings)
-        _write(stdout, envelope.failure(SCHEMA_VERSION, verb, failed, warnings))
+        _write(stdout, envelope.failure(engine_chain().version, verb, failed, warnings))
         return next(code for kind, code in EXIT_CLASSES if isinstance(error, kind))
     except Exception as error:
         traceback.print_exc(file=stderr)
         failed = Message("internal_error", f"{type(error).__name__}: {error}")
-        _write(stdout, envelope.failure(SCHEMA_VERSION, verb, failed, warnings))
+        _write(stdout, envelope.failure(engine_chain().version, verb, failed, warnings))
         return 1
 
 

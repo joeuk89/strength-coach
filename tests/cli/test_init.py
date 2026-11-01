@@ -212,14 +212,15 @@ def test_init_on_an_instance_stops_with_instance_exists(
     empty_directory: Path, release: None
 ) -> None:
     an_instance(empty_directory, pin=RELEASE)
-    before = (empty_directory / "coach.toml").read_text()
+    before = tree(empty_directory)
+    toml = (empty_directory / "coach.toml").read_text()
 
     run = run_coach("init", "--defaults")
 
     assert run.code == 5
     assert run.envelope["error"]["code"] == "instance_exists"
-    assert (empty_directory / "coach.toml").read_text() == before
-    assert tree(empty_directory) == {"coach.toml"}
+    assert (empty_directory / "coach.toml").read_text() == toml
+    assert tree(empty_directory) == before
 
 
 @pytest.mark.parametrize("owned", ["CLAUDE.md", ".coach", "export", "pages", "README.md"])
