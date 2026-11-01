@@ -81,15 +81,8 @@ def _form_at(conn: Connection, span: BlockSpan) -> ProgramForm | None:
 
 
 def _scheme_of(form: ProgramForm, exercise_id: str) -> str | None:
-    return next(
-        (
-            line.scheme.name
-            for s in form.sessions
-            for line in s.lines
-            if line.exercise == exercise_id
-        ),
-        None,
-    )
+    line = form.first_line(exercise_id)
+    return None if line is None else line.scheme.name
 
 
 def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:

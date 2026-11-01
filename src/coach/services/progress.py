@@ -19,7 +19,7 @@ from coach.core.linear import resets
 from coach.core.phase_trend import observed_rate, phase_condition_met
 from coach.core.planned_week import DAYS_IN_WEEK
 from coach.core.program.form import Line, ProgramForm
-from coach.core.progress import BestSet, MilestoneRead, best_set, milestone_read
+from coach.core.progress import PRECISION, BestSet, MilestoneRead, best_set, milestone_read
 from coach.core.stall import stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
@@ -211,11 +211,7 @@ def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> dat
 
 
 def _line(form: ProgramForm | None, exercise: str) -> Line | None:
-    if form is None:
-        return None
-    return next(
-        (line for s in form.sessions for line in s.lines if line.exercise == exercise), None
-    )
+    return None if form is None else form.first_line(exercise)
 
 
 def _e1rm(exposures: Sequence[Exposure], exercise: str, on: datetime.date) -> float | None:
@@ -230,7 +226,7 @@ def _change(
         return None
     start = _e1rm(exposures, exercise, spans[0].start)
     end = _e1rm(exposures, exercise, spans[-1].end + _DAY)
-    return None if start is None or end is None else round(end - start, 2)
+    return None if start is None or end is None else round(end - start, PRECISION)
 
 
 def _resets(line: Line | None, history: Sequence[Exposure]) -> int:
