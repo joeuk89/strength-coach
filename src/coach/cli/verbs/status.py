@@ -45,7 +45,7 @@ def run(call: Call) -> Outcome:
                 "last_import_age_days": result.last_import_age_days,
             },
             "workouts": result.workouts,
-            "schema_version": result.schema_version,
+            "store_schema_version": result.store_schema_version,
             "kit": [
                 {"location": kit.location, "kit": kit.kit, "tables": kit.tables}
                 for kit in result.kit
@@ -173,7 +173,7 @@ OUTPUT: Json = {
             on=BOOLEAN, last_import=_nullable("string"), last_import_age_days=_nullable("integer")
         ),
         "workouts": _object(hevy=INTEGER, manual=INTEGER),
-        "schema_version": INTEGER,
+        "store_schema_version": INTEGER,
         "kit": {
             "type": "array",
             "items": _object(location=STRING, kit=STRING, tables={"enum": ["current", "stale"]}),
@@ -217,7 +217,7 @@ OUTPUT: Json = {
         "engine",
         "hevy",
         "workouts",
-        "schema_version",
+        "store_schema_version",
         "kit",
         "plan",
         "rotation",
@@ -237,8 +237,8 @@ OUTPUT: Json = {
 DECLARATION = Declaration(
     name="status",
     summary=(
-        "Where the instance stands: engine pin, Hevy, workouts, kit, the WeekPlan, rotation and "
-        "program in force, Goal, Phase, Block, check-in, niggles, follow-ups, Decisions, "
+        "Where we stand: engine pin, Hevy, workouts, kit, the WeekPlan, rotation and program "
+        "in force, Goal, Phase, Block, check-in, niggles, follow-ups, Decisions, "
         "Observations, export."
     ),
     writes="none",

@@ -51,7 +51,7 @@ def test_status_keys_follow_the_order_where_we_stand_is_read_in(instance: Path) 
         "engine",
         "hevy",
         "workouts",
-        "schema_version",
+        "store_schema_version",
         "kit",
         "plan",
         "rotation",

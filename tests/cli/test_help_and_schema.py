@@ -51,7 +51,7 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
         "engine",
         "hevy",
         "workouts",
-        "schema_version",
+        "store_schema_version",
         "kit",
         "plan",
         "rotation",

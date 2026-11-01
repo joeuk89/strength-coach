@@ -101,7 +101,7 @@ class StatusResult:
     engine_version: str
     pin: str
     hevy_on: bool
-    schema_version: int
+    store_schema_version: int
     last_import: str | None
     last_import_age_days: int | None
     workouts: dict[str, int]
@@ -151,7 +151,7 @@ def status(
         engine_version=engine_version,
         pin=pin,
         hevy_on=hevy_on,
-        schema_version=schema_version(conn),
+        store_schema_version=schema_version(conn),
         last_import=utc_instant(last) if last else None,
         last_import_age_days=(now - last).days if last else None,
         workouts=counts_by_source(conn),

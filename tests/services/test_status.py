@@ -61,7 +61,7 @@ def published(conn: Connection) -> dict[str, str]:
     return dict(publish(conn, engine_version=ENGINE, config=a_config()).export.files)
 
 
-def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> None:
+def test_status_reports_the_engine_against_its_pin_and_the_store_schema_version() -> None:
     conn = open_store(":memory:")
 
     result = status_of(conn, published(conn))
@@ -70,7 +70,7 @@ def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> N
         engine_version=ENGINE,
         pin=ENGINE,
         hevy_on=True,
-        schema_version=1,
+        store_schema_version=1,
         last_import=None,
         last_import_age_days=None,
         workouts={"hevy": 0, "manual": 0},
