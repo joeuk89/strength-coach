@@ -67,7 +67,12 @@ def _group(group: PrescribedGroup, units: Units) -> Table:
     if group.load is not None:
         table |= {"load": float(group.load.amount), "load_kg": group.load.hevy_kg(units)}
     reps = list(group.reps) if isinstance(group.reps, tuple) else group.reps
-    optional = {"reps": reps, "duration_s": group.duration_s, "rpe": group.rpe}
+    optional = {
+        "reps": reps,
+        "duration_s": group.duration_s,
+        "rpe": group.rpe,
+        "rpe_cap": group.rpe_cap,
+    }
     return table | {key: value for key, value in optional.items() if value is not None}
 
 
