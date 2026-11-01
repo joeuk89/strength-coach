@@ -11,6 +11,7 @@ MIGRATIONS: tuple[Migration, ...] = ()
 
 def forward(conn: Connection, from_version: int) -> int:
     """Run every migration after `from_version` and return the version reached."""
-    for migration in MIGRATIONS[from_version - 1 :]:
+    pending = MIGRATIONS[from_version - 1 :]
+    for migration in pending:
         migration(conn)
-    return from_version + len(MIGRATIONS[from_version - 1 :])
+    return from_version + len(pending)

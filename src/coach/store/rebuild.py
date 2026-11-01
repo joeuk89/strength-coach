@@ -63,9 +63,6 @@ def _build(conn: Connection, export_dir: Path, version: int) -> None:
 
 def _ddl(version: int) -> str:
     store = files("coach.store")
-    path = (
-        store / "schema.sql"
-        if version == SCHEMA_VERSION
-        else (store / "schema_history" / f"v{version}.sql")
-    )
-    return path.read_text(encoding="utf-8")
+    if version == SCHEMA_VERSION:
+        return (store / "schema.sql").read_text(encoding="utf-8")
+    return (store / "schema_history" / f"v{version}.sql").read_text(encoding="utf-8")
