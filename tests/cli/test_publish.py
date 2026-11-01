@@ -21,6 +21,7 @@ def instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(root)
     assert run_coach("init", "--defaults").code == 0
     with open_store(root / ".coach" / "coach.db") as conn:
+        conn.execute("DELETE FROM exercise")
         a_history(conn)
     conn.close()
     return root
