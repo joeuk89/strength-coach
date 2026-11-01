@@ -6,7 +6,7 @@ from coach.cli.generated import drifted
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.core.check_in import CheckInDue
-from coach.core.message import Message
+from coach.core.engine_pin import generated_file_drift
 from coach.services.status import BlockStatus, CurrentGoal, PlanInForce, WeekPosition, status
 from coach.store.export import on_disk
 from coach.store.phases import OpenPhase
@@ -30,11 +30,7 @@ def run(call: Call) -> Outcome:
         )
     pin = call.instance.pin
     drift = tuple(
-        Message(
-            "generated_file_drift",
-            f"{relative} differs from what engine {pin} generates; `coach upgrade` rewrites it",
-        )
-        for relative in drifted(call.instance.root, pin)
+        generated_file_drift(relative, pin) for relative in drifted(call.instance.root, pin)
     )
     return Outcome(
         {

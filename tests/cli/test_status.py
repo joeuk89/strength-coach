@@ -328,7 +328,14 @@ def test_a_hand_edit_to_a_generated_file_warns_generated_file_drift_naming_it(
     run = run_coach("status")
 
     assert run.code == 0
-    drift = [w["message"] for w in run.envelope["warnings"] if w["code"] == "generated_file_drift"]
-    assert len(drift) == 2
-    assert drift[0].startswith(".claude/settings.json ")
-    assert drift[1].startswith("CLAUDE.md ")
+    drift = [w for w in run.envelope["warnings"] if w["code"] == "generated_file_drift"]
+    assert [(w["key"], w["severity"], w["scope"], w["rn"], w["left"]) for w in drift] == [
+        ("generated_file_drift@instance", "warning", {"kind": "instance"}, None, None)
+    ] * 2
+    assert [w["params"] for w in drift] == [
+        {"file": ".claude/settings.json", "engine_version": RELEASE_ENGINE},
+        {"file": "CLAUDE.md", "engine_version": RELEASE_ENGINE},
+    ]
+    assert all(w["params_hash"].startswith("sha256:") for w in drift)
+    assert drift[0]["message"].startswith(".claude/settings.json ")
+    assert drift[1]["message"].startswith("CLAUDE.md ")

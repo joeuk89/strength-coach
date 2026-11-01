@@ -56,6 +56,15 @@ def check_pin(engine_version: str, pin: str, *, upgrading: bool = False) -> Flag
     )
 
 
+def generated_file_drift(file: str, engine_version: str) -> Flag:
+    return raise_flag(
+        "generated_file_drift",
+        Scope("instance"),
+        {"file": file, "engine_version": engine_version},
+        f"{file} differs from what engine {engine_version} generates; `coach upgrade` rewrites it",
+    )
+
+
 def notes_between(
     pin: str, engine_version: str, notes: Mapping[int, str] = MIGRATION_NOTES
 ) -> tuple[str, ...]:
