@@ -15,7 +15,7 @@ from coach.core.import_flags import (
 from coach.core.instant import utc_instant
 from coach.core.mirror import BodyMeasurement, engine_folders, mirrored_routine
 from coach.core.routine_projection import routine_diff
-from coach.core.workout_import import Changes, event_since, reconcile_events, reconcile_full
+from coach.core.workout_import import Changes, event_pull_changes, event_since, full_pull_changes
 from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
 from coach.services.projections import projection, session_facts
@@ -68,9 +68,9 @@ def import_hevy(
     kind, since = ("full", None) if full or last is None else ("event", event_since(last))
     try:
         if since is None:
-            changes = reconcile_full(stored, client.workouts(), now, zone)
+            changes = full_pull_changes(stored, client.workouts(), now, zone)
         else:
-            changes = reconcile_events(stored, client.workout_events(since), now, zone)
+            changes = event_pull_changes(stored, client.workout_events(since), now, zone)
         pulled_routines = client.routines()
         pulled_folders = engine_folders(client.folders())
         measurements = client.body_measurements()
