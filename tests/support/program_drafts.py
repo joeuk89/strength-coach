@@ -240,3 +240,33 @@ def a_draft(*sessions: dict[str, Any], **fields: Any) -> dict[str, Any]:
 
 def toml(draft: dict[str, Any]) -> bytes:
     return dumps(draft).encode("utf-8")
+
+
+# The sessions the worked Draft elides ("the remaining sessions follow the same pattern"),
+# one line each, so its schedule names no missing session.
+_ELIDED = {
+    "a-wed-lower": ("bb_back_squat", "Week A · Wed — Lower"),
+    "a-fri-push": ("bb_bench_press", "Week A · Fri — Push"),
+    "a-sun-push": ("bb_bench_press", "Week A · Sun — Push"),
+    "b-mon-pull": ("bb_bent_over_row", "Week B · Mon — Pull"),
+    "b-wed-push": ("bb_bench_press", "Week B · Wed — Push"),
+    "b-fri-lower": ("bb_back_squat", "Week B · Fri — Lower"),
+    "b-sun-pull": ("bb_bent_over_row", "Week B · Sun — Pull"),
+}
+WORKED_DRAFT_COMPLETE = WORKED_DRAFT + "".join(
+    f"""
+[[session]]
+id = "{id_}"
+title = "{title}"
+kind = "lifting"
+tier = "core"
+
+  [[session.line]]
+  exercise = "{exercise}"
+  sets = [{{ count = 3, reps = [6, 8], rpe = 8 }}]
+  rest_s = 150
+  scheme = {{ name = "double_progression" }}
+  start_load = 100
+"""
+    for id_, (exercise, title) in _ELIDED.items()
+)

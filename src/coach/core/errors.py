@@ -1,8 +1,16 @@
+from collections.abc import Mapping
+
+
 class CoachError(Exception):
-    def __init__(self, code: str, message: str) -> None:
+    """`details` ride in the envelope's `error` beside the code and message."""
+
+    def __init__(
+        self, code: str, message: str, details: Mapping[str, object] | None = None
+    ) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
+        self.details = dict(details or {})
 
 
 class Invalid(CoachError):
