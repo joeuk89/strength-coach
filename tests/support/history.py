@@ -19,9 +19,10 @@ def a_logged_workout(
     on: str,
     *exercises: tuple[str, tuple[Logged, ...]],
     session_id: str | None = None,
+    set_type: str = "working",
 ) -> str:
-    """A workout version: per (template id, sets), working sets of (kg, reps, rpe). An id
-    starting `w-` is a manual workout."""
+    """A workout version: per (template id, sets), sets of (kg, reps, rpe) of `set_type`. An
+    id starting `w-` is a manual workout."""
     manual = id_.startswith("w-")
     logged_sets = [(template, set_) for template, logged in exercises for set_ in logged]
     sets = [
@@ -29,7 +30,7 @@ def a_logged_workout(
             position=position,
             hevy_template_id=template,
             hevy_title=None,
-            set_type="working",
+            set_type=set_type,
             weight_kg=kg,
             reps=reps,
             rpe=rpe,

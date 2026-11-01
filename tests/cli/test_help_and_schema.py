@@ -54,6 +54,7 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
         "schema_version",
         "kit",
         "export",
+        "program",
         "goal",
         "phase",
     ]

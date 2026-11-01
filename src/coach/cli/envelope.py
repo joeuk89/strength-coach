@@ -66,7 +66,7 @@ def _lookup(result: object, path: str) -> object:
 
 
 def _message(message: Message) -> Json:
-    return {"code": message.code, "message": message.message}
+    return {"code": message.code, "message": message.message, **message.details}
 
 
 def _warning(warning: Message | Flag) -> Json:

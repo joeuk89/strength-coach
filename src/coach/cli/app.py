@@ -86,7 +86,7 @@ def main(
         _write(stdout, envelope.success(SCHEMA_VERSION, verb, result, warnings))
         return 0
     except CoachError as error:
-        failed = Message(error.code, error.message)
+        failed = Message(error.code, error.message, error.details)
         warnings.extend(error.warnings)
         _write(stdout, envelope.failure(SCHEMA_VERSION, verb, failed, warnings))
         return next(code for kind, code in EXIT_CLASSES if isinstance(error, kind))

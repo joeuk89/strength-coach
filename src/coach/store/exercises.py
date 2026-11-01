@@ -63,6 +63,16 @@ def _decoded(row: Row) -> Row:
     return {**row, "muscles": json.loads(str(row["muscles"]))}
 
 
+def upsert_declared(conn: Connection, id_: str, fields: Mapping[str, object]) -> None:
+    """An Exercise a program Draft declares: updated field by field, or inserted with
+    `source = draft`. The template id is never set here; `plan apply` sets it (ADR 0011)."""
+    assert "hevy_template_id" not in fields
+    if get(conn, id_) is None:
+        insert(conn, {**fields, "id": id_, "source": "draft"})
+    elif fields:
+        update(conn, id_, fields)
+
+
 def library(conn: Connection) -> dict[str, LibraryEntry]:
     """Each Exercise by the Hevy template id it carries."""
     found = conn.execute(

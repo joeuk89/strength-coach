@@ -39,6 +39,16 @@ def run(call: Call) -> Outcome:
                 "behind_store": result.export.behind_store,
                 "store_behind_export": result.export.store_behind_export,
             },
+            "program": (
+                None
+                if result.program is None
+                else {
+                    "version": result.program.version,
+                    "kind": result.program.kind,
+                    "emphasis": result.program.emphasis,
+                    "adopted": result.program.adopted,
+                }
+            ),
             "goal": _goal(result.goal),
             "phase": _phase(result.phase),
         },
@@ -66,7 +76,8 @@ DECLARATION = Declaration(
         "Where the instance stands: the engine version against its pin, Hevy on or off and "
         "the age of the last import, workouts stored by source, the schema version, each "
         "plate-pool location's kit tables current or stale, whether the export is behind "
-        "the store or the store behind it, the current Goal and the open Phase."
+        "the store or the store behind it, the program version in force, the current Goal and "
+        "the open Phase."
     ),
     writes="none",
     needs_instance=True,
@@ -113,6 +124,16 @@ DECLARATION = Declaration(
                 },
                 "required": ["behind_store", "store_behind_export"],
             },
+            "program": {
+                "description": "the Program version in force, or null before the first",
+                "type": ["object", "null"],
+                "properties": {
+                    "version": {"type": "string"},
+                    "kind": {"type": "string"},
+                    "emphasis": {"type": "string"},
+                    "adopted": {"type": "string"},
+                },
+            },
             "goal": {
                 "type": ["object", "null"],
                 "properties": {
@@ -149,6 +170,7 @@ DECLARATION = Declaration(
             "schema_version",
             "kit",
             "export",
+            "program",
             "goal",
             "phase",
         ],

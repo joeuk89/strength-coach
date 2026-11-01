@@ -17,6 +17,7 @@ from coach.core.coaching_records import (
 )
 from coach.core.draft_fields import Fields, Table, draft_hash, required
 from coach.core.errors import Invalid
+from coach.core.muscles import MUSCLES_WANTED, read_muscles
 from coach.core.ref import KEY, Ref
 from coach.core.registries.agent import RECORD_KINDS
 from coach.core.registries.log import STATUS_SPAN_KINDS
@@ -346,20 +347,9 @@ def _exercise(f: Fields) -> ExerciseRecord:
 
 
 def _muscles(value: object, f: Fields) -> dict[str, list[str]]:
-    wanted = "a table {primary = [...], secondary = [...]} of muscle names"
-    if not isinstance(value, dict):
-        raise f.wrong("muscles", wanted)
-    table = cast(dict[str, object], value)
-    if set(table) != {"primary", "secondary"}:
-        raise f.wrong("muscles", wanted)
-    muscles: dict[str, list[str]] = {}
-    for part in ("primary", "secondary"):
-        names = table[part]
-        if not isinstance(names, list) or not all(
-            isinstance(n, str) for n in cast(list[object], names)
-        ):
-            raise f.wrong("muscles", wanted)
-        muscles[part] = list(cast(list[str], names))
+    muscles = read_muscles(value)
+    if muscles is None:
+        raise f.wrong("muscles", MUSCLES_WANTED)
     return muscles
 
 

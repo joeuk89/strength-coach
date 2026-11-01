@@ -6,7 +6,7 @@ from coach.core.flag import Flag
 from coach.core.import_flags import snapshot_stale
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
-from coach.store import goals, phases
+from coach.store import goals, phases, programs
 from coach.store.connection import Connection, schema_version
 from coach.store.export import MANIFEST, export, parse_manifest, tables_behind
 from coach.store.import_runs import last_import_at
@@ -28,6 +28,14 @@ class KitTables:
 
 
 @dataclass(frozen=True)
+class ProgramInForce:
+    version: str
+    kind: str
+    emphasis: str
+    adopted: str
+
+
+@dataclass(frozen=True)
 class CurrentGoal:
     id: str
     kind: str
@@ -45,6 +53,7 @@ class StatusResult:
     workouts: dict[str, int]
     kit: tuple[KitTables, ...]
     export: ExportState
+    program: ProgramInForce | None
     goal: CurrentGoal | None
     phase: OpenPhase | None
     warnings: tuple[Flag, ...]
@@ -74,6 +83,7 @@ def status(
         workouts=counts_by_source(conn),
         kit=tuple(KitTables(files.location, files.kit, tables_state(files)) for files in kits),
         export=_export_state(conn, engine_version, exported),
+        program=_program(conn),
         goal=_current_goal(conn),
         phase=phases.open_phase(conn),
         warnings=(stale,) if stale else (),
@@ -96,3 +106,11 @@ def _current_goal(conn: Connection) -> CurrentGoal | None:
     if stored is None:
         return None
     return CurrentGoal(stored.id, stored.goal.kind, stored.goal.priority_lifts)
+
+
+def _program(conn: Connection) -> ProgramInForce | None:
+    version = programs.latest(conn)
+    if version is None:
+        return None
+    form = version.form
+    return ProgramInForce(version.id, form.kind, form.emphasis, version.adopted)

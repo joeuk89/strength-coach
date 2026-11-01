@@ -5,6 +5,9 @@ from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.goals import STRENGTH, WORKED, with_phase
 from support.hevy_payloads import a_workout
+from support.kit_fixtures import kit_files
+from support.program_drafts import a_draft, toml
+from support.programs import a_config, the_worked_store
 from support.scenarios import a_session
 
 from coach.core.clock import Clock
@@ -12,8 +15,16 @@ from coach.core.goal import Until
 from coach.core.kit import KitFiles
 from coach.services.goal_adopt import goal_adopt
 from coach.services.hevy_import import import_hevy
+from coach.services.program import adopt
 from coach.services.publish import publish
-from coach.services.status import CurrentGoal, ExportState, KitTables, StatusResult, status
+from coach.services.status import (
+    CurrentGoal,
+    ExportState,
+    KitTables,
+    ProgramInForce,
+    StatusResult,
+    status,
+)
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import Connection, open_store
 from coach.store.phases import OpenPhase
@@ -59,6 +70,7 @@ def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> N
         workouts={"hevy": 0, "manual": 0},
         kit=(),
         export=ExportState(behind_store=False, store_behind_export=False),
+        program=None,
         goal=None,
         phase=None,
         warnings=(),
@@ -173,3 +185,20 @@ def test_status_shows_no_phase_once_it_is_closed() -> None:
     result = adopted(WORKED, with_phase(STRENGTH, 'close = { because = "done" }'))
 
     assert result.phase is None
+
+
+def test_status_reports_the_program_version_in_force() -> None:
+    conn = the_worked_store()
+    assert status_of(conn, hevy_on=False).program is None
+    adopt(
+        conn,
+        toml(a_draft()),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(),
+    )
+
+    result = status_of(conn, hevy_on=False)
+
+    assert result.program == ProgramInForce("pv-1", "redesign", "hypertrophy", "2026-10-30")
