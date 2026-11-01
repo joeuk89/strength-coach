@@ -156,6 +156,18 @@ def test_a_hevy_key_turns_hevy_on_and_lands_in_the_gitignored_env(
     assert run_coach("status").envelope["result"]["hevy"]["on"] is True
 
 
+def test_a_hevy_key_beside_an_existing_env_stops_before_a_file_is_written(
+    empty_directory: Path, release: None
+) -> None:
+    (empty_directory / ".env").write_text("OTHER=1\n")
+
+    run = run_coach("init", "--defaults", "--hevy-key", "test-key-not-real")
+
+    assert (run.code, run.envelope["error"]["code"]) == (5, "env_file_exists")
+    assert tree(empty_directory) == {".env"}
+    assert (empty_directory / ".env").read_text() == "OTHER=1\n"
+
+
 def test_hevy_without_a_key_writes_the_table_and_no_env(
     empty_directory: Path, release: None
 ) -> None:
