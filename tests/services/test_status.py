@@ -3,15 +3,20 @@ from collections.abc import Mapping
 
 from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
+from support.goals import STRENGTH, WORKED, with_phase
 from support.hevy_payloads import a_workout
 from support.scenarios import a_session
 
 from coach.core.clock import Clock
+from coach.core.goal import Until
 from coach.core.kit import KitFiles
+from coach.services.goal_adopt import goal_adopt
 from coach.services.hevy_import import import_hevy
 from coach.services.publish import publish
-from coach.services.status import ExportState, KitTables, StatusResult, status
+from coach.services.status import CurrentGoal, ExportState, KitTables, StatusResult, status
+from coach.store.catalogue import seed_catalogue
 from coach.store.connection import Connection, open_store
+from coach.store.phases import OpenPhase
 
 ENGINE = "0.4.0"
 A = "10000000-0000-4000-8000-00000000000a"
@@ -54,6 +59,8 @@ def test_status_reports_the_engine_against_its_pin_and_the_schema_version() -> N
         workouts={"hevy": 0, "manual": 0},
         kit=(),
         export=ExportState(behind_store=False, store_behind_export=False),
+        goal=None,
+        phase=None,
         warnings=(),
     )
 
@@ -129,3 +136,40 @@ def test_a_manifest_with_more_rows_than_the_store_puts_the_store_behind_the_expo
     result = status_of(open_store(":memory:"), published(elsewhere))
 
     assert result.export.store_behind_export is True
+
+
+def adopted(*drafts: str) -> StatusResult:
+    conn = open_store(":memory:")
+    with conn:
+        seed_catalogue(conn)
+    for draft in drafts:
+        goal_adopt(conn, draft.encode("utf-8"), file="g.toml", clock=FixedClock())
+    return status_of(conn, hevy_on=False)
+
+
+def test_status_shows_the_current_goal_and_the_open_phase() -> None:
+    result = adopted(WORKED)
+
+    assert result.goal == CurrentGoal("g-0001", "hypertrophy", ("bb_bench_press", "pull_up"))
+    assert result.phase == OpenPhase("ph-0001", "maintenance", Until("coachs_call"))
+
+
+def test_status_shows_the_newest_goal_and_the_phase_opened_after_a_close() -> None:
+    result = adopted(
+        WORKED,
+        with_phase(
+            STRENGTH,
+            'close = { because = "done" }\n'
+            'open = { kind = "deficit", until = { kind = "bodyweight_at_or_below", value = 78.5 }, '
+            'because = "cut" }',
+        ),
+    )
+
+    assert result.goal == CurrentGoal("g-0002", "strength", ("bb_bench_press",))
+    assert result.phase == OpenPhase("ph-0002", "deficit", Until("bodyweight_at_or_below", 78.5))
+
+
+def test_status_shows_no_phase_once_it_is_closed() -> None:
+    result = adopted(WORKED, with_phase(STRENGTH, 'close = { because = "done" }'))
+
+    assert result.phase is None
