@@ -10,7 +10,12 @@ from coach.cli import envelope, registry
 from coach.cli.argv import GLOBAL_OPTIONS, Options, find_leaf, parse_options
 from coach.cli.clock import clock_for
 from coach.cli.declaration import Call, Declaration, Json
-from coach.cli.instance import find_root, load_instance
+from coach.cli.instance import (
+    find_root,
+    load_instance,
+    rebuild_missing_store,
+    refuse_a_store_behind_the_export,
+)
 from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
@@ -23,6 +28,7 @@ EXIT_CLASSES: tuple[tuple[type[CoachError], int], ...] = (
     (Unreachable, 4),
     (Setup, 5),
 )
+STORE_WRITES = ("store", "hevy")
 
 
 def engine_version() -> str:
@@ -51,11 +57,15 @@ def main(
         else:
             running = engine_version()
             instance = None
+            rebuilt = None
             if declaration.needs_instance:
                 instance, pin_warning = load_instance(find_root(Path.cwd()), running)
                 if pin_warning:
                     warnings.append(pin_warning)
                 clock = clock or clock_for(instance.config.athlete.timezone)
+                rebuilt = rebuild_missing_store(instance)
+                if declaration.writes in STORE_WRITES:
+                    refuse_a_store_behind_the_export(instance)
             call = Call(
                 args=options.args,
                 full=options.full,
@@ -66,6 +76,7 @@ def main(
                 clock=clock,
                 make_client=make_client,
                 terminal=Terminal(sys.stdin, stderr),
+                rebuilt=rebuilt,
             )
             outcome = declaration.run(call)
             warnings.extend(outcome.warnings)

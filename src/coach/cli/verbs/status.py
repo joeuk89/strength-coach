@@ -4,6 +4,7 @@ from coach.cli.declaration import Call, Declaration, Example, Outcome
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.services.status import status
+from coach.store.export import on_disk
 
 
 def run(call: Call) -> Outcome:
@@ -15,6 +16,7 @@ def run(call: Call) -> Outcome:
             pin=call.instance.pin,
             hevy_on=call.instance.config.hevy is not None,
             kits=read_kit_files(call.instance),
+            exported=on_disk(call.instance.export_path),
         )
     return Outcome(
         {
@@ -25,6 +27,10 @@ def run(call: Call) -> Outcome:
                 {"location": kit.location, "kit": kit.kit, "tables": kit.tables}
                 for kit in result.kit
             ],
+            "export": {
+                "behind_store": result.export.behind_store,
+                "store_behind_export": result.export.store_behind_export,
+            },
         }
     )
 
@@ -33,7 +39,8 @@ DECLARATION = Declaration(
     name="status",
     summary=(
         "Where the instance stands: the engine version against its pin, Hevy on or off, "
-        "the schema version, each plate-pool location's kit tables current or stale."
+        "the schema version, each plate-pool location's kit tables current or stale, "
+        "whether the export is behind the store or the store behind it."
     ),
     writes="none",
     needs_instance=True,
@@ -63,8 +70,16 @@ DECLARATION = Declaration(
                     "required": ["location", "kit", "tables"],
                 },
             },
+            "export": {
+                "type": "object",
+                "properties": {
+                    "behind_store": {"type": "boolean"},
+                    "store_behind_export": {"type": "boolean"},
+                },
+                "required": ["behind_store", "store_behind_export"],
+            },
         },
-        "required": ["engine", "hevy", "schema_version", "kit"],
+        "required": ["engine", "hevy", "schema_version", "kit", "export"],
     },
     run=run,
     examples=(Example(("status",), "Where the instance stands."),),

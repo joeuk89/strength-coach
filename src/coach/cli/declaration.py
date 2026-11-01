@@ -7,6 +7,7 @@ from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.config import Config
 from coach.core.message import Message
+from coach.store.rebuild import Rebuilt
 
 type Writes = Literal["none", "store", "hevy", "git"]
 type Json = dict[str, object]
@@ -49,6 +50,10 @@ class Instance:
     def store_path(self) -> Path:
         return self.root / ".coach" / "coach.db"
 
+    @property
+    def export_path(self) -> Path:
+        return self.root / "export"
+
 
 @dataclass(frozen=True)
 class Call:
@@ -61,6 +66,7 @@ class Call:
     clock: Clock | None
     make_client: Callable[[], object] | None
     terminal: Terminal
+    rebuilt: Rebuilt | None = None
 
 
 @dataclass(frozen=True)

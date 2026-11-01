@@ -17,7 +17,6 @@ PENDING_LEAVES = frozenset(
         "program adopt",
         "goal adopt",
         "progress",
-        "publish",
         "upgrade",
     }
 )
