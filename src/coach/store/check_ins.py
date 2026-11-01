@@ -76,3 +76,15 @@ def _one(conn: Connection, sql: str, params: tuple[object, ...]) -> StoredCheckI
     id_, date, tier, start, end, status = found
     window = Window(datetime.date.fromisoformat(start), datetime.date.fromisoformat(end))
     return StoredCheckIn(id_, datetime.date.fromisoformat(date), tier, window, status)
+
+
+def current_windows(conn: Connection) -> list[tuple[datetime.date, datetime.date]]:
+    """Each `current` Check-in's window, first and last day, oldest first."""
+    found = conn.execute(
+        "SELECT window_start, window_end FROM check_in WHERE status = 'current' "
+        "ORDER BY window_start"
+    )
+    return [
+        (datetime.date.fromisoformat(start), datetime.date.fromisoformat(end))
+        for start, end in found
+    ]

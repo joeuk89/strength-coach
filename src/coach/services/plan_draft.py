@@ -7,8 +7,15 @@ from dataclasses import dataclass
 from typing import cast
 
 from coach.core.clock import Clock
+from coach.core.closed_week.block import block_ceiling_exceeded
+from coach.core.closed_week.dose import (
+    dose_under_target,
+    minimum_week_floor,
+    session_dose_high,
+)
 from coach.core.config import Config
 from coach.core.errors import Invalid
+from coach.core.flag import Flag
 from coach.core.instant import parse_instant
 from coach.core.kit import KitFiles
 from coach.core.load import LoadMode
@@ -23,14 +30,22 @@ from coach.core.prescription import (
     PlanOverride,
     PrescribeRequest,
     ProgramVersion,
-    StatusSpan,
+    SessionPrescription,
 )
+from coach.core.program.form import ProgramForm
 from coach.render.plan_draft import plan_draft as render_plan_draft
+from coach.services.closed_weeks import (
+    ClosedWeeks,
+    closed_weeks,
+    muscle_map,
+    parked_sessions,
+    status_spans,
+)
 from coach.services.history import read_history
 from coach.services.previous_plans import second_week_flags
 from coach.services.racks import racks_by_location
 from coach.services.rotation import default_week, rotation_position
-from coach.store import decisions, exercises, niggles, notes, programs, readings, week_plans
+from coach.store import decisions, exercises, goals, niggles, notes, programs, week_plans
 from coach.store.connection import Connection
 
 # The Decision kinds prescribe reads (prescription.md, "What prescribe is handed").
@@ -64,7 +79,9 @@ def plan_draft(
         raise Invalid("invalid_argument", f"rotation week {position!r} is not in the rotation")
     rotation = inferred if position is None else RotationPosition(position, inferred.source)
     rehab = niggles.open_rehab_sessions(conn)
-    spans = _status_spans(conn)
+    spans = status_spans(conn)
+    closed = closed_weeks(conn, config.athlete.units)
+    hard_week_count = closed.open_block.hard_weeks if closed.open_block else 0
     planned = choose_sessions(
         planned_sessions(
             version.form,
@@ -72,7 +89,7 @@ def plan_draft(
             monday=monday,
             rehab=rehab,
             spans=spans,
-            parked=_parked(conn, monday),
+            parked=parked_sessions(conn, monday),
         ),
         overrides,
         form=version.form,
@@ -96,6 +113,7 @@ def plan_draft(
                 decisions=_decisions(conn, session),
                 niggle_constraints=constraints,
                 status_spans=spans,
+                hard_week_count=hard_week_count,
             )
         )
         for session in planned
@@ -118,6 +136,10 @@ def plan_draft(
             racks=racks,
             units=config.athlete.units,
         ),
+        week_checks=_week_checks(
+            conn, version.form, closed, sessions, overrides, monday=monday, today=clock.today()
+        ),
+        hard_week_count=hard_week_count,
     )
     return PlanDraftResult(draft, render_plan_draft(draft, units=config.athlete.units))
 
@@ -154,24 +176,47 @@ def _decisions(conn: Connection, session: PlannedSession) -> tuple[DecisionInFor
     )
 
 
-def _parked(conn: Connection, monday: datetime.date) -> frozenset[str]:
-    """A park supersedes the resume before it on the same session, and the other way round."""
-    return frozenset(
-        str(row["session_id"])
-        for row in decisions.in_force(conn, monday.isoformat())
-        if row["kind"] == "park_session"
-    )
-
-
-def _status_spans(conn: Connection) -> tuple[StatusSpan, ...]:
-    return tuple(
-        StatusSpan(
-            str(row["kind"]),
-            datetime.date.fromisoformat(str(row["from_date"])),
-            None if row["to_date"] is None else datetime.date.fromisoformat(str(row["to_date"])),
+def _week_checks(
+    conn: Connection,
+    form: ProgramForm,
+    closed: ClosedWeeks,
+    sessions: Sequence[SessionPrescription],
+    overrides: Sequence[PlanOverride],
+    *,
+    monday: datetime.date,
+    today: datetime.date,
+) -> tuple[Flag, ...]:
+    """The plan warnings and the Block violation that read the closed weeks (docs/spec/week.md,
+    "The Block" and "Dose")."""
+    muscles = muscle_map(conn)
+    found: list[Flag | None] = [dose_under_target(closed.weeks, monday)]
+    found.extend(session_dose_high(session, muscles) for session in sessions)
+    block = closed.open_block
+    if block is not None and form.deload is not None:
+        found.append(
+            block_ceiling_exceeded(
+                block,
+                form.deload.hard_weeks_ceiling,
+                monday,
+                light_week=any(o.kind == "light_week" for o in overrides),
+                declined=any(
+                    row["kind"] == "decline_ceiling"
+                    and cast(Mapping[str, object], row["params"]).get("block") == block.id
+                    for row in decisions.in_force(conn, today.isoformat())
+                ),
+            )
         )
-        for row in readings.live(conn, "status_span")
-    )
+    minimum = next((o for o in overrides if o.kind == "minimum_week"), None)
+    if minimum is not None:
+        kept = cast(Sequence[str], minimum.params.get("keep", ()))
+        found.append(minimum_week_floor(sessions, kept, _priority_lifts(conn), monday))
+    return tuple(flag for flag in found if flag is not None)
+
+
+def _priority_lifts(conn: Connection) -> tuple[str, ...]:
+    goal_id = goals.current_id(conn)
+    stored = goals.get(conn, goal_id) if goal_id else None
+    return stored.goal.priority_lifts if stored else ()
 
 
 def _notes_since_last_approved(conn: Connection) -> tuple[AthleteNote, ...]:
