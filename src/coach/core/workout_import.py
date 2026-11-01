@@ -33,24 +33,24 @@ def event_since(last_import: datetime.datetime) -> datetime.datetime:
     return last_import - EVENT_OVERLAP
 
 
-def reconcile_full(
+def full_pull_changes(
     stored: Mapping[str, Presence],
     pulled: Iterable[Workout],
     noticed_at: datetime.datetime,
     zone: datetime.tzinfo,
 ) -> Changes:
     """A full pull: every listed workout is present, every stored one not listed is gone."""
-    reconciler = _Reconciler(stored, utc_instant(noticed_at), zone, "full")
+    pull = _PullChanges(stored, utc_instant(noticed_at), zone, "full")
     listed: set[str] = set()
     for workout in pulled:
         listed.add(workout.id)
-        reconciler.present(workout)
+        pull.present(workout)
     for workout_id in sorted(set(stored) - listed):
-        reconciler.absent(workout_id)
-    return reconciler.changes()
+        pull.absent(workout_id)
+    return pull.changes()
 
 
-def reconcile_events(
+def event_pull_changes(
     stored: Mapping[str, Presence],
     events: Iterable[WorkoutEvent],
     noticed_at: datetime.datetime,
@@ -58,13 +58,13 @@ def reconcile_events(
 ) -> Changes:
     """An event pull, applied oldest first whatever Hevy's page order: an update is present, a
     delete is gone."""
-    reconciler = _Reconciler(stored, utc_instant(noticed_at), zone, "event")
+    pull = _PullChanges(stored, utc_instant(noticed_at), zone, "event")
     for event in sorted(events, key=_event_moment):
         if event.workout is not None:
-            reconciler.present(event.workout)
+            pull.present(event.workout)
         else:
-            reconciler.absent(event.workout_id)
-    return reconciler.changes()
+            pull.absent(event.workout_id)
+    return pull.changes()
 
 
 def _event_moment(event: WorkoutEvent) -> datetime.datetime:
@@ -106,7 +106,7 @@ def version_of(workout: Workout, zone: datetime.tzinfo) -> WorkoutVersion:
     )
 
 
-class _Reconciler:
+class _PullChanges:
     """Applies a pull's presence changes in turn, then writes at most one tombstone per workout:
     the net change against what the store held before the pull."""
 
