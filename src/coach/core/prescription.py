@@ -80,9 +80,14 @@ class StatusSpan:
 
 @dataclass(frozen=True)
 class MatchedActivity:
+    """A conditioning session's last matched workout: its minutes, RPE, the reps logged per
+    exercise and the rounds done."""
+
     date: datetime.date
     minutes: int | None
     rpe: float | None
+    reps: Mapping[str, int] = field(default_factory=dict[str, int])
+    rounds: int | None = None
 
 
 @dataclass(frozen=True)
@@ -143,6 +148,20 @@ class LinePrescription:
 
 
 @dataclass(frozen=True)
+class ConditioningDose:
+    """A conditioning session's dose from its session scheme; `minutes` is the time cap under
+    `circuit_rounds`."""
+
+    scheme: str
+    minutes: int | None
+    rounds: int | None
+    reps: Mapping[str, int]
+    derived_from: str
+    change: str
+
+
+@dataclass(frozen=True)
 class SessionPrescription:
     session: PlannedSession
     lines: tuple[LinePrescription, ...]
+    dose: ConditioningDose | None = None

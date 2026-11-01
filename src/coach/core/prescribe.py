@@ -8,6 +8,7 @@ from typing import cast
 
 from coach.core.anchor import AnchorExposure, StartLoad, anchor, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
+from coach.core.conditioning import conditioning_dose
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
@@ -16,6 +17,7 @@ from coach.core.linear import misses_at, misses_before_reset, reset_load
 from coach.core.load import Load, LoadMode
 from coach.core.planned_week import week_monday
 from coach.core.prescription import (
+    ConditioningDose,
     ExerciseFacts,
     LinePrescription,
     PrescribedGroup,
@@ -43,9 +45,16 @@ from coach.core.wave_531 import (
 
 def prescribe(request: PrescribeRequest) -> SessionPrescription:
     planned = request.planned
-    return SessionPrescription(
-        planned, tuple(_Derivation(request, line).derive() for line in planned.lines)
-    )
+    lines = tuple(_Derivation(request, line).derive() for line in planned.lines)
+    return SessionPrescription(planned, lines, _session_dose(request))
+
+
+def _session_dose(request: PrescribeRequest) -> ConditioningDose | None:
+    session = request.version.form.session(request.planned.session_id)
+    if session is None or session.scheme is None:
+        return None
+    activity = request.activities.get(session.id)
+    return conditioning_dose(session.scheme, activity)
 
 
 type Found = AnchorExposure | StartLoad
