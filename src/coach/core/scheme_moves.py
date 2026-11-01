@@ -5,6 +5,7 @@ import datetime
 from dataclasses import dataclass
 
 from coach.core.anchor import StartLoad, anchor_load
+from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
@@ -64,6 +65,8 @@ class SchemeMoves:
         """The anchor's top working load on the grid the scheme moves over."""
         if not self.given.loaded:
             return None
+        if self.line.scheme.name == "assistance_ladder":
+            return self._rung(exposure)
         rack = self.given.rack
         if rack is None:
             top = exposure.top_load
@@ -81,9 +84,15 @@ class SchemeMoves:
 
     def opening(self, found: StartLoad) -> Move:
         """No exposure anywhere: the start load at the scheme's opening position."""
+        if self.line.scheme.name == "assistance_ladder":
+            first = Load(rungs(self.line)[0], "assisted")
+            self.steps.append(Step("scheme", None, first.amount, "first_rung"))
+            return self._held(first)
         return self._held(self._start_load(found))
 
     def move(self, exposure: Exposure, before: Load | None) -> Move:
+        if self.line.scheme.name == "assistance_ladder":
+            return self._climb(exposure, before)
         verdict = self._judge(exposure, before)
         rack = self.given.rack
         if verdict.hit and before is not None and rack is not None:
@@ -96,6 +105,33 @@ class SchemeMoves:
             if reset is not None:
                 return reset
         return self._held(before)
+
+    def _rung(self, exposure: Exposure) -> Load | None:
+        logged = exposure.top_load
+        if logged is None or logged.mode != "assisted":
+            return None
+        rung = Load(rung_of(logged.amount, rungs(self.line)), "assisted")
+        if rung != logged:
+            self._raise(
+                "offgrid_anchor_ignored",
+                {
+                    "exposure": exposure.ref,
+                    "logged_load": logged.amount,
+                    "anchor_used": rung.amount,
+                },
+                f"the logged {logged.amount:g} is not a rung; the anchor uses {rung.amount:g}",
+            )
+        return rung
+
+    def _climb(self, exposure: Exposure, rung: Load | None) -> Move:
+        if rung is None or not self._judge(exposure, rung).hit:
+            return self._held(rung)
+        up = next_rung(rung.amount, rungs(self.line))
+        if up is None:
+            self.steps.append(Step("scheme", rung.amount, rung.amount, "rack_top"))
+            return self._held(rung)
+        self.steps.append(Step("scheme", rung.amount, up, "hit"))
+        return Move(Load(up, "assisted"), "step_up", self.given.sets)
 
     def _reset(self, exposure: Exposure, before: Load) -> Move | None:
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))

@@ -21,10 +21,13 @@ RUNGS = [60, 50, 40, 30, 20, 10, 0]
 PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", rungs=RUNGS)
 
 
-def pull_up_on(on: str, rung: float, *, workout_id: str | None = None) -> Exposure:
+def pull_up_on(
+    on: str, rung: float, *, workout_id: str | None = None, last_reps: int = 8
+) -> Exposure:
     return an_exposure(
         on,
-        *[(rung, 8, 8)] * 4,
+        *[(rung, 8, 8)] * 3,
+        (rung, last_reps, 8),
         workout_id=workout_id,
         exercise_id="assisted_pull_up",
         mode="assisted",
@@ -39,9 +42,9 @@ def derive(line: Line, *exposures: Exposure, **request: Any) -> LinePrescription
 def test_the_assisted_pull_up_after_25_days_off_steps_two_rungs_back_with_one_set_fewer() -> None:
     line = derive(
         PULL_UP,
-        pull_up_on("2026-09-24", 40),
-        pull_up_on("2026-10-01", 40),
-        pull_up_on("2026-10-08", 40),
+        pull_up_on("2026-09-24", 40, last_reps=7),
+        pull_up_on("2026-10-01", 40, last_reps=7),
+        pull_up_on("2026-10-08", 40, last_reps=7),
     )
 
     assert line.steps[:3] == (
@@ -60,7 +63,7 @@ def test_the_assisted_pull_up_after_25_days_off_steps_two_rungs_back_with_one_se
     )
 
 
-def test_the_week_after_a_return_derives_from_the_return_exposure_with_no_band() -> None:
+def test_the_week_after_a_return_climbs_from_the_return_exposure_with_no_band() -> None:
     line = derive(
         PULL_UP,
         pull_up_on("2026-09-24", 40),
@@ -71,7 +74,7 @@ def test_the_week_after_a_return_derives_from_the_return_exposure_with_no_band()
 
     assert line.derived_from == "exposure:h-return/assisted_pull_up"
     assert [s for s in line.steps if s.step in ("cut", "rpe_ceiling")] == []
-    assert [(g.count, g.load, g.rpe_cap) for g in line.groups] == [(4, Load(60, "assisted"), None)]
+    assert [(g.count, g.load, g.rpe_cap) for g in line.groups] == [(4, Load(50, "assisted"), None)]
 
 
 def squat_on(on: str, *sets: tuple[float, int, float], workout_id: str = "h-1") -> Exposure:
