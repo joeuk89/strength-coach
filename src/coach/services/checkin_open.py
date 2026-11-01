@@ -9,38 +9,30 @@ from typing import cast
 from coach.core import check_in_card as card
 from coach.core.activity_rules import (
     QUALITY_CAP,
-    LoggedActivity,
-    activity_cap_exceeded,
     run_spikes,
 )
 from coach.core.check_in import Window, check_in_window
 from coach.core.check_in_card import Card, CardField
 from coach.core.clock import Clock
 from coach.core.closed_week.adherence import adherence
-from coach.core.closed_week.match import conditioning_activity
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag
-from coach.core.ledger_flags import followup_due, niggle_unconstrained, training_max_unused
 from coach.core.phase_trend import (
-    WeighIns,
     fourteen_day_average,
     observed_rate,
-    phase_condition_met,
-    phase_trend_off,
 )
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.units import from_kg
 from coach.services.cadence import cadence_signals
+from coach.services.check_in_warnings import activities, check_in_warnings, weigh_ins
 from coach.services.closed_weeks import WeekLog
 from coach.services.fatigue import COMPOUND_PATTERNS, Fatigue
 from coach.services.status import check_in_due_on
 from coach.store import (
     annotations,
     check_ins,
-    decisions,
     exercises,
     follow_ups,
     goals,
@@ -49,7 +41,6 @@ from coach.store import (
     observations,
     phases,
     programs,
-    readings,
     week_plans,
 )
 from coach.store.connection import Connection
@@ -57,8 +48,6 @@ from coach.store.rows import Row
 
 WEEK = datetime.timedelta(days=DAYS_IN_WEEK)
 _DAY = datetime.timedelta(days=1)
-# The one v1 scheme that reads a training max (program.md, "Line schemes").
-READS_TRAINING_MAX = ("wave_531",)
 
 
 def checkin_open(
@@ -138,8 +127,8 @@ def _card(
     closing = [w for w in closed.weeks if window.start <= w.monday + WEEK - _DAY <= window.end]
     plan = week_plans.in_force(conn, week_monday(on).isoformat())
     version = programs.latest(conn)
-    weigh_ins = _weigh_ins(conn)
-    activities = _activities(conn, log)
+    weighed = weigh_ins(conn)
+    logged = activities(conn, log)
     phase = phases.in_force(conn)
     fields: list[CardField | None] = [
         card.header(window, chosen, None if plan is None else str(plan["id"])),
@@ -165,8 +154,8 @@ def _card(
             short_sleep_week=any(t.name == "short_sleep_week" for t in opened.proposal.triggers),
         ),
         card.weight_phase(
-            sum(1 for d in weigh_ins if window.start <= d <= window.end),
-            _in_units(fourteen_day_average(weigh_ins, on), bodyweight_units),
+            sum(1 for d in weighed if window.start <= d <= window.end),
+            _in_units(fourteen_day_average(weighed, on), bodyweight_units),
             bodyweight_units,
             None
             if phase is None
@@ -174,20 +163,20 @@ def _card(
                 phase.id,
                 phase.kind,
                 phase.rate_pct_bw_per_week,
-                observed_rate(weigh_ins, on),
+                observed_rate(weighed, on),
                 {"kind": phase.until.kind, "value": _plain(phase.until.value)},
             ),
         ),
         card.activities(
             [
                 card.ActivityRead(a.id, a.date, a.kind, a.minutes, a.rpe, a.quality)
-                for a in activities
+                for a in logged
                 if window.start <= a.date <= window.end
             ],
             cap=QUALITY_CAP,
             spikes=[
                 str(f.scope.workout_id)
-                for f in run_spikes([a for a in activities if a.date <= on], since=window.start)
+                for f in run_spikes([a for a in logged if a.date <= on], since=window.start)
             ],
         ),
         card.niggles(_niggle_reads(conn)),
@@ -196,10 +185,7 @@ def _card(
         card.deep_tier(_deep_read(conn), tier=chosen),
     ]
     warnings = (
-        *_ledger_warnings(conn, on),
-        *_phase_warnings(conn, weigh_ins, on, bodyweight_units),
-        *_activity_warnings(activities, window, on),
-        *_training_max_warnings(conn),
+        *check_in_warnings(conn, log, window, on=on, bodyweight_units=bodyweight_units),
         *cadence_signals(conn, closed, units=units, on=on),
     )
     return Card(window, chosen, card.assemble(fields), warnings)
@@ -294,101 +280,6 @@ def _deep_read(conn: Connection) -> card.DeepRead:
         if since is None or day > since.isoformat():
             tags[str(row["because"])] += 1
     return card.DeepRead(dict(sorted(tags.items())), tuple(observations.current(conn)))
-
-
-def _ledger_warnings(conn: Connection, on: datetime.date) -> list[Flag]:
-    found = [
-        followup_due(str(f["id"]), str(f["due"]))
-        for f in follow_ups.every(conn)
-        if f["kind"] in ("kept", "deferred") and f["due"] and str(f["due"]) <= on.isoformat()
-    ]
-    found.extend(
-        niggle_unconstrained(str(n["id"]), str(n["opened"]))
-        for n in niggles.every(conn)
-        if n["status"] != "resolved" and not n["constraints"]
-    )
-    return found
-
-
-def _phase_warnings(
-    conn: Connection, weigh_ins: WeighIns, on: datetime.date, bodyweight_units: Units
-) -> list[Flag]:
-    phase = phases.in_force(conn)
-    if phase is None:
-        return []
-    raised = (
-        phase_trend_off(phase, weigh_ins, on),
-        phase_condition_met(phase, weigh_ins, on, units=bodyweight_units),
-    )
-    return [flag for flag in raised if flag is not None]
-
-
-def _activity_warnings(
-    activities: Sequence[LoggedActivity], window: Window, on: datetime.date
-) -> list[Flag]:
-    found: list[Flag] = []
-    monday = week_monday(window.start)
-    while monday <= window.end:
-        flag = activity_cap_exceeded(activities, monday)
-        if flag is not None:
-            found.append(flag)
-        monday += WEEK
-    found.extend(run_spikes([a for a in activities if a.date <= on], since=window.start))
-    return found
-
-
-def _training_max_warnings(conn: Connection) -> list[Flag]:
-    version = programs.latest(conn)
-    schemes: dict[str, list[str]] = {}
-    if version is not None:
-        for session in version.form.sessions:
-            for line in session.lines:
-                schemes.setdefault(line.exercise, []).append(line.scheme.name)
-    found: list[Flag] = []
-    for row in decisions.in_force(conn):
-        if row["kind"] != "training_max":
-            continue
-        exercise_id = str(row["exercise_id"])
-        read_by = schemes.get(exercise_id, [])
-        if not any(s in READS_TRAINING_MAX for s in read_by):
-            scheme = read_by[0] if read_by else None
-            found.append(training_max_unused(exercise_id, scheme, str(row["id"])))
-    return found
-
-
-def _weigh_ins(conn: Connection) -> dict[datetime.date, float]:
-    return {
-        datetime.date.fromisoformat(str(r["date"])): float(str(r["kg"]))
-        for r in readings.live(conn, "weigh_in")
-    }
-
-
-def _activities(conn: Connection, log: WeekLog) -> list[LoggedActivity]:
-    """Activities, and the Activity view of every conditioning workout (week.md, "What an
-    unmatched workout is")."""
-    found = [
-        LoggedActivity(
-            str(r["id"]),
-            datetime.date.fromisoformat(str(r["date"])),
-            str(r["kind"]),
-            cast(int | None, r["minutes"]),
-            float(str(r["rpe"])),
-            bool(r["quality"]),
-            cast(float | None, r["distance_km"]),
-        )
-        for r in readings.live(conn, "activity")
-    ]
-    for workout in log.workouts:
-        if workout.kind != "conditioning":
-            continue
-        rated = [s.rpe for e in workout.exposures for s in e.sets if s.rpe is not None]
-        view = conditioning_activity(workout.date, workout.minutes, rated)
-        found.append(
-            LoggedActivity(
-                workout.id, view.date, "conditioning", view.minutes, view.rpe, view.quality
-            )
-        )
-    return sorted(found, key=lambda a: (a.date, a.id))
 
 
 def _priority_lifts(conn: Connection) -> tuple[str, ...]:

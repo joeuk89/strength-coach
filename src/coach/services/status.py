@@ -2,16 +2,23 @@ import datetime
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from coach.core.check_in import CheckInDue, LastCheckIn, check_in_due
+from coach.core.check_in import (
+    DAY,
+    CheckInDue,
+    LastCheckIn,
+    Window,
+    check_in_due,
+    check_in_window,
+)
 from coach.core.clock import Clock
-from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Units
+from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Location, Units
 from coach.core.flag import Flag
 from coach.core.import_flags import snapshot_stale
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
-from coach.core.ledger_flags import niggle_unconstrained
 from coach.core.planned_week import RotationPosition, week_monday
 from coach.services.cadence import cadence_signals
+from coach.services.check_in_warnings import check_in_warnings
 from coach.services.closed_weeks import ClosedWeeks, WeekLog
 from coach.services.fatigue import Fatigue
 from coach.services.rotation import rotation_position
@@ -120,10 +127,13 @@ def status(
     hevy_on: bool,
     exported: Mapping[str, str],
     units: Units,
+    bodyweight_units: Units | None = None,
+    locations: Sequence[Location] = (),
     kits: Sequence[KitFiles] = (),
     cadence_days: int = DEFAULT_CHECKIN_CADENCE_DAYS,
 ) -> StatusResult:
-    """`exported` is the export as it stands on disk, file name to text."""
+    """`exported` is the export as it stands on disk, file name to text; `bodyweight_units`
+    defaults to the lift units."""
     now = clock.now()
     today = clock.today()
     open_niggles = [n for n in niggles.every(conn) if n["status"] != "resolved"]
@@ -154,10 +164,12 @@ def status(
         observations=tuple(observations.current(conn)),
         warnings=(
             *((stale,) if stale else ()),
-            *(
-                niggle_unconstrained(str(n["id"]), str(n["opened"]))
-                for n in open_niggles
-                if not n["constraints"]
+            *check_in_warnings(
+                conn,
+                log,
+                _open_window(conn, today),
+                on=today,
+                bodyweight_units=bodyweight_units or units,
             ),
             *cadence_signals(conn, closed, units=units, on=today),
         ),
@@ -165,6 +177,15 @@ def status(
         rotation=_rotation(conn, monday),
         block=_block(conn, closed, pending),
     )
+
+
+def _open_window(conn: Connection, today: datetime.date) -> Window:
+    """The days the next check-in would review, up to today; it starts after today when a
+    check-in recorded today already reviewed them."""
+    previous = check_ins.newest_current(conn)
+    if previous is not None:
+        return Window(previous.window.end + DAY, today)
+    return check_in_window(today, first_plan_monday=week_plans.first_week(conn))
 
 
 def _check_in_due(

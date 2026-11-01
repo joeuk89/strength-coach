@@ -117,7 +117,11 @@ def test_status_counts_open_niggles_due_follow_ups_decisions_and_observations() 
     assert result.follow_ups_due == ("f-0001",)
     assert result.decisions == {"training_max": ("d-0002",)}
     assert result.observations == ("o-0002",)
-    assert [w.key for w in result.warnings] == ["niggle_unconstrained@instance"]
+    assert [w.key for w in result.warnings] == [
+        "followup_due@instance",
+        "niggle_unconstrained@instance",
+        "training_max_unused@exercise:bb_bench_press",
+    ]
 
 
 CUTOVER = """date = 2026-11-01
