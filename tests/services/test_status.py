@@ -53,6 +53,7 @@ def status_of(
         pin=ENGINE,
         hevy_on=hevy_on,
         exported={} if exported is None else exported,
+        units="lb",
     )
 
 
@@ -130,6 +131,7 @@ def test_status_reports_each_plate_pool_locations_kit_tables_current_or_stale() 
         pin=ENGINE,
         hevy_on=False,
         exported={},
+        units="lb",
         kits=(home, cabin),
     )
 

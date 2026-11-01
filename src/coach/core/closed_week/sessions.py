@@ -19,22 +19,27 @@ ROUNDING = 1e-9
 
 @dataclass(frozen=True)
 class TargetSet:
-    """One prescribed working set: the bottom of its reps and its RPE."""
+    """One prescribed working set: the bottom of its reps, its RPE, the top of its reps and its
+    load in athlete units."""
 
     reps: int | None = None
     rpe: float | None = None
+    top: int | None = None
+    load: float | None = None
 
 
 @dataclass(frozen=True)
 class PlannedWork:
     """A planned session with its prescribed working sets by exercise; a `hold` line is not
-    among them. A dropped core session stays in the week as a Miss and takes no workout."""
+    among them. A dropped core session stays in the week as a Miss and takes no workout.
+    `returned` names the lines that took a return band."""
 
     session: PlannedSession
     targets: Mapping[str, tuple[TargetSet, ...]] = field(
         default_factory=dict[str, tuple[TargetSet, ...]]
     )
     dropped: bool = False
+    returned: frozenset[str] = frozenset()
 
     @property
     def ref(self) -> PlannedRef:

@@ -31,7 +31,7 @@ def a_hard_squat_week(conn: Connection, week: str) -> str:
     return plan_id
 
 
-def a_check_in(conn: Connection, start: str, end: str) -> None:
+def a_check_in(conn: Connection, start: str, end: str, *, readiness: str | None = None) -> None:
     with conn:
         rows.insert(
             conn,
@@ -43,6 +43,7 @@ def a_check_in(conn: Connection, start: str, end: str) -> None:
                 "window_start": start,
                 "window_end": end,
                 "read": "A steady block.",
+                "readiness": readiness,
                 "status": "current",
                 "draft_hash": f"sha256:{end}",
                 "recorded_at": f"{end}T20:00:00+00:00",

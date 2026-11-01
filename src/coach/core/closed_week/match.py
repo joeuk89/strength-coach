@@ -29,6 +29,7 @@ class WeekWorkout:
     started: str = ""
     kind: WorkoutClass = "lifting"
     minutes: int | None = None
+    session_rpe: float | None = None
 
 
 @dataclass(frozen=True)

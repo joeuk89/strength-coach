@@ -23,7 +23,9 @@ def at(day: datetime.date) -> FixedClock:
 
 
 def status_on(conn: Connection, day: datetime.date) -> StatusResult:
-    return status(conn, at(day), engine_version=ENGINE, pin=ENGINE, hevy_on=False, exported={})
+    return status(
+        conn, at(day), engine_version=ENGINE, pin=ENGINE, hevy_on=False, exported={}, units="lb"
+    )
 
 
 def a_check_in(conn: Connection, day: str, tier: str = "light", extra: str = "") -> None:

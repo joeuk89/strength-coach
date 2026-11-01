@@ -13,10 +13,12 @@ SETS = (TargetSet(6, 8),) * 3
 MUSCLES = {"bb_bench_press": {"primary": ["chest"], "secondary": ["triceps"]}}
 
 
-def planned(session_id: str, n: int, kind: str = "lifting", **work: bool) -> PlannedWork:
+def planned(
+    session_id: str, n: int, kind: str = "lifting", *, dropped: bool = False
+) -> PlannedWork:
     on = MONDAY + datetime.timedelta(days=n)
     targets = {"bb_bench_press": SETS} if kind == "lifting" else {}
-    return PlannedWork(PlannedSession(session_id, on, "home", kind, ()), targets, **work)
+    return PlannedWork(PlannedSession(session_id, on, "home", kind, ()), targets, dropped=dropped)
 
 
 def bench(id_: str, n: int) -> WeekWorkout:

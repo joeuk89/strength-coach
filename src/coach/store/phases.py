@@ -2,6 +2,7 @@ import datetime
 from dataclasses import dataclass
 
 from coach.core.goal import PhaseOpen, Until
+from coach.core.phase_trend import PhaseInForce
 from coach.store.connection import Connection
 
 BODYWEIGHT_UNTILS = ("bodyweight_at_or_below", "bodyweight_at_or_above")
@@ -22,6 +23,19 @@ def open_phase(conn: Connection) -> OpenPhase | None:
         return None
     id_, kind, until_kind, until_value = found
     return OpenPhase(id_, kind, Until(until_kind, _until_value(until_kind, until_value)))
+
+
+def in_force(conn: Connection) -> PhaseInForce | None:
+    """The open Phase with its target rate and the day it opened."""
+    found = conn.execute(
+        "SELECT id, kind, rate_pct_bw_per_week, until_kind, until_value, opened FROM phase "
+        "WHERE closed IS NULL"
+    ).fetchone()
+    if found is None:
+        return None
+    id_, kind, rate, until_kind, until_value, opened = found
+    until = Until(until_kind, _until_value(until_kind, until_value))
+    return PhaseInForce(id_, kind, rate, until, datetime.date.fromisoformat(opened))
 
 
 def insert(
