@@ -106,7 +106,7 @@ def test_since_keeps_exposures_on_or_after_the_date_and_no_exercise_reads_every_
 def test_an_exercise_outside_the_library_is_refused() -> None:
     with pytest.raises(Invalid) as refused:
         exposures(a_library(), exercises=("bb_nope",), since=None, last=10, units="kg")
-    assert refused.value.code == "invalid_argument"
+    assert refused.value.code == "unknown_exercise"
 
 
 def test_a_void_annotation_removes_the_exposure_from_the_view_and_the_anchor() -> None:

@@ -82,8 +82,9 @@ def test_a_withdrawing_weigh_in_carries_only_what_it_withdraws() -> None:
     assert parse('[[weigh_in]]\nwithdraws = "wi-0001"\n').records == (
         WeighInRecord(withdraws="wi-0001"),
     )
-    with pytest.raises(Invalid):
+    with pytest.raises(Invalid) as raised:
         parse('[[weigh_in]]\nwithdraws = "wi-0001"\nkg = 80\n')
+    assert raised.value.code == "unknown_key"
 
 
 def test_a_record_table_written_as_a_single_table_is_refused() -> None:

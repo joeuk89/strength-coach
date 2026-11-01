@@ -95,6 +95,7 @@ def test_an_annotation_on_a_workout_that_is_not_stored_is_refused() -> None:
         run(a_store(), DISCOUNT)
 
     assert WORKOUT in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_a_miss_tag_on_a_planned_session_no_plan_covers_is_refused() -> None:
@@ -107,6 +108,7 @@ def test_a_miss_tag_on_a_planned_session_no_plan_covers_is_refused() -> None:
         run(a_store(), text)
 
     assert "planned_session:2026-11-04/upper-a" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_an_annotation_may_target_a_manual_workout_raised_in_the_same_file() -> None:
@@ -127,3 +129,10 @@ def test_re_running_a_withdrawal_returns_the_same_ids_and_withdrawn_list() -> No
     first = run(conn, '[[annotation]]\nwithdraws = "a-0001"\n')
 
     assert run(conn, '[[annotation]]\nwithdraws = "a-0001"\n') == first
+
+
+def test_withdrawing_an_annotation_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), '[[annotation]]\nwithdraws = "a-0009"\n')
+
+    assert raised.value.code == "draft_ref_unresolved"

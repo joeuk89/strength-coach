@@ -125,6 +125,7 @@ def test_an_event_on_a_follow_up_that_is_not_stored_is_refused() -> None:
         run(a_store(), an_event("dropped", "2026-11-01"))
 
     assert "f-0001" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_a_follow_up_about_an_exercise_keeps_the_ref_and_a_note_may_cite_it_by_key() -> None:

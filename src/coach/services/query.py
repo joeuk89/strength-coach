@@ -68,7 +68,7 @@ def exposures(
     """`query exposures`: each Exposure with its annotations applied, newest first."""
     unknown = [e for e in exercises if library.get(conn, e) is None]
     if unknown:
-        raise Invalid("invalid_argument", f"no exercise {', '.join(unknown)} in the library")
+        raise Invalid("unknown_exercise", f"no exercise {', '.join(unknown)} in the library")
     found = [
         e
         for e in read_history(conn, units).exposures

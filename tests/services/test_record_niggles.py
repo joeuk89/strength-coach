@@ -115,6 +115,7 @@ def test_an_event_on_a_niggle_that_is_not_stored_is_refused() -> None:
         run(a_store(), '[[niggle]]\nniggle = "n-0009"\ndate = 2026-10-29\nstatus = "easing"\n')
 
     assert "n-0009" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 @pytest.mark.parametrize(
@@ -148,6 +149,7 @@ def test_a_constraint_on_an_exercise_the_library_lacks_is_refused() -> None:
         run(a_store(), text)
 
     assert "nope" in raised.value.message
+    assert raised.value.code == "unknown_exercise"
 
 
 REHAB = """
@@ -225,3 +227,21 @@ def test_re_running_a_niggle_draft_returns_the_same_ids_and_writes_nothing() -> 
 
     assert second == first
     assert len(events(niggles(conn)[0])) == 1
+
+
+def test_a_rehab_line_on_an_exercise_the_library_lacks_is_an_unknown_exercise() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), REHAB)
+
+    assert raised.value.code == "unknown_exercise"
+
+
+def test_a_rehab_session_reusing_a_session_id_is_a_duplicate_id() -> None:
+    conn = a_store()
+    an_exercise(conn, "band_external_rotation", load_mode="band", equipment_kind="band")
+    run(conn, REHAB)
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, REHAB.replace("left shoulder", "right shoulder"))
+
+    assert raised.value.code == "duplicate_id"

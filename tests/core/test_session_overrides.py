@@ -79,6 +79,7 @@ def test_an_add_session_names_a_session_the_version_or_a_niggle_carries() -> Non
         chosen(PlanOverride("add_session", "yoga", date=day(1)))
 
     assert "yoga" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 @pytest.mark.parametrize("offset", [-1, 7, 18])

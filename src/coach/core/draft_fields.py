@@ -141,7 +141,7 @@ class Fields:
         extra = sorted(set(self.table) - set(names))
         if extra:
             raise Invalid(
-                "invalid_argument",
+                "unknown_key",
                 f"{self.where}: a withdrawing row carries only withdraws; drop {', '.join(extra)}",
             )
 

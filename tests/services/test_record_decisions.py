@@ -202,6 +202,7 @@ def test_a_decision_on_a_session_no_version_or_niggle_raised_is_refused() -> Non
         run(a_store(), a_decision("park_session", 'session = "nope"\n'))
 
     assert "nope" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_a_decline_ceiling_lasts_to_the_sunday_of_the_week_it_is_made_in() -> None:
@@ -283,6 +284,7 @@ def test_evidence_naming_no_stored_record_is_refused() -> None:
         )
 
     assert "niggle:n-0004" in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_evidence_may_cite_an_exposure_on_a_stored_workout() -> None:
@@ -303,6 +305,7 @@ def test_evidence_citing_an_exposure_on_an_unstored_workout_is_refused() -> None
         )
 
     assert EXPOSURE in raised.value.message
+    assert raised.value.code == "draft_ref_unresolved"
 
 
 def test_ledger_open_keeps_decisions_in_force_today() -> None:
@@ -325,3 +328,17 @@ def test_re_running_a_decision_draft_returns_the_same_ids() -> None:
 
     assert run(conn, training_max(100)) == first
     assert in_force(conn) == ["d-0001"]
+
+
+def test_retiring_a_decision_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), a_decision("retire", 'decision = "d-0009"\n'))
+
+    assert raised.value.code == "draft_ref_unresolved"
+
+
+def test_a_decision_on_an_exercise_the_library_lacks_is_an_unknown_exercise() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), training_max(100))
+
+    assert raised.value.code == "unknown_exercise"

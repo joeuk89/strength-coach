@@ -160,7 +160,7 @@ def _added(
     session = form.session(session_id) or next((r for r in rehab if r.id == session_id), None)
     if session is None:
         raise Invalid(
-            "invalid_argument",
+            "draft_ref_unresolved",
             f"add_session names {session_id}, which is no session of the version or a niggle",
         )
     on = cast(datetime.date, override.date)

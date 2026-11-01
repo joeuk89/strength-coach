@@ -331,3 +331,10 @@ def test_a_date_inside_the_previous_window_is_refused() -> None:
 
     with pytest.raises(Invalid):
         run(conn, header("2026-11-05"))
+
+
+def test_retiring_an_observation_that_is_not_stored_is_an_unresolved_ref() -> None:
+    with pytest.raises(Invalid) as raised:
+        run(a_store(), header() + '[[observation]]\nretire = "o-0009"\nbecause = "x"\n')
+
+    assert raised.value.code == "draft_ref_unresolved"
