@@ -22,7 +22,6 @@ TIERS = ("light", "deep")
 
 
 def run(call: InstanceCall) -> Outcome:
-    athlete = call.instance.config.athlete
     tier = call.args.get("tier")
     if tier is not None and tier not in TIERS:
         raise Invalid("invalid_argument", f"--tier {tier!r} is not one of {', '.join(TIERS)}")
@@ -36,12 +35,12 @@ def run(call: InstanceCall) -> Outcome:
         card = checkin_open(
             conn,
             call.clock,
-            units=athlete.units,
-            bodyweight_units=athlete.bodyweight_units,
+            units=call.instance.units,
+            bodyweight_units=call.instance.bodyweight_units,
             date=_date(call.args.get("date")),
             tier=None if tier is None else str(tier),
             readiness=None if readiness is None else str(readiness),
-            cadence_days=athlete.checkin_cadence_days,
+            cadence_days=call.instance.checkin_cadence_days,
         )
     return Outcome(
         {

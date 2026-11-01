@@ -23,7 +23,7 @@ def run(call: InstanceCall) -> Outcome:
     instance = call.instance
     path = str(call.args["draft"])
     data = read_draft(path)
-    units = instance.config.athlete.units
+    units = instance.units
     if call.args.get("dry_run") is True:
         with open_instance_store(instance) as conn:
             found = dry_run(
