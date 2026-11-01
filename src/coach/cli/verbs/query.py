@@ -43,7 +43,7 @@ def _rows(result: QueryResult) -> Json:
 DECLARATION = Declaration(
     name="query",
     summary="One read view as a row list: readings (Weigh-ins, Sleep nights, Activities) or "
-    "ledger (one record kind with its withdrawals, or one record by id).",
+    "ledger (one record kind with its withdrawals or event history, or one record by id).",
     writes="none",
     needs_instance=True,
     arguments=(
@@ -67,5 +67,6 @@ DECLARATION = Declaration(
             ("query", "readings", "--kind", "weigh_in", "--last", "3"), "The last 3 Weigh-ins."
         ),
         Example(("query", "ledger", "--kind", "status_span", "--open"), "Status spans in force."),
+        Example(("query", "ledger", "--kind", "niggle", "--open"), "Open niggles."),
     ),
 )

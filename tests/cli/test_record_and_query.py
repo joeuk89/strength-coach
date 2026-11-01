@@ -192,3 +192,79 @@ def test_query_ledger_by_id(instance: Path) -> None:
     run = coach("query", "ledger", "--id", "an-0001")
 
     assert run.envelope["result"]["rows"][0]["text"] == "knee clicks"
+
+
+COACHING = """
+[[niggle]]
+key = "hamstring"
+site = "left hamstring"
+date = 2026-10-24
+status = "easing"
+
+[[niggle.constraints]]
+kind = "rpe_cap"
+pattern = "hinge"
+value = 7
+
+[[followup]]
+raised = 2026-10-24
+text = "Re-test the hinge"
+due = 2026-11-14
+
+[[decision]]
+kind = "activity_cap"
+activity_kind = "run"
+weekly_distance = 17
+because = "pain"
+text = "while the hamstring settles"
+evidence = ["niggle:@hamstring"]
+"""
+
+
+def test_record_writes_niggles_follow_ups_and_decisions_and_query_reads_them(
+    instance: Path,
+) -> None:
+    run = coach("record", draft(instance, COACHING))
+
+    assert run.code == 0
+    assert run.envelope["result"]["ids"] == {
+        "niggle": ["n-0001"],
+        "followup": ["f-0001"],
+        "decision": ["d-0001"],
+    }
+    niggle = coach("query", "ledger", "--id", "n-0001").envelope["result"]["rows"][0]
+    assert niggle["constraints"] == [
+        {"kind": "rpe_cap", "exercise_id": None, "pattern": "hinge", "value": 7.0}
+    ]
+    decisions = coach("query", "ledger", "--kind", "decision", "--open").envelope["result"]
+    assert [row["evidence"] for row in decisions["rows"]] == [["niggle:n-0001"]]
+
+
+@pytest.mark.parametrize(
+    ("text", "code"),
+    [
+        (
+            '[[niggle]]\nsite = "knee"\ndate = 2026-10-29\nstatus = "resolved"\n'
+            '[[niggle.constraints]]\nkind = "no_added_load"\n',
+            "niggle_constraint_on_resolved",
+        ),
+        (
+            '[[decision]]\nkind = "defer_deep_review"\nuntil = 2026-11-07\noutcome = "taken"\n'
+            'because = "schedule"\ntext = "busy week"\n',
+            "unknown_key",
+        ),
+        (
+            '[[decision]]\nkind = "block_reset"\nbecause = "schedule"\ntext = "x"\n',
+            "invalid_argument",
+        ),
+    ],
+)
+def test_a_bad_coaching_record_is_exit_1_and_writes_nothing(
+    instance: Path, text: str, code: str
+) -> None:
+    run = coach("record", draft(instance, text))
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == code
+    for kind in ("niggle", "decision"):
+        assert coach("query", "ledger", "--kind", kind).envelope["result"]["count"] == 0
