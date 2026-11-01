@@ -2,7 +2,6 @@
 set's Exercise through its template id, annotations applied in id order."""
 
 import datetime
-from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from typing import cast
@@ -128,14 +127,12 @@ def resolve(
 def _by_exercise(
     workout: LoggedWorkout, library: Mapping[str, LibraryEntry]
 ) -> dict[str, tuple[LoadMode, list[StoredSet]]]:
-    found: defaultdict[str, list[StoredSet]] = defaultdict(list)
-    modes: dict[str, LoadMode] = {}
+    found: dict[str, tuple[LoadMode, list[StoredSet]]] = {}
     for logged in workout.sets:
         entry = library.get(logged.hevy_template_id or "")
         if entry is not None:
-            found[entry.exercise_id].append(logged)
-            modes[entry.exercise_id] = entry.load_mode
-    return {exercise_id: (modes[exercise_id], sets) for exercise_id, sets in found.items()}
+            found.setdefault(entry.exercise_id, (entry.load_mode, []))[1].append(logged)
+    return found
 
 
 class _Corrected:
