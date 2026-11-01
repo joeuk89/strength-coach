@@ -7,6 +7,7 @@ from support.prescribe import a_line, a_request
 from coach.core.plan_draft import AthleteNote, PlanDraft
 from coach.core.planned_week import RotationPosition
 from coach.core.prescribe import prescribe
+from coach.core.prescription import PlanOverride
 from coach.render.plan_draft import plan_draft
 
 MONDAY = datetime.date(2026, 11, 2)
@@ -80,3 +81,13 @@ def test_a_superseding_draft_names_the_plan_it_supersedes() -> None:
     document = tomllib.loads(plan_draft(a_plan_draft(supersedes="wp-2026-11-02"), units="lb"))
 
     assert document["supersedes"] == "wp-2026-11-02"
+
+
+def test_a_capped_set_carries_its_rpe_cap() -> None:
+    light = PlanOverride("light_week")
+    session = prescribe(a_request(a_line(), exposures=(SQUAT,), overrides=(light,)))
+    draft = PlanDraft(MONDAY, RotationPosition("A", "program_adopt"), (session,))
+
+    working = tomllib.loads(plan_draft(draft, units="lb"))["session"][0]["line"][0]["sets"][-1]
+
+    assert (working["rpe"], working["rpe_cap"]) == (8, 8)

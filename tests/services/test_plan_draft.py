@@ -176,3 +176,14 @@ def test_a_no_training_span_over_the_whole_week_plans_nothing() -> None:
     a_status_span(conn, "ss-0001", "no_training", "2026-11-01", "2026-11-09")
 
     assert drafted(conn).draft.sessions == ()
+
+
+def test_a_return_line_after_43_days_off_derives_the_same_load_twice_from_one_store() -> None:
+    conn = a_squat_program()
+    squat_logged(conn, "h-1", "2026-09-14", (120, 8, 8), (120, 8, 8), (120, 7, 8), (120, 6, 8))
+
+    first, second = (drafted(conn).draft.sessions[0].lines[0] for _ in range(2))
+
+    assert first.steps[0].cause == "return 43+, 49 days off"
+    assert first.groups[-1].load is not None and first.groups[-1].load.amount == 100
+    assert (second.groups, second.steps) == (first.groups, first.steps)
