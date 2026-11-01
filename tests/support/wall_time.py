@@ -1,14 +1,21 @@
+import os
 import time
 from collections.abc import Callable, Generator
 
 import pytest
 
 LIMIT_S = 1.0
+# Shared CI runners are about three times slower than a laptop and vary run to run.
+CI_LIMIT_S = 3.0
 
 clock_key = pytest.StashKey[Callable[[], float]]()
 _elapsed_key = pytest.StashKey[float]()
 _reported_key = pytest.StashKey[bool]()
 _shared_key = pytest.StashKey[float]()
+
+
+def limit_s() -> float:
+    return CI_LIMIT_S if os.environ.get("CI") else LIMIT_S
 
 
 def _timed(item: pytest.Item) -> Generator[None]:
@@ -19,9 +26,10 @@ def _timed(item: pytest.Item) -> Generator[None]:
     shared = item.config.stash.get(_shared_key, 0.0) - shared_before
     total = item.stash.get(_elapsed_key, 0.0) + clock() - start - shared
     item.stash[_elapsed_key] = total
-    if total > LIMIT_S and not item.stash.get(_reported_key, False):
+    limit = limit_s()
+    if total > limit and not item.stash.get(_reported_key, False):
         item.stash[_reported_key] = True
-        pytest.fail(f"{item.nodeid} took {total:.2f} s, over the {LIMIT_S} s budget")
+        pytest.fail(f"{item.nodeid} took {total:.2f} s, over the {limit} s budget")
 
 
 @pytest.hookimpl(wrapper=True)

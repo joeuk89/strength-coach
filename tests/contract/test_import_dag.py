@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from support.import_dag import violations
+from support.import_dag import ALLOWED, violations
 
 SRC = Path(__file__).resolve().parents[2] / "src"
 
@@ -13,8 +13,9 @@ def plant(root: Path, module: str, source: str) -> Path:
     return root
 
 
-def test_the_engine_follows_the_import_dag() -> None:
-    assert violations(SRC) == []
+@pytest.mark.parametrize("layer", sorted(ALLOWED))
+def test_the_engine_follows_the_import_dag(layer: str) -> None:
+    assert violations(SRC, layer) == []
 
 
 @pytest.mark.parametrize(

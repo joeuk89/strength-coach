@@ -1,0 +1,11 @@
+{"session_id":"arms","routine_id":"fake-routine-0009","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"calves","routine_id":"fake-routine-0004","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"core-a","routine_id":"fake-routine-0002","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"core-b","routine_id":"fake-routine-0003","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"lower-a","routine_id":"fake-routine-0001","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"lower-b","routine_id":"fake-routine-0007","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"lower-c","routine_id":"fake-routine-0011","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"shoulders","routine_id":"fake-routine-0005","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"upper-a","routine_id":"fake-routine-0006","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"upper-b","routine_id":"fake-routine-0008","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}
+{"session_id":"upper-c","routine_id":"fake-routine-0010","status":"active","last_verified":"2026-10-25T12:00:00Z","plan_id":"wp-2026-10-26","written_at":"2026-10-25T12:00:00Z"}

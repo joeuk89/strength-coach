@@ -146,187 +146,102 @@ def _phase(phase: OpenPhase | None) -> Json | None:
     return {"id": phase.id, "kind": phase.kind, "until": {"kind": phase.until.kind, "value": shown}}
 
 
-IDS: Json = {
+STRING: Json = {"type": "string"}
+DATE: Json = {"type": "string", "format": "date"}
+INTEGER: Json = {"type": "integer"}
+BOOLEAN: Json = {"type": "boolean"}
+STRINGS: Json = {"type": "array", "items": STRING}
+IDS: Json = {"$ref": "#/$defs/ids"}
+
+
+def _object(nullable: bool = False, **properties: Json) -> Json:
+    return {"type": ["object", "null"] if nullable else "object", "properties": properties}
+
+
+def _nullable(kind: str) -> Json:
+    return {"type": [kind, "null"]}
+
+
+OUTPUT: Json = {
     "type": "object",
+    "$defs": {"ids": _object(count=INTEGER, ids=STRINGS)},
     "properties": {
-        "count": {"type": "integer"},
-        "ids": {"type": "array", "items": {"type": "string"}},
+        "engine": _object(version=STRING, pin=STRING),
+        "hevy": _object(
+            on=BOOLEAN, last_import=_nullable("string"), last_import_age_days=_nullable("integer")
+        ),
+        "workouts": _object(hevy=INTEGER, manual=INTEGER),
+        "schema_version": INTEGER,
+        "kit": {
+            "type": "array",
+            "items": _object(location=STRING, kit=STRING, tables={"enum": ["current", "stale"]}),
+        },
+        "export": _object(behind_store=BOOLEAN, store_behind_export=BOOLEAN),
+        "plan": _object(
+            True,
+            id=STRING,
+            week=DATE,
+            approved_at=STRING,
+            hash=STRING,
+            routines=_object(verified=INTEGER, unverified=STRINGS),
+        ),
+        "rotation": _object(
+            True,
+            week=DATE,
+            position=STRING,
+            source={"enum": ["plan_in_force", "previous_plan", "program_adopt"]},
+        ),
+        "program": _object(True, version=STRING, kind=STRING, emphasis=STRING, adopted=STRING),
+        "goal": _object(True, id=STRING, kind=STRING, priority_lifts=STRINGS),
+        "phase": _object(
+            True,
+            id=STRING,
+            kind=STRING,
+            until=_object(kind=STRING, value={"type": ["string", "number", "null"]}),
+        ),
+        "check_in": _object(
+            due=BOOLEAN,
+            due_on=_nullable("string"),
+            tier={"enum": ["light", "deep"]},
+            catch_up=BOOLEAN,
+            window=_object(True, start=DATE, end=DATE),
+        ),
+        "niggles": IDS,
+        "follow_ups_due": IDS,
+        "decisions": {"type": "object", "additionalProperties": IDS},
+        "observations": IDS,
     },
-    "required": ["count", "ids"],
+    "required": [
+        "engine",
+        "hevy",
+        "workouts",
+        "schema_version",
+        "kit",
+        "export",
+        "plan",
+        "rotation",
+        "program",
+        "goal",
+        "phase",
+        "check_in",
+        "niggles",
+        "follow_ups_due",
+        "decisions",
+        "observations",
+    ],
 }
 
 
 DECLARATION = Declaration(
     name="status",
     summary=(
-        "Where the instance stands: the engine version against its pin, Hevy on or off and "
-        "the age of the last import, workouts stored by source, the schema version, each "
-        "plate-pool location's kit tables current or stale, whether the export is behind "
-        "the store or the store behind it, the WeekPlan in force and this week's rotation "
-        "position, the program version in force, the current Goal and the open Phase, whether "
-        "a check-in is due and its tier, open niggles, due follow-ups, Decisions in force by "
-        "kind and current Observations as counts with ids, and the open Block's hard weeks "
-        "against its ceiling with whether a light week or deload is pending."
+        "Where the instance stands: engine pin, Hevy, workouts, kit, export, the WeekPlan, "
+        "rotation and program in force, Goal, Phase, check-in, niggles, follow-ups, Decisions, "
+        "Observations, Block."
     ),
     writes="none",
     needs_instance=True,
-    output={
-        "type": "object",
-        "properties": {
-            "engine": {
-                "type": "object",
-                "properties": {"version": {"type": "string"}, "pin": {"type": "string"}},
-                "required": ["version", "pin"],
-            },
-            "hevy": {
-                "type": "object",
-                "properties": {
-                    "on": {"type": "boolean"},
-                    "last_import": {"type": ["string", "null"]},
-                    "last_import_age_days": {"type": ["integer", "null"]},
-                },
-                "required": ["on", "last_import", "last_import_age_days"],
-            },
-            "workouts": {
-                "type": "object",
-                "properties": {"hevy": {"type": "integer"}, "manual": {"type": "integer"}},
-                "required": ["hevy", "manual"],
-            },
-            "schema_version": {"type": "integer"},
-            "kit": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "location": {"type": "string"},
-                        "kit": {"type": "string"},
-                        "tables": {"enum": ["current", "stale"]},
-                    },
-                    "required": ["location", "kit", "tables"],
-                },
-            },
-            "export": {
-                "type": "object",
-                "properties": {
-                    "behind_store": {"type": "boolean"},
-                    "store_behind_export": {"type": "boolean"},
-                },
-                "required": ["behind_store", "store_behind_export"],
-            },
-            "plan": {
-                "description": "the WeekPlan in force this week, or null",
-                "type": ["object", "null"],
-                "properties": {
-                    "id": {"type": "string"},
-                    "week": {"type": "string", "format": "date"},
-                    "approved_at": {"type": "string"},
-                    "hash": {"type": "string"},
-                    "routines": {
-                        "description": "Routine map rows verified, and the sessions left "
-                        "unverified",
-                        "type": "object",
-                        "properties": {
-                            "verified": {"type": "integer"},
-                            "unverified": {"type": "array", "items": {"type": "string"}},
-                        },
-                    },
-                },
-            },
-            "rotation": {
-                "description": "this week's rotation position and its source, or null before "
-                "the first version",
-                "type": ["object", "null"],
-                "properties": {
-                    "week": {"type": "string", "format": "date"},
-                    "position": {"type": "string"},
-                    "source": {"enum": ["plan_in_force", "previous_plan", "program_adopt"]},
-                },
-            },
-            "program": {
-                "description": "the Program version in force, or null before the first",
-                "type": ["object", "null"],
-                "properties": {
-                    "version": {"type": "string"},
-                    "kind": {"type": "string"},
-                    "emphasis": {"type": "string"},
-                    "adopted": {"type": "string"},
-                },
-            },
-            "goal": {
-                "type": ["object", "null"],
-                "properties": {
-                    "id": {"type": "string"},
-                    "kind": {"type": "string"},
-                    "priority_lifts": {"type": "array", "items": {"type": "string"}},
-                },
-                "required": ["id", "kind", "priority_lifts"],
-            },
-            "phase": {
-                "type": ["object", "null"],
-                "properties": {
-                    "id": {"type": "string"},
-                    "kind": {"type": "string"},
-                    "until": {
-                        "type": "object",
-                        "properties": {
-                            "kind": {"type": "string"},
-                            "value": {
-                                "type": ["string", "number", "null"],
-                                "description": "a date, a bodyweight, or null for coachs_call",
-                            },
-                        },
-                        "required": ["kind", "value"],
-                    },
-                },
-                "required": ["id", "kind", "until"],
-            },
-            "check_in": {
-                "description": "whether a check-in is due today, its derived tier and the "
-                "window it would review (null before that window opens)",
-                "type": "object",
-                "properties": {
-                    "due": {"type": "boolean"},
-                    "due_on": {"type": ["string", "null"], "format": "date"},
-                    "tier": {"enum": ["light", "deep"]},
-                    "catch_up": {"type": "boolean"},
-                    "window": {
-                        "type": ["object", "null"],
-                        "properties": {
-                            "start": {"type": "string", "format": "date"},
-                            "end": {"type": "string", "format": "date"},
-                        },
-                    },
-                },
-                "required": ["due", "due_on", "tier", "catch_up", "window"],
-            },
-            "niggles": {"description": "open niggles", **IDS},
-            "follow_ups_due": {"description": "follow-ups due today or earlier", **IDS},
-            "decisions": {
-                "description": "Decisions in force, by kind",
-                "type": "object",
-                "additionalProperties": IDS,
-            },
-            "observations": {"description": "current Observations", **IDS},
-        },
-        "required": [
-            "engine",
-            "hevy",
-            "workouts",
-            "schema_version",
-            "kit",
-            "export",
-            "plan",
-            "rotation",
-            "program",
-            "goal",
-            "phase",
-            "check_in",
-            "niggles",
-            "follow_ups_due",
-            "decisions",
-            "observations",
-        ],
-    },
+    output=OUTPUT,
     run=run,
     examples=(Example(("status",), "Where the instance stands."),),
 )

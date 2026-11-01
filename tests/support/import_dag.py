@@ -18,12 +18,15 @@ CLOCK_CALLS = {"now", "today", "utcnow"}
 CLOCK_OWNERS = {"datetime", "date"}
 
 
-def violations(src: Path) -> list[str]:
+def violations(src: Path, layer_only: str | None = None) -> list[str]:
+    """Every forbidden edge under `src`, or under one layer of it."""
     found: list[str] = []
     for path in sorted((src / "coach").rglob("*.py")):
         module = ".".join(path.relative_to(src).with_suffix("").parts)
         is_package = path.name == "__init__.py"
         layer = _layer(module)
+        if layer_only is not None and layer != layer_only:
+            continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         where = path.relative_to(src).as_posix()
         for node in ast.walk(tree):
