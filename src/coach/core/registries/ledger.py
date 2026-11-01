@@ -74,3 +74,9 @@ FOLLOW_UP_EVENTS = terms("follow-up-events", "deferred", "kept", "resolved", "dr
 CHECK_IN_STATUSES = terms("check-in-statuses", "current", "superseded")
 GOAL_KINDS = terms("goal-kinds", "hypertrophy", "strength")
 GOAL_STATUSES = terms("goal-statuses", "current", "superseded")
+MILESTONE_TARGET_KINDS = terms(
+    "milestone-target-kinds", "e1rm", "load_x_reps", "bodyweight_multiple"
+)
+PHASE_UNTIL_KINDS = terms(
+    "phase-until-kinds", "date", "bodyweight_at_or_below", "bodyweight_at_or_above", "coachs_call"
+)

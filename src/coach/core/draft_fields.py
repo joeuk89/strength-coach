@@ -94,6 +94,24 @@ class Fields:
             for i, t in enumerate(cast(list[Table], value), 1)
         ]
 
+    def texts(self, name: str) -> tuple[str, ...]:
+        value = self.raw(name)
+        if value is None:
+            return ()
+        if isinstance(value, list) and all(
+            isinstance(v, str) and v for v in cast(list[object], value)
+        ):
+            return tuple(cast(list[str], value))
+        raise self.wrong(name, "a list of non-empty strings")
+
+    def subtable(self, name: str) -> "Fields | None":
+        value = self.raw(name)
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            raise self.wrong(name, "a table")
+        return Fields(cast(Table, value), f"{self.where} {name}")
+
     def key(self) -> str | None:
         return self.text("key")
 
