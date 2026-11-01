@@ -8,6 +8,7 @@ from support.fake_hevy import FakeHevy
 from support.instances import an_instance
 
 from coach.cli import app
+from coach.core.clock import Clock
 
 ENGINE = "0.3.0"
 
@@ -139,8 +140,8 @@ def test_a_correction_leaves_one_live_weigh_in_and_a_duplicate_is_exit_1(instanc
 def test_a_manual_workout_never_reaches_hevy(instance: Path) -> None:
     clients: list[FakeHevy] = []
 
-    def make_client() -> FakeHevy:
-        clients.append(FakeHevy(FixedClock()))
+    def make_client(key: str, audit: Path, clock: Clock) -> FakeHevy:
+        clients.append(FakeHevy(clock))
         return clients[-1]
 
     out = io.StringIO()

@@ -5,30 +5,31 @@ from typing import cast
 
 from coach.cli.declaration import Json
 from coach.core.errors import Invalid
+from coach.core.flag import Flag
 from coach.core.message import Message
 
 
 def success(
-    schema_version: int, verb: str | None, result: Json, warnings: Sequence[Message]
+    schema_version: int, verb: str | None, result: Json, warnings: Sequence[Message | Flag]
 ) -> Json:
     return {
         "schema_version": schema_version,
         "ok": True,
         "verb": verb,
         "result": result,
-        "warnings": [_message(w) for w in warnings],
+        "warnings": [_warning(w) for w in warnings],
     }
 
 
 def failure(
-    schema_version: int, verb: str | None, error: Message, warnings: Sequence[Message]
+    schema_version: int, verb: str | None, error: Message, warnings: Sequence[Message | Flag]
 ) -> Json:
     return {
         "schema_version": schema_version,
         "ok": False,
         "verb": verb,
         "error": _message(error),
-        "warnings": [_message(w) for w in warnings],
+        "warnings": [_warning(w) for w in warnings],
     }
 
 
@@ -66,3 +67,7 @@ def _lookup(result: object, path: str) -> object:
 
 def _message(message: Message) -> Json:
     return {"code": message.code, "message": message.message}
+
+
+def _warning(warning: Message | Flag) -> Json:
+    return warning.to_json() if isinstance(warning, Flag) else _message(warning)

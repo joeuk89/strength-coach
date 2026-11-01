@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from coach.cli.app import main
+from coach.cli.declaration import MakeClient
 from coach.core.clock import Clock
 
 
@@ -23,8 +24,12 @@ def run_coach(
     stdout: io.StringIO | None = None,
     env: dict[str, str] | None = None,
     clock: Clock | None = None,
+    make_client: MakeClient | None = None,
 ) -> Run:
     out = stdout if stdout is not None else io.StringIO()
     err = io.StringIO()
-    code = main(list(argv), env or {}, out, err, clock=clock)
+    if make_client is None:
+        code = main(list(argv), env or {}, out, err, clock=clock)
+    else:
+        code = main(list(argv), env or {}, out, err, clock=clock, make_client=make_client)
     return Run(code, out.getvalue(), err.getvalue())
