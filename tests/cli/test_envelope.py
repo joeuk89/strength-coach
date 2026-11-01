@@ -7,7 +7,7 @@ from support.cli import run_coach
 from support.instances import an_instance
 
 from coach.cli import app, registry
-from coach.cli.declaration import Call, Declaration, Outcome
+from coach.cli.declaration import Call, Declaration, Json, Outcome
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 
 
@@ -132,3 +132,105 @@ def test_each_typed_error_exits_with_its_class(
     assert run.envelope["ok"] is False
     assert run.envelope["verb"] == "fail"
     assert run.envelope["error"]["code"] == "some_code"
+
+
+def a_listing(rows: int, *, width: int = 100) -> Declaration:
+    def listing(call: Call) -> Outcome:
+        kept = [{"id": n, "text": "x" * width} for n in range(rows)][: call.last]
+        return Outcome({"rows": kept, "count": rows, "truncated": len(kept) < rows})
+
+    return Declaration(
+        name="listing",
+        summary="Lists.",
+        writes="none",
+        needs_instance=False,
+        output={},
+        run=listing,
+    )
+
+
+def test_rows_past_3_kb_are_cut_from_the_end_and_marked_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(10, width=500),))
+
+    run = run_coach("listing")
+
+    result = run.envelope["result"]
+    assert len(run.stdout.encode("utf-8")) <= 3 * 1024
+    assert [row["id"] for row in result["rows"]] == [0, 1, 2, 3, 4]
+    assert (result["count"], result["truncated"]) == (10, True)
+
+
+def test_rows_under_3_kb_are_left_as_the_list_rule_kept_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(4),))
+
+    result = run_coach("listing").envelope["result"]
+
+    assert (len(result["rows"]), result["truncated"]) == (4, False)
+
+
+def test_full_lifts_the_3_kb_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(10, width=500),))
+
+    result = run_coach("listing", "--full").envelope["result"]
+
+    assert len(result["rows"]) == 10
+
+
+def test_the_largest_row_list_is_cut_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    def card(call: Call) -> Outcome:
+        def rows(n: int) -> Json:
+            return {"rows": [{"text": "y" * 400}] * n, "count": n, "truncated": False}
+
+        return Outcome({"lifts": rows(8), "activities": rows(2)})
+
+    monkeypatch.setattr(
+        registry,
+        "declarations",
+        lambda: (
+            Declaration(
+                name="card",
+                summary="A card.",
+                writes="none",
+                needs_instance=False,
+                output={},
+                run=card,
+            ),
+        ),
+    )
+
+    result = run_coach("card").envelope["result"]
+
+    assert len(result["activities"]["rows"]) == 2
+    assert result["lifts"]["truncated"] is True
+    assert len(result["lifts"]["rows"]) < 8
+
+
+def test_a_json_schema_naming_rows_count_and_truncated_is_not_a_row_list(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def describe(call: Call) -> Outcome:
+        shape: Json = {"rows": {"type": "array"}, "count": {}, "truncated": {}}
+        return Outcome({"declarations": [{"properties": shape, "text": "z" * 4000}]})
+
+    monkeypatch.setattr(
+        registry,
+        "declarations",
+        lambda: (
+            Declaration(
+                name="describe",
+                summary="Describes.",
+                writes="none",
+                needs_instance=False,
+                output={},
+                run=describe,
+            ),
+        ),
+    )
+
+    run = run_coach("describe")
+
+    assert run.code == 0

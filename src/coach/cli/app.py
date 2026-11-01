@@ -85,7 +85,8 @@ def main(
             outcome = declaration.run(call)
             warnings.extend(outcome.warnings)
             result = _projected(outcome.result, options)
-        _write(stdout, envelope.success(engine_chain().version, verb, result, warnings))
+        document = envelope.success(engine_chain().version, verb, result, warnings)
+        _write(stdout, document if options.full else envelope.fit(document))
         return 0
     except CoachError as error:
         failed = Message(error.code, error.message, error.details)
