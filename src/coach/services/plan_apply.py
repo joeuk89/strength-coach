@@ -204,7 +204,7 @@ def apply(
     plan = week_plans.by_id(conn, plan_id)
     if client is None or guarded is None:
         return ApplyResult(plan_id, found.write_plan_hash, found.resumes is not None, (), 0)
-    push = Push(conn, client, plan, session_facts(conn), config.athlete.units, now)
+    push = Push(conn, client, plan, session_facts(conn, plan), config.athlete.units, now)
     try:
         push.run(found.actions, guarded)
     except Invalid as error:

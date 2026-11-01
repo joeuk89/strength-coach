@@ -120,13 +120,15 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
     """Each live mapped routine against the projection of the WeekPlan that wrote it: the
     mirror is what Hevy returned at the last import or read-back (ADR 0011, "Import")."""
     live = {r.hevy_id: r for r in mirrors.routines(conn)}
-    facts = session_facts(conn)
     flags: list[Flag] = []
     for row in routine_map.written(conn):
-        mirrored, session = live.get(row.routine_id), facts.get(row.session_id)
-        if mirrored is None or session is None:
+        mirrored = live.get(row.routine_id)
+        if mirrored is None:
             continue
         plan = week_plans.by_id(conn, row.plan_id)
+        session = session_facts(conn, plan).get(row.session_id)
+        if session is None:
+            continue
         body = projection(conn, plan, row.session_id, session, units)
         diff = routine_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))
         if diff:

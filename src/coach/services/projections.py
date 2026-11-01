@@ -26,14 +26,15 @@ class SessionFacts:
     standing: bool
 
 
-def session_facts(conn: Connection) -> dict[str, SessionFacts]:
-    """Every session in force: the version's and each open niggle's rehab session."""
-    version = programs.latest(conn)
+def session_facts(conn: Connection, plan: Mapping[str, object]) -> dict[str, SessionFacts]:
+    """Every session as it stood when the plan was approved: the version then in force and
+    every niggle's rehab session. A later adopt never changes what the plan projects."""
+    version = programs.in_force_at(conn, str(plan["approved_at"]))
     facts: dict[str, SessionFacts] = {}
     if version is not None:
         for session in version.form.sessions:
             facts[session.id] = SessionFacts(session, session.cadence in STANDING_CADENCES)
-    for rehab in niggles.open_rehab_sessions(conn):
+    for rehab in niggles.every_rehab_session(conn):
         facts[rehab.id] = SessionFacts(rehab, standing=True)
     return facts
 

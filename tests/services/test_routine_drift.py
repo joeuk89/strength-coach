@@ -4,11 +4,13 @@ from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.kit_fixtures import kit_files
 from support.plan_drafts import a_plan_draft
-from support.plans import a_squat_program, squat_logged
+from support.plans import SQUAT_LINE, a_squat_program, squat_logged
+from support.program_drafts import a_draft, a_session, toml
 from support.programs import a_config
 
 from coach.services.hevy_import import import_hevy
 from coach.services.plan_apply import apply, dry_run
+from coach.services.program import adopt
 from coach.store import mirrors, routine_map
 from coach.store.connection import Connection
 
@@ -80,3 +82,29 @@ def test_a_routine_hevy_stops_returning_flips_its_map_row_to_missing_and_keeps_i
     assert routine_map.every(conn) == [("lower", routine, "missing")]
     assert routine in {r.hevy_id for r in mirrors.routines(conn)}
     assert drift_keys(conn, hevy) == []
+
+
+def test_adopting_a_version_that_renames_a_session_raises_no_drift_and_the_rerun_sends_no_put() -> (
+    None
+):
+    conn = a_squat_program()
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    push(conn, hevy, data)
+    renamed = a_session("lower", {**SQUAT_LINE, "cues": "Brace hard"}, title="Legs day")
+    adopt(
+        conn,
+        toml(a_draft(renamed)),
+        file="next.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=LATER,
+    )
+
+    drifted = drift_keys(conn, hevy)
+    hevy.calls.clear()
+    push(conn, hevy, data)
+
+    assert drifted == []
+    assert [c for c in hevy.calls if c[0] == "PUT"] == []
