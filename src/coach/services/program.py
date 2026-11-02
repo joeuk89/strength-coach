@@ -228,7 +228,7 @@ def _last_exposures(conn: Connection, config: Config) -> dict[str, Exposure]:
     """Each exercise with an Exposure anywhere, resolved as `prescribe` resolves them, to its
     latest."""
     latest: dict[str, Exposure] = {}
-    for exposure in read_history(conn, config.athlete.units).exposures:
+    for exposure in read_history(conn, config.athlete.units).lifting:
         held = latest.get(exposure.exercise_id)
         if held is None or exposure.date >= held.date:
             latest[exposure.exercise_id] = exposure

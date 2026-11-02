@@ -14,7 +14,7 @@ from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs
 from coach.core.e1rm import e1rm
 from coach.core.e1rm_checks import over_rep_cap, top_set_above_e1rm
-from coach.core.exposure import Exposure
+from coach.core.exposure import Exposure, lifting_reads
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
 from coach.core.overrides import line_override
@@ -49,6 +49,8 @@ def prescribe(request: PrescribeRequest) -> SessionPrescription:
     lines = planned.lines
     if planned.kind == "conditioning":
         lines = tuple(replace(line, scheme=SchemeRef("hold", {})) for line in lines)
+    else:
+        request = replace(request, exposures=lifting_reads(request.exposures))
     derived = (_Derivation(request, line).derive() for line in lines)
     kept = tuple(line for line in derived if line is not None)
     return SessionPrescription(planned, kept, _session_dose(request))
