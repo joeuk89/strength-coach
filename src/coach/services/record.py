@@ -32,9 +32,9 @@ def record(
             if exercise_ids:
                 stored["exercise"] = exercise_ids
             withdrawn = drafts.withdrawn_by_draft(conn, draft.hash)
-            return RecordResult(draft.hash, stored, withdrawn, dry_run, no_op=True)
+            return RecordResult(draft.hash, stored, withdrawn, dry_run=dry_run, no_op=True)
         recorded_at = clock.now().astimezone(datetime.UTC).isoformat(timespec="seconds")
         written = write_records(
             conn, draft, Stamp(draft.hash, recorded_at, "manual", clock.today())
         )
-    return RecordResult(draft.hash, written.ids, written.withdrawn, dry_run)
+    return RecordResult(draft.hash, written.ids, written.withdrawn, dry_run=dry_run)
