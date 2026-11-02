@@ -110,8 +110,9 @@ def a_session(
     kind: str,
     *groups: PrescribedGroup,
     exercise: str = "bb_back_squat",
+    cadence: str = "weekly",
 ) -> SessionPrescription:
-    planned = PlannedSession(session_id, on, "home", kind, ())
+    planned = PlannedSession(session_id, on, "home", kind, (), cadence)
     return SessionPrescription(planned, (a_line(exercise, groups),) if groups else ())
 
 
@@ -180,6 +181,33 @@ def test_quality_conditioning_two_days_before_a_heavy_squat_is_fine() -> None:
     sessions = [
         a_session("intervals", day(0), "conditioning"),
         a_session("lower", day(2), "lifting", HEAVY),
+    ]
+
+    assert quality_stack(sessions, quality={"intervals"}, patterns=PATTERNS) == []
+
+
+def test_standing_quality_conditioning_does_not_stack_with_a_monday_lifting_session() -> None:
+    sessions = [
+        a_session("intervals", MONDAY, "conditioning", cadence="standing"),
+        a_session("lower", MONDAY, "lifting", HEAVY),
+    ]
+
+    assert quality_stack(sessions, quality={"intervals"}, patterns=PATTERNS) == []
+
+
+def test_standing_quality_conditioning_does_not_stack_before_a_heavy_tuesday_squat() -> None:
+    sessions = [
+        a_session("intervals", MONDAY, "conditioning", cadence="standing"),
+        a_session("lower", day(1), "lifting", HEAVY),
+    ]
+
+    assert quality_stack(sessions, quality={"intervals"}, patterns=PATTERNS) == []
+
+
+def test_weekly_quality_conditioning_does_not_stack_with_a_standing_lifting_session() -> None:
+    sessions = [
+        a_session("intervals", MONDAY, "conditioning"),
+        a_session("core-a", MONDAY, "lifting", HEAVY, cadence="standing"),
     ]
 
     assert quality_stack(sessions, quality={"intervals"}, patterns=PATTERNS) == []
