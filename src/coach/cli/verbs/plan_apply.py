@@ -34,7 +34,7 @@ def run(call: InstanceCall) -> Outcome:
                 kits=read_kit_files(instance),
                 clock=call.clock,
             )
-        return Outcome(dry_run_result(found, units=units, full=call.full, last=call.last))
+        return Outcome(dry_run_result(found, units=units, full=call.full))
     given = call.args.get("expect")
     expect = given if isinstance(given, str) else None
     client = None
@@ -86,13 +86,13 @@ def _prompt(found: DryRun, *, units: Units, full: bool) -> str:
     )
 
 
-def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Json:
-    """The dry run's result: the Write plan, its hash and the approval prompt. By default each
-    flag is its key, severity and acknowledgement, since the prompt already carries its text."""
+def dry_run_result(found: DryRun, *, units: Units, full: bool) -> Json:
+    """The dry run's result: the Write plan, its hash and the approval prompt. Every flag is
+    listed, never cut, since the agent approves against them; by default each is what an
+    acknowledgement needs, since the prompt already carries its text."""
     summary = found.summary
     prompt = _prompt(found, units=units, full=full)
     flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
-    kept = flags if full else flags[:last]
     return {
         "week": summary.week.isoformat(),
         "supersedes": summary.supersedes,
@@ -100,9 +100,8 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Jso
         "moved_routines": list(found.moved_routines),
         "position": {"week": summary.position.week, "source": summary.position.source},
         **found.actions.to_json(),
-        "flags": kept,
+        "flags": flags,
         "flag_count": len(flags),
-        "flags_truncated": len(kept) < len(flags),
         "write_plan_hash": found.write_plan_hash,
         "prompt": prompt,
     }
@@ -111,7 +110,9 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool, last: int) -> Jso
 def _brief(flag: Flag) -> Json:
     return {
         "key": flag.key,
+        "code": flag.code,
         "severity": flag.severity,
+        "params_hash": flag.params_hash,
         "left": flag.left.to_json() if flag.left else None,
     }
 
@@ -160,9 +161,21 @@ DECLARATION = Declaration(
                 },
             },
             "templates_to_create": {"type": "array"},
-            "flags": {"type": "array"},
+            "flags": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string"},
+                        "code": {"type": "string"},
+                        "severity": {"enum": ["violation", "warning"]},
+                        "params_hash": {"type": "string"},
+                        "left": {"type": ["object", "null"]},
+                    },
+                    "required": ["key", "code", "severity", "params_hash", "left"],
+                },
+            },
             "flag_count": {"type": "integer"},
-            "flags_truncated": {"type": "boolean"},
             "write_plan_hash": {"type": "string"},
             "prompt": {"type": "string"},
         },
