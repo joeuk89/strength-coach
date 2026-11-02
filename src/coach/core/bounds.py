@@ -28,8 +28,7 @@ from coach.core.cut import (
     working_set_count,
 )
 from coach.core.days_off import line_days_off
-from coach.core.e1rm import e1rm as best_e1rm
-from coach.core.e1rm import model_load
+from coach.core.e1rm import E1rm, model_load
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
@@ -62,6 +61,7 @@ class LineContext:
     anchor_top: Load | None = None
     scheme_load: Load | None = None
     pin: Load | None = None
+    e1rm: E1rm | None = None
 
 
 @dataclass(frozen=True)
@@ -272,11 +272,7 @@ class _Bounding:
     def _limit_load(self, cap: Number) -> None:
         if not self.loads:
             return
-        found = best_e1rm(
-            self.context.request.exposures,
-            self.context.line.exercise,
-            self.context.request.planned.date,
-        )
+        found = self.context.e1rm
         if found is None or self.loads[0].mode == "assisted":
             self._unchecked(cap)
             return
@@ -380,7 +376,7 @@ class _Bounding:
             _, cause = min(other_caps, key=lambda c: c[0])
             self.steps.append(Step("test", None, None, cause))
             return None
-        found = best_e1rm(request.exposures, self.context.line.exercise, request.planned.date)
+        found = self.context.e1rm
         if found is None:
             return None
         single = model_load(found.load, 1, TEST_RPE).as_mode(self.context.mode)

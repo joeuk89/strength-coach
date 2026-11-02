@@ -46,7 +46,7 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 83
+    assert len(rows) == run.envelope["result"]["count"] == 84
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -60,6 +60,14 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
     assert rows["anchor_load_unusable"]["params"] == ["exposure", "logged_load", "anchor_used"]
     assert rows["anchor_load_unusable"]["left_by"] == ["weekplan", "decision"]
     assert rows["anchor_load_unusable"]["rn"] is None
+    assert rows["carried_e1rm"]["params"] == [
+        "pre_layoff_exposure",
+        "pre_layoff_e1rm",
+        "factor",
+        "carried",
+        "expires",
+    ]
+    assert rows["carried_e1rm"]["rn"] == "rn:detraining-return.5"
 
 
 def test_the_flags_registry_names_what_may_leave_each_code() -> None:
@@ -81,7 +89,7 @@ def test_the_default_flags_envelope_truncates_under_3_kb() -> None:
     assert len(run.stdout.encode("utf-8")) < 3 * 1024
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
-    assert result["count"] == 83
+    assert result["count"] == 84
 
 
 def test_last_keeps_that_many_rows() -> None:
