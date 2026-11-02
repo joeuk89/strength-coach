@@ -492,7 +492,7 @@ def test_the_default_dry_run_of_the_worked_week_fits_the_envelope_budget() -> No
 
     document = envelope.render(envelope.success(1, "plan apply", result, []), pretty=False)
 
-    assert len(document.encode("utf-8")) < 3 * 1024
+    assert len(document.encode("utf-8")) < envelope.BUDGET_BYTES
     assert result["flag_count"] == len(found.flags) == 4
     assert result["flags"] == [
         {"key": flag.key, "severity": "warning", "left": None} for flag in found.flags

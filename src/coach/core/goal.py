@@ -75,7 +75,7 @@ class GoalDraft:
 
 
 def goal_diff(previous: Goal | None, new: Goal) -> dict[str, object] | None:
-    """`why` shows only as changed: both texts in full could pass the envelope's 3 KB cap."""
+    """`why` shows only as changed: both texts in full could pass the envelope's budget."""
     if previous is None:
         return None
     diff: dict[str, object] = {}

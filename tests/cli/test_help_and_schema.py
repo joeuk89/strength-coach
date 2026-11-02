@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 
+from coach.cli.envelope import BUDGET_BYTES
 from coach.cli.registry import declarations
 
 
@@ -68,13 +69,13 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 
 
-def test_schema_without_a_verb_lists_the_declarations_as_rows_under_3_kb() -> None:
+def test_schema_without_a_verb_lists_the_declarations_as_rows_under_the_budget() -> None:
     run = run_coach("schema")
 
     result = run.envelope["result"]
     names = [d.name for d in declarations()]
     assert run.code == 0
-    assert len(run.stdout.encode("utf-8")) <= 3 * 1024
+    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
     assert [row["name"] for row in result["rows"]] == names[: len(result["rows"])]
     assert (result["count"], result["truncated"]) == (16, True)
 

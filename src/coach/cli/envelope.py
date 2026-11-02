@@ -9,7 +9,7 @@ from coach.core.flag import Flag
 from coach.core.message import Message
 
 # verbs.md, "Envelope and budget".
-BUDGET_BYTES = 3 * 1024
+BUDGET_BYTES = 6 * 1024
 
 
 def success(
@@ -43,10 +43,23 @@ def render(envelope: Json, *, pretty: bool) -> str:
 
 
 def fit(envelope: Json) -> Json:
-    """Cut trailing rows from the `{rows, count, truncated}` lists of the result, the longest
-    first, until the envelope fits the budget; fields never drop."""
+    """Cut trailing keys from the grouped rows of the result, the longest `keys[]` first, then
+    trailing rows from its flat `{rows, count, truncated}` lists, the longest first, until the
+    envelope fits the budget; fields and grouped rows never drop."""
     fitted = copy.deepcopy(envelope)
-    lists = _row_lists(fitted.get("result"))
+    result = fitted.get("result")
+    groups = [found for found in _mappings(result) if _is_grouped_row(found)]
+    while _size(fitted) > BUDGET_BYTES:
+        longest = max(groups, key=lambda found: len(_keys(found)), default=None)
+        if longest is None or not _keys(longest):
+            break
+        _keys(longest).pop()
+        longest["keys_truncated"] = True
+    lists = [
+        found
+        for found in _mappings(result)
+        if _is_row_list(found) and not any(_is_grouped_row(row) for row in _rows(found))
+    ]
     while _size(fitted) > BUDGET_BYTES:
         longest = max(lists, key=lambda found: len(_rows(found)), default=None)
         if longest is None or not _rows(longest):
@@ -60,14 +73,21 @@ def _size(envelope: Json) -> int:
     return len(render(envelope, pretty=False).encode("utf-8"))
 
 
-def _row_lists(value: object) -> list[Json]:
+def _mappings(value: object) -> list[Json]:
     if isinstance(value, list):
-        return [found for item in cast(list[object], value) for found in _row_lists(item)]
+        return [found for item in cast(list[object], value) for found in _mappings(item)]
     if not isinstance(value, dict):
         return []
     mapping = cast(Json, value)
-    found = [mapping] if _is_row_list(mapping) else []
-    return found + [nested for child in mapping.values() for nested in _row_lists(child)]
+    return [mapping, *(nested for child in mapping.values() for nested in _mappings(child))]
+
+
+def _is_grouped_row(row: object) -> bool:
+    return isinstance(row, dict) and isinstance(cast(Json, row).get("keys"), list)
+
+
+def _keys(row: Json) -> list[object]:
+    return cast(list[object], row["keys"])
 
 
 def _is_row_list(mapping: Json) -> bool:
