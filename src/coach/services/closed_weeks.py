@@ -171,6 +171,7 @@ class WeekLog:
             if form
             else {},
             dose_target=form.dose.per_muscle if form and form.dose else None,
+            lift_dose=form.dose.lift if form and form.dose else {},
         )
 
     def _week_of(self, workout: WeekWorkout) -> datetime.date:

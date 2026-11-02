@@ -8,7 +8,7 @@ from typing import cast
 from coach.core.closed_week.dose import is_hard
 from coach.core.config import WEEKDAYS
 from coach.core.flag import Acknowledgement, Flag, FlagKey, Scope, leave, raise_flag
-from coach.core.muscles import DOSED_MUSCLES
+from coach.core.muscles import DOSED_MUSCLES, read_muscles
 from coach.core.program.bands import (
     deload_shape,
     dose_bands,
@@ -31,6 +31,7 @@ def adopt_warnings(form: ProgramForm, context: AdoptContext) -> tuple[Flag, ...]
     raised.goal()
     raised.priority_lift_absent()
     raised.dose()
+    raised.counted_variants()
     raised.deload()
     raised.muscles()
     raised.block()
@@ -107,7 +108,7 @@ class _Warnings:
         bands = dose_bands(self.form.emphasis, self.context.phase)
         targets = [
             ("per_muscle", dose.per_muscle, bands.per_muscle),
-            *((lift, target, bands.per_lift) for lift, target in dose.lift.items()),
+            *((lift, target.sets, bands.per_lift) for lift, target in dose.lift.items()),
         ]
         for target_of, target, (low, high) in targets:
             if not low <= target <= high:
@@ -123,6 +124,40 @@ class _Warnings:
                     f"dose {target_of} = {target} is outside {low}-{high} hard sets a week",
                 )
                 return
+
+    def counted_variants(self) -> None:
+        dose = self.form.dose
+        if dose is None:
+            return
+        for lift, target in dose.lift.items():
+            for variant in target.counts:
+                patterns = [self._pattern(lift), self._pattern(variant)]
+                primary = [self._primary(lift), self._primary(variant)]
+                if patterns[0] != patterns[1] or set(primary[0]) != set(primary[1]):
+                    self.raise_(
+                        "counted_variant_off_pattern",
+                        self.version_scope,
+                        {
+                            "lift": lift,
+                            "variant": variant,
+                            "patterns": patterns,
+                            "primary_muscles": primary,
+                        },
+                        f"{lift} counts {variant}, whose pattern or primary muscles differ",
+                    )
+                    return
+
+    def _fields(self, exercise_id: str) -> Mapping[str, object]:
+        declared = self.form.exercises.get(exercise_id) or {}
+        stored = self.context.library.get(exercise_id) or {}
+        return {**stored, **declared}
+
+    def _pattern(self, exercise_id: str) -> object:
+        return self._fields(exercise_id).get("pattern")
+
+    def _primary(self, exercise_id: str) -> list[str]:
+        muscles = read_muscles(self._fields(exercise_id).get("muscles"))
+        return muscles["primary"] if muscles else []
 
     def deload(self) -> None:
         if self.form.deload is None:

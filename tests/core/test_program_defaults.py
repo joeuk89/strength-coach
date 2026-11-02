@@ -1,7 +1,7 @@
 from support.program_drafts import WORKED_DRAFT, a_draft, a_session, toml
 
 from coach.core.program.defaults import fill
-from coach.core.program.form import Deload, Dose, ProgramForm
+from coach.core.program.form import Deload, Dose, LiftDose, ProgramForm
 from coach.core.program.parse import parse_program_draft
 
 PRIORITY = ("bb_bench_press", "pull_up")
@@ -16,7 +16,7 @@ def test_the_worked_draft_is_filled_with_the_hypertrophy_defaults() -> None:
 
     filled = fill(form, priority_lifts=PRIORITY, phase=None, session_minutes=60)
 
-    assert filled.form.dose == Dose(10, {"bb_bench_press": 8, "pull_up": 8})
+    assert filled.form.dose == Dose(10, {"bb_bench_press": LiftDose(8), "pull_up": LiftDose(8)})
     assert filled.form.deload == Deload(6, 40, 0, 8, True)
     assert filled.filled == ("dose", "deload", "session.a-mon-lower.minutes")
     minutes = {s.id: s.minutes for s in filled.form.sessions}
@@ -39,7 +39,7 @@ def test_strength_cuts_thirty_percent_of_sets() -> None:
         session_minutes=60,
     )
 
-    assert filled.form.dose == Dose(10, {"bb_bench_press": 8})
+    assert filled.form.dose == Dose(10, {"bb_bench_press": LiftDose(8)})
     assert filled.form.deload == Deload(6, 30, 0, 8, True)
 
 
@@ -47,8 +47,8 @@ def test_a_surplus_fills_the_upper_half_of_the_band_and_a_deficit_holds_the_defa
     surplus = fill(form_of(a_draft()), priority_lifts=PRIORITY, phase="surplus", session_minutes=60)
     deficit = fill(form_of(a_draft()), priority_lifts=PRIORITY, phase="deficit", session_minutes=60)
 
-    assert surplus.form.dose == Dose(15, {"bb_bench_press": 10, "pull_up": 10})
-    assert deficit.form.dose == Dose(10, {"bb_bench_press": 8, "pull_up": 8})
+    assert surplus.form.dose == Dose(15, {"bb_bench_press": LiftDose(10), "pull_up": LiftDose(10)})
+    assert deficit.form.dose == Dose(10, {"bb_bench_press": LiftDose(8), "pull_up": LiftDose(8)})
 
 
 def test_maintenance_fills_a_third_of_the_dose_and_no_planned_deload() -> None:
@@ -59,7 +59,7 @@ def test_maintenance_fills_a_third_of_the_dose_and_no_planned_deload() -> None:
         session_minutes=60,
     )
 
-    assert filled.form.dose == Dose(4, {"bb_bench_press": 3, "pull_up": 3})
+    assert filled.form.dose == Dose(4, {"bb_bench_press": LiftDose(3), "pull_up": LiftDose(3)})
     assert filled.form.deload == Deload(6, 0, 0, 8, False)
 
 

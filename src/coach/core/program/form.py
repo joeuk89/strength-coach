@@ -84,9 +84,23 @@ class Schedule:
 
 
 @dataclass(frozen=True)
+class LiftDose:
+    """A priority lift's weekly target and the counted variants whose hard sets add to it."""
+
+    sets: int
+    counts: tuple[str, ...] = ()
+
+    def to_document(self) -> object:
+        return {"sets": self.sets, "counts": list(self.counts)} if self.counts else self.sets
+
+
+@dataclass(frozen=True)
 class Dose:
     per_muscle: int
-    lift: Mapping[str, int] = field(default_factory=dict[str, int])
+    lift: Mapping[str, LiftDose] = field(default_factory=dict[str, LiftDose])
+
+    def counted(self) -> dict[str, tuple[str, ...]]:
+        return {lift: dose.counts for lift, dose in self.lift.items()}
 
 
 @dataclass(frozen=True)
@@ -156,7 +170,10 @@ class ProgramForm:
             },
         }
         if self.dose is not None:
-            document["dose"] = {"per_muscle": self.dose.per_muscle, "lift": dict(self.dose.lift)}
+            document["dose"] = {
+                "per_muscle": self.dose.per_muscle,
+                "lift": {lift: dose.to_document() for lift, dose in self.dose.lift.items()},
+            }
         if self.deload is not None:
             document["deload"] = {
                 "hard_weeks_ceiling": self.deload.hard_weeks_ceiling,

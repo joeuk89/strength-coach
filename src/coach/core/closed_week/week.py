@@ -16,6 +16,8 @@ class ClosedWeek:
     sessions: tuple[SessionOutcome, ...] = ()
     dose: Mapping[str, float] = field(default_factory=dict[str, float])
     dose_target: int | None = None
+    lift_dose: Mapping[str, int] = field(default_factory=dict[str, int])
+    lift_dose_target: Mapping[str, int] = field(default_factory=dict[str, int])
 
     @property
     def ordinary(self) -> bool:

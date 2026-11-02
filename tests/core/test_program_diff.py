@@ -96,3 +96,14 @@ def test_reordering_sessions_is_a_session_order_change() -> None:
     assert change["version"] == {
         "session_order": {"from": ["push", "legs"], "to": ["legs", "push"]}
     }
+
+
+def test_a_change_to_a_lifts_counted_variants_shows_in_the_dose() -> None:
+    bare = {"per_muscle": 10, "lift": {"pull_up": 8}}
+    counted = {"per_muscle": 10, "lift": {"pull_up": {"sets": 8, "counts": ["band_pull_up"]}}}
+    before, _ = filled_form(a_draft(dose=bare))
+    after, _ = filled_form(a_draft(dose=counted))
+
+    change: Any = diff(before, after).to_json()
+
+    assert change["version"]["dose"] == {"from": bare, "to": counted}

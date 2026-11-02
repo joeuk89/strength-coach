@@ -17,10 +17,6 @@ No Block has closed yet.
 | --- | --- | --- | --- |
 | bb_bench_press | kind load_x_reps, load 185, reps 5 | 2026-05-19 | – |
 
-## Dose
-
-Target: per_muscle 10, bb_bench_press 8, bb_back_squat 8.
-
 ## Phase
 
 - kind: maintenance

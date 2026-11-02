@@ -6,7 +6,6 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 
 from coach.core.cadence import BlockSpan
-from coach.core.closed_week.dose import is_hard
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
 from coach.core.e1rm import e1rm
@@ -14,7 +13,6 @@ from coach.core.exposure import Exposure
 from coach.core.line_history import newest_first, ordinary, since_redesign
 from coach.core.linear import resets
 from coach.core.phase_trend import observed_rate, phase_condition_met
-from coach.core.planned_week import DAYS_IN_WEEK
 from coach.core.program.form import Line, ProgramForm
 from coach.core.progress import (
     PRECISION,
@@ -50,6 +48,7 @@ def progress(
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
+    dosed = _weeks_in(closed, block)
     exposures = read_history(conn, units).exposures
     versions = programs.newest_first(conn)
     form = versions[0].form if versions else None
@@ -82,8 +81,8 @@ def progress(
             milestone_read(m, exposures, weigh_ins, units)
             for m in (stored.goal.milestones if stored else ())
         ),
-        dose=_dose(closed, block, exposures, priority),
-        dose_target=_dose_target(form, priority),
+        dose=_dose(dosed),
+        dose_target=_dose_target(dosed),
         adherence=_adherence(conn, closed, block),
         phase=_phase(conn, weigh_ins, on, bodyweight_units),
         goal=GoalRead(stored.goal.kind, stored.adopted, stored.goal.why) if stored else None,
@@ -191,35 +190,23 @@ def _weeks_in(closed: ClosedWeeks, block: BlockSpan | None) -> list[ClosedWeek]:
     return [w for w in closed.weeks if block.holds(w.monday)]
 
 
-def _dose(
-    closed: ClosedWeeks,
-    block: BlockSpan | None,
-    exposures: Sequence[Exposure],
-    priority: Sequence[str],
-) -> tuple[DoseWeek, ...]:
-    found: list[DoseWeek] = []
-    for week in _weeks_in(closed, block):
-        sunday = week.monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
-        lifts = {
-            exercise: sum(
-                1
-                for e in exposures
-                if e.exercise_id == exercise and week.monday <= e.date <= sunday
-                for s in e.working
-                if is_hard(s.rpe)
-            )
-            for exercise in priority
-        }
-        muscles = {m: round(v, 1) for m, v in sorted(week.dose.items())}
-        found.append(DoseWeek(week.monday, week.kind, muscles, lifts))
-    return tuple(found)
+def _dose(weeks: Sequence[ClosedWeek]) -> tuple[DoseWeek, ...]:
+    return tuple(
+        DoseWeek(
+            week.monday,
+            week.kind,
+            {m: round(v, 1) for m, v in sorted(week.dose.items())},
+            dict(week.lift_dose),
+        )
+        for week in weeks
+    )
 
 
-def _dose_target(form: ProgramForm | None, priority: Sequence[str]) -> dict[str, int]:
-    if form is None or form.dose is None:
+def _dose_target(weeks: Sequence[ClosedWeek]) -> dict[str, int]:
+    """The targets the block's newest closed week was judged against."""
+    if not weeks or weeks[-1].dose_target is None:
         return {}
-    lifts = {lift: form.dose.lift[lift] for lift in priority if lift in form.dose.lift}
-    return {"per_muscle": form.dose.per_muscle, **lifts}
+    return {"per_muscle": weeks[-1].dose_target, **weeks[-1].lift_dose_target}
 
 
 def _adherence(

@@ -109,3 +109,29 @@ def test_a_minimum_week_keeping_no_priority_lift_warns_minimum_week_floor() -> N
     flag = flags_of(conn, monday(0), keep)["minimum_week_floor"]
 
     assert flag.params == {"priority_lift": "bb_bench_press", "kept_sessions": ["lower"]}
+
+
+def test_a_priority_lift_under_target_in_three_of_four_weeks_warns_lift_dose_under_target() -> None:
+    flag = flags_of(hard_weeks(4), monday(4))["lift_dose_under_target"]
+
+    assert flag.params == {
+        "exercise_id": "bb_bench_press",
+        "target": 8,
+        "weekly_figures": [0, 0, 0, 0],
+        "counted": [],
+    }
+    assert "lift_dose_under_target" not in flags_of(hard_weeks(2), monday(2))
+
+
+def test_a_minimum_week_keeping_a_counted_variant_keeps_the_lifts_floor() -> None:
+    negatives = a_line(
+        "negative_pull_up", sets=[{"count": 2, "reps": 5, "rpe": 8}], start_load=None
+    )
+    pull = a_session("pull", a_line(sets=[{"count": 2, "reps": [6, 8], "rpe": 8}]), negatives)
+    lift = {"bb_bench_press": 8, "pull_up": {"sets": 8, "counts": ["negative_pull_up"]}}
+    conn = a_squat_program(
+        a_session("lower", SQUAT_LINE), pull, dose={"per_muscle": 10, "lift": lift}
+    )
+    keep = PlanOverride("minimum_week", params={"keep": ("pull",)}, because="schedule", text="t")
+
+    assert "minimum_week_floor" not in flags_of(conn, monday(0), keep)
