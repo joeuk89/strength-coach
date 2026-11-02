@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's); 2026-10-31 by wayfinder #44 (`main` takes a client factory and a clock; the suite target is ADR 0019's, now thirty seconds)
+amended: 2026-11-02 (the output budget doubles to 6 KB); 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's); 2026-10-31 by wayfinder #44 (`main` takes a client factory and a clock; the suite target is ADR 0019's, now thirty seconds)
 ---
 
 # The agent drives the engine through a CLI over plain service functions
@@ -43,8 +43,10 @@ maintenance cost 15, testability 15, context cost per pass 10.
 - **Envelope:** `schema_version`, `ok`, `verb`, `result` or `error {code, message}`, `warnings[]`.
   Pretty-printed when stdout is a TTY, one line when piped. No table or prose mode: the human sees
   what the agent sees.
-- **Output budget.** Every read verb returns a compact summary by default, capped at 3 KB by a
-  test per verb, with `--full` for the whole record and `--fields a,b,c` for a projection. An
+- **Output budget.** Every read verb returns a compact summary by default, capped at 6 KB by a
+  test per verb, with `--full` for the whole record and `--fields a,b,c` for a projection. The
+  cap was 3 KB until 2026-11-02, when it doubled: complete data beats an arbitrary cap, and at
+  3 KB a 27-flag plan Draft could only be read one flag code at a time. An
   inline `python3 -c` filter in a transcript marks a missing `query` view.
 - **Inputs.** Scalars travel as flags. Anything authored or longer than a line (a plan, check-in
   answers, a program patch, a manual workout) travels as the path of a file the agent wrote

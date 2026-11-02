@@ -201,6 +201,23 @@ class Flag:
         }
 
 
+def grouped(flags: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+    """Flags as `Flag.to_json` writes them, one row per code in the order each code first appears:
+    its severity, count and keys, each key with the params hash an acknowledgement copies."""
+    by_code: dict[object, list[Mapping[str, object]]] = {}
+    for flag in flags:
+        by_code.setdefault(flag["code"], []).append(flag)
+    return [
+        {
+            "code": code,
+            "severity": found[0]["severity"],
+            "count": len(found),
+            "keys": [{"key": f["key"], "params_hash": f["params_hash"]} for f in found],
+        }
+        for code, found in by_code.items()
+    ]
+
+
 def _left(document: Mapping[str, object]) -> Left:
     return Left(
         cast(Reason, document["because"]),

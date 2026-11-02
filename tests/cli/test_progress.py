@@ -7,6 +7,7 @@ from support.clock import FixedClock, at
 from support.instances import an_instance
 
 from coach.cli import app
+from coach.cli.envelope import BUDGET_BYTES
 from coach.store.connection import connect
 
 ENGINE = "0.3.0"
@@ -30,7 +31,7 @@ def coach(*argv: str) -> Run:
     return run_coach(*argv, clock=FixedClock(at(BOUNDARY)))
 
 
-def test_progress_reports_the_closed_block_under_3_kb(instance: Path) -> None:
+def test_progress_reports_the_closed_block_under_the_budget(instance: Path) -> None:
     run = coach("progress")
 
     assert run.code == 0
@@ -41,7 +42,7 @@ def test_progress_reports_the_closed_block_under_3_kb(instance: Path) -> None:
     assert [b["block"] for b in bench["e1rm_by_block"]] == ["b-2026-10-30", "b-2026-11-23"]
     assert result["goal"]["why"] == WHY
     assert [w["code"] for w in run.envelope["warnings"]] == ["cadence_slow"]
-    assert len(run.stdout.encode("utf-8")) < 3 * 1024
+    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
 
 
 def test_full_adds_per_line_history(instance: Path) -> None:

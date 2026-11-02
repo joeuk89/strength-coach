@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 
+from coach.cli.envelope import BUDGET_BYTES
+
 
 @pytest.fixture(autouse=True)
 def outside_an_instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -82,11 +84,11 @@ def test_the_flags_registry_names_what_may_leave_each_code() -> None:
     assert "acknowledgeable" not in rows["stall_streak"]
 
 
-def test_the_default_flags_envelope_truncates_under_3_kb() -> None:
+def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     run = run_coach("schema", "--registry", "flags")
 
     result = run.envelope["result"]
-    assert len(run.stdout.encode("utf-8")) < 3 * 1024
+    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
     assert result["count"] == 88

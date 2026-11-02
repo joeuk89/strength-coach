@@ -136,7 +136,7 @@ class Declaration:
     moves_pin: bool = False
     # A verb whose result derives from workouts pulls Hevy before it runs (verbs.md, "The pull").
     pulls_first: bool = False
-    # Output the agent must act on in full may run over the 3 KB budget (verbs.md).
+    # Output the agent must act on in full may run over the budget (verbs.md).
     over_budget: OverBudget = never
 
     def input_schema(self) -> Json:

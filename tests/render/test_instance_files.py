@@ -91,6 +91,13 @@ def test_the_generated_claude_md_names_the_profile_and_the_drafts_once() -> None
     assert text.count(".coach/drafts/") == 1
 
 
+def test_the_generated_claude_md_names_the_options_that_lift_the_default_cuts() -> None:
+    text = claude_md("0.3.0")
+
+    assert "--last <n>" in text
+    assert "--full" in text
+
+
 def test_settings_allow_coach_and_ask_on_exactly_the_verbs_handed_in() -> None:
     settings = json.loads(settings_json(["publish", "plan apply"]))
 
