@@ -5,6 +5,9 @@ from typing import Any
 
 import pytest
 from support.cli import run_coach
+from support.clock import FixedClock
+from support.fake_hevy import FakeHevy
+from support.fixture_instances import serving
 from support.instances import an_instance
 
 from coach.cli import app, registry
@@ -13,6 +16,7 @@ from coach.cli.declaration import (
     Call,
     Declaration,
     Json,
+    MakeClient,
     Outcome,
     OverBudget,
     always,
@@ -26,6 +30,10 @@ from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 class Terminal(io.StringIO):
     def isatty(self) -> bool:
         return True
+
+
+def no_hevy() -> MakeClient:
+    return serving(FakeHevy(FixedClock()))
 
 
 @pytest.fixture
@@ -62,6 +70,34 @@ def test_fields_naming_a_path_the_result_lacks_is_invalid(instance: Path) -> Non
 
     assert run.code == 1
     assert run.envelope["error"]["code"] == "invalid_argument"
+
+
+@pytest.mark.parametrize("fields", ["warnings", "warnings.0.code", "ok", "verb", "schema_version"])
+def test_fields_naming_an_envelope_field_says_it_is_outside_result(
+    instance: Path, fields: str
+) -> None:
+    run = run_coach("status", "--fields", fields, make_client=no_hevy())
+
+    assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
+    head = fields.split(".")[0]
+    assert run.envelope["error"]["message"] == (
+        f"--fields: {head!r} is an envelope field, not in result; it is always returned"
+    )
+
+
+def test_fields_naming_the_error_says_it_comes_only_on_failure(instance: Path) -> None:
+    run = run_coach("status", "--fields", "error.code", make_client=no_hevy())
+
+    assert run.envelope["error"]["message"] == (
+        "--fields: 'error' is an envelope field, not in result; it is returned on failure"
+    )
+
+
+def test_fields_naming_an_unknown_path_says_result_lacks_it(instance: Path) -> None:
+    run = run_coach("status", "--fields", "nonsense", make_client=no_hevy())
+
+    assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
+    assert run.envelope["error"]["message"] == "--fields: result has no 'nonsense'"
 
 
 @pytest.mark.parametrize(

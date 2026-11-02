@@ -10,6 +10,13 @@ from coach.core.message import Message
 
 # verbs.md, "Envelope and budget".
 BUDGET_BYTES = 6 * 1024
+ENVELOPE_FIELDS = {
+    "schema_version": "it is always returned",
+    "ok": "it is always returned",
+    "verb": "it is always returned",
+    "warnings": "it is always returned",
+    "error": "it is returned on failure",
+}
 
 
 def success(
@@ -124,9 +131,19 @@ def _lookup(result: object, path: str) -> object:
     for key in path.split("."):
         mapping = cast(Json, value) if isinstance(value, dict) else {}
         if key not in mapping:
-            raise Invalid("invalid_argument", f"--fields: result has no {path!r}")
+            raise _not_found(path, at_top=value is result)
         value = mapping[key]
     return value
+
+
+def _not_found(path: str, *, at_top: bool) -> Invalid:
+    head = path.split(".")[0]
+    if at_top and head in ENVELOPE_FIELDS:
+        return Invalid(
+            "invalid_argument",
+            f"--fields: {head!r} is an envelope field, not in result; {ENVELOPE_FIELDS[head]}",
+        )
+    return Invalid("invalid_argument", f"--fields: result has no {path!r}")
 
 
 def _message(message: Message) -> Json:
