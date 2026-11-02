@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 from typing import Any, cast
 
 import pytest
@@ -149,7 +150,7 @@ def test_re_running_a_follow_up_draft_returns_the_same_ids() -> None:
     conn = a_store()
     first = run(conn, RAISE)
 
-    assert run(conn, RAISE) == first
+    assert run(conn, RAISE) == replace(first, no_op=True)
 
 
 def test_a_draft_spelling_the_kind_followup_is_refused() -> None:

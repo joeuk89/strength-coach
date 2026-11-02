@@ -1,5 +1,5 @@
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from coach.core.check_in import check_in_window
 from coach.core.check_in_file import CheckInFile, parse_check_in_file
@@ -27,20 +27,23 @@ class CheckInRecordResult:
     superseded: str | None
     phase_opened: str | None
     phase_closed: str | None
+    dry_run: bool = False
+    no_op: bool = False
 
 
 def checkin_record(
-    conn: Connection, data: bytes, *, file: str, clock: Clock
+    conn: Connection, data: bytes, *, file: str, clock: Clock, dry_run: bool = False
 ) -> CheckInRecordResult:
     """Write the Check-in row and every record its file carries, in one transaction. The same
     file again writes nothing; a changed file for the same date supersedes the row
-    (check-in.md, "Correcting")."""
+    (check-in.md, "Correcting"). A dry run writes and rolls back."""
     checkin = parse_check_in_file(data, file=file)
-    with transaction(conn):
+    with transaction(conn, commit=not dry_run):
         stored = check_ins.by_draft(conn, checkin.draft.hash)
+        no_op = stored is not None
         if stored is None:
             stored = _write(conn, checkin, clock)
-        return _result(conn, checkin, stored)
+        return replace(_result(conn, checkin, stored), dry_run=dry_run, no_op=no_op)
 
 
 def _write(conn: Connection, checkin: CheckInFile, clock: Clock) -> StoredCheckIn:

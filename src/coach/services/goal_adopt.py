@@ -1,5 +1,5 @@
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from coach.core.clock import Clock
 from coach.core.errors import Invalid
@@ -21,17 +21,23 @@ class GoalAdoptResult:
     phase_opened: str | None
     phase_closed: str | None
     diff: dict[str, object] | None
+    dry_run: bool = False
+    no_op: bool = False
 
 
-def goal_adopt(conn: Connection, data: bytes, *, file: str, clock: Clock) -> GoalAdoptResult:
+def goal_adopt(
+    conn: Connection, data: bytes, *, file: str, clock: Clock, dry_run: bool = False
+) -> GoalAdoptResult:
     """Record a Goal from its Draft, superseding the current one, and open or close the Phase.
-    A Draft whose hash is already stored writes nothing (verbs.md, "Re-run safety")."""
+    A Draft whose hash is already stored writes nothing (verbs.md, "Re-run safety"). A dry run
+    writes and rolls back."""
     draft = parse_goal_draft(data, file=file)
-    with transaction(conn):
+    with transaction(conn, commit=not dry_run):
         goal_id = goals.id_by_draft(conn, draft.hash)
+        no_op = goal_id is not None
         if goal_id is None:
             goal_id = _write(conn, draft, clock)
-        return _result(conn, draft.hash, goal_id)
+        return replace(_result(conn, draft.hash, goal_id), dry_run=dry_run, no_op=no_op)
 
 
 def _write(conn: Connection, draft: GoalDraft, clock: Clock) -> str:

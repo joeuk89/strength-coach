@@ -1,7 +1,24 @@
 import itertools
 from pathlib import Path
 
+from coach.cli.declaration import Argument, Json
 from coach.core.errors import Invalid
+
+DRY_RUN = Argument(
+    "--dry-run",
+    "run the real write and roll it back: the result and ids the real run would give, or its "
+    "violation; write nothing",
+    takes_value=False,
+)
+DRY_RUN_OUTPUT: Json = {
+    "dry_run": {"type": "boolean", "description": "dry run only"},
+    "no_op": {"type": "boolean", "description": "dry run only: the Draft is already stored"},
+}
+
+
+def marked(result: Json, *, dry_run: bool, no_op: bool) -> Json:
+    """A Draft verb's result, with `dry_run` and `no_op` on a dry run only."""
+    return result | {"dry_run": True, "no_op": no_op} if dry_run else result
 
 
 def read_draft(path: str) -> bytes:

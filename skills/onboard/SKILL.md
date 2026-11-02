@@ -46,7 +46,7 @@ week's shape and why it has it, limits, how they want to be coached, history. Th
 Phase as the draft states them. Say what changes each: the Goal when the aim changes, the
 profile when they say so, the Phase at a check-in or a block boundary.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach query`, `coach goal adopt`
