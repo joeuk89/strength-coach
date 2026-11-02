@@ -95,6 +95,20 @@ def test_one_violation_on_one_line_refuses_with_every_flag_and_the_fixed_fact_gi
     assert [f.code for f in fixed.flags if f.severity == "violation"] == []
 
 
+def test_the_refusal_names_each_flag_with_the_params_hash_an_acknowledgement_copies() -> None:
+    conn = a_squat_week()
+    standing = offgrid(run(conn, a_plan_draft(conn)))
+    write(conn, KNEE_CAP)
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, a_plan_draft(conn, overrides=PIN_115))
+
+    reported = cast(list[dict[str, object]], raised.value.details["flags"])
+    warning = next(f for f in reported if f["key"] == OFFGRID)
+    assert warning["params_hash"] == standing.params_hash
+    assert all(str(f["params_hash"]).startswith("sha256:") for f in reported)
+
+
 def acknowledge(key: str, params_hash: str, because: str = 'because = "kit"\n') -> str:
     return (
         f'[[acknowledge]]\nflag = "{key}"\nparams_hash = "{params_hash}"\n{because}'
