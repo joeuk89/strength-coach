@@ -1,6 +1,6 @@
 import datetime
 
-from support.blocks import BOUNDARY, PULL_UP_LINE, WHY, two_closed_blocks
+from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, WHY, two_closed_blocks
 from support.clock import FixedClock, at
 from support.kit_fixtures import kit_files
 from support.ledger import a_weigh_in
@@ -124,3 +124,22 @@ def test_a_drop_before_the_lift_moved_to_linear_is_no_reset() -> None:
     bench = bench_in(report(conn))
 
     assert (bench.scheme, bench.resets, bench.stall_streak) == ("linear", 0, 0)
+
+
+def pull_up_in(found: Progress) -> LiftProgress:
+    return next(lift for lift in found.lifts if lift.exercise_id == "pull_up")
+
+
+def test_flat_pull_ups_that_predate_the_latest_redesign_show_no_stall_streak() -> None:
+    conn = two_closed_blocks()
+    assert pull_up_in(report(conn)).stall_streak == 3
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, PULL_UP_LINE), because="new block")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert pull_up_in(report(conn)).stall_streak == 0
