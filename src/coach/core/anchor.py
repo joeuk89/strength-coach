@@ -14,15 +14,13 @@ from coach.core.rack import Rack, round_to_rack
 SAME_SESSION_WINDOW_DAYS = 90
 SAME_SESSION_WINDOW_DAYS_RN = None
 
-type AnchorStep = Literal["same_session", "any_session"]
-
 
 @dataclass(frozen=True)
 class AnchorExposure:
     """`skipped` is the exposure the search would have picked had its load been usable."""
 
     exposure: Exposure
-    step: AnchorStep
+    step: Literal["same_session", "any_session"]
     skipped: Exposure | None = None
 
     @property
@@ -63,32 +61,28 @@ def anchor(
         reverse=True,
     )
     window_start = on - datetime.timedelta(days=SAME_SESSION_WINDOW_DAYS)
-    newest = _search(candidates, session_id, window_start)
-    if mode not in RACK_MODES or newest is None or _usable(newest[0]):
-        return _found(newest, start_load, None)
-    usable = [e for e in candidates if _usable(e)]
-    return _found(_search(usable, session_id, window_start), start_load, newest[0])
+    found = _search(candidates, session_id, window_start)
+    skipped = None
+    if mode in RACK_MODES and found is not None and not _usable(found.exposure):
+        skipped = found.exposure
+        found = _search([e for e in candidates if _usable(e)], session_id, window_start, skipped)
+    return StartLoad(start_load, skipped) if found is None else found
 
 
 def _search(
-    candidates: list[Exposure], session_id: str, window_start: datetime.date
-) -> tuple[Exposure, AnchorStep] | None:
+    candidates: list[Exposure],
+    session_id: str,
+    window_start: datetime.date,
+    skipped: Exposure | None = None,
+) -> AnchorExposure | None:
     same = next(
         (e for e in candidates if e.session_id == session_id and e.date >= window_start), None
     )
     if same is not None:
-        return same, "same_session"
+        return AnchorExposure(same, "same_session", skipped)
     if candidates:
-        return candidates[0], "any_session"
+        return AnchorExposure(candidates[0], "any_session", skipped)
     return None
-
-
-def _found(
-    found: tuple[Exposure, AnchorStep] | None, start_load: Load | None, skipped: Exposure | None
-) -> AnchorExposure | StartLoad:
-    if found is None:
-        return StartLoad(start_load, skipped)
-    return AnchorExposure(*found, skipped)
 
 
 def _usable(exposure: Exposure) -> bool:
