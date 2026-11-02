@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
+amended: 2026-11-02 by #195 (a plate-pool location names a hardware choice and `single` per implement in place of `collars` and `dumbbells`; the set-up and per-line links take plate-pool format 1's shapes)
 supersedes: 0008 in part (ownership, import, the snapshot, the deep link); 0008's rounding, warm-up, cap and frozen-prescription consequences stand
 ---
 
@@ -40,10 +41,11 @@ the instance; the athlete commits two files to their own repo.
   and `kit/<name>.achievable.json`. The tables file carries a header the engine reads:
   `format` (the document format number the engine states it parses), `plate_pool` (the version
   that wrote it) and `inventory_sha256` (the inventory it was built from). `[location.<name>]`
-  is `kind = "plate-pool"` with `kit = "<name>"`, `collars` and `dumbbells` (pair or single)
-  choosing which tables apply, and the equipment-kind map; no URL. A grid location is as ADR
-  0008 has it. The two kinds stay: a grid location has no inventory and no tables, so one shape
-  would carry two empty halves.
+  is `kind = "plate-pool"` with `kit = "<name>"`, the equipment-kind map, and one
+  `implement.<id>` table per implement it maps, naming a `hardware` choice and, on a handle,
+  `single`, which choose the table per implement, hardware and pair; no URL. A grid location
+  is as ADR 0008 has it. The two kinds stay: a grid location has no inventory and no tables, so
+  one shape would carry two empty halves.
 - **Stale tables are a setup refusal.** Every verb that rounds (`plan draft`, `program adopt`)
   hashes the inventory and compares it with the header; a mismatch stops with exit 5,
   `kit_tables_stale`, naming the location and the command to run. Not a warning, because a
@@ -58,9 +60,11 @@ the instance; the athlete commits two files to their own repo.
   carries forward against the current rack and warns per line. The clearing rule stands: the next
   WeekPlan freezes on the new rack, and a frozen load never re-rounds.
 - **Routine pages.** Each plate-pool location gets one set-up link, with the inventory inline in
-  the URL (compressed and encoded; a few kilobytes), that one tap installs on the phone. The
-  per-line deep link keeps ADR 0008's shape and adds the kit's short hash, so plate-pool can say
-  when the kit stored on the device is not the one the loads were rounded to.
+  the URL fragment (`#inventory=`, raw deflate and base64url; a few kilobytes), that one tap
+  installs on the phone. The per-line link names the implement by inventory id
+  (`?barbell=175lb&barbell.hardware=collar-clamp`, `?dumbbell.single=` for a single handle) and
+  adds the kit's short hash, so plate-pool can say when the kit stored on the device is not the
+  one the loads were rounded to.
 - **plate-pool's side of the contract** is its issue 52: version `inventory.schema.json` as the
   public contract; an `achievable` command that emits the tables document with the header; a kit
   screen that loads an inventory from the set-up link, a pasted file or local storage, with the
