@@ -104,10 +104,25 @@ contract test holds that no verb declaration accepts a violation key as an ackno
 
 ## Leaving a warning
 
-A warning is left by an **Acknowledgement**: `{key, params_hash, because, text, evidence}`. The
-`because` categories are the override's (pain, kit, stall, fatigue, schedule, athlete request,
-coach judgement); the text is the coach's voice, unpoliced; evidence refs are optional (niggle,
-exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no `because`.
+A warning is left by an **Acknowledgement**, a record of `{key, params_hash, because, text,
+evidence}`. The `because` categories are the override's (pain, kit, stall, fatigue, schedule,
+athlete request, coach judgement); the text is the coach's voice, unpoliced; evidence refs are
+optional (niggle, exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no
+`because`.
+
+In the plan Draft the agent writes an `[[acknowledge]]` table, which names the key as `flag`, as
+`program.md` and `overrides.md` show. It copies the two values from the warning's own `[[flag]]`
+table, whose `key` becomes `flag` and whose `params_hash` is copied as is. The engine writes each
+`[[flag]]` table at the top of the Draft, or under the `[[session.line]]` the flag is about:
+
+```toml
+[[acknowledge]]
+flag = "offgrid_anchor_ignored@line:2026-11-02/lower/bb_back_squat"
+params_hash = "sha256:…"
+because = "kit"
+text = "The 121 was a mislabelled plate."
+evidence = ["niggle:n-0001"]  # optional
+```
 
 - **Home.** The agent writes acknowledgements in the plan Draft next to the overrides. They freeze
   onto the WeekPlan at approval and show at the approval prompt as "left warnings" with their
