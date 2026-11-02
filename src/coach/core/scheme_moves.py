@@ -7,7 +7,8 @@ from dataclasses import dataclass, replace
 from coach.core.anchor import StartLoad, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
-from coach.core.e1rm import WINDOW_DAYS, e1rm
+from coach.core.carried_e1rm import E1rmRead
+from coach.core.e1rm import PRECISION, WINDOW_DAYS
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.line_history import (
@@ -48,6 +49,7 @@ class SchemeInput:
     mode: LoadMode
     rack: Rack | None
     scope: Scope
+    e1rm: E1rmRead
 
     @property
     def loaded(self) -> bool:
@@ -183,7 +185,7 @@ class SchemeMoves:
         return Move(Load(up, "assisted"), "step_up", self.given.sets)
 
     def _top(self, exposure: Exposure, before: Load | None) -> Move:
-        found = e1rm(self.given.request.exposures, self.line.exercise, self.given.on)
+        found = self.given.e1rm.best
         if found is None:
             self._raise(
                 "no_e1rm",
@@ -201,13 +203,24 @@ class SchemeMoves:
 
     def _heaviest_top(self, exposure: Exposure, anchor_top: Load) -> Load:
         """The one-row cap counts from the line's heaviest top in the e1RM window, so a lighter
-        bad day as the anchor never lowers the top set, and another session never lifts it."""
-        start = self.given.on - datetime.timedelta(days=WINDOW_DAYS)
-        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        bad day as the anchor never lowers the top set, and another session never lifts it.
+        While the carried e1RM binds, the pre-layoff tops count at its factor."""
+        tops = [anchor_top, *self._tops_in_window(exposure, self.given.on)]
+        carried = self.given.e1rm.carried
+        if carried is not None:
+            tops += [
+                replace(top, amount=round(top.amount * carried.factor, PRECISION))
+                for top in self._tops_in_window(exposure, carried.pre_layoff_on)
+            ]
+        return max(tops, key=lambda t: t.amount)
+
+    def _tops_in_window(self, exposure: Exposure, on: datetime.date) -> list[Load]:
+        start = on - datetime.timedelta(days=WINDOW_DAYS)
+        history = ordinary(line_history(self.given.request.exposures, exposure, on=on))
         tops = (
             top_on_grid(e, self.given.rack, self.given.mode) for e in history if e.date >= start
         )
-        return max((anchor_top, *(t for t in tops if t is not None)), key=lambda t: t.amount)
+        return [t for t in tops if t is not None]
 
     def _wave(self, exposure: Exposure | None) -> Move:
         training_max = find_training_max(

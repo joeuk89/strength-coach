@@ -226,6 +226,12 @@ PLAN_WARNINGS = (
         "no_e1rm", ("line",), ("exercise_id", "scheme"), ("rn:autoregulation.5",)
     ),
     acknowledgeable_warning(
+        "carried_e1rm",
+        ("line",),
+        ("pre_layoff_exposure", "pre_layoff_e1rm", "factor", "carried", "expires"),
+        ("rn:detraining-return.5",),
+    ),
+    acknowledgeable_warning(
         "increment_over_step", ("line",), ("increment", "scheme_step", "from_exposure")
     ),
     acknowledgeable_warning(

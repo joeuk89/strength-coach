@@ -253,6 +253,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | --- | --- | --- | --- |
 | `top_set_above_e1rm` | line | e1RM, model, load, RPE target | rn:autoregulation.6 |
 | `no_e1rm` | line | exercise id, scheme | rn:autoregulation.5 |
+| `carried_e1rm` | line | pre-layoff exposure ref, pre-layoff e1RM, band factor, carried value, expiry date (`prescription.md`, **The carried e1RM**) | rn:detraining-return.5 |
 | `increment_over_step` | line | increment, scheme step, from exposure | `null` |
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
 | `anchor_load_unusable` | line | skipped exposure ref, logged load, anchor used (`start_load` or the older exposure's ref) | `null` |

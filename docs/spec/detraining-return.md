@@ -214,7 +214,9 @@ takes about half as long as the break.
   ones included, to the first session back. `/program-week` applies claim
   3 on every run and `/check-in` announces the return week.
 - After the return week, the progression scheme resumes from the loads
-  the return week logged.
+  the return week logged. A `top_backoff` line instead reads the
+  pre-layoff e1RM scaled by the band (the carried e1RM), so it regains
+  the pre-layoff level quickly, as claim 5 finds.
 - For illness, apply claim 4 whatever the gap. Ask the athlete whether
   their symptoms stayed above the neck. If they had fever, chest
   symptoms, other whole-body symptoms or a slow recovery, send them to a

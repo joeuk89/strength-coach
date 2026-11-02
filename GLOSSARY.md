@@ -364,6 +364,12 @@ Estimated one-rep max from the best qualifying set in the 42 days before a date,
 Recomputed from exposures, never stored.
 _Avoid_: training max (a Decision), strength estimate
 
+**Carried e1RM**:
+After a return week, the e1RM from the 42 days ending on the lift's last pre-layoff exposure,
+times the return band's load factor. A `top_backoff` line reads it while it is above the live
+e1RM, for up to 42 days after the return exposure. Derived from exposures, never stored.
+_Avoid_: stored e1RM, decayed e1RM, layoff e1RM
+
 **Qualifying set**:
 A working set e1RM may be read from: 12 or fewer reps to failure, counted as reps plus 10 minus
 RPE. A set past that is too far from failure to estimate.

@@ -9,6 +9,7 @@ from typing import cast
 
 from coach.core.anchor import StartLoad, anchor, anchor_load_unusable
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
+from coach.core.carried_e1rm import E1rmRead, carried_e1rm, e1rm_read
 from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs
 from coach.core.e1rm import e1rm
@@ -123,8 +124,9 @@ class _Derivation:
         )
         self._keep(anchor_load_unusable(found, self.scope))
         line = replace(authored, sets=sets)
+        read = self._e1rm_read(authored)
         schemes = SchemeMoves(
-            SchemeInput(self.request, authored, sets, mode, rack, self.scope),
+            SchemeInput(self.request, authored, sets, mode, rack, self.scope, read),
             self.steps,
             self.flags,
         )
@@ -133,7 +135,9 @@ class _Derivation:
             pinned_only = pin is not None and found.load is None and line.scheme.name != "wave_531"
             move = Move(None, "hold", line.sets) if pinned_only else schemes.opening(found)
             line = replace(line, sets=move.sets)
-            context = LineContext(self.request, line, exercise, mode, rack, self.scope)
+            context = LineContext(
+                self.request, line, exercise, mode, rack, self.scope, e1rm=read.best
+            )
             opening = _first(move.proposal)
             loaded = mode in LOAD_BEARING_MODES
             pinned = self._pin(opening, mode, *pin) if pin is not None and loaded else None
@@ -141,8 +145,9 @@ class _Derivation:
             proposal = move.proposal if pinned is None else _pinned(move.proposal, pinned)
             bounded = bound(context, proposal, move.rounding, self.steps, self.flags)
             change = "first prescription"
-            return self._bounded(line, found.derived_from, rack, bounded, change)
+            return self._bounded(line, found.derived_from, rack, bounded, change, read)
         self._keep(over_rep_cap(authored, found.exposure))
+        self._carried(read, mode)
         before = schemes.anchor_top(found.exposure)
         move = self._move_or_hold(schemes, found.exposure, before, overrides)
         schemes.stall(found.exposure)
@@ -160,6 +165,7 @@ class _Derivation:
             anchor_top=before,
             scheme_load=moved,
             pin=pinned,
+            e1rm=read.best,
         )
         if pinned is not None:
             bounded = bound(context, _pinned(move.proposal, pinned), "hold", self.steps, self.flags)
@@ -168,17 +174,58 @@ class _Derivation:
         if pin is not None:
             self._check_increment(found.exposure, rack, before, bounded.load)
         change = _change(line, before, bounded, move.change, _racked(moved, rack, move.rounding))
-        return self._bounded(line, found.derived_from, rack, bounded, change)
+        return self._bounded(line, found.derived_from, rack, bounded, change, read)
 
     def _bounded(
-        self, line: Line, derived_from: str, rack: Rack | None, bounded: Bounded, change: str
+        self,
+        line: Line,
+        derived_from: str,
+        rack: Rack | None,
+        bounded: Bounded,
+        change: str,
+        read: E1rmRead,
     ) -> LinePrescription:
         if bounded.dropped:
             return self._prescription(line, derived_from, (), "dropped")
         groups = self._groups(line, rack, bounded)
-        found = e1rm(self.request.exposures, line.exercise, self.request.planned.date)
-        self._keep(top_set_above_e1rm(groups, found, self.scope))
+        self._keep(top_set_above_e1rm(groups, read.best, self.scope))
         return self._prescription(line, derived_from, groups, change)
+
+    def _e1rm_read(self, line: Line) -> E1rmRead:
+        """One e1RM for every read on the line: under `top_backoff` the carried e1RM while it
+        binds (docs/spec/prescription.md, "The carried e1RM")."""
+        planned = self.request.planned
+        live = e1rm(self.request.exposures, line.exercise, planned.date)
+        if line.scheme.name != "top_backoff":
+            return E1rmRead(live)
+        carried = carried_e1rm(
+            self.request.exposures,
+            self.request.trained,
+            exercise_id=line.exercise,
+            session_id=planned.session_id,
+            on=planned.date,
+        )
+        return e1rm_read(live, carried)
+
+    def _carried(self, read: E1rmRead, mode: LoadMode) -> None:
+        carried = read.carried
+        if carried is None:
+            return
+        value = carried.load.as_mode(mode).amount
+        pre_layoff = carried.pre_layoff.load.as_mode(mode).amount
+        self._raise(
+            "carried_e1rm",
+            {
+                "pre_layoff_exposure": carried.pre_layoff.exposure,
+                "pre_layoff_e1rm": pre_layoff,
+                "factor": carried.factor,
+                "carried": value,
+                "expires": carried.expires.isoformat(),
+            },
+            f"the pre-layoff e1RM of {pre_layoff:g} from "
+            f"{carried.pre_layoff.exposure}, ×{carried.factor:g}, carries as {value:g} until "
+            f"{carried.expires.isoformat()}",
+        )
 
     def _move_or_hold(
         self,
