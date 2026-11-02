@@ -131,19 +131,15 @@ def _lookup(result: object, path: str) -> object:
     for key in path.split("."):
         mapping = cast(Json, value) if isinstance(value, dict) else {}
         if key not in mapping:
-            raise _not_found(path, at_top=value is result)
+            if value is result and key in ENVELOPE_FIELDS:
+                raise Invalid(
+                    "invalid_argument",
+                    f"--fields: {key!r} is an envelope field, not in result; "
+                    f"{ENVELOPE_FIELDS[key]}",
+                )
+            raise Invalid("invalid_argument", f"--fields: result has no {path!r}")
         value = mapping[key]
     return value
-
-
-def _not_found(path: str, *, at_top: bool) -> Invalid:
-    head = path.split(".")[0]
-    if at_top and head in ENVELOPE_FIELDS:
-        return Invalid(
-            "invalid_argument",
-            f"--fields: {head!r} is an envelope field, not in result; {ENVELOPE_FIELDS[head]}",
-        )
-    return Invalid("invalid_argument", f"--fields: result has no {path!r}")
 
 
 def _message(message: Message) -> Json:
