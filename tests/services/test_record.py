@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from support.clock import FixedClock
 from support.ledger import a_hevy_workout, a_store, a_weigh_in, an_exercise
@@ -98,7 +100,7 @@ def test_re_running_the_same_draft_writes_nothing_and_returns_the_same_ids() -> 
 
     second = run(conn, SEVEN_KINDS)
 
-    assert second == first
+    assert second == replace(first, no_op=True)
     assert count(conn, "weigh_in") == 1
     assert count(conn, "workout") == 1
 
@@ -341,3 +343,41 @@ def test_a_manual_workout_on_a_session_no_version_or_niggle_raised_is_an_unresol
         run(a_store(), '[[workout]]\ndate = 2026-10-06\nsession_id = "nope"\nminutes = 10\n')
 
     assert raised.value.code == "draft_ref_unresolved"
+
+
+def test_a_dry_run_returns_the_ids_the_real_run_then_writes_and_stores_nothing() -> None:
+    conn = a_store()
+
+    dry = record(conn, SEVEN_KINDS.encode(), file="d.toml", clock=FixedClock(), dry_run=True)
+
+    assert (dry.dry_run, dry.no_op) == (True, False)
+    assert count(conn, "weigh_in") == 0
+    assert count(conn, "exercise") == 0
+    real = run(conn, SEVEN_KINDS)
+    assert real.ids == dry.ids
+    assert real.ids["weigh_in"] == ["wi-0001"]
+    assert (real.dry_run, real.no_op) == (False, False)
+
+
+def test_a_dry_run_of_a_stored_draft_returns_the_stored_ids_as_a_no_op() -> None:
+    conn = a_store()
+    stored = run(conn, SEVEN_KINDS)
+
+    dry = record(conn, SEVEN_KINDS.encode(), file="d.toml", clock=FixedClock(), dry_run=True)
+
+    assert dry.ids == stored.ids
+    assert (dry.dry_run, dry.no_op) == (True, True)
+
+
+def test_a_dry_run_of_a_draft_with_an_unresolved_ref_raises_what_the_real_run_raises() -> None:
+    conn = a_store()
+    text = (
+        "[[weigh_in]]\ndate = 2026-10-29\nkg = 82.4\n"
+        '[[note]]\ndate = 2026-10-29\ntext = "x"\nabout = "niggle:@x"\n'
+    )
+
+    with pytest.raises(Invalid) as raised:
+        record(conn, text.encode(), file="d.toml", clock=FixedClock(), dry_run=True)
+
+    assert raised.value.code == "draft_ref_unresolved"
+    assert count(conn, "weigh_in") == 0

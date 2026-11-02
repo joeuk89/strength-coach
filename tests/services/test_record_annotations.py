@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -138,7 +139,7 @@ def test_re_running_a_withdrawal_returns_the_same_ids_and_withdrawn_list() -> No
     run(conn, DISCOUNT)
     first = run(conn, '[[annotation]]\nwithdraws = "a-0001"\n')
 
-    assert run(conn, '[[annotation]]\nwithdraws = "a-0001"\n') == first
+    assert run(conn, '[[annotation]]\nwithdraws = "a-0001"\n') == replace(first, no_op=True)
 
 
 def test_withdrawing_an_annotation_that_is_not_stored_is_an_unresolved_ref() -> None:
