@@ -1,5 +1,14 @@
-from coach.cli.declaration import Argument, Declaration, Example, InInstance, InstanceCall, Outcome
-from coach.cli.drafts import read_draft
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+    on_dry_run,
+)
+from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
 from coach.services.goal_adopt import goal_adopt
 
@@ -10,19 +19,18 @@ def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
     with open_instance_store(call.instance) as conn:
-        result = goal_adopt(conn, data, file=path, clock=call.clock)
-    return Outcome(
-        {
-            "draft_hash": result.draft_hash,
-            "goal_id": result.goal_id,
-            "kind": result.kind,
-            "priority_lifts": list(result.priority_lifts),
-            "milestones": list(result.milestones),
-            "superseded": result.superseded,
-            "phase": {"opened": result.phase_opened, "closed": result.phase_closed},
-            "diff": result.diff,
-        }
-    )
+        result = goal_adopt(conn, data, file=path, clock=call.clock, dry_run=on_dry_run(call.args))
+    summary: Json = {
+        "draft_hash": result.draft_hash,
+        "goal_id": result.goal_id,
+        "kind": result.kind,
+        "priority_lifts": list(result.priority_lifts),
+        "milestones": list(result.milestones),
+        "superseded": result.superseded,
+        "phase": {"opened": result.phase_opened, "closed": result.phase_closed},
+        "diff": result.diff,
+    }
+    return Outcome(marked(summary, dry_run=result.dry_run, no_op=result.no_op))
 
 
 DECLARATION = Declaration(
@@ -32,7 +40,7 @@ DECLARATION = Declaration(
         "the Phase in the same file. The same file again writes nothing and returns the same id."
     ),
     writes="store",
-    arguments=(Argument("draft", "path of the TOML goal Draft", required=True),),
+    arguments=(Argument("draft", "path of the TOML goal Draft", required=True), DRY_RUN),
     output={
         "type": "object",
         "properties": {
@@ -58,6 +66,7 @@ DECLARATION = Declaration(
                     "priority_lifts as {from, to}, milestones as {added, removed}, why as true"
                 ),
             },
+            **DRY_RUN_OUTPUT,
         },
         "required": [
             "draft_hash",
@@ -73,5 +82,9 @@ DECLARATION = Declaration(
     run=InInstance(run),
     examples=(
         Example(("goal", "adopt", ".coach/drafts/2026-10-30-goal.toml"), "Adopt a goal Draft."),
+        Example(
+            ("goal", "adopt", ".coach/drafts/2026-10-30-goal.toml", "--dry-run"),
+            "The Goal and Phase ids adopting a goal Draft would record.",
+        ),
     ),
 )
