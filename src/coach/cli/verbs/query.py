@@ -64,6 +64,7 @@ def run(call: InstanceCall) -> Outcome:
                 severity=_text(call, "severity"),
                 scope=_text(call, "scope"),
                 summary=call.args.get("summary") is True,
+                full=call.full,
                 last=last,
             )
         elif view == "lines":

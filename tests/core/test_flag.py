@@ -11,6 +11,7 @@ from coach.core.flag import (
     Flag,
     FlagKey,
     Scope,
+    grouped,
     leave,
     raise_flag,
 )
@@ -385,3 +386,37 @@ def test_a_flag_reads_back_from_its_json(left: bool) -> None:
         flag = leave(flag, [an_acknowledgement(flag.key, flag.params_hash)])
 
     assert Flag.from_json(flag.to_json()) == flag
+
+
+def test_flags_group_one_row_per_code_in_the_order_each_code_first_appears() -> None:
+    week = raise_flag("rotation_unconfirmed", Scope("week", monday=MONDAY), {}, "confirm A")
+    squat = Scope("line", monday=MONDAY, session_id="lower-a", exercise_id="bb_back_squat")
+    first, second = a_stall(), raise_flag("stall_streak", squat, {"streak": 3}, "squat stalled")
+
+    rows = grouped(flag.to_json() for flag in (first, week, second))
+
+    assert rows == [
+        {
+            "code": "stall_streak",
+            "severity": "warning",
+            "count": 2,
+            "keys": [
+                {
+                    "key": "stall_streak@line:2026-11-02/upper-a/bb_overhead_press",
+                    "params_hash": first.params_hash,
+                },
+                {
+                    "key": "stall_streak@line:2026-11-02/lower-a/bb_back_squat",
+                    "params_hash": second.params_hash,
+                },
+            ],
+        },
+        {
+            "code": "rotation_unconfirmed",
+            "severity": "violation",
+            "count": 1,
+            "keys": [
+                {"key": "rotation_unconfirmed@week:2026-11-02", "params_hash": week.params_hash}
+            ],
+        },
+    ]
