@@ -127,7 +127,13 @@ Notes:
 One definition: three consecutive ordinary exposures of the line (light-week and return-week
 exposures skipped) with no gain on the scheme's metric raise `stall_streak` with the three
 exposure refs. Three is opinion: the sources say read the trend, not one session, and name no
-count (rn:progression-methods §4). The metric per scheme:
+count (rn:progression-methods §4).
+
+The streak reads exposures on or after the latest redesign's adoption date and none before it: a
+redesign starts every line with a clean streak, because a stall under the old design says
+nothing about the new one. An amend (a swap, a fix, a scheme change) leaves the streak alone, as
+does a light, return or missed week; the streak spans the light week by skipping its exposures,
+and `cadence_slow` relies on it surviving the Block boundary (`goals.md`). The metric per scheme:
 
 | Scheme | Metric | The rule's own response |
 | --- | --- | --- |

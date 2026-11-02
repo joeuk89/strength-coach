@@ -242,7 +242,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
 | `over_rep_cap` | exposure | reps, cap | rn:autoregulation.5 |
 | `short_sleep_week` | week | short nights, threshold, window | rn:sleep-dieting.1 |
-| `stall_streak` | line | streak length, exposure refs | rn:progression-methods §4 |
+| `stall_streak` | line | streak length, exposure refs (all on or after the latest redesign's adoption date; `prescription.md`, **Stalls**) | rn:progression-methods §4 |
 | `rep_range_missed` | line | set index, reps, range, logged RPE, authored RPE | `null` |
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
 | `rpe_ceiling_unchecked` | line | cap, clipped load, anchor exposure ref | rn:autoregulation.6 |
