@@ -8,7 +8,9 @@ description: The week's prescription. Use when a check-in has closed a week, whe
 ## Read first
 The profile, once. The plan Draft from `coach plan draft` with its flags: each line carries its
 prescription, the steps that derived it and its change from last week. Judge the lines that
-carry a flag or an override; show the rest as they stand.
+carry a flag or an override; show the rest as they stand. The summary lists each flag code
+with its count and keys; to read one code's flags with their messages, run
+`coach query flags --draft <path> --code <code>`, or `--full` for every flag.
 
 ## Ask
 State the week for confirmation: the rotation position, the day each session falls on, where
