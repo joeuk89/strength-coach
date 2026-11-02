@@ -17,12 +17,16 @@ checkin_cadence_days = 7
 # [location.home]
 # kind = "plate-pool"
 # kit = "home"
-# collars = "clamp"
-# dumbbells = "pair"
 #
 # [location.home.implements]
 # barbell = "barbell"
 # dumbbell = "dumbbell"
+#
+# [location.home.implement.barbell]
+# hardware = "collar-clamp"
+#
+# [location.home.implement.dumbbell]
+# hardware = "screw-standard"
 #
 # [location.gym]
 # kind = "grid"
@@ -62,9 +66,13 @@ increment = 10
 [location.home]
 kind = "plate-pool"
 kit = "home"
-collars = "clamp"
-dumbbells = "pair"
 
 [location.home.implements]
 barbell = "barbell"
 dumbbell = "dumbbell"
+
+[location.home.implement.barbell]
+hardware = "collar-clamp"
+
+[location.home.implement.dumbbell]
+hardware = "screw-standard"

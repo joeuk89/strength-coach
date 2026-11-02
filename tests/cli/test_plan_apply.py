@@ -3,6 +3,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 from support.cli import Run, run_coach
@@ -488,12 +489,27 @@ def test_the_hook_asks_with_the_prompt_of_the_real_dry_run(instance: Path) -> No
 
 def test_the_default_dry_run_of_the_worked_week_fits_the_envelope_budget() -> None:
     found = a_dry_run(the_worked_week())
-    result = dry_run_result(found, units="lb", full=False, last=10)
+    result = dry_run_result(found, units="lb", full=False)
 
     document = envelope.render(envelope.success(1, "plan apply", result, []), pretty=False)
 
-    assert len(document.encode("utf-8")) < 3 * 1024
+    assert len(document.encode("utf-8")) < envelope.BUDGET_BYTES
     assert result["flag_count"] == len(found.flags) == 4
-    assert result["flags"] == [
-        {"key": flag.key, "severity": "warning", "left": None} for flag in found.flags
+    flags: Any = result["flags"]
+    assert [(f["key"], f["code"], f["severity"], f["left"]) for f in flags] == [
+        (flag.key, flag.code, "warning", None) for flag in found.flags
+    ]
+
+
+def test_the_declared_dry_run_flags_are_the_rows_an_acknowledgement_needs() -> None:
+    [declaration] = [d for d in declarations() if d.name == "plan apply"]
+    properties: Any = declaration.output["properties"]
+
+    assert "flags_truncated" not in properties
+    assert properties["flags"]["items"]["required"] == [
+        "key",
+        "code",
+        "severity",
+        "params_hash",
+        "left",
     ]

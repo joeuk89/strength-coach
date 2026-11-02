@@ -161,3 +161,15 @@ def test_resolving_a_niggle_keeps_its_rehab_session_in_the_weeks_planned_before(
     record(conn, resolved.encode(), file="r.toml", clock=FixedClock())
 
     assert adherence_counts(conn) == [(1, 2)] * 2
+
+
+def test_a_closed_week_carries_each_lifts_figure_and_target_from_the_version_in_force() -> None:
+    lift = {"bb_bench_press": {"sets": 6, "counts": ["bb_back_squat"]}, "pull_up": 8}
+    conn = a_squat_program(dose={"per_muscle": 10, "lift": lift})
+    a_hard_squat_week(conn, monday(0))
+    closed_through(conn, 1)
+
+    [week] = closed_weeks(conn).weeks
+
+    assert week.lift_dose == {"bb_bench_press": 4, "pull_up": 0}
+    assert week.lift_dose_target == {"bb_bench_press": 6, "pull_up": 8}

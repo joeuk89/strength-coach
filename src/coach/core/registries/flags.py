@@ -193,6 +193,10 @@ VIOLATIONS = (
     violation("set_groups_off_scheme", ("line",), ("scheme", "expected_shape"), ("program adopt",)),
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
     violation("acknowledgement_unmatched", ("version",), ("flag_key",), ("program adopt",)),
+    violation("counted_variant_unknown", ("version",), ("lift", "exercise_id"), ("program adopt",)),
+    violation(
+        "counted_variant_not_exclusive", ("version",), ("exercise_id", "lifts"), ("program adopt",)
+    ),
     violation(
         "record_kind_not_allowed",
         ("instance",),
@@ -226,10 +230,19 @@ PLAN_WARNINGS = (
         "no_e1rm", ("line",), ("exercise_id", "scheme"), ("rn:autoregulation.5",)
     ),
     acknowledgeable_warning(
+        "carried_e1rm",
+        ("line",),
+        ("pre_layoff_exposure", "pre_layoff_e1rm", "factor", "carried", "expires"),
+        ("rn:detraining-return.5",),
+    ),
+    acknowledgeable_warning(
         "increment_over_step", ("line",), ("increment", "scheme_step", "from_exposure")
     ),
     acknowledgeable_warning(
         "offgrid_anchor_ignored", ("line",), ("exposure", "logged_load", "anchor_used")
+    ),
+    acknowledgeable_warning(
+        "anchor_load_unusable", ("line",), ("exposure", "logged_load", "anchor_used")
     ),
     acknowledgeable_warning(
         "over_rep_cap", ("exposure",), ("reps", "cap"), ("rn:autoregulation.5",)
@@ -282,6 +295,12 @@ PLAN_WARNINGS = (
         ("rn:volume-frequency.1",),
     ),
     acknowledgeable_warning(
+        "lift_dose_under_target",
+        ("week",),
+        ("exercise_id", "target", "weekly_figures", "counted"),
+        ("rn:volume-frequency.1", "rn:minimum-effective-dose.4"),
+    ),
+    acknowledgeable_warning(
         "session_dose_high", ("session",), ("planned_sets", "ceiling"), ("rn:volume-frequency.3",)
     ),
     acknowledgeable_warning("override_persisting", ("line",), ("kind", "weeks", "plan_ids")),
@@ -325,6 +344,11 @@ ADOPT_WARNINGS = (
         ("version",),
         ("target_of", "target", "band", "phase"),
         ("rn:goal-programming §3",),
+    ),
+    adopt_warning(
+        "counted_variant_off_pattern",
+        ("version",),
+        ("lift", "variant", "patterns", "primary_muscles"),
     ),
     adopt_warning(
         "deload_off_emphasis",

@@ -9,6 +9,7 @@ from coach.core.config import (
     Engine,
     GridLocation,
     Hevy,
+    ImplementChoice,
     IncrementImplement,
     PlatePoolLocation,
     RackImplement,
@@ -39,7 +40,16 @@ def test_coach_toml_parses_back_to_the_config_it_was_written_from() -> None:
         athlete=ATHLETE,
         hevy=Hevy(),
         locations=(
-            PlatePoolLocation("home", kit="home", collars="clamp", dumbbells="single"),
+            PlatePoolLocation(
+                "home",
+                kit="home",
+                implements={"barbell": "barbell", "dumbbell": "dumbbell", "vest": "vest"},
+                implement={
+                    "barbell": ImplementChoice(hardware="none"),
+                    "dumbbell": ImplementChoice(hardware="screw-long", single=True),
+                    "vest": ImplementChoice(),
+                },
+            ),
             GridLocation(
                 "gym",
                 implements={"barbell": "bar", "dumbbell": "rack"},
@@ -73,6 +83,35 @@ def test_coach_toml_carries_a_commented_example_location_of_each_kind() -> None:
     kinds = {type(location) for location in config.locations}
     assert kinds == {PlatePoolLocation, GridLocation}
     assert all(location.implements for location in config.locations)
+    home = next(loc for loc in config.locations if isinstance(loc, PlatePoolLocation))
+    assert home.implement == {
+        "barbell": ImplementChoice(hardware="collar-clamp"),
+        "dumbbell": ImplementChoice(hardware="screw-standard"),
+    }
+
+
+def test_coach_toml_writes_a_plate_pool_location_as_implement_choice_tables() -> None:
+    home = PlatePoolLocation(
+        "home",
+        kit="home",
+        implements={"barbell": "barbell", "dumbbell": "dumbbell"},
+        implement={
+            "barbell": ImplementChoice(hardware="collar-clamp"),
+            "dumbbell": ImplementChoice(hardware="screw-standard", single=True),
+        },
+    )
+
+    document = tomllib.loads(coach_toml(Config(Engine("0.3.0"), ATHLETE, locations=(home,))))
+
+    assert document["location"]["home"] == {
+        "kind": "plate-pool",
+        "kit": "home",
+        "implements": {"barbell": "barbell", "dumbbell": "dumbbell"},
+        "implement": {
+            "barbell": {"hardware": "collar-clamp"},
+            "dumbbell": {"hardware": "screw-standard", "single": True},
+        },
+    }
 
 
 def test_the_generated_claude_md_is_under_forty_lines_and_names_the_engine_version() -> None:
@@ -89,6 +128,13 @@ def test_the_generated_claude_md_names_the_profile_and_the_drafts_once() -> None
 
     assert text.count("profile.md") == 1
     assert text.count(".coach/drafts/") == 1
+
+
+def test_the_generated_claude_md_names_the_options_that_lift_the_default_cuts() -> None:
+    text = claude_md("0.3.0")
+
+    assert "--last <n>" in text
+    assert "--full" in text
 
 
 def test_settings_allow_coach_and_ask_on_exactly_the_verbs_handed_in() -> None:

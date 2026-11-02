@@ -28,8 +28,7 @@ from coach.core.cut import (
     working_set_count,
 )
 from coach.core.days_off import line_days_off
-from coach.core.e1rm import e1rm as best_e1rm
-from coach.core.e1rm import model_load
+from coach.core.e1rm import E1rm, model_load
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
@@ -62,6 +61,7 @@ class LineContext:
     anchor_top: Load | None = None
     scheme_load: Load | None = None
     pin: Load | None = None
+    e1rm: E1rm | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +104,7 @@ class _Bounding:
     sets: tuple[SetGroup, ...]
     rpe_caps: list[tuple[Number, str]] = field(default_factory=list[tuple[Number, str]])
     load_ceilings: list[Load] = field(default_factory=list[Load])
+    unchecked_cap: Number | None = None
 
     def run(self) -> Bounded:
         self._cut()
@@ -119,6 +120,7 @@ class _Bounding:
         self._niggle_loads(constraints)
         cap = self._rpe_ceiling(constraints)
         self._rack()
+        self._unchecked()
         first = self.loads[0] if self.loads else None
         set_loads = self.loads if self.per_set else ()
         return Bounded(self.sets, first, cap, self._test(), set_loads=set_loads)
@@ -272,13 +274,9 @@ class _Bounding:
     def _limit_load(self, cap: Number) -> None:
         if not self.loads:
             return
-        found = best_e1rm(
-            self.context.request.exposures,
-            self.context.line.exercise,
-            self.context.request.planned.date,
-        )
+        found = self.context.e1rm
         if found is None or self.loads[0].mode == "assisted":
-            self._unchecked(cap)
+            self._clip_to_anchor(cap)
             return
         self.sets = reps_within_model(self.sets, cap)
         reps = self._limiting_reps()
@@ -296,10 +294,17 @@ class _Bounding:
         reps = [r for g in working if (r := fewest_reps(g.reps)) is not None]
         return max(reps, default=None)
 
-    def _unchecked(self, cap: Number) -> None:
+    def _clip_to_anchor(self, cap: Number) -> None:
         top = self.context.anchor_top
         if top is not None:
             self._limit("rpe_ceiling", top, "anchor")
+        self.unchecked_cap = cap
+
+    def _unchecked(self) -> None:
+        """Raised after the rack step, so the load it quotes is the one the line prescribes."""
+        cap = self.unchecked_cap
+        if cap is None:
+            return
         anchor = self.context.anchor
         clipped = self._amounts()
         self._raise(
@@ -380,7 +385,7 @@ class _Bounding:
             _, cause = min(other_caps, key=lambda c: c[0])
             self.steps.append(Step("test", None, None, cause))
             return None
-        found = best_e1rm(request.exposures, self.context.line.exercise, request.planned.date)
+        found = self.context.e1rm
         if found is None:
             return None
         single = model_load(found.load, 1, TEST_RPE).as_mode(self.context.mode)

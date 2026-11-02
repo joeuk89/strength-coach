@@ -39,15 +39,22 @@ One TOML file. Every key below is the schema; an unknown key anywhere is a viola
 ### Schedule
 
 One shape, no rule plugins. `rotation` is an ordered list of week names; each named table maps
-weekdays to session ids. A one-week rotation is the old `fixed_weekdays`; a coach-led session
-that anchors the week is just a coach-led session on its weekday in every rotation week.
+weekdays to a session id or a non-empty list of session ids. A one-week rotation is the old
+`fixed_weekdays`; a coach-led session that anchors the week is just a coach-led session on its
+weekday in every rotation week.
+
+Each entry is a slot, so a weekday may hold several sessions, of any kinds. List order is the
+order within the day: the plan plans them in that order and every listing of the week shows them
+in it. A one-element list and a bare id are the same schedule. A session scheduled beside another
+keeps all its own fields (scheme, `minutes`, routine); nothing merges, and there is no day-level
+time budget.
 
 ```toml
 [schedule]
 rotation = ["A", "B"]
 
 [schedule.A]
-mon = "lower-a"
+mon = ["lower-a", "cond-swings"]
 tue = "coach-led"
 thu = "push-a"
 sat = "pull-a"
@@ -274,9 +281,13 @@ verb (nothing leaves the store; `publish` commits the export as usual). It is on
 validate, fill, upsert declared exercises, record the version, open or continue the Block.
 
 - **Dry run** prints the diff against the previous version (sessions and lines added, removed,
-  changed; the defaults the emphasis filled, marked as such), every flag, and each start load in
-  athlete units with its Hevy kg. The `program` skill shows this to the athlete and runs the real
-  adopt on their yes.
+  changed; the defaults the emphasis filled, marked as such), every flag, each start load in
+  athlete units with its Hevy kg, and every session of the filled version, in version order,
+  with its time estimate beside its filled `minutes`. The estimate sums `count × (duration_s +
+  rest_s)` over each set group of the session's lines, with 40 s for a group that states no
+  `duration_s`, and rounds up to whole minutes; it is null for a session with no lines or with
+  no `minutes`, and it is the number `session_over_minutes` reports. The `program` skill shows
+  this to the athlete and runs the real adopt on their yes.
 - **Kind.** `amend` continues the open Block and the rotation position. `redesign` closes the
   open Block, opens one dated today and restarts the rotation at the first week unless
   `--position` names another; a redesign with an open Block warns `block_open_at_redesign`.
@@ -297,7 +308,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `unknown_exercise` | line | `exercise` is not in the library and not declared in the Draft |
 | `unknown_scheme` | line or session | the scheme name or a param is not in the registry |
 | `unknown_load_mode` | line | `load_mode` is not one of the glossary's |
-| `duplicate_id` | version | two sessions share an id, or one exercise appears twice in a session |
+| `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session, or one session appears twice on a weekday |
 | `schedule_session_missing` | version | the schedule names a session the version lacks |
 | `session_unscheduled` | session | a session in no rotation week with no `cadence` |
 | `cadence_on_scheduled` | session | a scheduled session states a cadence |

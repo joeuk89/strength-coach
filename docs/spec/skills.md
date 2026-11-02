@@ -71,7 +71,7 @@ it and answered with a recorded reason. Not every code gets an entry; the schema
 <what the athlete should come away knowing. Every figure is quoted from an envelope or the
 rendered draft, never retyped. Ends with the fixed line below>
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 <the verbs this skill uses, as a plain list in no order: for the contract test and so a new agent
@@ -193,7 +193,7 @@ when there is one. Quote every number from the card or the rendered record; neve
 Name each decision and its reason in plain words. Say what next week will feel like, not what
 it will contain; the plan does that.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach checkin open`, `coach checkin record`, `coach query`
@@ -241,8 +241,9 @@ One message; follow up only for a gap that blocks the design.
 - **Coverage.** Every pattern in the rotation. The hinge and a carry go in on purpose because
   they are dropped first; `muscle_no_hard_sets` sees a muscle, not a pattern.
 - **Order and time.** Priority lifts first (`priority_lift_not_first`), the heaviest work while
-  fresh, accessories last and the first cut when `session_over_minutes` fires. Superset small
-  lifts to buy time, never the compounds.
+  fresh, accessories last and the first cut when `session_over_minutes` fires. Read each
+  session's estimate against its `minutes` in the dry run; cut accessories first where it runs
+  close. Superset small lifts to buy time, never the compounds.
 - **Scheme, RPE and rest per line.** A top set and back-offs on a load-bearing priority lift,
   double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
   a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
@@ -269,7 +270,7 @@ that move it week to week. Say why each exercise is there and what would earn a 
 every load, set count and filled default from the adopt dry run; never retype one. For a
 revision, lead with what the report says changed and what this version does about it.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach progress`, `coach program show`, `coach program adopt`,
@@ -278,7 +279,7 @@ The athlete sees what will be recorded and says yes before any verb records it.
 
 ## Worked example: `kit`
 
-Under budget (about 2.2k characters). It owns every location write, so `onboard` names no skill
+Under budget (about 2.8k characters). It owns every location write, so `onboard` names no skill
 and `cutover.md` step 2 is one run of it. The athlete says what they have; the skill does the
 files and the command.
 
@@ -298,7 +299,8 @@ the location's `kit/<name>.json` as it stands.
 Where they train, and for each place: a plate pool they load themselves (bar, adjustable
 dumbbells, plates and collars), or fixed kit (a dumbbell rack, machines, a bar with a known
 step). For a plate pool: every plate with its count and weight, the locking hardware, each
-implement's bare weight and limit, which collars they use. For fixed kit: the step per
+implement's bare weight and limit, which hardware each implement uses (collars, screws or
+none) and whether a handle is loaded as a pair or single. For fixed kit: the step per
 implement, the bar's weight, the dumbbells on the rack. A new purchase: what it is, how many,
 what it weighs.
 
@@ -306,10 +308,17 @@ what it weighs.
 - **Kind.** A place where the athlete builds loads from plates is `plate-pool`; anything else
   is `grid`. One pair of adjustable dumbbells with a dial is `grid` with an increment and a
   maximum.
-- **Inventory.** Write `kit/<name>.json` in plate-pool's schema; mark a weight `verified` only
-  when the maker states it, `owner` when the athlete weighed it, else `unverified`. Then run
+- **Inventory.** Write `kit/<name>.json` in plate-pool's inventory format 1: `format: 1`,
+  `name`, `lengthUnit`, `bore` on each plate type, `stackLength` on each plate but a `block`
+  one, `kind` on each implement; no `positions` or `symmetric`. Mark a weight `verified` only when the maker states
+  it, `owner` when the athlete weighed it, else `unverified`. Then run
   `npx plate-pool achievable --inventory kit/<name>.json > kit/<name>.achievable.json`; a
   schema error is the athlete's answer to fix, never a value to guess.
+- **Location.** `[location.<name>]` is `kind = "plate-pool"`, `kit = "<name>"`, `implements`,
+  and one `[location.<name>.implement.<id>]` table per implement `implements` names. Give
+  `hardware` (an id from that implement's hardware options, or `none`) to every implement with
+  options, the dumbbell included; never leave it to a default. Add `single = true` only on a
+  handle loaded single.
 - **Map.** `implements` names one implement at the location for every equipment kind the
   athlete's exercises use, or the kind is unsupplied there and `equipment_unsupplied` says so
   at adopt.
@@ -381,7 +390,7 @@ week's shape and why it has it, limits, how they want to be coached, history. Th
 Phase as the draft states them. Say what changes each: the Goal when the aim changes, the
 profile when they say so, the Phase at a check-in or a block boundary.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach query`, `coach goal adopt`

@@ -1,4 +1,5 @@
 import shutil
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ from support.program_drafts import a_draft, a_session, toml
 from support.programs import GYM, HOME
 
 from coach.cli import app
+from coach.cli.registry import declarations
 from coach.core.goal import Goal
 from coach.store import goals
 from coach.store.catalogue import seed_catalogue
@@ -85,6 +87,38 @@ def test_plan_draft_writes_the_draft_and_returns_its_summary(instance: Path) -> 
     text = (instance / result["path"]).read_text()
     assert 'text = "Knee felt tight on the stairs."' in text
     assert 'change = "first prescription"' in text
+
+
+def test_each_flag_key_in_the_summary_carries_the_params_hash_its_draft_table_carries(
+    instance: Path,
+) -> None:
+    result = coach("plan", "draft", "--week", "2026-11-02").envelope["result"]
+
+    [row] = result["flags"]
+    [table] = tomllib.loads((instance / result["path"]).read_text())["flag"]
+    assert row == {
+        "code": "rotation_unconfirmed",
+        "severity": "violation",
+        "count": 1,
+        "keys": [
+            {
+                "key": "rotation_unconfirmed@week:2026-11-02",
+                "params_hash": (
+                    "sha256:15a498510e347e58c8eeb3465628f15434d46e9ce0be0adeb0f5fc56f30ddc46"
+                ),
+            }
+        ],
+    }
+    assert table["params_hash"] == row["keys"][0]["params_hash"]
+
+
+def test_the_declared_flag_keys_require_the_key_and_params_hash() -> None:
+    declared = next(d for d in declarations() if d.name == "plan draft")
+    properties: Any = declared.output["properties"]
+    row = properties["flags"]["items"]
+
+    assert set(row["required"]) == {"code", "severity", "count", "keys"}
+    assert {"key", "params_hash"} <= set(row["properties"]["keys"]["items"]["required"])
 
 
 def test_plan_draft_twice_on_an_unchanged_store_returns_the_same_path_and_hash(

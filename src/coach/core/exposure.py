@@ -16,12 +16,14 @@ REPAIRABLE = ("reps", "rpe", "weight_kg", "set_type")
 
 @dataclass(frozen=True)
 class Matched:
-    """The planned session a workout fulfilled. Whether its week was a light week, and which
-    lines took the return band in it, come from Match; until Match reads plans they stay unset."""
+    """The planned session a workout fulfilled (docs/spec/week.md, "Match"): its id and kind,
+    whether its week was a light week, and the lines that took the return band in it. `kind` is
+    `None` when no program version names the session."""
 
     session_id: str
     light_week: bool = False
     return_band_lines: frozenset[str] = frozenset()
+    kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,12 @@ class Exposure:
         return None if self.match is None else self.match.session_id
 
     @property
+    def conditioning(self) -> bool:
+        """Matched to a conditioning session: its sets anchor that session's lines and nothing
+        else (ADR 0010)."""
+        return self.match is not None and self.match.kind == "conditioning"
+
+    @property
     def top_load(self) -> Load | None:
         """The heaviest working load; under assistance, the least assistance."""
         loads = [s.load for s in self.working if s.load is not None]
@@ -63,6 +71,11 @@ class Exposure:
         if loads[0].mode == "assisted":
             return min(loads, key=lambda load: load.amount)
         return max(loads, key=lambda load: load.amount)
+
+
+def lifting_reads(exposures: Iterable[Exposure]) -> tuple[Exposure, ...]:
+    """What a lifting or rehab line reads: every Exposure but the conditioning-matched."""
+    return tuple(e for e in exposures if not e.conditioning)
 
 
 @dataclass(frozen=True)

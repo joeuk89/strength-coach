@@ -93,6 +93,7 @@ class _Checks:
                 f"location {form.location!r} has no [location.{form.location}] in coach.toml",
             )
         self._duplicate_ids()
+        self._counted_variants()
         for week, day, session_id in form.schedule.slots():
             if form.session(session_id) is None:
                 self.raise_(
@@ -113,6 +114,14 @@ class _Checks:
             )
 
     def _duplicate_ids(self) -> None:
+        slots: set[tuple[str, str, str]] = set()
+        for week, day, session_id in self.form.schedule.slots():
+            if (week, day, session_id) in slots:
+                self._duplicate(
+                    session_id, None, f"schedule.{week}.{day} names {session_id!r} twice"
+                )
+                return
+            slots.add((week, day, session_id))
         seen: set[str] = set()
         for session in self.form.sessions:
             if session.id in seen:
@@ -126,13 +135,44 @@ class _Checks:
                     return
                 exercises.add(line.exercise)
 
-    def _duplicate(self, session_id: str, exercise_id: str | None) -> None:
+    def _counted_variants(self) -> None:
+        dose = self.form.dose
+        if dose is None:
+            return
+        goal = self.context.goal
+        priority = {*dose.lift, *(goal.priority_lifts if goal else ())}
+        under: dict[str, list[str]] = {}
+        for lift, target in dose.lift.items():
+            for variant in target.counts:
+                under.setdefault(variant, []).append(lift)
+                if self._exercise(variant) is None:
+                    self.raise_(
+                        "counted_variant_unknown",
+                        self.version_scope,
+                        {"lift": lift, "exercise_id": variant},
+                        f"{lift} counts {variant!r}, which is not in the library and not "
+                        "declared in the Draft",
+                    )
+        for variant, lifts in under.items():
+            if len(lifts) > 1 or variant in priority:
+                self.raise_(
+                    "counted_variant_not_exclusive",
+                    self.version_scope,
+                    {"exercise_id": variant, "lifts": lifts},
+                    f"{variant} is counted under {', '.join(lifts)}; a counted variant counts "
+                    "toward one lift and is never itself a priority lift",
+                )
+                return
+
+    def _duplicate(
+        self, session_id: str, exercise_id: str | None, message: str | None = None
+    ) -> None:
         what = f"exercise {exercise_id!r} twice in" if exercise_id else "two sessions with id"
         self.raise_(
             "duplicate_id",
             self.version_scope,
             {"session_id": session_id, "exercise_id": exercise_id},
-            f"{what} {session_id!r}",
+            message or f"{what} {session_id!r}",
         )
 
     def session(self, session: Session) -> None:

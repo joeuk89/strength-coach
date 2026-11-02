@@ -5,6 +5,7 @@ from coach.core import check_in_card as card
 from coach.core.check_in_card import Ask
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import PlannedWork, session_outcome
+from coach.core.closed_week.week import ClosedWeek
 from coach.core.exposure import Exposure, ExposureSet
 from coach.core.load import Load
 from coach.core.prescription import PlannedSession
@@ -84,3 +85,26 @@ def test_maintenance_asks_whether_the_kept_lifts_held() -> None:
 
     assert found is not None
     assert found.asks == (Ask("kept_lifts_held"),)
+
+
+def a_dosed_week(weeks_ago: int, pull_up: int) -> ClosedWeek:
+    return ClosedWeek(
+        MONDAY - datetime.timedelta(weeks=weeks_ago),
+        "hard",
+        dose={"lats": 12.5},
+        dose_target=10,
+        lift_dose={"pull_up": pull_up},
+        lift_dose_target={"pull_up": 8},
+    )
+
+
+def test_the_dose_field_gives_each_lift_its_figure_target_and_trailing_mean() -> None:
+    weeks = [a_dosed_week(3, 6), a_dosed_week(2, 8), a_dosed_week(1, 9), a_dosed_week(0, 11)]
+
+    found = card.dose(weeks[-1:], weeks)
+
+    assert found is not None
+    assert found.facts["lifts"] == [
+        {"lift": "pull_up", "delivered": 11, "target": 8, "mean": 8.5},
+    ]
+    assert found.facts["muscles"] == [{"muscle": "lats", "delivered": 12.5, "mean": 12.5}]

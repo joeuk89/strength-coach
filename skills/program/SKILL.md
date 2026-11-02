@@ -27,8 +27,9 @@ One message; follow up only for a gap that blocks the design.
 - **Coverage.** Every pattern in the rotation. The hinge and a carry go in on purpose because
   they are dropped first; `muscle_no_hard_sets` sees a muscle, not a pattern.
 - **Order and time.** Priority lifts first (`priority_lift_not_first`), the heaviest work while
-  fresh, accessories last and the first cut when `session_over_minutes` fires. Superset small
-  lifts to buy time, never the compounds.
+  fresh, accessories last and the first cut when `session_over_minutes` fires. Read each
+  session's estimate against its `minutes` in the dry run; cut accessories first where it runs
+  close. Superset small lifts to buy time, never the compounds.
 - **Scheme, RPE and rest per line.** A top set and back-offs on a load-bearing priority lift,
   double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
   a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
@@ -55,7 +56,7 @@ that move it week to week. Say why each exercise is there and what would earn a 
 every load, set count and filled default from the adopt dry run; never retype one. For a
 revision, lead with what the report says changed and what this version does about it.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach progress`, `coach program show`, `coach program adopt`,

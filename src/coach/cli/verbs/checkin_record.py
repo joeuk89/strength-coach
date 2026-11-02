@@ -1,5 +1,14 @@
-from coach.cli.declaration import Argument, Declaration, Example, InInstance, InstanceCall, Outcome
-from coach.cli.drafts import read_draft
+from coach.cli.declaration import (
+    Argument,
+    Declaration,
+    Example,
+    InInstance,
+    InstanceCall,
+    Json,
+    Outcome,
+    on_dry_run,
+)
+from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
 from coach.services.checkin_record import checkin_record
 
@@ -8,22 +17,23 @@ def run(call: InstanceCall) -> Outcome:
     path = str(call.args["draft"])
     data = read_draft(path)
     with open_instance_store(call.instance) as conn:
-        result = checkin_record(conn, data, file=path, clock=call.clock)
-    return Outcome(
-        {
-            "check_in": result.check_in,
-            "draft_hash": result.draft_hash,
-            "tier": result.tier,
-            "window": {
-                "start": result.window_start.isoformat(),
-                "end": result.window_end.isoformat(),
-            },
-            "ids": result.ids,
-            "withdrawn": result.withdrawn,
-            "superseded": result.superseded,
-            "phase": {"opened": result.phase_opened, "closed": result.phase_closed},
-        }
-    )
+        result = checkin_record(
+            conn, data, file=path, clock=call.clock, dry_run=on_dry_run(call.args)
+        )
+    summary: Json = {
+        "check_in": result.check_in,
+        "draft_hash": result.draft_hash,
+        "tier": result.tier,
+        "window": {
+            "start": result.window_start.isoformat(),
+            "end": result.window_end.isoformat(),
+        },
+        "ids": result.ids,
+        "withdrawn": result.withdrawn,
+        "superseded": result.superseded,
+        "phase": {"opened": result.phase_opened, "closed": result.phase_closed},
+    }
+    return Outcome(marked(summary, dry_run=result.dry_run, no_op=result.no_op))
 
 
 DECLARATION = Declaration(
@@ -36,7 +46,7 @@ DECLARATION = Declaration(
         "writes nothing; a changed file for the same date supersedes the row."
     ),
     writes="store",
-    arguments=(Argument("draft", "path of the TOML check-in file", required=True),),
+    arguments=(Argument("draft", "path of the TOML check-in file", required=True), DRY_RUN),
     output={
         "type": "object",
         "properties": {
@@ -69,6 +79,7 @@ DECLARATION = Declaration(
                 },
                 "required": ["opened", "closed"],
             },
+            **DRY_RUN_OUTPUT,
         },
         "required": [
             "check_in",
@@ -86,6 +97,10 @@ DECLARATION = Declaration(
         Example(
             ("checkin", "record", ".coach/drafts/2026-11-01-checkin.toml"),
             "Record a check-in file.",
+        ),
+        Example(
+            ("checkin", "record", ".coach/drafts/2026-11-01-checkin.toml", "--dry-run"),
+            "The check-in row and ids recording a check-in file would assign.",
         ),
     ),
 )

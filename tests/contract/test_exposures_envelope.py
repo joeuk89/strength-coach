@@ -6,11 +6,12 @@ from support.clock import FixedClock
 from support.history import an_instance_with_eight_weeks
 
 from coach.cli import app
+from coach.cli.envelope import BUDGET_BYTES
 
 ENGINE = "0.3.0"
 
 
-def test_query_exposures_last_five_is_under_3_kb(
+def test_query_exposures_last_five_is_under_the_budget(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
@@ -22,4 +23,4 @@ def test_query_exposures_last_five_is_under_3_kb(
 
     assert run.code == 0
     assert run.envelope["result"]["truncated"] is True
-    assert len(run.stdout.encode("utf-8")) < 3 * 1024
+    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES

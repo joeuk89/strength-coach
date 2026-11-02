@@ -104,10 +104,25 @@ contract test holds that no verb declaration accepts a violation key as an ackno
 
 ## Leaving a warning
 
-A warning is left by an **Acknowledgement**: `{key, params_hash, because, text, evidence}`. The
-`because` categories are the override's (pain, kit, stall, fatigue, schedule, athlete request,
-coach judgement); the text is the coach's voice, unpoliced; evidence refs are optional (niggle,
-exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no `because`.
+A warning is left by an **Acknowledgement**, a record of `{key, params_hash, because, text,
+evidence}`. The `because` categories are the override's (pain, kit, stall, fatigue, schedule,
+athlete request, coach judgement); the text is the coach's voice, unpoliced; evidence refs are
+optional (niggle, exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no
+`because`.
+
+In the plan Draft the agent writes an `[[acknowledge]]` table, which names the key as `flag`, as
+`program.md` and `overrides.md` show. It copies the two values from the warning's own `[[flag]]`
+table, whose `key` becomes `flag` and whose `params_hash` is copied as is. The engine writes each
+`[[flag]]` table at the top of the Draft, or under the `[[session.line]]` the flag is about:
+
+```toml
+[[acknowledge]]
+flag = "offgrid_anchor_ignored@line:2026-11-02/lower/bb_back_squat"
+params_hash = "sha256:…"
+because = "kit"
+text = "The 121 was a mislabelled plate."
+evidence = ["niggle:n-0001"]  # optional
+```
 
 - **Home.** The agent writes acknowledgements in the plan Draft next to the overrides. They freeze
   onto the WeekPlan at approval and show at the approval prompt as "left warnings" with their
@@ -226,6 +241,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on | `null` |
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry | `null` |
+| `counted_variant_unknown` | version | lift, exercise id | an `[exercise.<id>]` declaration in the Draft, a library id, or removing it from the lift's `counts` (`program.md`, "Dose and deload") | `null` |
+| `counted_variant_not_exclusive` | version | exercise id, the lifts counting it | the exercise in one lift's `counts` only, and no priority lift in any | `null` |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) | `null` |
 | `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) | `null` |
 | `reading_duplicate` | instance | reading kind, date or night, source, the live row's id | withdrawing one of the two rows in the Draft (`schema.md`, `check-in.md` "Correcting") | `null` |
@@ -238,14 +255,16 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | --- | --- | --- | --- |
 | `top_set_above_e1rm` | line | e1RM, model, load, RPE target | rn:autoregulation.6 |
 | `no_e1rm` | line | exercise id, scheme | rn:autoregulation.5 |
+| `carried_e1rm` | line | pre-layoff exposure ref, pre-layoff e1RM, band factor, carried value, expiry date (`prescription.md`, **The carried e1RM**) | rn:detraining-return.5 |
 | `increment_over_step` | line | increment, scheme step, from exposure | `null` |
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
+| `anchor_load_unusable` | line | skipped exposure ref, logged load, anchor used (`start_load` or the older exposure's ref) | `null` |
 | `over_rep_cap` | exposure | reps, cap | rn:autoregulation.5 |
 | `short_sleep_week` | week | short nights, threshold, window | rn:sleep-dieting.1 |
 | `stall_streak` | line | streak length, exposure refs (all on or after the latest redesign's adoption date; `prescription.md`, **Stalls**) | rn:progression-methods §4 |
 | `rep_range_missed` | line | set index, reps, range, logged RPE, authored RPE | `null` |
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
-| `rpe_ceiling_unchecked` | line | cap, clipped load, anchor exposure ref | rn:autoregulation.6 |
+| `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref | rn:autoregulation.6 |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
 | `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
 | `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) | rn:volume-frequency.1 |
@@ -265,6 +284,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `priority_lift_absent` | version | exercise id | `null` |
 | `priority_lift_not_first` | session | exercise id, position among the lines carrying a working group | rn:goal-programming §7 |
 | `dose_off_band` | version | muscle or lift, target, band, phase | rn:goal-programming §3 |
+| `counted_variant_off_pattern` | version | lift, counted variant, the two patterns, the two primary muscle lists | `null` |
 | `deload_off_emphasis` | version | deload policy, expected shape | rn:goal-programming §6 |
 | `muscle_no_hard_sets` | version | muscle, sessions searched | rn:volume-frequency.1 |
 | `session_over_minutes` | session | estimate, `minutes` | `null` |

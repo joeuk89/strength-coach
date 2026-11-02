@@ -61,12 +61,12 @@ _Avoid_: status (as a field here; the five status columns are `schema.md`'s), pa
 
 **Slot**:
 A place in a program version's schedule that names which session fills it: a rotation week
-and weekday, or none, plus a cadence.
+and weekday, or none, plus a cadence. A weekday may hold several slots, in order.
 _Avoid_: day, position
 
 **Rotation week**:
-One named week of a program version's schedule, mapping weekdays to sessions. The schedule is
-an ordered list of them; a one-week rotation is a fixed week.
+One named week of a program version's schedule, mapping each weekday to one or more sessions in
+order. The schedule is an ordered list of them; a one-week rotation is a fixed week.
 _Avoid_: week letter, cycle week, schedule rule
 
 **Cadence**:
@@ -334,6 +334,7 @@ _Avoid_: performance, session log
 **Match**:
 The link from a workout to the planned session it fulfilled, or none. Derived from the session's
 date window with the routine as a tiebreaker, corrected by a match annotation, never stored.
+Every Exposure of the workout carries it.
 _Avoid_: mapping, reconciliation
 
 **Miss**:
@@ -363,6 +364,12 @@ _Avoid_: status day, availability, wellness day
 Estimated one-rep max from the best qualifying set in the 42 days before a date, exercise-wide.
 Recomputed from exposures, never stored.
 _Avoid_: training max (a Decision), strength estimate
+
+**Carried e1RM**:
+After a return week, the e1RM from the 42 days ending on the lift's last pre-layoff exposure,
+times the return band's load factor. A `top_backoff` line reads it while it is above the live
+e1RM, for up to 42 days after the return exposure. Derived from exposures, never stored.
+_Avoid_: stored e1RM, decayed e1RM, layoff e1RM
 
 **Qualifying set**:
 A working set e1RM may be read from: 12 or fewer reps to failure, counted as reps plus 10 minus
@@ -529,6 +536,17 @@ The athlete's plates, locking hardware and implements at one plate-pool location
 plate-pool's schema and owned by the instance. The engine never reads it; plate-pool does.
 _Avoid_: kit file, equipment list
 
+**Set-up link**:
+The one link on a plate-pool location's routine pages that carries its inventory inline, in the
+URL fragment, and installs it as the kit stored in plate-pool on the athlete's device.
+_Avoid_: kit link, import link
+
+**Per-line link**:
+The link on a loaded line of a routine page that opens plate-pool at the line's load on its
+implement, with the location's hardware choice and the short hash of the inventory the load was
+rounded to.
+_Avoid_: deep link (fine in prose), load link
+
 **Equipment kind**:
 What an exercise is done with: barbell, dumbbell, kettlebell, leg attachment, vest, machine,
 cable, band or bodyweight. A location maps each kind it supplies to one of its implements in its
@@ -653,8 +671,9 @@ a permission prompt attaches to; each has a dry run. Four in v1.
 _Avoid_: gated command, mutation, asked verb (the same four, seen from the prompt)
 
 **Dry run**:
-A writing verb run without writing, returning what it would send and whether a guard would refuse
-it. What the permission prompt shows.
+A verb run without writing, returning exactly what the real run would return and whether a guard
+would refuse it. On a Writing verb it is what the permission prompt shows; on a Draft verb it is
+what the athlete approves.
 _Avoid_: preview, simulate, plan (which is a noun here)
 
 **Service**:

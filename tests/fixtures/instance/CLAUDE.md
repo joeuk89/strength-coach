@@ -5,6 +5,8 @@ data only; the engine, its skills and its hooks come from the installed package 
 
 - `coach status` opens a session: where things stand and what needs attention.
 - `coach --help` lists the verbs; `coach schema <verb>` gives one verb's arguments and output.
+- A list stops at 10 rows and a result at the size budget, and each says when it was cut:
+  `--last <n>` keeps n rows, `--full` keeps everything.
 - The athlete's own account of themselves is the profile, `profile.md`.
 - A verb that takes a document reads a Draft the agent writes first, at
   `.coach/drafts/<date>-<kind>.toml`.

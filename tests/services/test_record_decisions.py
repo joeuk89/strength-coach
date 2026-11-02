@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -343,7 +344,7 @@ def test_re_running_a_decision_draft_returns_the_same_ids() -> None:
     conn = a_store_with_bench()
     first = run(conn, training_max(100))
 
-    assert run(conn, training_max(100)) == first
+    assert run(conn, training_max(100)) == replace(first, no_op=True)
     assert in_force(conn) == ["d-0001"]
 
 

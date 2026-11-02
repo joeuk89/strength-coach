@@ -1,67 +1,88 @@
 {
   "$schema": "./inventory.schema.json",
+  "format": 1,
+  "name": "Synthetic home",
+  "lengthUnit": "in",
   "plateTypes": [
     {
       "id": "plate",
       "name": "Synthetic plate",
-      "unit": "lb"
+      "unit": "lb",
+      "bore": "standard"
     },
     {
       "id": "vest-block",
       "name": "Synthetic vest block",
-      "unit": "kg"
+      "unit": "kg",
+      "bore": "block"
     }
   ],
   "plates": [
     {
       "id": "p-25",
-      "name": "25 lb",
       "type": "plate",
       "count": 4,
       "weight": {
         "listed": 25,
         "status": "verified"
-      }
+      },
+      "stackLength": {
+        "listed": 1.0,
+        "status": "verified"
+      },
+      "shape": "round"
     },
     {
       "id": "p-10",
-      "name": "10 lb",
       "type": "plate",
       "count": 4,
       "weight": {
         "listed": 10,
         "status": "verified"
-      }
+      },
+      "stackLength": {
+        "listed": 0.75,
+        "status": "verified"
+      },
+      "shape": "round"
     },
     {
       "id": "p-5",
-      "name": "5 lb",
       "type": "plate",
       "count": 4,
       "weight": {
         "listed": 5,
         "status": "verified"
-      }
+      },
+      "stackLength": {
+        "listed": 0.5,
+        "status": "verified"
+      },
+      "shape": "round"
     },
     {
       "id": "p-2.5",
-      "name": "2.5 lb",
       "type": "plate",
       "count": 4,
       "weight": {
         "listed": 2.5,
         "status": "verified"
-      }
+      },
+      "stackLength": {
+        "listed": 0.25,
+        "status": "verified"
+      },
+      "shape": "round"
     },
     {
       "id": "vest-1",
-      "name": "1 kg",
       "type": "vest-block",
       "count": 6,
       "weight": {
         "listed": 1,
         "status": "verified"
-      }
+      },
+      "shape": "block"
     }
   ],
   "hardware": [
@@ -96,76 +117,132 @@
       "weight": {
         "listed": 2.5,
         "status": "verified"
-      }
+      },
+      "capacity": 3.25
+    },
+    {
+      "id": "screw-long",
+      "name": "Long locking screw",
+      "kind": "screw",
+      "count": 4,
+      "unit": "lb",
+      "weight": {
+        "listed": 2.5,
+        "status": "verified"
+      },
+      "capacity": 5.125
     }
   ],
   "implements": [
     {
       "id": "barbell",
       "name": "Bar",
+      "kind": "bar",
       "count": 1,
       "unit": "lb",
       "base": {
         "listed": 20,
         "status": "verified"
       },
-      "positions": [
-        "left",
-        "right"
-      ]
+      "accepts": [
+        "plate"
+      ],
+      "hardware": {
+        "options": [
+          "collar-clamp",
+          "collar-spinlock",
+          "none"
+        ],
+        "perPosition": 1
+      },
+      "positionLength": {
+        "listed": 11.5,
+        "status": "verified"
+      }
     },
     {
       "id": "dumbbell",
       "name": "Dumbbell handle",
+      "kind": "handle",
       "count": 2,
       "unit": "lb",
       "base": {
         "listed": 5,
         "status": "verified"
       },
-      "positions": [
-        "end-a",
-        "end-b"
-      ]
+      "accepts": [
+        "plate"
+      ],
+      "hardware": {
+        "options": [
+          "screw-standard",
+          "screw-long",
+          "none"
+        ],
+        "perPosition": 1
+      },
+      "positionLength": {
+        "listed": 5.5,
+        "status": "verified"
+      },
+      "unevenAllowance": 2.5
     },
     {
       "id": "kettlebell",
       "name": "Kettlebell handle",
+      "kind": "stack",
       "count": 1,
       "unit": "lb",
       "base": {
         "listed": 10,
         "status": "verified"
       },
-      "positions": [
-        "stack"
-      ]
+      "accepts": [
+        "plate"
+      ],
+      "hardware": {
+        "options": [
+          "screw-standard",
+          "screw-long",
+          "none"
+        ],
+        "perPosition": 1
+      },
+      "positionLength": {
+        "listed": 5.5,
+        "status": "verified"
+      }
     },
     {
       "id": "leg",
       "name": "Leg attachment",
+      "kind": "stack",
       "count": 1,
       "unit": "lb",
       "base": {
         "listed": 0,
         "status": "verified"
       },
-      "positions": [
-        "stack"
-      ]
+      "accepts": [
+        "plate"
+      ],
+      "positionLength": {
+        "listed": 8,
+        "status": "verified"
+      }
     },
     {
       "id": "vest",
       "name": "Vest",
+      "kind": "vest",
       "count": 1,
       "unit": "kg",
       "base": {
         "listed": 0,
         "status": "verified"
       },
-      "positions": [
-        "front",
-        "back"
+      "accepts": [
+        "vest-block"
       ]
     }
   ]

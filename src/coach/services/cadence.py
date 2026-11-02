@@ -42,7 +42,7 @@ def cadence_signals(
         return ()
     forms = [_form_at(conn, span) for span in (before, last)]
     adherence = _adherence(closed, before, last)
-    exposures = read_history(conn, units).exposures
+    exposures = read_history(conn, units).lifting
     left = leave_warning_decisions(conn, on)
     found: list[Flag] = []
     for session_id, line in _lines(version.form):

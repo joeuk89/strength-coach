@@ -204,3 +204,27 @@ def test_a_return_line_after_43_days_off_derives_the_same_load_twice_from_one_st
     assert first.steps[0].cause == "return 43+, 49 days off"
     assert first.groups[-1].load is not None and first.groups[-1].load.amount == 100
     assert (second.groups, second.steps) == (first.groups, first.steps)
+
+
+HELD_SQUAT = ((120, 8, 8), (120, 8, 8), (120, 7, 8), (120, 6, 8))
+
+
+def stall_codes(conn: Connection) -> list[str]:
+    [session] = drafted(conn).draft.sessions
+    return [flag.code for flag in session.lines[0].flags if flag.code == "stall_streak"]
+
+
+def test_held_squats_before_the_redesign_adoption_raise_no_stall() -> None:
+    conn = a_squat_program()
+    for id_, on in (("h-1", "2026-10-12"), ("h-2", "2026-10-19"), ("h-3", "2026-10-26")):
+        squat_logged(conn, id_, on, *HELD_SQUAT)
+
+    assert stall_codes(conn) == []
+
+
+def test_held_squats_from_the_redesign_adoption_on_raise_stall_streak() -> None:
+    conn = a_squat_program()
+    for id_, on in (("h-1", "2026-10-30"), ("h-2", "2026-10-31"), ("h-3", "2026-11-01")):
+        squat_logged(conn, id_, on, *HELD_SQUAT)
+
+    assert stall_codes(conn) == ["stall_streak"]

@@ -5,6 +5,7 @@ from support.exposures import an_exposure
 from coach.core.closed_week.dose import (
     delivered_dose,
     dose_under_target,
+    lift_dose_under_target,
     minimum_week_floor,
     session_dose_high,
     trailing_mean,
@@ -94,3 +95,77 @@ def test_a_minimum_week_keeps_two_hard_sets_of_each_priority_lift() -> None:
         "kept_sessions": ["push"],
     }
     assert minimum_week_floor([two_sets], ("push",), ("bb_bench_press",), MONDAY) is None
+
+
+PULL_UP_COUNTS = {"pull_up": ("negative_pull_up", "band_pull_up")}
+
+
+def a_pull_up_week(weeks_ago: int, figure: int, kind: WeekKind = "hard") -> ClosedWeek:
+    monday = MONDAY - datetime.timedelta(weeks=weeks_ago + 1)
+    return ClosedWeek(monday, kind, lift_dose={"pull_up": figure}, lift_dose_target={"pull_up": 8})
+
+
+def test_a_lift_at_its_target_with_its_variants_every_week_raises_nothing() -> None:
+    weeks = [a_pull_up_week(n, 11) for n in (3, 2, 1, 0)]
+
+    assert lift_dose_under_target(weeks, MONDAY, PULL_UP_COUNTS) is None
+
+
+def test_a_lift_under_its_target_in_three_of_four_ordinary_weeks_warns_with_its_variants() -> None:
+    weeks = [a_pull_up_week(4, 1), a_pull_up_week(3, 11), a_pull_up_week(2, 2, "light")]
+    weeks += [a_pull_up_week(1, 7), a_pull_up_week(0, 5)]
+
+    flag = lift_dose_under_target(weeks, MONDAY, PULL_UP_COUNTS)
+
+    assert flag is not None and flag.key == "lift_dose_under_target@week:2026-12-07"
+    assert flag.params == {
+        "exercise_id": "pull_up",
+        "target": 8,
+        "weekly_figures": [1, 11, 7, 5],
+        "counted": ["negative_pull_up", "band_pull_up"],
+    }
+
+
+def test_weeks_before_the_lift_had_a_target_never_count_against_it() -> None:
+    untargeted = ClosedWeek(MONDAY - datetime.timedelta(weeks=4), "hard")
+    weeks = [untargeted, a_pull_up_week(2, 1), a_pull_up_week(1, 1)]
+
+    assert lift_dose_under_target(weeks, MONDAY, PULL_UP_COUNTS) is None
+
+
+def test_a_lift_the_version_in_force_no_longer_targets_raises_nothing() -> None:
+    weeks = [
+        ClosedWeek(
+            MONDAY - datetime.timedelta(weeks=n + 1),
+            "hard",
+            lift_dose={"bb_back_squat": 0},
+            lift_dose_target={"bb_back_squat": 8},
+        )
+        for n in (3, 2, 1, 0)
+    ]
+
+    assert lift_dose_under_target(weeks, MONDAY, PULL_UP_COUNTS) is None
+
+
+def pull_session(*lines: tuple[str, int]) -> SessionPrescription:
+    planned = PlannedSession("pull", MONDAY, "home", "lifting", ())
+    return SessionPrescription(
+        planned,
+        tuple(
+            LinePrescription(
+                exercise, "linear", (PrescribedGroup("working", sets, rpe=8),), None, (), (), ""
+            )
+            for exercise, sets in lines
+        ),
+    )
+
+
+def test_a_counted_variants_planned_hard_sets_keep_the_lifts_minimum_week_floor() -> None:
+    bands = pull_session(("band_pull_up", 2))
+    one_band = pull_session(("band_pull_up", 1))
+
+    kept = minimum_week_floor([bands], ("pull",), ("pull_up",), MONDAY, PULL_UP_COUNTS)
+    short = minimum_week_floor([one_band], ("pull",), ("pull_up",), MONDAY, PULL_UP_COUNTS)
+
+    assert kept is None
+    assert short is not None and short.params["priority_lift"] == "pull_up"

@@ -7,6 +7,7 @@ from coach.core.closed_week.close import WeekFacts, close_week
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import PlannedWork, TargetSet
 from coach.core.prescription import PlannedSession
+from coach.core.program.form import LiftDose
 
 MONDAY = datetime.date(2026, 11, 2)
 SETS = (TargetSet(6, 8),) * 3
@@ -122,3 +123,50 @@ def test_trained_unlogged_and_cancelled_annotations_count_by_their_planned_sessi
     first, second = close_week(facts).sessions
 
     assert (first.trained, second.in_adherence) == (True, False)
+
+
+PULL_UP_DOSE = {"pull_up": LiftDose(8, ("negative_pull_up", "band_pull_up"))}
+
+
+def pulls(id_: str, n: int, *counts: tuple[str, int, float | None]) -> WeekWorkout:
+    on = MONDAY + datetime.timedelta(days=n)
+    exposures = tuple(
+        an_exposure(on.isoformat(), *[(None, 5, rpe)] * sets, workout_id=id_, exercise_id=ex)
+        for ex, sets, rpe in counts
+    )
+    return WeekWorkout(id_, on, exposures)
+
+
+def test_a_lifts_weekly_figure_adds_the_hard_sets_of_its_counted_variants() -> None:
+    workout = pulls(
+        "h-1", 2, ("pull_up", 1, 9), ("negative_pull_up", 3, 8), ("band_pull_up", 7, None)
+    )
+
+    week = close_week(WeekFacts(MONDAY, (), (workout,), lift_dose=PULL_UP_DOSE))
+
+    assert week.lift_dose == {"pull_up": 11}
+    assert week.lift_dose_target == {"pull_up": 8}
+
+
+def test_an_easy_set_or_a_rehab_negative_at_rpe_5_adds_nothing_to_the_lift() -> None:
+    lifting = pulls("h-1", 2, ("pull_up", 2, 8), ("negative_pull_up", 1, 4))
+    rehab = pulls("h-2", 0, ("negative_pull_up", 2, 5), ("band_pull_up", 1, 6))
+    facts = WeekFacts(
+        MONDAY, (planned("elbow", 0, "rehab"),), (lifting, rehab), lift_dose=PULL_UP_DOSE
+    )
+
+    assert close_week(facts).lift_dose == {"pull_up": 3}
+
+
+def test_a_lift_with_no_hard_sets_reads_0_and_a_coach_led_estimate_adds_nothing() -> None:
+    pt = WeekWorkout("w-1", MONDAY + datetime.timedelta(days=1))
+    facts = WeekFacts(
+        MONDAY,
+        (planned("pt", 1, "coach_led"),),
+        (pt,),
+        claims={"w-1": (MONDAY + datetime.timedelta(days=1), "pt")},
+        estimated={"pt": {"lats": 4}},
+        lift_dose=PULL_UP_DOSE,
+    )
+
+    assert close_week(facts).lift_dose == {"pull_up": 0}

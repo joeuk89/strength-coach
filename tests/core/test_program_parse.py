@@ -2,8 +2,8 @@ import pytest
 from support.program_drafts import WORKED_DRAFT, a_draft, a_line, a_session, toml
 
 from coach.core.errors import Invalid
-from coach.core.program.form import SchemeRef, SetGroup
-from coach.core.program.parse import parse_program_draft
+from coach.core.program.form import Dose, LiftDose, SchemeRef, SetGroup
+from coach.core.program.parse import parse_form, parse_program_draft
 
 
 def test_the_worked_draft_parses_into_its_sessions_lines_and_schedule() -> None:
@@ -14,7 +14,7 @@ def test_the_worked_draft_parses_into_its_sessions_lines_and_schedule() -> None:
     assert draft.hash.startswith("sha256:")
     assert (form.kind, form.emphasis, form.location) == ("redesign", "hypertrophy", "home")
     assert form.schedule.rotation == ("A", "B")
-    assert form.schedule.weeks["B"]["sat"] == "b-sat-push"
+    assert form.schedule.weeks["B"]["sat"] == ("b-sat-push",)
     assert [s.id for s in form.sessions] == [
         "pt-tuesday",
         "a-mon-lower",
@@ -142,3 +142,105 @@ def test_a_declared_exercise_keeps_its_typed_values() -> None:
     form = parse_program_draft(toml(draft), file="d.toml").form
 
     assert form.exercises["custom_ring_push_up"] == {"name": "Ring push-up", "muscles": muscles}
+
+
+COUNTED = {"sets": 8, "counts": ["negative_pull_up", "band_pull_up"]}
+
+
+def test_a_lift_dose_is_a_bare_target_or_a_table_naming_its_counted_variants() -> None:
+    draft = a_draft(dose={"per_muscle": 10, "lift": {"bb_bench_press": 8, "pull_up": COUNTED}})
+
+    parsed = parse_program_draft(toml(draft), file="d.toml")
+
+    assert parsed.unknown_keys == ()
+    assert parsed.form.dose == Dose(
+        10,
+        {
+            "bb_bench_press": LiftDose(8),
+            "pull_up": LiftDose(8, ("negative_pull_up", "band_pull_up")),
+        },
+    )
+
+
+def test_a_lift_dose_writes_back_bare_without_variants_and_as_a_table_with_them() -> None:
+    draft = a_draft(dose={"per_muscle": 10, "lift": {"bb_bench_press": 8, "pull_up": COUNTED}})
+    form = parse_program_draft(toml(draft), file="d.toml").form
+
+    document = form.to_document()
+
+    assert document["dose"] == {"per_muscle": 10, "lift": {"bb_bench_press": 8, "pull_up": COUNTED}}
+    assert parse_form(document, file="stored")[0] == form
+
+
+def test_a_lift_dose_table_key_outside_sets_and_counts_is_an_unknown_key() -> None:
+    lift: dict[str, object] = {"pull_up": {"sets": 8, "counts": [], "weight": 0.5}}
+
+    parsed = parse_program_draft(toml(a_draft(dose={"per_muscle": 10, "lift": lift})), file="d")
+
+    assert parsed.unknown_keys == ("dose.lift.pull_up.weight",)
+    assert parsed.form.dose == Dose(10, {"pull_up": LiftDose(8)})
+
+
+@pytest.mark.parametrize(
+    "value",
+    [{"sets": 0}, {"sets": "8"}, {"counts": ["band_pull_up"]}, {"sets": 8, "counts": [3]}, "8"],
+)
+def test_a_malformed_lift_dose_stops_the_read(value: object) -> None:
+    draft = a_draft(dose={"per_muscle": 10, "lift": {"pull_up": value}})
+
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(draft), file="d.toml")
+
+    assert raised.value.code == "invalid_argument"
+    assert "dose.lift.pull_up" in raised.value.message
+
+
+def a_two_session_monday(monday: object) -> dict[str, object]:
+    return a_draft(
+        a_session("mon-ohp"),
+        a_session("cond-swings", kind="conditioning", tier="optional"),
+        schedule={"rotation": ["A"], "A": {"mon": monday}},
+    )
+
+
+def test_a_weekday_may_name_a_list_of_sessions_in_order() -> None:
+    draft = a_two_session_monday(["mon-ohp", "cond-swings"])
+
+    form = parse_program_draft(toml(draft), file="d.toml").form
+
+    assert form.schedule.weeks["A"]["mon"] == ("mon-ohp", "cond-swings")
+    assert form.schedule.slots() == [("A", "mon", "mon-ohp"), ("A", "mon", "cond-swings")]
+
+
+def test_a_bare_session_id_and_a_one_element_list_are_the_same_schedule() -> None:
+    bare = parse_program_draft(toml(a_two_session_monday("mon-ohp")), file="d.toml").form
+    listed = parse_program_draft(toml(a_two_session_monday(["mon-ohp"])), file="d.toml").form
+
+    assert bare.schedule == listed.schedule
+    assert bare.schedule.weeks["A"]["mon"] == ("mon-ohp",)
+    assert bare.to_document()["schedule"] == {"rotation": ["A"], "A": {"mon": "mon-ohp"}}
+
+
+@pytest.mark.parametrize("monday", [[], ["mon-ohp", 3], [""], 3])
+def test_a_weekday_that_is_not_a_session_id_or_a_list_of_them_is_the_wrong_shape(
+    monday: object,
+) -> None:
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(a_two_session_monday(monday)), file="d.toml")
+
+    assert raised.value.code == "invalid_argument"
+    assert "schedule.A.mon" in raised.value.message
+
+
+def test_a_two_session_day_round_trips_through_its_document() -> None:
+    form = parse_program_draft(
+        toml(a_two_session_monday(["mon-ohp", "cond-swings"])), file="d.toml"
+    ).form
+
+    again, _ = parse_form(form.to_document(), file="stored")
+
+    assert again == form
+    assert form.to_document()["schedule"] == {
+        "rotation": ["A"],
+        "A": {"mon": ["mon-ohp", "cond-swings"]},
+    }

@@ -8,6 +8,7 @@ from coach.core.config import (
     Config,
     GridImplement,
     GridLocation,
+    ImplementChoice,
     IncrementImplement,
     Location,
     PlatePoolLocation,
@@ -28,9 +29,11 @@ EXAMPLE_LOCATIONS: tuple[Location, ...] = (
     PlatePoolLocation(
         "home",
         kit="home",
-        collars="clamp",
-        dumbbells="pair",
         implements={"barbell": "barbell", "dumbbell": "dumbbell"},
+        implement={
+            "barbell": ImplementChoice(hardware="collar-clamp"),
+            "dumbbell": ImplementChoice(hardware="screw-standard"),
+        },
     ),
     GridLocation(
         "gym",
@@ -73,6 +76,8 @@ data only; the engine, its skills and its hooks come from the installed package 
 
 - `coach status` opens a session: where things stand and what needs attention.
 - `coach --help` lists the verbs; `coach schema <verb>` gives one verb's arguments and output.
+- A list stops at 10 rows and a result at the size budget, and each says when it was cut:
+  `--last <n>` keeps n rows, `--full` keeps everything.
 - The athlete's own account of themselves is the profile, `profile.md`.
 - A verb that takes a document reads a Draft the agent writes first, at
   `.coach/drafts/<date>-<kind>.toml`.
@@ -110,15 +115,23 @@ def _location(location: Location) -> dict[str, TomlValue]:
         return {
             "kind": "plate-pool",
             "kit": location.kit,
-            "collars": location.collars,
-            "dumbbells": location.dumbbells,
             "implements": dict(location.implements),
+            "implement": {name: _choice(choice) for name, choice in location.implement.items()},
         }
     return {
         "kind": "grid",
         "implements": dict(location.implements),
         "implement": {name: _implement(rule) for name, rule in location.implement.items()},
     }
+
+
+def _choice(choice: ImplementChoice) -> dict[str, TomlValue]:
+    table: dict[str, TomlValue] = {}
+    if choice.hardware is not None:
+        table["hardware"] = choice.hardware
+    if choice.single:
+        table["single"] = True
+    return table
 
 
 def _implement(rule: GridImplement) -> dict[str, TomlValue]:

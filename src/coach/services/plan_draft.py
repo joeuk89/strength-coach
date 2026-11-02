@@ -11,6 +11,7 @@ from coach.core.clock import Clock
 from coach.core.closed_week.block import block_ceiling_exceeded
 from coach.core.closed_week.dose import (
     dose_under_target,
+    lift_dose_under_target,
     minimum_week_floor,
     session_dose_high,
 )
@@ -112,9 +113,11 @@ def plan_draft(
     )
     locations = {*version.form.locations(), *(s.location for s in planned)}
     racks = racks_by_location(config, kits, locations)
-    history = read_history(conn, config.athlete.units)
+    history = read_history(conn, config.athlete.units, log)
     program = ProgramVersion(version.form, _exercise_facts(conn))
     constraints = niggles.open_constraints(conn)
+    opened = programs.block_opened(conn)
+    redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     sessions = tuple(
         prescribe(
             PrescribeRequest(
@@ -128,6 +131,7 @@ def plan_draft(
                 niggle_constraints=constraints,
                 status_spans=spans,
                 hard_week_count=hard_week_count,
+                redesigned=redesigned,
             )
         )
         for session in planned
@@ -221,7 +225,11 @@ def _week_checks(
     """The plan warnings and the Block violation that read the closed weeks (docs/spec/week.md,
     "The Block" and "Dose")."""
     muscles = muscle_map(conn)
-    found: list[Flag | None] = [dose_under_target(closed.weeks, monday)]
+    counted = form.dose.counted() if form.dose else {}
+    found: list[Flag | None] = [
+        dose_under_target(closed.weeks, monday),
+        lift_dose_under_target(closed.weeks, monday, counted),
+    ]
     found.extend(session_dose_high(session, muscles) for session in sessions)
     block = closed.open_block
     if block is not None and form.deload is not None:
@@ -241,7 +249,7 @@ def _week_checks(
     minimum = next((o for o in overrides if o.kind == "minimum_week"), None)
     if minimum is not None:
         kept = cast(Sequence[str], minimum.params.get("keep", ()))
-        found.append(minimum_week_floor(sessions, kept, _priority_lifts(conn), monday))
+        found.append(minimum_week_floor(sessions, kept, _priority_lifts(conn), monday, counted))
     return tuple(flag for flag in found if flag is not None)
 
 

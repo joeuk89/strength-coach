@@ -18,6 +18,7 @@ from coach.core.load import Load, LoadMode
 from coach.core.program.checks import AdoptContext, OpenBlock, violations
 from coach.core.program.defaults import fill
 from coach.core.program.diff import ProgramDiff, diff
+from coach.core.program.estimate import session_estimate
 from coach.core.program.fold import Folded, fold_overrides
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
@@ -43,6 +44,7 @@ class AdoptResult:
     block_reset: bool
     diff: ProgramDiff
     start_loads: tuple[Mapping[str, object], ...]
+    sessions: tuple[Mapping[str, object], ...] = ()
     acknowledgements: tuple[AcknowledgeEntry, ...] = ()
     warnings: tuple[Flag, ...] = ()
     dry_run: bool = False
@@ -136,6 +138,7 @@ def adopt(
             block_reset=reset,
             diff=diff(previous.form if previous else None, filled.form, filled.filled),
             start_loads=_start_loads(filled.form, library, config),
+            sessions=_session_estimates(filled.form),
             acknowledgements=frozen,
             warnings=warnings,
             dry_run=dry_run,
@@ -225,7 +228,7 @@ def _last_exposures(conn: Connection, config: Config) -> dict[str, Exposure]:
     """Each exercise with an Exposure anywhere, resolved as `prescribe` resolves them, to its
     latest."""
     latest: dict[str, Exposure] = {}
-    for exposure in read_history(conn, config.athlete.units).exposures:
+    for exposure in read_history(conn, config.athlete.units).lifting:
         held = latest.get(exposure.exercise_id)
         if held is None or exposure.date >= held.date:
             latest[exposure.exercise_id] = exposure
@@ -305,6 +308,17 @@ def _start_loads(
     )
 
 
+def _session_estimates(form: ProgramForm) -> tuple[Mapping[str, object], ...]:
+    return tuple(
+        {
+            "id": session.id,
+            "minutes": session.minutes,
+            "estimate": session_estimate(session),
+        }
+        for session in form.sessions
+    )
+
+
 def _load_mode(
     form: ProgramForm, library: Mapping[str, Mapping[str, object]], line: Line
 ) -> LoadMode:
@@ -324,6 +338,7 @@ def _no_op(
         block_reset=False,
         diff=diff(stored.form, stored.form),
         start_loads=_start_loads(stored.form, _library(conn), config),
+        sessions=_session_estimates(stored.form),
         acknowledgements=programs.acknowledgements(conn, stored.id),
         dry_run=dry_run,
         no_op=True,

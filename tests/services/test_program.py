@@ -115,6 +115,74 @@ def test_a_dry_run_shows_each_start_load_with_its_hevy_kg_and_writes_nothing() -
     } in result.start_loads
 
 
+def test_a_dry_run_lists_every_session_with_its_minutes_and_time_estimate() -> None:
+    result = run(the_worked_store(), WORKED_DRAFT_COMPLETE, dry_run=True, session_minutes=75)
+
+    elided = [
+        "a-wed-lower",
+        "a-fri-push",
+        "a-sun-push",
+        "b-mon-pull",
+        "b-wed-push",
+        "b-fri-lower",
+        "b-sun-pull",
+    ]
+    assert list(result.sessions) == [
+        {"id": "pt-tuesday", "minutes": None, "estimate": None},
+        {"id": "a-mon-lower", "minutes": 75, "estimate": 49},
+        {"id": "b-sat-push", "minutes": 90, "estimate": 22},
+        {"id": "a-sat-pull", "minutes": 90, "estimate": 17},
+        *({"id": id_, "minutes": 75, "estimate": 8} for id_ in elided),
+    ]
+
+
+def test_a_session_estimate_is_the_one_session_over_minutes_reports() -> None:
+    draft = toml(a_draft(a_session("push", minutes=5)))
+
+    result = run(the_worked_store(), draft, dry_run=True)
+
+    over = [flag for flag in result.warnings if flag.code == "session_over_minutes"]
+    assert [dict(flag.params) for flag in over] == [{"estimate": 8, "minutes": 5}]
+    assert list(result.sessions) == [{"id": "push", "minutes": 5, "estimate": 8}]
+
+
+def test_a_dry_run_of_the_draft_in_force_still_lists_its_sessions() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, session_minutes=75)
+
+    again = run(conn, WORKED_DRAFT_COMPLETE, dry_run=True, session_minutes=75)
+
+    assert again.no_op
+    assert again.sessions[:2] == (
+        {"id": "pt-tuesday", "minutes": None, "estimate": None},
+        {"id": "a-mon-lower", "minutes": 75, "estimate": 49},
+    )
+
+
+def test_a_conditioning_session_with_lines_but_no_minutes_has_no_estimate() -> None:
+    emom = {
+        "name": "emom_density",
+        "minutes": 12,
+        "minutes_cap": 16,
+        "minutes_step": 2,
+        "reps": {"kb_swing": 12},
+        "reps_cap": {"kb_swing": 15},
+        "rpe_target": 7,
+    }
+    swings = a_session(
+        "swings",
+        a_line("pull_up", scheme={"name": "hold"}, start_load=None),
+        kind="conditioning",
+        tier="optional",
+        cadence="standing",
+        scheme=emom,
+    )
+
+    result = run(the_worked_store(), toml(a_draft(a_session("push"), swings)), dry_run=True)
+
+    assert {"id": "swings", "minutes": None, "estimate": None} in result.sessions
+
+
 def test_a_per_hand_start_load_reports_the_dumbbell_total_hevy_stores() -> None:
     dumbbells = a_line("db_bulgarian_split_squat", start_load=15)
     draft = toml(a_draft(a_session("legs", dumbbells), location="gym"))
@@ -573,3 +641,62 @@ def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version
         "emphasis_off_goal@version:pv-2",
         adopted.acknowledgements[0].params_hash,
     )
+
+
+def with_pull_up_counting(*variants: str, acknowledge: str = "") -> str:
+    counts = ", ".join(f'"{v}"' for v in variants)
+    return (
+        WORKED_DRAFT_COMPLETE
+        + f"""
+[dose]
+per_muscle = 10
+
+[dose.lift]
+bb_bench_press = 8
+pull_up = {{ sets = 8, counts = [{counts}] }}
+"""
+        + acknowledge
+    )
+
+
+def test_a_pull_up_counting_its_negatives_and_band_pull_ups_adopts_inside_the_band() -> None:
+    conn = the_worked_store()
+
+    result = run(
+        conn, with_pull_up_counting("negative_pull_up", "band_pull_up"), available_days=EVERY_DAY
+    )
+
+    assert keys(result) == ["scheme_off_emphasis@line:a-sat-pull/pull_up"]
+    row = conn.execute("SELECT dose FROM program_version WHERE id = 'pv-1'").fetchone()
+    assert json.loads(row[0])["lift"] == {
+        "bb_bench_press": 8,
+        "pull_up": {"sets": 8, "counts": ["negative_pull_up", "band_pull_up"]},
+    }
+
+
+def test_a_lat_pulldown_counts_toward_the_pull_up_and_a_fly_warns() -> None:
+    pulldown = run(
+        the_worked_store(), with_pull_up_counting("lat_pulldown"), available_days=EVERY_DAY
+    )
+    fly = run(the_worked_store(), with_pull_up_counting("db_fly"), available_days=EVERY_DAY)
+
+    assert "counted_variant_off_pattern@version:pv-1" not in keys(pulldown)
+    assert "counted_variant_off_pattern@version:pv-1" in keys(fly)
+
+
+def test_an_acknowledgement_leaves_counted_variant_off_pattern_on_the_version() -> None:
+    entry = """
+[[acknowledge]]
+flag = "counted_variant_off_pattern@version:pv-1"
+because = "coach_judgement"
+text = "Counted on purpose."
+"""
+    result = run(
+        the_worked_store(),
+        with_pull_up_counting("db_fly", acknowledge=entry),
+        available_days=EVERY_DAY,
+    )
+
+    [flag] = [f for f in result.warnings if f.code == "counted_variant_off_pattern"]
+    assert flag.left is not None
+    assert flag.params["variant"] == "db_fly"

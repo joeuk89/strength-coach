@@ -16,9 +16,12 @@ RECORDED_AT = "2026-10-30T12:00:00+00:00"
 HOME = {
     "kind": "plate-pool",
     "kit": "home",
-    "collars": "clamp",
-    "dumbbells": "pair",
     "implements": {"barbell": "barbell", "dumbbell": "dumbbell", "kettlebell": "kettlebell"},
+    "implement": {
+        "barbell": {"hardware": "collar-clamp"},
+        "dumbbell": {"hardware": "screw-standard"},
+        "kettlebell": {"hardware": "none"},
+    },
 }
 GYM = {
     "kind": "grid",

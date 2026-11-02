@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 from typing import Any, cast
 
 import pytest
@@ -225,7 +226,7 @@ def test_re_running_a_niggle_draft_returns_the_same_ids_and_writes_nothing() -> 
 
     second = run(conn, HAMSTRING)
 
-    assert second == first
+    assert second == replace(first, no_op=True)
     assert len(events(niggles(conn)[0])) == 1
 
 

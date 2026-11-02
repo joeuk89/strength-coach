@@ -286,6 +286,25 @@ def test_a_session_on_a_weekday_the_athlete_cannot_train_warns_session_on_unavai
     ]
 
 
+def test_every_session_a_weekday_lists_on_an_unavailable_day_warns() -> None:
+    draft = a_draft(
+        a_session("push"),
+        a_session("pull", a_line("bb_bent_over_row")),
+        schedule={"rotation": ["A"], "A": {"mon": ["push", "pull"]}},
+    )
+    days = ("tuesday",)
+
+    flags = warnings_of(draft, a_context(available_days=days))
+
+    assert the("session_on_unavailable_day", flags) == [
+        (
+            f"session_on_unavailable_day@session:{id_}",
+            {"session_id": id_, "weekday": "monday", "available_days": ["tuesday"]},
+        )
+        for id_ in ("push", "pull")
+    ]
+
+
 def test_supersetted_lines_with_different_rests_warn_superset_rest_differs() -> None:
     def paired(*rests: int) -> list[tuple[str, dict[str, object]]]:
         lines = [
@@ -469,3 +488,78 @@ def test_an_unchanged_scheme_or_an_exercise_new_to_the_version_raises_nothing() 
 
     assert moved({}, {}) == []
     assert the("scheme_change_off_signal", warnings_of(linear, new_exercise)) == []
+
+
+VERTICAL_PULL: dict[str, object] = {
+    "pattern": "vertical_pull",
+    "muscles": {"primary": ["lats"], "secondary": []},
+}
+PULL_LIBRARY: dict[str, dict[str, object]] = LIBRARY | {
+    "bb_bench_press": {**LIBRARY["bb_bench_press"], "pattern": "horizontal_push"},
+    "pull_up": VERTICAL_PULL,
+    "lat_pulldown": {
+        **VERTICAL_PULL,
+        "muscles": {"primary": ["lats"], "secondary": ["biceps"]},
+    },
+    "straight_arm_pulldown": {**VERTICAL_PULL, "pattern": "shoulder_extension"},
+}
+PULL_UP_PRIORITY = a_context(library=PULL_LIBRARY, goal=a_goal(priority_lifts=("pull_up",)))
+
+
+def counting(*variants: str, **draft: Any) -> dict[str, Any]:
+    lift = {"pull_up": {"sets": 8, "counts": list(variants)}}
+    return a_draft(
+        a_session("pull", a_line("pull_up")), dose={"per_muscle": 10, "lift": lift}, **draft
+    )
+
+
+def test_a_variant_sharing_the_lifts_pattern_and_primary_muscles_raises_nothing() -> None:
+    flags = warnings_of(counting("lat_pulldown"), PULL_UP_PRIORITY)
+
+    assert the("counted_variant_off_pattern", flags) == []
+    assert the("dose_off_band", flags) == []
+
+
+def test_a_variant_off_the_lifts_pattern_or_muscles_warns_counted_variant_off_pattern() -> None:
+    flags = warnings_of(counting("lat_pulldown", "bb_bench_press"), PULL_UP_PRIORITY)
+    pattern_only = warnings_of(counting("straight_arm_pulldown"), PULL_UP_PRIORITY)
+
+    assert the("counted_variant_off_pattern", flags) == [
+        (
+            "counted_variant_off_pattern@version:pv-1",
+            {
+                "lift": "pull_up",
+                "variant": "bb_bench_press",
+                "patterns": ["vertical_pull", "horizontal_push"],
+                "primary_muscles": [["lats"], ["chest"]],
+            },
+        )
+    ]
+    assert [p["variant"] for _, p in the("counted_variant_off_pattern", pattern_only)] == [
+        "straight_arm_pulldown"
+    ]
+
+
+def test_an_acknowledgement_leaves_counted_variant_off_pattern() -> None:
+    entry = {
+        "flag": "counted_variant_off_pattern@version:pv-1",
+        "because": "coach_judgement",
+        "text": "the coach counts it on purpose",
+    }
+    form = a_form(counting("bb_bench_press", acknowledge=[entry]))
+
+    flags = leave_warnings(adopt_warnings(form, PULL_UP_PRIORITY), form.acknowledgements)
+
+    [flag] = [f for f in flags if f.code == "counted_variant_off_pattern"]
+    assert flag.left is not None
+
+
+def test_a_lifts_counted_variants_on_lines_never_stand_in_for_the_lift() -> None:
+    lift = {"pull_up": {"sets": 8, "counts": ["lat_pulldown"]}}
+    draft = a_draft(
+        a_session("pull", a_line("lat_pulldown")), dose={"per_muscle": 10, "lift": lift}
+    )
+
+    assert the("priority_lift_absent", warnings_of(draft, PULL_UP_PRIORITY)) == [
+        ("priority_lift_absent@version:pv-1", {"exercise_id": "pull_up"})
+    ]

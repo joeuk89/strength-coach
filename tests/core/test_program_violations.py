@@ -69,6 +69,10 @@ VIOLATIONS = [
     (one_line(load_mode="kettle"), "unknown_load_mode@line:push/bb_bench_press"),
     (a_draft(a_session("push"), a_session("push")), "duplicate_id@version:pv-1"),
     (
+        a_draft(schedule={"rotation": ["A"], "A": {"mon": ["push", "push"]}}),
+        "duplicate_id@version:pv-1",
+    ),
+    (
         a_draft(schedule={"rotation": ["A"], "A": {"mon": "push", "tue": "pull"}}),
         "schedule_session_missing@version:pv-1",
     ),
@@ -376,3 +380,54 @@ def test_a_scheme_param_of_the_wrong_type_names_the_param(
 )
 def test_a_scheme_param_of_the_right_type_passes(draft: dict[str, Any]) -> None:
     assert keyed(draft) == []
+
+
+VARIANT_LIBRARY = LIBRARY | {
+    "negative_pull_up": {"load_mode": "bodyweight", "equipment_kind": "bodyweight"},
+    "band_pull_up": {"load_mode": "band", "equipment_kind": "band"},
+}
+
+
+def with_lift_dose(lift: dict[str, Any], **draft: Any) -> dict[str, Any]:
+    return a_draft(dose={"per_muscle": 10, "lift": lift}, **draft)
+
+
+def counted(context_lifts: tuple[str, ...], lift: dict[str, Any], **draft: Any) -> list[Flag]:
+    context = a_context(library=VARIANT_LIBRARY, goal=a_goal(context_lifts))
+    return flags_of(with_lift_dose(lift, **draft), context)
+
+
+PULL_UP_VARIANTS = {"sets": 8, "counts": ["negative_pull_up", "band_pull_up"]}
+
+
+def test_counted_variants_in_the_library_or_declared_raise_nothing() -> None:
+    declared = {"sets": 8, "counts": ["negative_pull_up", "custom_jump_pull_up"]}
+    exercise = {"custom_jump_pull_up": {"load_mode": "bodyweight"}}
+
+    assert counted(("pull_up",), {"pull_up": PULL_UP_VARIANTS}) == []
+    assert counted(("pull_up",), {"pull_up": declared}, exercise=exercise) == []
+
+
+def test_a_counted_variant_outside_the_library_is_counted_variant_unknown() -> None:
+    [flag] = counted(("pull_up",), {"pull_up": {"sets": 8, "counts": ["no_such_exercise"]}})
+
+    assert flag.key == "counted_variant_unknown@version:pv-1"
+    assert flag.params == {"lift": "pull_up", "exercise_id": "no_such_exercise"}
+
+
+def test_a_variant_under_two_lifts_is_counted_variant_not_exclusive() -> None:
+    lifts = {"pull_up": PULL_UP_VARIANTS, "bb_bench_press": {"sets": 8, "counts": ["band_pull_up"]}}
+
+    [flag] = counted(("pull_up", "bb_bench_press"), lifts)
+
+    assert flag.key == "counted_variant_not_exclusive@version:pv-1"
+    assert flag.params == {"exercise_id": "band_pull_up", "lifts": ["pull_up", "bb_bench_press"]}
+
+
+def test_a_priority_lift_listed_as_a_variant_is_counted_variant_not_exclusive() -> None:
+    lifts = {"pull_up": {"sets": 8, "counts": ["bb_bench_press"]}}
+
+    [flag] = counted(("pull_up", "bb_bench_press"), lifts)
+
+    assert flag.code == "counted_variant_not_exclusive"
+    assert flag.params == {"exercise_id": "bb_bench_press", "lifts": ["pull_up"]}

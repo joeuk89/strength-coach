@@ -8,6 +8,7 @@ from typing import Literal
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
+from coach.core.program.form import RACK_MODES
 from coach.core.rack import Rack, round_to_rack
 
 SAME_SESSION_WINDOW_DAYS = 90
@@ -16,8 +17,11 @@ SAME_SESSION_WINDOW_DAYS_RN = None
 
 @dataclass(frozen=True)
 class AnchorExposure:
+    """`skipped` is the exposure the search would have picked had its load been usable."""
+
     exposure: Exposure
     step: Literal["same_session", "any_session"]
+    skipped: Exposure | None = None
 
     @property
     def derived_from(self) -> str:
@@ -26,9 +30,10 @@ class AnchorExposure:
 
 @dataclass(frozen=True)
 class StartLoad:
-    """No exposure anywhere: the line's start load stands, `None` when it has none."""
+    """No usable exposure anywhere: the line's start load stands, `None` when it has none."""
 
     load: Load | None
+    skipped: Exposure | None = None
 
     @property
     def derived_from(self) -> str:
@@ -42,7 +47,10 @@ def anchor(
     session_id: str,
     on: datetime.date,
     start_load: Load | None,
+    mode: LoadMode | None = None,
 ) -> AnchorExposure | StartLoad:
+    """With `mode` a rack mode, an exposure with no working set at a positive load is skipped
+    like a deload log; under assistance 0 is a real load."""
     candidates = sorted(
         (
             e
@@ -53,14 +61,47 @@ def anchor(
         reverse=True,
     )
     window_start = on - datetime.timedelta(days=SAME_SESSION_WINDOW_DAYS)
+    found = _search(candidates, session_id, window_start)
+    skipped = None
+    if mode in RACK_MODES and found is not None and not _usable(found.exposure):
+        skipped = found.exposure
+        found = _search([e for e in candidates if _usable(e)], session_id, window_start, skipped)
+    return StartLoad(start_load, skipped) if found is None else found
+
+
+def _search(
+    candidates: list[Exposure],
+    session_id: str,
+    window_start: datetime.date,
+    skipped: Exposure | None = None,
+) -> AnchorExposure | None:
     same = next(
         (e for e in candidates if e.session_id == session_id and e.date >= window_start), None
     )
     if same is not None:
-        return AnchorExposure(same, "same_session")
+        return AnchorExposure(same, "same_session", skipped)
     if candidates:
-        return AnchorExposure(candidates[0], "any_session")
-    return StartLoad(start_load)
+        return AnchorExposure(candidates[0], "any_session", skipped)
+    return None
+
+
+def _usable(exposure: Exposure) -> bool:
+    top = exposure.top_load
+    return top is not None and top.amount > 0
+
+
+def anchor_load_unusable(found: AnchorExposure | StartLoad, scope: Scope) -> Flag | None:
+    skipped = found.skipped
+    if skipped is None:
+        return None
+    top = skipped.top_load
+    logged = None if top is None else top.amount
+    return raise_flag(
+        "anchor_load_unusable",
+        scope,
+        {"exposure": skipped.ref, "logged_load": logged, "anchor_used": found.derived_from},
+        f"{skipped.ref} has no working set at a positive load; the anchor is {found.derived_from}",
+    )
 
 
 def _deload_log(exposure: Exposure) -> bool:

@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 
 import pytest
 from support.clock import FixedClock
@@ -179,7 +180,7 @@ def test_the_same_file_again_writes_nothing_and_returns_the_same_row() -> None:
     first = run(conn, EVERY_KIND)
     second = run(conn, EVERY_KIND)
 
-    assert second == first
+    assert second == replace(first, no_op=True)
     assert len(check_ins(conn)) == 1
 
 
@@ -344,3 +345,46 @@ def test_retiring_an_observation_that_is_not_stored_is_an_unresolved_ref() -> No
         run(a_store(), header() + '[[observation]]\nretire = "o-0009"\nbecause = "x"\n')
 
     assert raised.value.code == "draft_ref_unresolved"
+
+
+def dry_run(conn: Connection, text: str) -> CheckInRecordResult:
+    return checkin_record(
+        conn, text.encode("utf-8"), file="ci.toml", clock=FixedClock(NOV_1), dry_run=True
+    )
+
+
+def test_a_dry_run_reports_the_ids_the_real_run_then_writes_and_stores_nothing() -> None:
+    conn = a_store_with_a_workout()
+
+    dry = dry_run(conn, EVERY_KIND)
+
+    assert (dry.check_in, dry.phase_opened, dry.ids["decision"]) == (
+        "ci-2026-11-01",
+        "ph-0001",
+        ["d-0001"],
+    )
+    assert (dry.dry_run, dry.no_op) == (True, False)
+    assert check_ins(conn) == []
+    assert conn.execute("SELECT count(*) FROM phase").fetchone() == (0,)
+    assert replace(run(conn, EVERY_KIND), dry_run=True) == dry
+
+
+def test_a_dry_run_of_a_recorded_file_returns_the_stored_row_as_a_no_op() -> None:
+    conn = a_store_with_a_workout()
+    stored = run(conn, EVERY_KIND)
+
+    dry = dry_run(conn, EVERY_KIND)
+
+    assert dry == replace(stored, dry_run=True, no_op=True)
+
+
+def test_a_dry_run_of_a_refused_file_raises_what_the_real_run_raises() -> None:
+    conn = a_store()
+    run(conn, EVERY_KIND.split("[[niggle]]")[0])
+    opening = '[phase]\nkind = "deficit"\nuntil = { kind = "coachs_call" }\nbecause = "cut"\n'
+
+    with pytest.raises(Invalid) as raised:
+        dry_run(conn, header("2026-11-08") + opening)
+
+    assert raised.value.code == "phase_already_open"
+    assert len(check_ins(conn)) == 1

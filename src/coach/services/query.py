@@ -8,6 +8,7 @@ from coach.core.config import Units
 from coach.core.e1rm import point
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
+from coach.core.flag import grouped
 from coach.core.frozen_prescription import dose, frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import week_monday
@@ -253,10 +254,12 @@ def flags(
     severity: str | None,
     scope: str | None,
     summary: bool,
+    full: bool,
     last: int | None,
 ) -> QueryResult:
-    """`query flags`: the flags frozen on the plan in force, or those of a Draft validated now;
-    with `summary` the counts by (code, severity)."""
+    """`query flags`: the flags frozen on the plan in force, or those of a Draft validated now,
+    one row per code unless a filter or `full` asks for the flat rows; with `summary` the counts
+    by (code, severity)."""
     if severity is not None and severity not in SEVERITIES:
         raise Invalid("invalid_argument", f"--severity takes one of {', '.join(SEVERITIES)}")
     found = [
@@ -272,6 +275,8 @@ def flags(
             {"code": c, "severity": s, "count": n} for (c, s), n in sorted(counts.items())
         ]
         return _newest(rows, last)
+    if code is None and severity is None and scope is None and not full:
+        return _newest(grouped(found), last)
     return _newest([_flag_row(flag) for flag in found], last)
 
 

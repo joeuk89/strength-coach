@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from dataclasses import replace
 
 import pytest
 from support.clock import FixedClock
@@ -121,14 +122,14 @@ def test_the_same_draft_again_writes_nothing_and_returns_the_same_answer(
 
     second = adopt(conn, STRENGTH)
 
-    assert second == first
+    assert second == replace(first, no_op=True)
     assert rows(conn, "SELECT count(*) FROM goal") == [(2,)]
 
 
 def test_the_worked_draft_again_is_a_no_op_though_its_phase_is_open(conn: Connection) -> None:
     first = adopt(conn, WORKED)
 
-    assert adopt(conn, WORKED) == first
+    assert adopt(conn, WORKED) == replace(first, no_op=True)
     assert rows(conn, "SELECT count(*) FROM phase") == [(1,)]
 
 
@@ -192,3 +193,57 @@ def test_a_refused_draft_writes_nothing(conn: Connection) -> None:
 
     assert rows(conn, "SELECT id, status FROM goal") == [("g-0001", "current")]
     assert rows(conn, "SELECT count(*) FROM phase") == [(1,)]
+
+
+def dry_run(conn: Connection, text: str) -> GoalAdoptResult:
+    return goal_adopt(conn, text.encode("utf-8"), file="g.toml", clock=FixedClock(), dry_run=True)
+
+
+def test_a_dry_run_reports_the_ids_the_real_run_then_writes_and_stores_nothing(
+    conn: Connection,
+) -> None:
+    adopt(conn, WORKED)
+    change = with_phase(STRENGTH, 'close = { because = "recomp done" }\n' + opening("surplus"))
+
+    dry = dry_run(conn, change)
+
+    assert (dry.goal_id, dry.superseded, dry.phase_closed, dry.phase_opened) == (
+        "g-0002",
+        "g-0001",
+        "ph-0001",
+        "ph-0002",
+    )
+    assert (dry.dry_run, dry.no_op) == (True, False)
+    assert dry.diff is not None
+    assert rows(conn, "SELECT id, status FROM goal") == [("g-0001", "current")]
+    assert rows(conn, "SELECT id, closed FROM phase") == [("ph-0001", None)]
+    assert replace(adopt(conn, change), dry_run=True) == dry
+
+
+def test_a_dry_run_of_an_adopted_draft_returns_the_stored_goal_as_a_no_op(
+    conn: Connection,
+) -> None:
+    stored = adopt(conn, WORKED)
+
+    dry = dry_run(conn, WORKED)
+
+    assert dry == replace(stored, dry_run=True, no_op=True)
+
+
+@pytest.mark.parametrize(
+    ("draft", "code"),
+    [
+        (with_phase(STRENGTH, opening("surplus")), "phase_already_open"),
+        (STRENGTH.replace('["bb_bench_press"]', '["bench"]'), "unknown_exercise"),
+    ],
+)
+def test_a_dry_run_of_a_refused_draft_raises_what_the_real_run_raises(
+    conn: Connection, draft: str, code: str
+) -> None:
+    adopt(conn, WORKED)
+
+    with pytest.raises(Invalid) as raised:
+        dry_run(conn, draft)
+
+    assert raised.value.code == code
+    assert rows(conn, "SELECT id FROM goal") == [("g-0001",)]

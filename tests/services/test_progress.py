@@ -1,6 +1,6 @@
 import datetime
 
-from support.blocks import BOUNDARY, PULL_UP_LINE, WHY, two_closed_blocks
+from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, WHY, two_closed_blocks
 from support.clock import FixedClock, at
 from support.kit_fixtures import kit_files
 from support.ledger import a_weigh_in
@@ -65,6 +65,25 @@ def test_the_report_shows_dose_by_muscle_and_lift_for_each_week_of_the_closed_bl
     assert first.lifts == {"bb_bench_press": 4, "pull_up": 3}
 
 
+def test_the_dose_target_is_the_one_the_blocks_newest_closed_week_carried() -> None:
+    conn = a_store()
+    later = a_draft(
+        a_session("push", BENCH_LINE, PULL_UP_LINE),
+        kind="amend",
+        dose={"per_muscle": 12, "lift": {"bb_bench_press": 9, "pull_up": 7}},
+    )
+    adopt(
+        conn,
+        toml(later),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert report(conn).dose_target == {"per_muscle": 10, "bb_bench_press": 8, "pull_up": 8}
+
+
 def test_the_report_shows_the_phase_trend_and_the_goals_why_verbatim() -> None:
     found = report(a_store())
 
@@ -124,3 +143,22 @@ def test_a_drop_before_the_lift_moved_to_linear_is_no_reset() -> None:
     bench = bench_in(report(conn))
 
     assert (bench.scheme, bench.resets, bench.stall_streak) == ("linear", 0, 0)
+
+
+def pull_up_in(found: Progress) -> LiftProgress:
+    return next(lift for lift in found.lifts if lift.exercise_id == "pull_up")
+
+
+def test_flat_pull_ups_that_predate_the_latest_redesign_show_no_stall_streak() -> None:
+    conn = two_closed_blocks()
+    assert pull_up_in(report(conn)).stall_streak == 3
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, PULL_UP_LINE), because="new block")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert pull_up_in(report(conn)).stall_streak == 0

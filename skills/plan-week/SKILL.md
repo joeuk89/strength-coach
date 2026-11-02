@@ -8,7 +8,9 @@ description: The week's prescription. Use when a check-in has closed a week, whe
 ## Read first
 The profile, once. The plan Draft from `coach plan draft` with its flags: each line carries its
 prescription, the steps that derived it and its change from last week. Judge the lines that
-carry a flag or an override; show the rest as they stand.
+carry a flag or an override; show the rest as they stand. The summary lists each flag code
+with its count and keys; to read one code's flags with their messages, run
+`coach query flags --draft <path> --code <code>`, or `--full` for every flag.
 
 ## Ask
 State the week for confirmation: the rotation position, the day each session falls on, where
@@ -27,9 +29,10 @@ its reason. A load the engine derived is never retyped.
   Hold the load and look again next week, or restate the sets when the athlete says the range is
   wrong for them now.
 - **Dose.** `dose_under_target`: a muscle has run under its target. Find the misses behind it
-  before adding sets; then restate the sets on a line that trains it. `session_dose_high`: one
-  session carries too much; move a line's sets to a lighter day or drop a line, the accessories
-  first, never the priority lifts.
+  before adding sets; then restate the sets on a line that trains it. `lift_dose_under_target`
+  is the same for a priority lift, its counted variants included: restate the sets on the lift
+  or on a variant it counts. `session_dose_high`: one session carries too much; move a line's
+  sets to a lighter day or drop a line, the accessories first, never the priority lifts.
 - **Fatigue.** When the check-in proposed a light week, take it as a `light_week` override,
   restating its cut or RPE cap with a reason where the triggers say so, or decline it with a
   `decline_ceiling` Decision and the reason. `light_week_shape_off_trigger` and
@@ -59,7 +62,7 @@ Quote every load and change from the Draft or the dry run; never retype one. Nam
 and Decision and its reason in plain words. Lines with no flag and no override are shown, not
 explained.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach plan draft`, `coach plan apply`, `coach query`, `coach record`

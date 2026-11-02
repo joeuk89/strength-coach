@@ -1,16 +1,27 @@
 import base64
+import dataclasses
 import re
 import zlib
 
+from coach.core.config import ImplementChoice
 from coach.core.pages import PageLine, PlatePoolKit, RoutinePage
 from coach.render.routine_page import routine_page
 
 INVENTORY = b'{"plates": [{"lb": 45, "count": 4}, {"lb": 25, "count": 2}]}\n'
 HOME = PlatePoolKit(
     location="home",
-    collars="clamp",
-    dumbbells="pair",
-    implements={"barbell": "barbell", "dumbbell": "dumbbell", "bodyweight": "vest"},
+    implements={
+        "barbell": "barbell",
+        "dumbbell": "dumbbell",
+        "leg_attachment": "leg",
+        "bodyweight": "vest",
+    },
+    implement={
+        "barbell": ImplementChoice(hardware="collar-clamp"),
+        "dumbbell": ImplementChoice(hardware="screw-standard"),
+        "leg": ImplementChoice(),
+        "vest": ImplementChoice(),
+    },
     short_hash="3f9a01bc",
     inventory=INVENTORY,
 )
@@ -29,6 +40,12 @@ CURL = PageLine(
     equipment_kind="dumbbell",
     set_groups=({"type": "working", "count": 3, "range": [10, 12], "load": 30, "load_kg": 13.61},),
 )
+LEG_CURL = PageLine(
+    exercise_id="leg_curl",
+    name="Leg Curl",
+    equipment_kind="leg_attachment",
+    set_groups=({"type": "working", "count": 3, "range": [10, 12], "load": 40, "load_kg": 18.14},),
+)
 PULL_UP = PageLine(
     exercise_id="pull_up",
     name="Pull Up",
@@ -43,7 +60,7 @@ def a_page(location: str = "home", kit: PlatePoolKit | None = HOME) -> RoutinePa
         title="Lower A",
         week="2026-11-02",
         location=location,
-        lines=(SQUAT, CURL, PULL_UP),
+        lines=(SQUAT, CURL, LEG_CURL, PULL_UP),
         kit=kit,
     )
 
@@ -57,9 +74,22 @@ def test_a_plate_pool_routine_page_links_each_loaded_line_with_the_kit_hash() ->
 
     line_links = [link for link in links(text) if "kit=3f9a01bc" in link]
     assert line_links == [
-        "https://joeuk89.github.io/plate-pool/?barbell=175lb&collars=clamp&kit=3f9a01bc",
-        "https://joeuk89.github.io/plate-pool/?dumbbells=30lb&kit=3f9a01bc",
+        "https://joeuk89.github.io/plate-pool/?barbell=175lb&barbell.hardware=collar-clamp&kit=3f9a01bc",
+        "https://joeuk89.github.io/plate-pool/?dumbbell=30lb&dumbbell.hardware=screw-standard&kit=3f9a01bc",
+        "https://joeuk89.github.io/plate-pool/?leg=40lb&kit=3f9a01bc",
     ]
+
+
+def test_a_handle_rounded_single_is_linked_by_its_single_key() -> None:
+    single = {**HOME.implement, "dumbbell": ImplementChoice(hardware="none", single=True)}
+    kit = dataclasses.replace(HOME, implement=single)
+
+    text = routine_page(a_page(kit=kit), units="lb")
+
+    assert (
+        "https://joeuk89.github.io/plate-pool/?dumbbell.single=30lb&dumbbell.hardware=none&kit=3f9a01bc"
+        in links(text)
+    )
 
 
 def test_a_plate_pool_routine_page_carries_one_set_up_link_with_the_inventory_inline() -> None:
@@ -67,9 +97,11 @@ def test_a_plate_pool_routine_page_carries_one_set_up_link_with_the_inventory_in
 
     set_up = [link for link in links(text) if "kit=3f9a01bc" not in link]
     assert len(set_up) == 1
-    encoded = set_up[0].removeprefix("https://joeuk89.github.io/plate-pool/?kit=")
+    assert set_up[0].startswith("https://joeuk89.github.io/plate-pool/#inventory=")
+    encoded = set_up[0].removeprefix("https://joeuk89.github.io/plate-pool/#inventory=")
+    assert "=" not in encoded
     padded = encoded + "=" * (-len(encoded) % 4)
-    assert zlib.decompress(base64.urlsafe_b64decode(padded)) == INVENTORY
+    assert zlib.decompress(base64.urlsafe_b64decode(padded), -15) == INVENTORY
 
 
 def test_a_grid_routine_page_carries_no_plate_pool_link() -> None:

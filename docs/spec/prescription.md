@@ -33,6 +33,7 @@ a glossary noun.
 | the status spans (`no_training`, `ill`) | which sessions derive; days off; the illness cap |
 | the rack snapshot per location (ADR 0008) | steps 7 and 8, every load step |
 | the Block's hard-week count | the `wave_531` wave |
+| the latest redesign's adoption date | stalls (none before it count) |
 | the last matched Activity per conditioning session | the session schemes |
 | the planned date | everything dated |
 
@@ -56,6 +57,18 @@ Per line, in this order:
    opening position (`program.md`, the scheme table). A load-bearing line with neither is
    `start_load_missing`.
 
+A lifting or rehab line never anchors on an Exposure from a workout matched to a conditioning
+session, by any step, and the e1RM window below never reads one: those sets anchor their own
+session's lines and nothing else (ADR 0010). A conditioning line's `hold` anchors within its own
+session by step 1, and with no history of its own falls through to steps 2 and 3 as any line.
+
+On a line in a rack mode (`total`, `per_hand_x2`, `single_implement`), steps 1 and 2 also skip
+an exposure with no working set at a positive load (a logging gap, such as a carry logged at 0):
+it has no usable anchor load, so the next older exposure anchors, and with none, step 3 applies.
+The line warns `anchor_load_unusable` naming the newest skipped exposure, its logged load and
+the anchor used. Under assistance 0 is a real load (no assistance) and is never skipped. The
+skipped exposure still counts as a day trained: days off per lift read its date as before.
+
 e1RM is always exercise-wide: the best qualifying point in the 42 days before the planned date
 (one Block at the default ceiling, rn:deloads.3; the window is opinion), every session included.
 A qualifying set has 12 or fewer reps to failure, reps plus 10 minus RPE (rn:autoregulation.5).
@@ -64,7 +77,9 @@ until a newer qualifying point exists.
 
 **The anchor's load.** The anchor's top working load, as logged. A logged load that is not a row
 of the session location's rack is replaced by the nearest row **at or below** it, and the line
-warns `offgrid_anchor_ignored` naming both. A historical load never defines the grid.
+warns `offgrid_anchor_ignored` naming both. A historical load never defines the grid. A zero
+logged load on a line in a rack mode never anchors (the skip above), so it never snaps to the
+rack's bottom row.
 
 **Days off per lift** = `max(layoff, exposure age − usual interval)`, where the layoff is the
 gap since the last lifting exposure of any kind (coach-led counts), the usual interval is the
@@ -96,7 +111,7 @@ cut.
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
 | `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
-| `top_backoff` | the exercise's best e1RM in the window | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
+| `top_backoff` | the exercise's best e1RM in the window, or the carried e1RM while it binds (**The carried e1RM**, below) | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included; while the carried e1RM binds, the pre-layoff heaviest top × the band factor too)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window and no carried e1RM: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
 Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
@@ -109,9 +124,14 @@ Notes:
 
 - The one-row cap on `top_backoff` is a rule, not a warning: a bigger jump is the model
   over-reading one great day. Because every scheme's own step is at most one row,
-  `increment_over_step` fires only on a `pin_load` more than one row above the anchor.
+  `increment_over_step` fires only on a `pin_load` more than one row above the anchor. After a
+  return week the cap counts from the pre-layoff heaviest top scaled by the band, so the line
+  gets back to its pre-layoff level in about one week rather than one row a week.
 - `top_backoff` reads the **best** point in the window, so one bad day never drops the top set;
   only a recovery ceiling or the window expiring lowers it.
+- When the e1RM moves the `top_backoff` top (the one-row cap does not bind), the `scheme` step
+  records `cause = e1rm <exposure ref>`, the exposure the e1RM came from (the pre-layoff one
+  while the carried e1RM binds), and the line's `change` ends with it (below).
 - With no next rack row (a band at the top of its ladder, a dumbbell rack's heaviest pair) a
   hit holds and the step records `cause = rack_top`; the agent swaps or the version changes.
 - A `test` single is never authored; the deload policy prescribes it in a light week, below.
@@ -206,7 +226,8 @@ whole-week layoff; the band here is per lift.
 
 Days off per lift as above. The cut is measured from the **lower** of the scheme's proposal and
 the anchor's load, so a return week never carries a progression, and from the pre-layoff
-anchor only: the week after derives from the return-week exposure by the ordinary scheme.
+anchor only: the week after derives from the return-week exposure by the ordinary scheme, which
+under `top_backoff` reads the carried e1RM (below).
 
 The band is a safety bound (ADR 0005, amended): no override waives or softens it, and `pin_load`
 lowers only. The one lawful route is the fact behind it: days off, which a `trained_unlogged`
@@ -229,6 +250,37 @@ not all derive together (an override fought the band) is `return_band_disagrees`
 
 Illness alone (gap ≤ 10 days) is not a cut: the RPE 7 cap is the whole return. Illness with
 days off > 10 is a return line with the cap at 7.
+
+#### The carried e1RM
+
+After a return week, a `top_backoff` line's own 42-day window holds only the return-week sets,
+which were easy, so the model alone would climb one row a week from the return load. The
+**carried e1RM** lets it catch up to the pre-layoff level, discounted by the band
+(rn:detraining-return.5: what is lost returns faster than it was built). It is derived on every
+`prescribe` from exposures alone and never stored.
+
+- The **return exposure** R is the lift's latest exposure whose days off on its own date
+  exceeded 10. A planned date that is itself a return week carries nothing: the return week is
+  unchanged.
+- While R is 42 days or fewer before the planned date, the carried e1RM is the best qualifying
+  point in the 42 days ending on the lift's last exposure before R (the same window rules and
+  invalidation as the live read), × the load factor of the band R's days off gave (×0.95,
+  ×0.90 or ×0.85). With no qualifying point there it does not exist, and `no_e1rm` behaves as
+  without it.
+- It **binds** while it is above the live window's e1RM. A live point at or above it, or R plus
+  42 days passing, ends it.
+- While it binds, every e1RM read on the line is `max(live, carried)`: the top move, the RPE
+  ceilings' load limit, the test single and the `top_set_above_e1rm` check. The one-row cap
+  counts from `max(heaviest top in the live window, pre-layoff heaviest top × the factor)`, the
+  pre-layoff top read from the same slid window on the line.
+- Every week it binds the line warns `carried_e1rm` with the pre-layoff exposure, the pre-layoff
+  e1RM, the factor, the carried value and the date it expires.
+
+Worked example: `bb_deadlift`, last exposure 2026-09-16 at 135 lb, the August best 170.5×6 @7.5
+(e1RM 218.81), planned 2026-11-01 after 46 days off (×0.85). The return week cuts 135 × 0.85 as
+before. The week after, the carried e1RM is 218.81 × 0.85 = 185.99, so six at RPE 7.5 asks for
+144.93, rounded down; the cap is one row above 170 × 0.85 = 144.5, so the model binds. From
+there the live e1RM takes over and the ordinary one-row climb resumes.
 
 ### Niggle constraints
 
@@ -257,7 +309,8 @@ a niggle's `rpe_cap`) has
 its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down (the model and its
 limits, rn:autoregulation.5 and .6). A set whose implied reps to failure would exceed 12 has its
 reps cut to fit the model. With no usable e1RM the load
-is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`.
+is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`, quoting the
+load as the rack step leaves it.
 
 ### The test set
 
@@ -288,9 +341,10 @@ source, and lives in the registry without an `rn:`.
 | An `amend` version | nothing changes: session ids and exercises carry their history | |
 | A `redesign` with new session ids | anchor rule step 2: the exercise's newest exposure in any session | `start_load_ignored` at adopt where both exist and differ |
 | A scheme change on a line | the new scheme's read of the same history (a `linear` line moving to `double_progression` starts from the anchor load at the bottom of the range) | |
-| `top_backoff` with no e1RM in 42 days | the anchor's top load, held | `no_e1rm` |
+| `top_backoff` with no e1RM in 42 days and no carried e1RM | the anchor's top load, held | `no_e1rm` |
 | `wave_531` with no `training_max` Decision | `start_load` as the training max | `training_max_unused` is the reverse case |
 | A layoff with no pre-layoff anchor in the session | anchor rule steps 2–3, then the band | |
+| An exposure logged at 0 (or with no load) on a line in a rack mode | the next older exposure, else `start_load` (anchor rule, the skip); the band, if any, measures from that | `anchor_load_unusable`; `start_load_missing` without either |
 
 ## What the agent is handed
 
@@ -302,7 +356,7 @@ Per line, in the `plan draft` envelope and the `plan apply --dry-run` envelope:
 | `derived_from` | `exposure:<workout>/<exercise>` or `start_load` |
 | `steps` | the derivation steps, in pipeline order, only those that changed something or found a ceiling not binding |
 | `flags` | the line's violations and warnings, `validation.md`'s shape |
-| `change` | one string, `4×6–8 @8: 120 → 125`, `held`, `first prescription`, `reset 120 → 107.5` |
+| `change` | one string, `4×6–8 @8: 120 → 125`, `held`, `first prescription`, `reset 120 → 107.5`; a `top_backoff` top the e1RM moved adds the e1RM and its exposure's date and session, `1×5 @8 + 4×5: 117.5 → 120 (e1RM 150 from 2026-10-13, pt-chest-back)`, whatever the later steps did to the load (the session is left out for a workout that matched none) |
 
 No prose rationale. The `plan-week` skill judges only lines carrying a flag or an override and
 shows the rest; its coaching questions are `skills.md`'s. `unexplained_drift` is the

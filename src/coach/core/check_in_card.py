@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from coach.core.check_in import Window
 from coach.core.closed_week.adherence import Adherence
-from coach.core.closed_week.dose import trailing_mean
+from coach.core.closed_week.dose import lift_trailing_mean, trailing_mean
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.closed_week.week import ClosedWeek
@@ -217,8 +217,8 @@ def adherence(found: Adherence) -> CardField:
 
 
 def dose(closing: Sequence[ClosedWeek], weeks: Sequence[ClosedWeek]) -> CardField | None:
-    """The newest closing week's delivered dose per muscle against the version's target, beside
-    the trailing four-ordinary-week mean."""
+    """The newest closing week's delivered dose per muscle and per priority lift against the
+    version's targets, beside the trailing four-ordinary-week mean."""
     if not closing or closing[-1].dose_target is None:
         return None
     latest = closing[-1]
@@ -231,7 +231,16 @@ def dose(closing: Sequence[ClosedWeek], weeks: Sequence[ClosedWeek]) -> CardFiel
         }
         for muscle in muscles
     ]
-    return CardField("dose", {"target": latest.dose_target, "muscles": rows})
+    lifts = [
+        {
+            "lift": lift,
+            "delivered": latest.lift_dose.get(lift, 0),
+            "target": target,
+            "mean": _rounded(lift_trailing_mean(weeks, lift)),
+        }
+        for lift, target in latest.lift_dose_target.items()
+    ]
+    return CardField("dose", {"target": latest.dose_target, "muscles": rows, "lifts": lifts})
 
 
 @dataclass(frozen=True)

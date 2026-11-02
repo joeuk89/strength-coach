@@ -189,14 +189,33 @@ class Flag:
         )
 
     def to_summary(self) -> dict[str, object]:
-        """The flag in a default summary: its key and what it says, the params left out."""
+        """The flag in a default summary: its key, its params hash and what it says, the params
+        left out."""
         return {
             "key": self.key,
+            "params_hash": self.params_hash,
             "code": self.code,
             "severity": self.severity,
             "message": self.message,
             "left": self.left.to_json() if self.left else None,
         }
+
+
+def grouped(flags: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+    """Flags as `Flag.to_json` writes them, one row per code in the order each code first appears:
+    its severity, count and keys, each key with the params hash an acknowledgement copies."""
+    by_code: dict[object, list[Mapping[str, object]]] = {}
+    for flag in flags:
+        by_code.setdefault(flag["code"], []).append(flag)
+    return [
+        {
+            "code": code,
+            "severity": found[0]["severity"],
+            "count": len(found),
+            "keys": [{"key": f["key"], "params_hash": f["params_hash"]} for f in found],
+        }
+        for code, found in by_code.items()
+    ]
 
 
 def _left(document: Mapping[str, object]) -> Left:

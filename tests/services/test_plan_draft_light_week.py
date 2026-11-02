@@ -106,3 +106,11 @@ def test_quality_conditioning_the_day_before_a_heavy_squat_suggests_dropping_it(
         "reason": "quality_stack",
         "evidence": ["planned_session:2026-11-03/intervals", "planned_session:2026-11-04/lower"],
     }
+
+
+def test_standing_quality_conditioning_beside_a_monday_lift_suggests_no_drop() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), {**INTERVALS, "cadence": "standing"})
+
+    flags = flags_of(conn, monday(0))
+
+    assert "session_drop_suggested" not in flags

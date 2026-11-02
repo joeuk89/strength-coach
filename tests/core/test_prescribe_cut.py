@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 from typing import Any
 
@@ -15,7 +16,7 @@ from coach.core.prescription import (
     StatusSpan,
     Step,
 )
-from coach.core.program.form import Dose, Line, SetGroup
+from coach.core.program.form import Dose, LiftDose, Line, SetGroup
 
 RUNGS = [60, 50, 40, 30, 20, 10, 0]
 PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", rungs=RUNGS)
@@ -228,7 +229,9 @@ def test_a_hold_line_after_a_layoff_takes_the_return_band() -> None:
     assert (group.count, group.load, group.rpe_cap) == (3, Load(85, "total"), 7)
 
 
-PRIORITY = Dose(per_muscle=10, lift={"bb_bench_press": 8, "assisted_pull_up": 8})
+PRIORITY = Dose(
+    per_muscle=10, lift={"bb_bench_press": LiftDose(8), "assisted_pull_up": LiftDose(8)}
+)
 TOP_BACKOFF = a_line(
     "bb_bench_press",
     warm_up(5),
@@ -350,6 +353,19 @@ def test_with_no_usable_e1rm_a_capped_line_is_clipped_to_the_anchor_and_warns() 
         ),
     ]
     assert line.groups[-1].load == Load(120, "total")
+
+
+def test_with_no_usable_e1rm_the_clipped_load_is_quoted_as_the_rack_rounds_it() -> None:
+    logged = squat_on("2026-10-26", *[(120, 15, 7)] * 4)
+    restated = PlanOverride("light_week", params={"load_cut_pct": 15})
+
+    line = derive(a_line(), logged, overrides=(restated,))
+
+    # the hit's 125 cut by 15% is 106.25, off the rack; the rack rounds it down to 105
+    unchecked = next(f for f in line.flags if f.code == "rpe_ceiling_unchecked")
+    assert unchecked.params["clipped_load"] == 105
+    assert unchecked.message.endswith("the load is held at 105")
+    assert line.groups[-1].load == Load(105, "total")
 
 
 def test_a_light_week_restating_the_load_cut_cuts_load_and_sets() -> None:
@@ -492,3 +508,21 @@ def test_a_wave_531_return_line_cuts_the_training_max_before_rounding_once() -> 
         (1, Load(62.5, "total"), 5),
         (1, Load(70, "total"), 5),
     ]
+
+
+COUNTED_PRIORITY = Dose(
+    per_muscle=10, lift={"bb_bench_press": LiftDose(8, ("bb_close_grip_bench_press",))}
+)
+
+
+def test_a_light_week_tests_the_priority_lift_and_never_its_counted_variant() -> None:
+    variant = dataclasses.replace(TOP_BACKOFF, exercise="bb_close_grip_bench_press")
+    sets = ((100, 3, 8), (85, 5, 6), (85, 5, 6), (85, 5, 6))
+    logged = an_exposure("2026-10-26", *sets, exercise_id="bb_close_grip_bench_press")
+    bench = an_exposure("2026-10-26", *sets)
+
+    on_variant = derive(variant, logged, overrides=(LIGHT_WEEK,), dose=COUNTED_PRIORITY)
+    on_lift = derive(TOP_BACKOFF, bench, overrides=(LIGHT_WEEK,), dose=COUNTED_PRIORITY)
+
+    assert "test" not in [g.type for g in on_variant.groups]
+    assert [g.type for g in on_lift.groups].count("test") == 1

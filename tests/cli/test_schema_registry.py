@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 
+from coach.cli.envelope import BUDGET_BYTES
+
 
 @pytest.fixture(autouse=True)
 def outside_an_instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -46,7 +48,7 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 82
+    assert len(rows) == run.envelope["result"]["count"] == 88
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -55,6 +57,19 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
     assert rows["light_week_unprompted"]["rn"] == ["rn:deloads.3", "rn:deloads.4"]
     assert rows["recovery_ceiling_exceeded"]["rn"]["cases"]["niggle"] is None
     assert rows["override_conflict"]["scope"] == ["week", "session", "line"]
+    assert rows["anchor_load_unusable"]["severity"] == "warning"
+    assert rows["anchor_load_unusable"]["scope"] == ["line"]
+    assert rows["anchor_load_unusable"]["params"] == ["exposure", "logged_load", "anchor_used"]
+    assert rows["anchor_load_unusable"]["left_by"] == ["weekplan", "decision"]
+    assert rows["anchor_load_unusable"]["rn"] is None
+    assert rows["carried_e1rm"]["params"] == [
+        "pre_layoff_exposure",
+        "pre_layoff_e1rm",
+        "factor",
+        "carried",
+        "expires",
+    ]
+    assert rows["carried_e1rm"]["rn"] == "rn:detraining-return.5"
 
 
 def test_the_flags_registry_names_what_may_leave_each_code() -> None:
@@ -69,14 +84,14 @@ def test_the_flags_registry_names_what_may_leave_each_code() -> None:
     assert "acknowledgeable" not in rows["stall_streak"]
 
 
-def test_the_default_flags_envelope_truncates_under_3_kb() -> None:
+def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     run = run_coach("schema", "--registry", "flags")
 
     result = run.envelope["result"]
-    assert len(run.stdout.encode("utf-8")) < 3 * 1024
+    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
-    assert result["count"] == 82
+    assert result["count"] == 88
 
 
 def test_last_keeps_that_many_rows() -> None:
