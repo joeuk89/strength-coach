@@ -17,7 +17,6 @@ from support.programs import a_config, the_worked_store
 from coach.core.errors import Invalid
 from coach.core.plan_draft import PlanDraft
 from coach.services.closed_weeks import closed_weeks
-from coach.services.history import read_history
 from coach.services.plan_draft import plan_draft
 from coach.services.program import adopt, show_draft
 from coach.store import programs
@@ -198,10 +197,23 @@ def test_the_swings_workout_gives_the_check_in_no_lift_row() -> None:
     assert [r["exercise"] for r in rows] == ["bb_back_squat"]
 
 
-def test_the_swings_workout_leaves_the_lift_history_behind_e1rm_and_anchors() -> None:
-    exposures = read_history(a_swings_monday(), "kg").exposures
+def test_the_next_swings_hold_line_anchors_on_the_logged_swings() -> None:
+    conn = a_swings_monday()
 
-    assert [(e.workout_id, e.exercise_id) for e in exposures] == [("h-1", "bb_back_squat")]
+    draft = plan_draft(
+        conn,
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(datetime.datetime(2026, 11, 8)),
+        week=datetime.date.fromisoformat(monday(1)),
+        position="A",
+    ).draft
+
+    [swings] = [s for s in draft.sessions if s.session.session_id == "cond-swings"]
+    [line] = swings.lines
+    load = line.groups[-1].load
+    assert line.derived_from == "exposure:h-2/kb_swing"
+    assert load is not None and load.amount == 52.5
 
 
 def test_a_swings_only_day_is_not_a_lifting_day_for_the_return_week() -> None:

@@ -14,14 +14,13 @@ from coach.core.closed_week.match import PlannedRef, WeekWorkout, workout_class
 from coach.core.closed_week.sessions import PlannedWork, TargetSet
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
-from coach.core.days_off import SessionTrained
 from coach.core.exposure import Annotation, Exposure, LoggedWorkout, resolve
-from coach.core.log import WorkoutVersion
 from coach.core.muscles import read_muscles
 from coach.core.planned_week import DAYS_IN_WEEK, choose_sessions, planned_sessions, week_monday
 from coach.core.prescription import PlannedSession, PlanOverride, StatusSpan
 from coach.core.program.form import ProgramForm
 from coach.core.ref import Ref
+from coach.services.history import trained_without_sets
 from coach.store import (
     annotations,
     check_ins,
@@ -282,33 +281,6 @@ class WeekLog:
             )
             for s in sessions
         )
-
-
-def trained_without_sets(
-    live: tuple[Annotation, ...], current: tuple[WorkoutVersion, ...], sessions: dict[str, str]
-) -> tuple[SessionTrained, ...]:
-    """The session dates trained with no logged sets: each `trained_unlogged` Annotation and each
-    hand-entered Workout with no sets."""
-    return (*_trained_unlogged(live), *_without_sets(current, sessions))
-
-
-def _trained_unlogged(live: tuple[Annotation, ...]) -> list[SessionTrained]:
-    found: list[SessionTrained] = []
-    for annotation in live:
-        if annotation.kind == "trained_unlogged":
-            day, _, session_id = Ref.parse(annotation.target).id.partition("/")
-            found.append(SessionTrained(_day(day), session_id))
-    return found
-
-
-def _without_sets(
-    current: tuple[WorkoutVersion, ...], sessions: dict[str, str]
-) -> list[SessionTrained]:
-    return [
-        SessionTrained(_day(v.date), sessions.get(v.id))
-        for v in current
-        if v.source == "manual" and not v.sets
-    ]
 
 
 def _targets(
