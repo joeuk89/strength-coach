@@ -1,4 +1,5 @@
-"""The logged history as core values: exposures and the session dates trained without sets."""
+"""The logged history as core values: exposures and the session dates trained without sets. A
+workout matched to a conditioning session yields no Exposures (ADR 0010)."""
 
 import datetime
 from dataclasses import dataclass
@@ -6,10 +7,9 @@ from typing import cast
 
 from coach.core.config import Units
 from coach.core.days_off import DaysOff, SessionTrained, line_days_off
-from coach.core.exposure import Annotation, Exposure, LoggedWorkout, Matched, resolve
-from coach.core.log import WorkoutVersion
+from coach.core.exposure import Exposure, LoggedWorkout, Matched, resolve
 from coach.core.planned_week import week_monday
-from coach.core.ref import Ref
+from coach.services.closed_weeks import WeekLog, trained_without_sets
 from coach.store import annotations, exercises, week_plans, workouts
 from coach.store.connection import Connection
 
@@ -24,20 +24,14 @@ def read_history(conn: Connection, units: Units) -> History:
     sessions = workouts.sessions_of_current(conn)
     current = workouts.current_workouts(conn)
     live = annotations.live(conn)
+    conditioning = WeekLog(conn, units).conditioning
     logged = [
         LoggedWorkout(v.id, _day(v.date), v.sets, _match(conn, sessions.get(v.id), _day(v.date)))
         for v in current
+        if v.id not in conditioning
     ]
     exposures = resolve(logged, exercises.library(conn), live, units)
     return History(exposures, trained_without_sets(live, current, sessions))
-
-
-def trained_without_sets(
-    live: tuple[Annotation, ...], current: tuple[WorkoutVersion, ...], sessions: dict[str, str]
-) -> tuple[SessionTrained, ...]:
-    """The session dates trained with no logged sets: each `trained_unlogged` Annotation and each
-    hand-entered Workout with no sets."""
-    return (*_trained_unlogged(live), *_without_sets(current, sessions))
 
 
 def days_off_for_line(
@@ -77,25 +71,6 @@ def _took_return_band(steps: object) -> bool:
         str(step.get("cause", "")).startswith("return")
         for step in cast(list[dict[str, object]], steps)
     )
-
-
-def _trained_unlogged(live: tuple[Annotation, ...]) -> list[SessionTrained]:
-    found: list[SessionTrained] = []
-    for annotation in live:
-        if annotation.kind == "trained_unlogged":
-            day, _, session_id = Ref.parse(annotation.target).id.partition("/")
-            found.append(SessionTrained(_day(day), session_id))
-    return found
-
-
-def _without_sets(
-    current: tuple[WorkoutVersion, ...], sessions: dict[str, str]
-) -> list[SessionTrained]:
-    return [
-        SessionTrained(_day(v.date), sessions.get(v.id))
-        for v in current
-        if v.source == "manual" and not v.sets
-    ]
 
 
 def _day(text: str) -> datetime.date:

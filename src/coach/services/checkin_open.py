@@ -204,7 +204,7 @@ def _session_reads(
 
 
 def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.LiftRead]:
-    every = [e for w in log.workouts for e in w.exposures]
+    every = log.exposures
     inside = [e for e in every if window.start <= e.date <= window.end and e.working]
     patterns = {str(r["id"]): r["pattern"] for r in exercises.every(conn)}
     priority = _priority_lifts(conn)

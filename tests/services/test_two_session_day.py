@@ -8,7 +8,7 @@ import pytest
 from support.check_in_cards import field_of, opened
 from support.clock import FixedClock
 from support.closed_weeks import closed_through, monday
-from support.history import a_logged_workout
+from support.history import a_logged_workout, an_annotation
 from support.kit_fixtures import kit_files
 from support.plans import SQUAT_LINE, a_squat_program, an_approved_plan, squat_logged
 from support.program_drafts import a_draft, a_line, a_session, toml
@@ -17,6 +17,7 @@ from support.programs import a_config, the_worked_store
 from coach.core.errors import Invalid
 from coach.core.plan_draft import PlanDraft
 from coach.services.closed_weeks import closed_weeks
+from coach.services.history import read_history
 from coach.services.plan_draft import plan_draft
 from coach.services.program import adopt, show_draft
 from coach.store import programs
@@ -181,6 +182,47 @@ def test_the_swings_workout_matched_to_the_conditioning_session_is_an_activity()
             "quality": True,
         }
     ]
+
+
+def a_swings_monday() -> Any:
+    conn = a_squat_program(LOWER, SWINGS, schedule=a_monday("lower", "cond-swings"))
+    an_approved_plan(conn, monday(0))
+    squat_logged(conn, "h-1", monday(0), *[(120, 8, 8)] * 4)
+    a_logged_workout(conn, "h-2", monday(0), (SWING_TEMPLATE, ((24.0, 12, 8.0),) * 12))
+    return conn
+
+
+def test_the_swings_workout_gives_the_check_in_no_lift_row() -> None:
+    rows = cast(list[dict[str, Any]], field_of(opened(a_swings_monday()), "lifts").facts["rows"])
+
+    assert [r["exercise"] for r in rows] == ["bb_back_squat"]
+
+
+def test_the_swings_workout_leaves_the_lift_history_behind_e1rm_and_anchors() -> None:
+    exposures = read_history(a_swings_monday(), "kg").exposures
+
+    assert [(e.workout_id, e.exercise_id) for e in exposures] == [("h-1", "bb_back_squat")]
+
+
+def test_a_swings_only_day_is_not_a_lifting_day_for_the_return_week() -> None:
+    conn = a_squat_program(LOWER, SWINGS, schedule=a_monday("lower", "cond-swings"))
+    squat_logged(conn, "h-0", monday(-3), *[(120, 8, 8)] * 4)
+    an_approved_plan(conn, monday(0))
+    a_logged_workout(conn, "h-2", monday(0), (SWING_TEMPLATE, ((24.0, 12, 8.0),) * 12))
+    an_annotation(
+        conn,
+        "a-1",
+        "match",
+        "workout:h-2",
+        planned_session=f"planned_session:{monday(0)}/cond-swings",
+    )
+    an_approved_plan(conn, monday(1))
+    squat_logged(conn, "h-3", monday(1), *[(120, 8, 8)] * 4)
+    closed_through(conn, 2)
+
+    kinds = [w.kind for w in closed_weeks(conn).weeks]
+
+    assert kinds == ["partial", "return"]
 
 
 def test_the_program_draft_keeps_the_two_session_day_and_adopts_again_unchanged() -> None:
