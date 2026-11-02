@@ -1,6 +1,6 @@
 import copy
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import cast
 
 from coach.cli.declaration import Json
@@ -47,26 +47,27 @@ def fit(envelope: Json) -> Json:
     trailing rows from its flat `{rows, count, truncated}` lists, the longest first, until the
     envelope fits the budget; fields and grouped rows never drop."""
     fitted = copy.deepcopy(envelope)
-    result = fitted.get("result")
-    groups = [found for found in _mappings(result) if _is_grouped_row(found)]
-    while _size(fitted) > BUDGET_BYTES:
-        longest = max(groups, key=lambda found: len(_keys(found)), default=None)
-        if longest is None or not _keys(longest):
-            break
-        _keys(longest).pop()
-        longest["keys_truncated"] = True
+    mappings = _mappings(fitted.get("result"))
+    groups = [found for found in mappings if _is_grouped_row(found)]
     lists = [
         found
-        for found in _mappings(result)
+        for found in mappings
         if _is_row_list(found) and not any(_is_grouped_row(row) for row in _rows(found))
     ]
-    while _size(fitted) > BUDGET_BYTES:
-        longest = max(lists, key=lambda found: len(_rows(found)), default=None)
-        if longest is None or not _rows(longest):
-            break
-        _rows(longest).pop()
-        longest["truncated"] = True
+    _cut(fitted, groups, _keys, "keys_truncated")
+    _cut(fitted, lists, _rows, "truncated")
     return fitted
+
+
+def _cut(
+    envelope: Json, holders: list[Json], items: Callable[[Json], list[object]], marker: str
+) -> None:
+    while _size(envelope) > BUDGET_BYTES:
+        longest = max(holders, key=lambda found: len(items(found)), default=None)
+        if longest is None or not items(longest):
+            break
+        items(longest).pop()
+        longest[marker] = True
 
 
 def _size(envelope: Json) -> int:
