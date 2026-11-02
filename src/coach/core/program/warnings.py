@@ -1,7 +1,6 @@
 """The warnings `program adopt` raises on a filled form (docs/spec/program.md, "Warnings", and
 docs/spec/goals.md, "Adopt: the goal checks")."""
 
-import math
 from collections.abc import Mapping, Sequence
 from typing import cast
 
@@ -17,13 +16,12 @@ from coach.core.program.bands import (
     scheme_fits,
 )
 from coach.core.program.checks import AdoptContext
+from coach.core.program.estimate import session_estimate
 from coach.core.program.form import WEEKDAYS as SCHEDULE_DAYS
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm, Session
 from coach.core.registries.ledger import Reason
 
 LOW_ADHERENCE = ("watch", "low")
-# The time one set takes before its rest, when it states no duration_s; an opinion.
-SET_WORK_S = 40
 
 
 def adopt_warnings(form: ProgramForm, context: AdoptContext) -> tuple[Flag, ...]:
@@ -304,14 +302,9 @@ class _Warnings:
                 return
 
     def _minutes(self, session: Session, scope: Scope) -> None:
-        if session.minutes is None or not session.lines:
+        estimate = session_estimate(session)
+        if session.minutes is None or estimate is None:
             return
-        seconds = sum(
-            group.count * ((group.duration_s or SET_WORK_S) + line.rest_s)
-            for line in session.lines
-            for group in line.sets
-        )
-        estimate = math.ceil(seconds / 60)
         if estimate > session.minutes:
             self.raise_(
                 "session_over_minutes",

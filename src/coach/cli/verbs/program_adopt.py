@@ -44,6 +44,7 @@ def _result(result: AdoptResult) -> Json:
         return summary | {
             "diff": result.diff.to_json(),
             "start_loads": [dict(load) for load in result.start_loads],
+            "sessions": [dict(session) for session in result.sessions],
             "no_op": result.no_op,
         }
     acknowledgements: list[Json] = [
@@ -68,8 +69,8 @@ DECLARATION = Declaration(
         Argument(
             "--dry-run",
             "show the diff against the version in force, filled defaults marked, each start "
-            "load in athlete units with its Hevy kg, and the warnings as left or not; write "
-            "nothing",
+            "load in athlete units with its Hevy kg, each session's time estimate beside its "
+            "minutes, and the warnings as left or not; write nothing",
             takes_value=False,
         ),
         Argument("--position", "the rotation week a redesign starts at (default: the first)"),
@@ -90,6 +91,19 @@ DECLARATION = Declaration(
             "no_op": {"type": "boolean"},
             "diff": {"type": "object", "description": "dry run only"},
             "start_loads": {"type": "array", "description": "dry run only"},
+            "sessions": {
+                "type": "array",
+                "description": "dry run only",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "minutes": {"type": ["integer", "null"]},
+                        "estimate": {"type": ["integer", "null"]},
+                    },
+                    "required": ["id", "minutes", "estimate"],
+                },
+            },
         },
         "required": ["version", "kind", "position", "block", "no_op"],
     },
