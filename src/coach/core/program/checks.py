@@ -114,13 +114,14 @@ class _Checks:
             )
 
     def _duplicate_ids(self) -> None:
-        slots = self.form.schedule.slots()
-        for n, (week, day, session_id) in enumerate(slots):
-            if (week, day, session_id) in slots[:n]:
+        slots: set[tuple[str, str, str]] = set()
+        for week, day, session_id in self.form.schedule.slots():
+            if (week, day, session_id) in slots:
                 self._duplicate(
                     session_id, None, f"schedule.{week}.{day} names {session_id!r} twice"
                 )
                 return
+            slots.add((week, day, session_id))
         seen: set[str] = set()
         for session in self.form.sessions:
             if session.id in seen:

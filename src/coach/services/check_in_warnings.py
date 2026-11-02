@@ -61,7 +61,7 @@ def activities(conn: Connection, log: WeekLog) -> list[LoggedActivity]:
         for r in readings.live(conn, "activity")
     ]
     for workout in log.workouts:
-        if workout.kind != "conditioning" and log.matched_kind(workout) != "conditioning":
+        if workout.kind != "conditioning" and workout.id not in log.conditioning:
             continue
         rated = [s.rpe for e in workout.exposures for s in e.sets if s.rpe is not None]
         view = conditioning_activity(workout.date, workout.minutes, rated)

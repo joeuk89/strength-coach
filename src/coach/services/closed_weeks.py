@@ -142,7 +142,7 @@ class WeekLog:
         self._plans: dict[datetime.date, _WeekPlan] = {}
         self._matches: dict[datetime.date, dict[str, PlannedSession]] = {}
         self.conditioning = frozenset(
-            w.id for w in self.workouts if self.matched_kind(w) == "conditioning"
+            w.id for w in self.workouts if self._matched_kind(w) == "conditioning"
         )
         self.lifting_dates = [
             *(
@@ -173,7 +173,7 @@ class WeekLog:
         0010), whatever its sets carry."""
         return tuple(e for w in self.workouts if w.id not in self.conditioning for e in w.exposures)
 
-    def matched_kind(self, workout: WeekWorkout) -> str | None:
+    def _matched_kind(self, workout: WeekWorkout) -> str | None:
         """The kind of the planned session the workout matched in its week, if any. Match reads
         no week kind, so it is known before the return week's lifting dates."""
         session = self._matched(self._week_of(workout)).get(workout.id)
@@ -224,7 +224,7 @@ class WeekLog:
             form = version.form if version else None
             overrides = week_plans.stored_overrides(self.conn, str(plan["id"])) if plan else ()
             planned = self._planned(plan, form, overrides, monday) if plan and form else ()
-            self._plans[monday] = _WeekPlan(form, tuple(overrides), planned)
+            self._plans[monday] = _WeekPlan(form, overrides, planned)
         return self._plans[monday]
 
     def _workouts_of(self, monday: datetime.date) -> tuple[WeekWorkout, ...]:
