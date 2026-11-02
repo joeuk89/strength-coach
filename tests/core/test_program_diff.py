@@ -107,3 +107,38 @@ def test_a_change_to_a_lifts_counted_variants_shows_in_the_dose() -> None:
     change: Any = diff(before, after).to_json()
 
     assert change["version"]["dose"] == {"from": bare, "to": counted}
+
+
+def a_monday_of(*ids: str) -> ProgramForm:
+    monday: object = ids[0] if len(ids) == 1 else list(ids)
+    sessions = (a_session("x"), a_session("y", kind="conditioning", tier="optional"))
+    form, _ = filled_form(a_draft(*sessions, schedule={"rotation": ["A"], "A": {"mon": monday}}))
+    return form
+
+
+def test_a_second_session_on_a_weekday_is_a_schedule_change() -> None:
+    change: Any = diff(a_monday_of("x"), a_monday_of("x", "y")).to_json()
+
+    assert change["version"]["schedule"] == {
+        "from": {"rotation": ["A"], "A": {"mon": "x"}},
+        "to": {"rotation": ["A"], "A": {"mon": ["x", "y"]}},
+    }
+
+
+def test_reordering_a_weekdays_sessions_is_a_schedule_change() -> None:
+    change: Any = diff(a_monday_of("x", "y"), a_monday_of("y", "x")).to_json()
+
+    assert "schedule" in change["version"]
+
+
+def test_a_one_element_list_is_the_same_schedule_as_a_bare_id() -> None:
+    bare = a_monday_of("x")
+    listed, _ = filled_form(
+        a_draft(
+            a_session("x"),
+            a_session("y", kind="conditioning", tier="optional"),
+            schedule={"rotation": ["A"], "A": {"mon": ["x"]}},
+        )
+    )
+
+    assert diff(bare, listed).empty

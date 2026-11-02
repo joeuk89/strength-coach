@@ -114,6 +114,13 @@ class _Checks:
             )
 
     def _duplicate_ids(self) -> None:
+        slots = self.form.schedule.slots()
+        for n, (week, day, session_id) in enumerate(slots):
+            if (week, day, session_id) in slots[:n]:
+                self._duplicate(
+                    session_id, None, f"schedule.{week}.{day} names {session_id!r} twice"
+                )
+                return
         seen: set[str] = set()
         for session in self.form.sessions:
             if session.id in seen:
@@ -156,13 +163,15 @@ class _Checks:
                 )
                 return
 
-    def _duplicate(self, session_id: str, exercise_id: str | None) -> None:
+    def _duplicate(
+        self, session_id: str, exercise_id: str | None, message: str | None = None
+    ) -> None:
         what = f"exercise {exercise_id!r} twice in" if exercise_id else "two sessions with id"
         self.raise_(
             "duplicate_id",
             self.version_scope,
             {"session_id": session_id, "exercise_id": exercise_id},
-            f"{what} {session_id!r}",
+            message or f"{what} {session_id!r}",
         )
 
     def session(self, session: Session) -> None:

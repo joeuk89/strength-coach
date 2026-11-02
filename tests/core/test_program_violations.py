@@ -69,6 +69,10 @@ VIOLATIONS = [
     (one_line(load_mode="kettle"), "unknown_load_mode@line:push/bb_bench_press"),
     (a_draft(a_session("push"), a_session("push")), "duplicate_id@version:pv-1"),
     (
+        a_draft(schedule={"rotation": ["A"], "A": {"mon": ["push", "push"]}}),
+        "duplicate_id@version:pv-1",
+    ),
+    (
         a_draft(schedule={"rotation": ["A"], "A": {"mon": "push", "tue": "pull"}}),
         "schedule_session_missing@version:pv-1",
     ),

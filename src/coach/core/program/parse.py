@@ -94,12 +94,12 @@ def _schedule(reader: "_Reader") -> Schedule:
     rotation = reader.texts("rotation")
     if not rotation or len(set(rotation)) != len(rotation):
         raise reader.wrong("rotation", "a list of distinct week names")
-    weeks: dict[str, dict[str, str]] = {}
+    weeks: dict[str, dict[str, tuple[str, ...]]] = {}
     for week in rotation:
         days = reader.optional_table(week)
         if days is None:
             continue
-        weeks[week] = {day: days.text(day) for day in WEEKDAYS if days.has(day)}
+        weeks[week] = {day: days.session_ids(day) for day in WEEKDAYS if days.has(day)}
         days.finish()
     reader.finish()
     return Schedule(tuple(rotation), weeks)
@@ -302,6 +302,13 @@ class _Reader:
         if not _is_list(value) or not all(isinstance(v, str) and v for v in _items(value)):
             raise self.wrong(key, "a list of names")
         return [cast(str, v) for v in _items(value)]
+
+    def session_ids(self, key: str) -> tuple[str, ...]:
+        value = self.raw(key)
+        ids = [value] if isinstance(value, str) else _items(value) if _is_list(value) else []
+        if ids and all(isinstance(v, str) and v for v in ids):
+            return tuple(cast(str, v) for v in ids)
+        raise self.wrong(key, "a session id or a non-empty list of session ids")
 
     def choice(self, key: str, choices: Sequence[str]) -> str:
         value = self.optional_choice(key, choices)

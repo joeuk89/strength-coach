@@ -286,6 +286,25 @@ def test_a_session_on_a_weekday_the_athlete_cannot_train_warns_session_on_unavai
     ]
 
 
+def test_every_session_a_weekday_lists_on_an_unavailable_day_warns() -> None:
+    draft = a_draft(
+        a_session("push"),
+        a_session("pull", a_line("bb_bent_over_row")),
+        schedule={"rotation": ["A"], "A": {"mon": ["push", "pull"]}},
+    )
+    days = ("tuesday",)
+
+    flags = warnings_of(draft, a_context(available_days=days))
+
+    assert the("session_on_unavailable_day", flags) == [
+        (
+            f"session_on_unavailable_day@session:{id_}",
+            {"session_id": id_, "weekday": "monday", "available_days": ["tuesday"]},
+        )
+        for id_ in ("push", "pull")
+    ]
+
+
 def test_supersetted_lines_with_different_rests_warn_superset_rest_differs() -> None:
     def paired(*rests: int) -> list[tuple[str, dict[str, object]]]:
         lines = [

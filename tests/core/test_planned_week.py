@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 
 from support.prescribe import PLANNED, a_line, a_rotation_form
 
@@ -20,6 +21,24 @@ def planned(
 def test_weekly_sessions_fall_on_their_weekday_of_the_rotation_week() -> None:
     assert planned(a_rotation_form()) == [("2026-11-02", "lower-a"), ("2026-11-05", "push-a")]
     assert planned(a_rotation_form(), "B") == [("2026-11-03", "pull-b")]
+
+
+def test_every_session_a_weekday_lists_is_planned_on_that_day_in_list_order() -> None:
+    cond = Session("cond-swings", "Swings", "conditioning", "optional", lines=LINE)
+    rotation = a_rotation_form(cond)
+    form = replace(
+        rotation,
+        schedule=replace(
+            rotation.schedule,
+            weeks={"A": {"mon": ("lower-a", "cond-swings"), "thu": ("push-a",)}},
+        ),
+    )
+
+    assert planned(form) == [
+        ("2026-11-02", "lower-a"),
+        ("2026-11-02", "cond-swings"),
+        ("2026-11-05", "push-a"),
+    ]
 
 
 def test_a_session_takes_its_own_location_or_the_versions() -> None:
