@@ -88,8 +88,8 @@ def _prompt(found: DryRun, *, units: Units, full: bool) -> str:
 
 def dry_run_result(found: DryRun, *, units: Units, full: bool) -> Json:
     """The dry run's result: the Write plan, its hash and the approval prompt. Every flag is
-    listed, never cut, since the agent approves against them; by default each is what an
-    acknowledgement needs, since the prompt already carries its text."""
+    listed, never cut, because the agent approves against them. By default each flag carries
+    only what an acknowledgement needs, since the prompt already holds its text."""
     summary = found.summary
     prompt = _prompt(found, units=units, full=full)
     flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
