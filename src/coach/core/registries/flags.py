@@ -193,6 +193,10 @@ VIOLATIONS = (
     violation("set_groups_off_scheme", ("line",), ("scheme", "expected_shape"), ("program adopt",)),
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
     violation("acknowledgement_unmatched", ("version",), ("flag_key",), ("program adopt",)),
+    violation("counted_variant_unknown", ("version",), ("lift", "exercise_id"), ("program adopt",)),
+    violation(
+        "counted_variant_not_exclusive", ("version",), ("exercise_id", "lifts"), ("program adopt",)
+    ),
     violation(
         "record_kind_not_allowed",
         ("instance",),
@@ -334,6 +338,11 @@ ADOPT_WARNINGS = (
         ("version",),
         ("target_of", "target", "band", "phase"),
         ("rn:goal-programming §3",),
+    ),
+    adopt_warning(
+        "counted_variant_off_pattern",
+        ("version",),
+        ("lift", "variant", "patterns", "primary_muscles"),
     ),
     adopt_warning(
         "deload_off_emphasis",

@@ -573,3 +573,62 @@ def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version
         "emphasis_off_goal@version:pv-2",
         adopted.acknowledgements[0].params_hash,
     )
+
+
+def with_pull_up_counting(*variants: str, acknowledge: str = "") -> str:
+    counts = ", ".join(f'"{v}"' for v in variants)
+    return (
+        WORKED_DRAFT_COMPLETE
+        + f"""
+[dose]
+per_muscle = 10
+
+[dose.lift]
+bb_bench_press = 8
+pull_up = {{ sets = 8, counts = [{counts}] }}
+"""
+        + acknowledge
+    )
+
+
+def test_a_pull_up_counting_its_negatives_and_band_pull_ups_adopts_inside_the_band() -> None:
+    conn = the_worked_store()
+
+    result = run(
+        conn, with_pull_up_counting("negative_pull_up", "band_pull_up"), available_days=EVERY_DAY
+    )
+
+    assert keys(result) == ["scheme_off_emphasis@line:a-sat-pull/pull_up"]
+    row = conn.execute("SELECT dose FROM program_version WHERE id = 'pv-1'").fetchone()
+    assert json.loads(row[0])["lift"] == {
+        "bb_bench_press": 8,
+        "pull_up": {"sets": 8, "counts": ["negative_pull_up", "band_pull_up"]},
+    }
+
+
+def test_a_lat_pulldown_counts_toward_the_pull_up_and_a_fly_warns() -> None:
+    pulldown = run(
+        the_worked_store(), with_pull_up_counting("lat_pulldown"), available_days=EVERY_DAY
+    )
+    fly = run(the_worked_store(), with_pull_up_counting("db_fly"), available_days=EVERY_DAY)
+
+    assert "counted_variant_off_pattern@version:pv-1" not in keys(pulldown)
+    assert "counted_variant_off_pattern@version:pv-1" in keys(fly)
+
+
+def test_an_acknowledgement_leaves_counted_variant_off_pattern_on_the_version() -> None:
+    entry = """
+[[acknowledge]]
+flag = "counted_variant_off_pattern@version:pv-1"
+because = "coach_judgement"
+text = "Counted on purpose."
+"""
+    result = run(
+        the_worked_store(),
+        with_pull_up_counting("db_fly", acknowledge=entry),
+        available_days=EVERY_DAY,
+    )
+
+    [flag] = [f for f in result.warnings if f.code == "counted_variant_off_pattern"]
+    assert flag.left is not None
+    assert flag.params["variant"] == "db_fly"

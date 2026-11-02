@@ -241,6 +241,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on | `null` |
 | `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry | `null` |
+| `counted_variant_unknown` | version | lift, exercise id | an `[exercise.<id>]` declaration in the Draft, a library id, or removing it from the lift's `counts` (`program.md`, "Dose and deload") | `null` |
+| `counted_variant_not_exclusive` | version | exercise id, the lifts counting it | the exercise in one lift's `counts` only, and no priority lift in any | `null` |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) | `null` |
 | `override_conflict` | week, session, line | the two kinds | removing one of the two overrides (`overrides.md`) | `null` |
 | `reading_duplicate` | instance | reading kind, date or night, source, the live row's id | withdrawing one of the two rows in the Draft (`schema.md`, `check-in.md` "Correcting") | `null` |
@@ -282,6 +284,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `priority_lift_absent` | version | exercise id | `null` |
 | `priority_lift_not_first` | session | exercise id, position among the lines carrying a working group | rn:goal-programming §7 |
 | `dose_off_band` | version | muscle or lift, target, band, phase | rn:goal-programming §3 |
+| `counted_variant_off_pattern` | version | lift, counted variant, the two patterns, the two primary muscle lists | `null` |
 | `deload_off_emphasis` | version | deload policy, expected shape | rn:goal-programming §6 |
 | `muscle_no_hard_sets` | version | muscle, sessions searched | rn:volume-frequency.1 |
 | `session_over_minutes` | session | estimate, `minutes` | `null` |
