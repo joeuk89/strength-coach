@@ -57,7 +57,8 @@ def progress(
     priority = stored.goal.priority_lifts if stored else ()
     signals = cadence_signals(conn, closed, units=units, on=on)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
-    redesigned = programs.block_opened(conn)
+    opened = programs.block_opened(conn)
+    redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     weigh_ins = {
         datetime.date.fromisoformat(str(r["date"])): float(str(r["kg"]))
         for r in readings.live(conn, "weigh_in")
@@ -71,7 +72,7 @@ def progress(
                 exposures,
                 spans,
                 _scheme_since(versions, exercise),
-                None if redesigned is None else datetime.date.fromisoformat(redesigned),
+                redesigned,
                 on,
                 by_exercise.get(exercise),
             )

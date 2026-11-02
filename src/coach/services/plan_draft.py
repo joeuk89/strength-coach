@@ -115,7 +115,8 @@ def plan_draft(
     history = read_history(conn, config.athlete.units)
     program = ProgramVersion(version.form, _exercise_facts(conn))
     constraints = niggles.open_constraints(conn)
-    redesigned = programs.block_opened(conn)
+    opened = programs.block_opened(conn)
+    redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     sessions = tuple(
         prescribe(
             PrescribeRequest(
@@ -129,7 +130,7 @@ def plan_draft(
                 niggle_constraints=constraints,
                 status_spans=spans,
                 hard_week_count=hard_week_count,
-                redesigned=None if redesigned is None else datetime.date.fromisoformat(redesigned),
+                redesigned=redesigned,
             )
         )
         for session in planned

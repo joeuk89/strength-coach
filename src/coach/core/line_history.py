@@ -30,8 +30,8 @@ def ordinary(history: Iterable[Exposure]) -> tuple[Exposure, ...]:
 def since_redesign(
     history: Iterable[Exposure], redesigned: datetime.date | None
 ) -> tuple[Exposure, ...]:
-    """The exposures on or after the latest redesign's adoption date; all of them with none
-    (docs/spec/prescription.md, "Stalls")."""
+    """Exposures on or after the latest redesign's adoption date (docs/spec/prescription.md,
+    "Stalls")."""
     return tuple(e for e in history if redesigned is None or redesigned <= e.date)
 
 
