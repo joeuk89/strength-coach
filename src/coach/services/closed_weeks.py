@@ -7,17 +7,17 @@ from dataclasses import dataclass
 from typing import cast
 
 from coach.core.closed_week.block import Block, blocks
-from coach.core.closed_week.close import WeekFacts, close_week
+from coach.core.closed_week.close import WeekFacts, close_week, week_matches
 from coach.core.closed_week.dose import MuscleMap
 from coach.core.closed_week.kind import is_return_week
 from coach.core.closed_week.match import PlannedRef, WeekWorkout, workout_class
 from coach.core.closed_week.sessions import PlannedWork, TargetSet
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
-from coach.core.exposure import Annotation, LoggedWorkout, resolve
+from coach.core.exposure import Annotation, Exposure, LoggedWorkout, resolve
 from coach.core.muscles import read_muscles
 from coach.core.planned_week import DAYS_IN_WEEK, choose_sessions, planned_sessions, week_monday
-from coach.core.prescription import PlanOverride, StatusSpan
+from coach.core.prescription import PlannedSession, PlanOverride, StatusSpan
 from coach.core.program.form import ProgramForm
 from coach.core.ref import Ref
 from coach.services.history import trained_without_sets
@@ -93,6 +93,13 @@ def _closed_mondays(windows: WindowList, first: datetime.date) -> list[datetime.
     return found
 
 
+@dataclass(frozen=True)
+class _WeekPlan:
+    form: ProgramForm | None
+    overrides: tuple[PlanOverride, ...]
+    planned: tuple[PlannedWork, ...]
+
+
 class WeekLog:
     """What every closed week reads, loaded once. A week closes when a window covers its Sunday,
     so a window not yet recorded closes its weeks the same way (`checkin open`)."""
@@ -122,10 +129,6 @@ class WeekLog:
             )
             for v in current
         )
-        self.lifting_dates = [
-            *(w.date for w in self.workouts if w.kind == "lifting"),
-            *(t.date for t in trained_without_sets(live, current, sessions)),
-        ]
         self.claims = _claims(live, self.workouts, sessions)
         self.trained_unlogged = _planned_refs(live, "trained_unlogged")
         self.cancelled = _planned_refs(live, "cancelled")
@@ -133,6 +136,22 @@ class WeekLog:
         self.routines = routine_map.mapped(conn)
         self.rehab = niggles.rehab_histories(conn)
         self.muscles = muscle_map(conn)
+        self._by_week: dict[datetime.date, list[WeekWorkout]] = {}
+        for workout in self.workouts:
+            self._by_week.setdefault(self._week_of(workout), []).append(workout)
+        self._plans: dict[datetime.date, _WeekPlan] = {}
+        self._matches: dict[datetime.date, dict[str, PlannedSession]] = {}
+        self.conditioning = frozenset(
+            w.id for w in self.workouts if self._matched_kind(w) == "conditioning"
+        )
+        self.lifting_dates = [
+            *(
+                w.date
+                for w in self.workouts
+                if w.kind == "lifting" and w.id not in self.conditioning
+            ),
+            *(t.date for t in trained_without_sets(live, current, sessions)),
+        ]
 
     def closed_by(self, windows: WindowList) -> ClosedWeeks:
         if not self.redesigns:
@@ -148,23 +167,31 @@ class WeekLog:
     def workout(self, workout_id: str) -> WeekWorkout:
         return next(w for w in self.workouts if w.id == workout_id)
 
+    @property
+    def exposures(self) -> tuple[Exposure, ...]:
+        """A workout matched to a conditioning session yields an Activity, not Exposures (ADR
+        0010), whatever its sets carry."""
+        return tuple(e for w in self.workouts if w.id not in self.conditioning for e in w.exposures)
+
+    def _matched_kind(self, workout: WeekWorkout) -> str | None:
+        """The kind of the planned session the workout matched in its week, if any. Match reads
+        no week kind, so it is known before the return week's lifting dates."""
+        session = self._matched(self._week_of(workout)).get(workout.id)
+        return None if session is None else session.kind
+
     def facts(self, monday: datetime.date) -> WeekFacts:
-        sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
-        plan = week_plans.in_force(self.conn, monday.isoformat())
-        at = str(plan["approved_at"]) if plan else f"{sunday.isoformat()}T23:59:59"
-        version = programs.in_force_at(self.conn, at)
-        form = version.form if version else None
-        overrides = week_plans.stored_overrides(self.conn, str(plan["id"])) if plan else ()
+        plan = self._plan(monday)
+        form = plan.form
         return WeekFacts(
             monday,
-            planned=self._planned(plan, form, overrides, monday) if plan and form else (),
-            workouts=tuple(w for w in self.workouts if self._week_of(w) == monday),
+            planned=plan.planned,
+            workouts=self._workouts_of(monday),
             routines=self.routines,
             claims=self.claims,
             trained_unlogged=self.trained_unlogged,
             cancelled=self.cancelled,
             spans=self.spans,
-            carried=frozenset(o.kind for o in overrides if o.kind in WEEK_OVERRIDES),
+            carried=frozenset(o.kind for o in plan.overrides if o.kind in WEEK_OVERRIDES),
             returned=is_return_week(monday, self.lifting_dates),
             muscles=self.muscles,
             estimated={s.id: s.estimated_sets for s in form.sessions if s.estimated_sets}
@@ -173,6 +200,35 @@ class WeekLog:
             dose_target=form.dose.per_muscle if form and form.dose else None,
             lift_dose=form.dose.lift if form and form.dose else {},
         )
+
+    def _matched(self, monday: datetime.date) -> dict[str, PlannedSession]:
+        if monday not in self._matches:
+            self._matches[monday] = (
+                week_matches(
+                    self._plan(monday).planned,
+                    self._workouts_of(monday),
+                    routines=self.routines,
+                    claims=self.claims,
+                )
+                if self.redesigns and monday >= week_monday(self.redesigns[0])
+                else {}
+            )
+        return self._matches[monday]
+
+    def _plan(self, monday: datetime.date) -> _WeekPlan:
+        if monday not in self._plans:
+            sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
+            plan = week_plans.in_force(self.conn, monday.isoformat())
+            at = str(plan["approved_at"]) if plan else f"{sunday.isoformat()}T23:59:59"
+            version = programs.in_force_at(self.conn, at)
+            form = version.form if version else None
+            overrides = week_plans.stored_overrides(self.conn, str(plan["id"])) if plan else ()
+            planned = self._planned(plan, form, overrides, monday) if plan and form else ()
+            self._plans[monday] = _WeekPlan(form, overrides, planned)
+        return self._plans[monday]
+
+    def _workouts_of(self, monday: datetime.date) -> tuple[WeekWorkout, ...]:
+        return tuple(self._by_week.get(monday, ()))
 
     def _week_of(self, workout: WeekWorkout) -> datetime.date:
         """A claimed workout belongs to the week of the session it claims, not of its date."""

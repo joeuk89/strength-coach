@@ -68,16 +68,26 @@ class Session:
 @dataclass(frozen=True)
 class Schedule:
     rotation: tuple[str, ...]
-    weeks: Mapping[str, Mapping[str, str]]
+    weeks: Mapping[str, Mapping[str, tuple[str, ...]]]
 
     def slots(self) -> list[tuple[str, str, str]]:
-        """Every (rotation week, weekday, session id), in rotation and weekday order."""
+        """Every (rotation week, weekday, session id), in rotation, weekday and list order."""
         return [
-            (week, day, self.weeks[week][day])
+            (week, day, session_id)
             for week in self.rotation
             for day in WEEKDAYS
-            if day in self.weeks.get(week, {})
+            for session_id in self.weeks.get(week, {}).get(day, ())
         ]
+
+    def to_document(self) -> dict[str, object]:
+        """A weekday with one session is a bare id, so a one-element list reads as unchanged."""
+        return {
+            "rotation": list(self.rotation),
+            **{
+                week: {day: ids[0] if len(ids) == 1 else list(ids) for day, ids in days.items()}
+                for week, days in self.weeks.items()
+            },
+        }
 
     def scheduled(self) -> frozenset[str]:
         return frozenset(session for _, _, session in self.slots())
@@ -164,10 +174,7 @@ class ProgramForm:
             "because": self.because,
             "emphasis": self.emphasis,
             "location": self.location,
-            "schedule": {
-                "rotation": list(self.schedule.rotation),
-                **{week: dict(days) for week, days in self.schedule.weeks.items()},
-            },
+            "schedule": self.schedule.to_document(),
         }
         if self.dose is not None:
             document["dose"] = {

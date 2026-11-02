@@ -97,7 +97,7 @@ def a_request(
         because="first program",
         emphasis="hypertrophy",
         location="home",
-        schedule=Schedule(("A",), {"A": {"mon": "lower"}}),
+        schedule=Schedule(("A",), {"A": {"mon": ("lower",)}}),
         sessions=(session,),
         dose=dose,
         deload=deload,
@@ -127,7 +127,7 @@ def a_rotation_form(*extra: Session) -> ProgramForm:
         location="home",
         schedule=Schedule(
             ("A", "B"),
-            {"A": {"mon": "lower-a", "thu": "push-a"}, "B": {"tue": "pull-b"}},
+            {"A": {"mon": ("lower-a",), "thu": ("push-a",)}, "B": {"tue": ("pull-b",)}},
         ),
         sessions=(
             Session("lower-a", "Lower A", "lifting", "core", lines=line),
@@ -151,7 +151,7 @@ def a_conditioning_request(
         because="first program",
         emphasis="hypertrophy",
         location="home",
-        schedule=Schedule(("A",), {"A": {"tue": "cond"}}),
+        schedule=Schedule(("A",), {"A": {"tue": ("cond",)}}),
         sessions=(session,),
     )
     swing = {"kb_swing": ExerciseFacts("single_implement", "kettlebell", "hinge")}

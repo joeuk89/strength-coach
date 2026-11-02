@@ -2,7 +2,7 @@
 delivered dose (docs/spec/week.md; ADR 0010, "What each kind's workout yields")."""
 
 import datetime
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from coach.core.closed_week.dose import (
@@ -48,8 +48,9 @@ class WeekFacts:
 
 
 def close_week(facts: WeekFacts) -> ClosedWeek:
-    matchable = [work.session for work in facts.planned if not work.dropped]
-    matches = match_week(matchable, facts.workouts, routines=facts.routines, claims=facts.claims)
+    matches = week_matches(
+        facts.planned, facts.workouts, routines=facts.routines, claims=facts.claims
+    )
     by_workout = {w.id: w for w in facts.workouts}
     taken = {(s.date, s.session_id): by_workout[w] for w, s in matches.items()}
     sessions = tuple(
@@ -77,6 +78,18 @@ def close_week(facts: WeekFacts) -> ClosedWeek:
         delivered_lift_dose(exposures, facts.lift_dose),
         {lift: target.sets for lift, target in facts.lift_dose.items()},
     )
+
+
+def week_matches(
+    planned: Sequence[PlannedWork],
+    workouts: Sequence[WeekWorkout],
+    *,
+    routines: Mapping[str, str],
+    claims: Mapping[str, PlannedRef],
+) -> dict[str, PlannedSession]:
+    """A dropped session stays in the week as a Miss but takes no workout."""
+    matchable = [work.session for work in planned if not work.dropped]
+    return match_week(matchable, workouts, routines=routines, claims=claims)
 
 
 def _dosed_exposures(facts: WeekFacts, matches: Mapping[str, PlannedSession]) -> list[Exposure]:

@@ -14,7 +14,7 @@ def test_the_worked_draft_parses_into_its_sessions_lines_and_schedule() -> None:
     assert draft.hash.startswith("sha256:")
     assert (form.kind, form.emphasis, form.location) == ("redesign", "hypertrophy", "home")
     assert form.schedule.rotation == ("A", "B")
-    assert form.schedule.weeks["B"]["sat"] == "b-sat-push"
+    assert form.schedule.weeks["B"]["sat"] == ("b-sat-push",)
     assert [s.id for s in form.sessions] == [
         "pt-tuesday",
         "a-mon-lower",
@@ -193,3 +193,54 @@ def test_a_malformed_lift_dose_stops_the_read(value: object) -> None:
 
     assert raised.value.code == "invalid_argument"
     assert "dose.lift.pull_up" in raised.value.message
+
+
+def a_two_session_monday(monday: object) -> dict[str, object]:
+    return a_draft(
+        a_session("mon-ohp"),
+        a_session("cond-swings", kind="conditioning", tier="optional"),
+        schedule={"rotation": ["A"], "A": {"mon": monday}},
+    )
+
+
+def test_a_weekday_may_name_a_list_of_sessions_in_order() -> None:
+    draft = a_two_session_monday(["mon-ohp", "cond-swings"])
+
+    form = parse_program_draft(toml(draft), file="d.toml").form
+
+    assert form.schedule.weeks["A"]["mon"] == ("mon-ohp", "cond-swings")
+    assert form.schedule.slots() == [("A", "mon", "mon-ohp"), ("A", "mon", "cond-swings")]
+
+
+def test_a_bare_session_id_and_a_one_element_list_are_the_same_schedule() -> None:
+    bare = parse_program_draft(toml(a_two_session_monday("mon-ohp")), file="d.toml").form
+    listed = parse_program_draft(toml(a_two_session_monday(["mon-ohp"])), file="d.toml").form
+
+    assert bare.schedule == listed.schedule
+    assert bare.schedule.weeks["A"]["mon"] == ("mon-ohp",)
+    assert bare.to_document()["schedule"] == {"rotation": ["A"], "A": {"mon": "mon-ohp"}}
+
+
+@pytest.mark.parametrize("monday", [[], ["mon-ohp", 3], [""], 3])
+def test_a_weekday_that_is_not_a_session_id_or_a_list_of_them_is_the_wrong_shape(
+    monday: object,
+) -> None:
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(a_two_session_monday(monday)), file="d.toml")
+
+    assert raised.value.code == "invalid_argument"
+    assert "schedule.A.mon" in raised.value.message
+
+
+def test_a_two_session_day_round_trips_through_its_document() -> None:
+    form = parse_program_draft(
+        toml(a_two_session_monday(["mon-ohp", "cond-swings"])), file="d.toml"
+    ).form
+
+    again, _ = parse_form(form.to_document(), file="stored")
+
+    assert again == form
+    assert form.to_document()["schedule"] == {
+        "rotation": ["A"],
+        "A": {"mon": ["mon-ohp", "cond-swings"]},
+    }

@@ -39,15 +39,22 @@ One TOML file. Every key below is the schema; an unknown key anywhere is a viola
 ### Schedule
 
 One shape, no rule plugins. `rotation` is an ordered list of week names; each named table maps
-weekdays to session ids. A one-week rotation is the old `fixed_weekdays`; a coach-led session
-that anchors the week is just a coach-led session on its weekday in every rotation week.
+weekdays to a session id or a non-empty list of session ids. A one-week rotation is the old
+`fixed_weekdays`; a coach-led session that anchors the week is just a coach-led session on its
+weekday in every rotation week.
+
+Each entry is a slot, so a weekday may hold several sessions, of any kinds. List order is the
+order within the day: the plan plans them in that order and every listing of the week shows them
+in it. A one-element list and a bare id are the same schedule. A session scheduled beside another
+keeps all its own fields (scheme, `minutes`, routine); nothing merges, and there is no day-level
+time budget.
 
 ```toml
 [schedule]
 rotation = ["A", "B"]
 
 [schedule.A]
-mon = "lower-a"
+mon = ["lower-a", "cond-swings"]
 tue = "coach-led"
 thu = "push-a"
 sat = "pull-a"
@@ -297,7 +304,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `unknown_exercise` | line | `exercise` is not in the library and not declared in the Draft |
 | `unknown_scheme` | line or session | the scheme name or a param is not in the registry |
 | `unknown_load_mode` | line | `load_mode` is not one of the glossary's |
-| `duplicate_id` | version | two sessions share an id, or one exercise appears twice in a session |
+| `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session, or one session appears twice on a weekday |
 | `schedule_session_missing` | version | the schedule names a session the version lacks |
 | `session_unscheduled` | session | a session in no rotation week with no `cadence` |
 | `cadence_on_scheduled` | session | a scheduled session states a cadence |

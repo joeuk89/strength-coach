@@ -58,9 +58,9 @@ def planned_sessions(
     if any(span.kind == "no_training" and all(span.covers(d) for d in days) for span in spans):
         return ()
     found: list[PlannedSession] = []
-    for weekday, session_id in form.schedule.weeks.get(position, {}).items():
+    for week, weekday, session_id in form.schedule.slots():
         session = form.session(session_id)
-        if session is not None:
+        if week == position and session is not None:
             found.append(_planned(form, session, days[WEEKDAYS.index(weekday)], "weekly"))
     for session in (*form.sessions, *rehab):
         if session.cadence == "standing":

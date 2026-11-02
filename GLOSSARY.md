@@ -61,12 +61,12 @@ _Avoid_: status (as a field here; the five status columns are `schema.md`'s), pa
 
 **Slot**:
 A place in a program version's schedule that names which session fills it: a rotation week
-and weekday, or none, plus a cadence.
+and weekday, or none, plus a cadence. A weekday may hold several slots, in order.
 _Avoid_: day, position
 
 **Rotation week**:
-One named week of a program version's schedule, mapping weekdays to sessions. The schedule is
-an ordered list of them; a one-week rotation is a fixed week.
+One named week of a program version's schedule, mapping each weekday to one or more sessions in
+order. The schedule is an ordered list of them; a one-week rotation is a fixed week.
 _Avoid_: week letter, cycle week, schedule rule
 
 **Cadence**:
