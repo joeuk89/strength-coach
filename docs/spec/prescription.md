@@ -57,6 +57,13 @@ Per line, in this order:
    opening position (`program.md`, the scheme table). A load-bearing line with neither is
    `start_load_missing`.
 
+On a line in a rack mode (`total`, `per_hand_x2`, `single_implement`), steps 1 and 2 also skip
+an exposure with no working set at a positive load (a logging gap, such as a carry logged at 0):
+it has no usable anchor load, so the next older exposure anchors, and with none, step 3 applies.
+The line warns `anchor_load_unusable` naming the newest skipped exposure, its logged load and
+the anchor used. Under assistance 0 is a real load (no assistance) and is never skipped. The
+skipped exposure still counts as a day trained: days off per lift read its date as before.
+
 e1RM is always exercise-wide: the best qualifying point in the 42 days before the planned date
 (one Block at the default ceiling, rn:deloads.3; the window is opinion), every session included.
 A qualifying set has 12 or fewer reps to failure, reps plus 10 minus RPE (rn:autoregulation.5).
@@ -65,7 +72,9 @@ until a newer qualifying point exists.
 
 **The anchor's load.** The anchor's top working load, as logged. A logged load that is not a row
 of the session location's rack is replaced by the nearest row **at or below** it, and the line
-warns `offgrid_anchor_ignored` naming both. A historical load never defines the grid.
+warns `offgrid_anchor_ignored` naming both. A historical load never defines the grid. A zero
+logged load on a line in a rack mode never anchors (the skip above), so it never snaps to the
+rack's bottom row.
 
 **Days off per lift** = `max(layoff, exposure age − usual interval)`, where the layoff is the
 gap since the last lifting exposure of any kind (coach-led counts), the usual interval is the
@@ -292,6 +301,7 @@ source, and lives in the registry without an `rn:`.
 | `top_backoff` with no e1RM in 42 days | the anchor's top load, held | `no_e1rm` |
 | `wave_531` with no `training_max` Decision | `start_load` as the training max | `training_max_unused` is the reverse case |
 | A layoff with no pre-layoff anchor in the session | anchor rule steps 2–3, then the band | |
+| An exposure logged at 0 (or with no load) on a line in a rack mode | the next older exposure, else `start_load` (anchor rule, the skip); the band, if any, measures from that | `anchor_load_unusable`; `start_load_missing` without either |
 
 ## What the agent is handed
 

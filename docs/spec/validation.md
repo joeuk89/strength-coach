@@ -240,6 +240,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `no_e1rm` | line | exercise id, scheme | rn:autoregulation.5 |
 | `increment_over_step` | line | increment, scheme step, from exposure | `null` |
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
+| `anchor_load_unusable` | line | skipped exposure ref, logged load, anchor used (`start_load` or the older exposure's ref) | `null` |
 | `over_rep_cap` | exposure | reps, cap | rn:autoregulation.5 |
 | `short_sleep_week` | week | short nights, threshold, window | rn:sleep-dieting.1 |
 | `stall_streak` | line | streak length, exposure refs (all on or after the latest redesign's adoption date; `prescription.md`, **Stalls**) | rn:progression-methods §4 |

@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import cast
 
-from coach.core.anchor import StartLoad, anchor
+from coach.core.anchor import StartLoad, anchor, anchor_load_unusable
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
 from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs
@@ -119,7 +119,9 @@ class _Derivation:
             session_id=self.request.planned.session_id,
             on=self.request.planned.date,
             start_load=start,
+            mode=mode,
         )
+        self._keep(anchor_load_unusable(found, self.scope))
         line = replace(authored, sets=sets)
         schemes = SchemeMoves(
             SchemeInput(self.request, authored, sets, mode, rack, self.scope),
