@@ -295,6 +295,12 @@ PLAN_WARNINGS = (
         ("rn:volume-frequency.1",),
     ),
     acknowledgeable_warning(
+        "lift_dose_under_target",
+        ("week",),
+        ("exercise_id", "target", "weekly_figures", "counted"),
+        ("rn:volume-frequency.1", "rn:minimum-effective-dose.4"),
+    ),
+    acknowledgeable_warning(
         "session_dose_high", ("session",), ("planned_sets", "ceiling"), ("rn:volume-frequency.3",)
     ),
     acknowledgeable_warning("override_persisting", ("line",), ("kind", "weeks", "plan_ids")),

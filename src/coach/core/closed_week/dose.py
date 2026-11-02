@@ -10,6 +10,7 @@ from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.muscles import DOSED_MUSCLES
 from coach.core.planned_week import week_monday
 from coach.core.prescription import LinePrescription, SessionPrescription
+from coach.core.program.form import LiftDose
 
 type MuscleMap = Mapping[str, Mapping[str, Sequence[str]]]
 
@@ -46,6 +47,21 @@ def delivered_dose(
     return dose
 
 
+def delivered_lift_dose(
+    exposures: Iterable[Exposure], lifts: Mapping[str, LiftDose]
+) -> dict[str, int]:
+    """Each lift's hard sets with its counted variants', one per set."""
+    hard: dict[str, int] = {}
+    for exposure in exposures:
+        hard[exposure.exercise_id] = hard.get(exposure.exercise_id, 0) + sum(
+            1 for s in exposure.working if is_hard(s.rpe)
+        )
+    return {
+        lift: sum(hard.get(exercise, 0) for exercise in (lift, *target.counts))
+        for lift, target in lifts.items()
+    }
+
+
 def trailing_mean(weeks: Iterable[ClosedWeek], muscle: str) -> float | None:
     trailing = _trailing(weeks)
     if not trailing:
@@ -75,6 +91,37 @@ def dose_under_target(
     return None
 
 
+def lift_dose_under_target(
+    weeks: Iterable[ClosedWeek], monday: datetime.date, counted: Mapping[str, Sequence[str]]
+) -> Flag | None:
+    """The first lift under its target, its counted variants included, in three of the
+    trailing four ordinary weeks that carried a target for it."""
+    ordinary = _trailing(weeks)
+    lifts = dict.fromkeys(lift for w in ordinary for lift in w.lift_dose_target)
+    for lift in lifts:
+        trailing = [w for w in ordinary if lift in w.lift_dose_target]
+        figures = [w.lift_dose.get(lift, 0) for w in trailing]
+        under = sum(
+            1 for w, f in zip(trailing, figures, strict=True) if f < w.lift_dose_target[lift]
+        )
+        if under >= UNDER_IN:
+            target = trailing[-1].lift_dose_target[lift]
+            return raise_flag(
+                "lift_dose_under_target",
+                Scope("week", monday),
+                {
+                    "exercise_id": lift,
+                    "target": target,
+                    "weekly_figures": figures,
+                    "counted": list(counted.get(lift, ())),
+                },
+                f"{lift} was under its {target} hard sets in {under} of the last "
+                f"{len(trailing)} ordinary weeks",
+                rn="rn:volume-frequency.1",
+            )
+    return None
+
+
 def session_dose_high(session: SessionPrescription, muscles: MuscleMap) -> Flag | None:
     planned: dict[str, float] = {}
     for line in session.lines:
@@ -99,13 +146,16 @@ def minimum_week_floor(
     kept: Sequence[str],
     priority_lifts: Sequence[str],
     monday: datetime.date,
+    counted: Mapping[str, Sequence[str]] | None = None,
 ) -> Flag | None:
+    """`counted` names each lift's counted variants, whose planned hard sets count toward it."""
     hard: dict[str, int] = {}
     for session in sessions:
         for line in session.lines:
             hard[line.exercise_id] = hard.get(line.exercise_id, 0) + _hard_sets(line)
     for lift in priority_lifts:
-        if hard.get(lift, 0) < PRIORITY_FLOOR:
+        variants = (counted or {}).get(lift, ())
+        if sum(hard.get(exercise, 0) for exercise in (lift, *variants)) < PRIORITY_FLOOR:
             return raise_flag(
                 "minimum_week_floor",
                 Scope("week", monday),
