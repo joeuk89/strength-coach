@@ -62,7 +62,10 @@ def main(
         declaration, tokens = find_leaf(argv, registry.declarations())
         verb = declaration.name if declaration else None
         options = parse_options(declaration, tokens)
-        if declaration is None:
+        if options.version:
+            verb = None
+            result: Json = {"version": engine_version()}
+        elif declaration is None:
             result = _help()
         elif options.help:
             result = declaration.describe()
@@ -136,7 +139,8 @@ def _projected(result: Json, options: Options) -> Json:
 
 def _help() -> Json:
     return {
-        "usage": "coach <verb> [arguments] [--fields a.b,c | --full] [--last <n>] [--help]",
+        "usage": "coach <verb> [arguments] [--fields a.b,c | --full] [--last <n>] [--help]"
+        " | coach --version",
         "verbs": [_leaf(d) for d in registry.declarations()],
         "options": [{"name": o.name, "help": o.help} for o in GLOBAL_OPTIONS],
     }

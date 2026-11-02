@@ -11,7 +11,9 @@ GLOBAL_OPTIONS = (
     Argument("--full", "the whole record instead of the compact summary", takes_value=False),
     Argument("--last", f"how many of the newest rows a list keeps (default {DEFAULT_LAST})"),
     Argument("--help", "describe the verb instead of running it", takes_value=False),
+    Argument("--version", "the installed engine version; needs no instance", takes_value=False),
 )
+BARE_OPTIONS = ("--help", "--version")
 
 
 @dataclass(frozen=True)
@@ -21,6 +23,7 @@ class Options:
     full: bool
     last: int
     help: bool
+    version: bool
 
 
 def find_leaf(
@@ -31,8 +34,8 @@ def find_leaf(
         words = declaration.name.split()
         if list(argv[: len(words)]) == words:
             return declaration, list(argv[len(words) :])
-    if not argv or argv[0] == "--help":
-        return None, list(argv[1:])
+    if not argv or argv[0].partition("=")[0] in BARE_OPTIONS:
+        return None, list(argv)
     raise Invalid("invalid_argument", f"unknown verb {argv[0]!r}; run `coach --help`")
 
 
@@ -75,16 +78,17 @@ def _set(values: dict[str, ArgValue], argument: Argument, value: str) -> None:
 
 def _split_globals(declared: Sequence[Argument], values: dict[str, ArgValue]) -> Options:
     help_ = values.pop("help", False) is True
+    version = values.pop("version", False) is True
     full = values.pop("full", False) is True
     fields = _fields(values.pop("fields", None))
     last = _last(values.pop("last", None))
     if fields is not None and full:
         raise Invalid("invalid_argument", "--fields and --full exclude each other")
-    if not help_:
+    if not (help_ or version):
         missing = [a.name for a in declared if a.required and a.key not in values]
         if missing:
             raise Invalid("invalid_argument", f"missing {', '.join(missing)}")
-    return Options(args=values, fields=fields, full=full, last=last, help=help_)
+    return Options(args=values, fields=fields, full=full, last=last, help=help_, version=version)
 
 
 def _fields(raw: ArgValue | None) -> tuple[str, ...] | None:

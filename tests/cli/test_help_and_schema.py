@@ -22,6 +22,14 @@ def test_help_lists_every_declared_leaf() -> None:
     assert {"status", "schema"} <= set(names)
 
 
+def test_help_lists_version_among_the_options_and_in_the_usage() -> None:
+    result = run_coach("--help").envelope["result"]
+
+    (option,) = [o for o in result["options"] if o["name"] == "--version"]
+    assert option["help"]
+    assert "coach --version" in result["usage"]
+
+
 def test_no_arguments_prints_the_help() -> None:
     run = run_coach()
 

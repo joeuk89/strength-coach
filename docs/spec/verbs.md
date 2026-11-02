@@ -93,7 +93,9 @@ Not leaves, and why:
 ## Envelope and budget
 
 The envelope is ADR 0002's: `schema_version`, `ok`, `verb`, `result` or `error {code, message}`,
-`warnings[]`. Three rules every leaf obeys:
+`warnings[]`. `coach --version` needs no instance and returns the same envelope with `verb: null`
+and `result: {version}`, the installed engine version, as `coach --help` returns its help.
+Three rules every leaf obeys:
 
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
