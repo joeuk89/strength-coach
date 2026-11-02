@@ -33,6 +33,7 @@ a glossary noun.
 | the status spans (`no_training`, `ill`) | which sessions derive; days off; the illness cap |
 | the rack snapshot per location (ADR 0008) | steps 7 and 8, every load step |
 | the Block's hard-week count | the `wave_531` wave |
+| the latest redesign's adoption date | stalls (none before it count) |
 | the last matched Activity per conditioning session | the session schemes |
 | the planned date | everything dated |
 

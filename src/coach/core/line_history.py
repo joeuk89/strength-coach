@@ -27,6 +27,14 @@ def ordinary(history: Iterable[Exposure]) -> tuple[Exposure, ...]:
     return tuple(e for e in history if not _light_or_return(e))
 
 
+def since_redesign(
+    history: Iterable[Exposure], redesigned: datetime.date | None
+) -> tuple[Exposure, ...]:
+    """The exposures on or after the latest redesign's adoption date; all of them with none
+    (docs/spec/prescription.md, "Stalls")."""
+    return tuple(e for e in history if redesigned is None or redesigned <= e.date)
+
+
 def _light_or_return(exposure: Exposure) -> bool:
     match = exposure.match
     return match is not None and (

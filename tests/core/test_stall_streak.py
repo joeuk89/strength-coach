@@ -1,3 +1,4 @@
+import datetime
 from typing import Any
 
 from support.exposures import an_exposure
@@ -16,8 +17,11 @@ def squat_on(on: str, *sets: tuple[float, int, float], **match: Any) -> Exposure
     )
 
 
-def derive(*exposures: Exposure, line: Any = None) -> LinePrescription:
-    return prescribe(a_request(line or a_line(), exposures=exposures)).lines[0]
+def derive(
+    *exposures: Exposure, line: Any = None, redesigned: datetime.date | None = None
+) -> LinePrescription:
+    request = a_request(line or a_line(), exposures=exposures, redesigned=redesigned)
+    return prescribe(request).lines[0]
 
 
 def stalls(line: LinePrescription) -> list[dict[str, object]]:
@@ -100,3 +104,45 @@ def test_a_linear_line_making_every_rep_over_the_authored_rpe_does_not_stall() -
     line = derive(*(squat_on(on, *hard) for on in dates), line=LINEAR)
 
     assert stalls(line) == []
+
+
+REDESIGNED = datetime.date(2026, 10, 19)
+
+
+def test_three_held_exposures_before_the_latest_redesign_raise_no_stall() -> None:
+    line = derive(
+        squat_on("2026-09-28"),
+        squat_on("2026-10-05"),
+        squat_on("2026-10-12"),
+        redesigned=REDESIGNED,
+    )
+
+    assert stalls(line) == []
+
+
+def test_two_held_exposures_before_the_latest_redesign_and_one_after_raise_no_stall() -> None:
+    line = derive(
+        squat_on("2026-10-05"),
+        squat_on("2026-10-12"),
+        squat_on("2026-10-19"),
+        redesigned=REDESIGNED,
+    )
+
+    assert stalls(line) == []
+
+
+def test_three_held_exposures_from_the_adoption_date_on_raise_stall_streak() -> None:
+    dates = ("2026-10-19", "2026-10-22", "2026-10-26")
+
+    line = derive(squat_on("2026-10-12"), *(squat_on(on) for on in dates), redesigned=REDESIGNED)
+
+    assert stalls(line) == [{"streak": 3, "exposures": [ref(on) for on in dates]}]
+
+
+def test_an_amend_between_the_held_exposures_does_not_reset_the_streak() -> None:
+    amended = a_line("bb_back_squat", working(4, (6, 8), rpe=8.5))
+    dates = ("2026-10-19", "2026-10-22", "2026-10-26")
+
+    line = derive(*(squat_on(on) for on in dates), line=amended, redesigned=REDESIGNED)
+
+    assert stalls(line) == [{"streak": 3, "exposures": [ref(on) for on in dates]}]
