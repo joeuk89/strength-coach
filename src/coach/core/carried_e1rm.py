@@ -4,7 +4,7 @@ live e1RM catches it or 42 days have passed since the return exposure."""
 
 import datetime
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from coach.core.cut import return_band
 from coach.core.days_off import SessionTrained, line_days_off
@@ -22,9 +22,13 @@ class CarriedE1rm:
 
     pre_layoff: E1rm
     factor: float
-    load: Load
     expires: datetime.date
     pre_layoff_on: datetime.date
+
+    @property
+    def load(self) -> Load:
+        amount = round(self.pre_layoff.load.amount * self.factor, PRECISION)
+        return replace(self.pre_layoff.load, amount=amount)
 
     @property
     def e1rm(self) -> E1rm:
@@ -63,9 +67,8 @@ def carried_e1rm(
         point = e1rm(exposures, exercise_id, pre_layoff_on)
         if point is None:
             return None
-        load = Load(round(point.load.amount * band.load_factor, PRECISION), point.load.mode)
         expires = returned + datetime.timedelta(days=WINDOW_DAYS)
-        return CarriedE1rm(point, band.load_factor, load, expires, pre_layoff_on)
+        return CarriedE1rm(point, band.load_factor, expires, pre_layoff_on)
     return None
 
 
