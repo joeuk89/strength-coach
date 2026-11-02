@@ -4,6 +4,7 @@ import datetime
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from functools import cached_property
 from typing import cast
 
 from coach.core.closed_week.block import Block, blocks
@@ -156,7 +157,6 @@ class WeekLog:
             ),
             *(t.date for t in self.trained),
         ]
-        self._matched_exposures: tuple[Exposure, ...] | None = None
 
     def closed_by(self, windows: WindowList) -> ClosedWeeks:
         if not self.redesigns:
@@ -172,14 +172,11 @@ class WeekLog:
     def workout(self, workout_id: str) -> WeekWorkout:
         return self._by_id[workout_id]
 
-    @property
+    @cached_property
     def matched_exposures(self) -> tuple[Exposure, ...]:
         """Every Exposure, each carrying its workout's Match."""
-        if self._matched_exposures is None:
-            self._matched_exposures = tuple(
-                replace(e, match=self.match_of(w.id)) for w in self.workouts for e in w.exposures
-            )
-        return self._matched_exposures
+        matches = {w.id: self.match_of(w.id) for w in self.workouts}
+        return tuple(replace(e, match=matches[w.id]) for w in self.workouts for e in w.exposures)
 
     @property
     def exposures(self) -> tuple[Exposure, ...]:
