@@ -232,6 +232,9 @@ PLAN_WARNINGS = (
         "offgrid_anchor_ignored", ("line",), ("exposure", "logged_load", "anchor_used")
     ),
     acknowledgeable_warning(
+        "anchor_load_unusable", ("line",), ("exposure", "logged_load", "anchor_used")
+    ),
+    acknowledgeable_warning(
         "over_rep_cap", ("exposure",), ("reps", "cap"), ("rn:autoregulation.5",)
     ),
     acknowledgeable_warning(

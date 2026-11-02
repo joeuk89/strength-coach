@@ -6,7 +6,7 @@ from coach.core.anchor import AnchorExposure, StartLoad, anchor, anchor_load
 from coach.core.config import RackImplement
 from coach.core.exposure import Exposure
 from coach.core.flag import Scope, raise_flag
-from coach.core.load import Load
+from coach.core.load import Load, LoadMode
 from coach.core.rack import grid_rack
 
 PLANNED = datetime.date(2026, 11, 2)
@@ -132,3 +132,62 @@ def test_a_bodyweight_anchor_carries_no_load() -> None:
     hang = an_exposure("2026-10-26", (None, 8, 8), mode="bodyweight")
 
     assert anchor_load(hang, RACK, session_id="push_a") == (None, None)
+
+
+def anchored_in(mode: LoadMode, *exposures: Exposure) -> AnchorExposure | StartLoad:
+    return anchor(
+        exposures,
+        exercise_id="bb_bench_press",
+        session_id="push_a",
+        on=PLANNED,
+        start_load=START,
+        mode=mode,
+    )
+
+
+def test_a_load_bearing_line_skips_an_exposure_logged_at_zero_for_the_start_load() -> None:
+    zero = an_exposure("2026-10-26", (0, 5, 8), (0, 5, 8), session_id="push_a")
+
+    assert anchored_in("total", zero) == StartLoad(START, skipped=zero)
+
+
+def test_behind_a_zero_logged_exposure_the_older_positive_one_anchors() -> None:
+    older = an_exposure("2026-10-12", (100, 5, 8), session_id="push_a")
+    zero = an_exposure("2026-10-26", (0, 5, 8), session_id="push_a")
+
+    assert anchored_in("total", older, zero) == AnchorExposure(older, "same_session", zero)
+
+
+def test_an_exposure_logged_with_no_load_is_skipped_too() -> None:
+    absent = an_exposure("2026-10-26", (None, 5, 8), session_id="push_b")
+
+    assert anchored_in("per_hand_x2", absent) == StartLoad(START, skipped=absent)
+
+
+def test_only_the_exposure_the_search_would_have_picked_is_named_as_skipped() -> None:
+    oldest = an_exposure("2026-10-05", (0, 5, 8), session_id="push_a")
+    older = an_exposure("2026-10-12", (100, 5, 8), session_id="push_a")
+    zero = an_exposure("2026-10-19", (0, 5, 8), session_id="push_a")
+    newest = an_exposure("2026-10-26", (0, 5, 8), session_id="push_a")
+
+    assert anchored_in("total", oldest, older, zero, newest) == AnchorExposure(
+        older, "same_session", newest
+    )
+
+
+def test_a_positive_off_grid_exposure_is_not_skipped() -> None:
+    off_grid = an_exposure("2026-10-26", (104, 5, 8), session_id="push_a")
+
+    assert anchored_in("total", off_grid) == AnchorExposure(off_grid, "same_session")
+
+
+def test_an_assisted_exposure_at_zero_assistance_is_not_skipped() -> None:
+    unassisted = an_exposure("2026-10-26", (0, 8, 8), mode="assisted", session_id="push_a")
+
+    assert anchored_in("assisted", unassisted) == AnchorExposure(unassisted, "same_session")
+
+
+def test_a_bodyweight_exposure_is_not_skipped() -> None:
+    hang = an_exposure("2026-10-26", (None, 8, 8), mode="bodyweight", session_id="push_a")
+
+    assert anchored_in("bodyweight", hang) == AnchorExposure(hang, "same_session")
