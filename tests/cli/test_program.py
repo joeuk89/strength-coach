@@ -140,6 +140,27 @@ def test_program_adopt_dry_run_shows_the_diff_and_start_loads_and_writes_nothing
     assert conn.execute("SELECT count(*) FROM program_version").fetchone() == (0,)
 
 
+def test_program_adopt_dry_run_lists_each_session_with_its_minutes_and_estimate(
+    instance: Path,
+) -> None:
+    run = coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE), "--dry-run")
+
+    sessions = run.envelope["result"]["sessions"]
+    assert sessions[:3] == [
+        {"id": "pt-tuesday", "minutes": None, "estimate": None},
+        {"id": "a-mon-lower", "minutes": 60, "estimate": 49},
+        {"id": "b-sat-push", "minutes": 90, "estimate": 22},
+    ]
+    assert len(sessions) == 11
+
+
+def test_the_real_program_adopt_output_has_no_sessions(instance: Path) -> None:
+    run = coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
+
+    assert run.code == 0
+    assert "sessions" not in run.envelope["result"]
+
+
 def test_a_draft_with_a_violation_is_exit_1_with_its_code_and_every_flag(instance: Path) -> None:
     draft = a_draft(location="cabin")
 
