@@ -281,9 +281,13 @@ verb (nothing leaves the store; `publish` commits the export as usual). It is on
 validate, fill, upsert declared exercises, record the version, open or continue the Block.
 
 - **Dry run** prints the diff against the previous version (sessions and lines added, removed,
-  changed; the defaults the emphasis filled, marked as such), every flag, and each start load in
-  athlete units with its Hevy kg. The `program` skill shows this to the athlete and runs the real
-  adopt on their yes.
+  changed; the defaults the emphasis filled, marked as such), every flag, each start load in
+  athlete units with its Hevy kg, and every session of the filled version, in version order,
+  with its time estimate beside its filled `minutes`. The estimate sums `count × (duration_s +
+  rest_s)` over each set group of the session's lines, with 40 s for a group that states no
+  `duration_s`, and rounds up to whole minutes; it is null for a session with no lines or with
+  no `minutes`, and it is the number `session_over_minutes` reports. The `program` skill shows
+  this to the athlete and runs the real adopt on their yes.
 - **Kind.** `amend` continues the open Block and the rotation position. `redesign` closes the
   open Block, opens one dated today and restarts the rotation at the first week unless
   `--position` names another; a redesign with an open Block warns `block_open_at_redesign`.
