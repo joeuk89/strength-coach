@@ -27,9 +27,10 @@ its reason. A load the engine derived is never retyped.
   Hold the load and look again next week, or restate the sets when the athlete says the range is
   wrong for them now.
 - **Dose.** `dose_under_target`: a muscle has run under its target. Find the misses behind it
-  before adding sets; then restate the sets on a line that trains it. `session_dose_high`: one
-  session carries too much; move a line's sets to a lighter day or drop a line, the accessories
-  first, never the priority lifts.
+  before adding sets; then restate the sets on a line that trains it. `lift_dose_under_target`
+  is the same for a priority lift, its counted variants included: restate the sets on the lift
+  or on a variant it counts. `session_dose_high`: one session carries too much; move a line's
+  sets to a lighter day or drop a line, the accessories first, never the priority lifts.
 - **Fatigue.** When the check-in proposed a light week, take it as a `light_week` override,
   restating its cut or RPE cap with a reason where the triggers say so, or decline it with a
   `decline_ceiling` Decision and the reason. `light_week_shape_off_trigger` and

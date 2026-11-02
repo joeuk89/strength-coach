@@ -533,3 +533,14 @@ def test_an_acknowledgement_leaves_counted_variant_off_pattern() -> None:
 
     [flag] = [f for f in flags if f.code == "counted_variant_off_pattern"]
     assert flag.left is not None
+
+
+def test_a_lifts_counted_variants_on_lines_never_stand_in_for_the_lift() -> None:
+    lift = {"pull_up": {"sets": 8, "counts": ["lat_pulldown"]}}
+    draft = a_draft(
+        a_session("pull", a_line("lat_pulldown")), dose={"per_muscle": 10, "lift": lift}
+    )
+
+    assert the("priority_lift_absent", warnings_of(draft, PULL_UP_PRIORITY)) == [
+        ("priority_lift_absent@version:pv-1", {"exercise_id": "pull_up"})
+    ]

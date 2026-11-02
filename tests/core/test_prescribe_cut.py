@@ -1,3 +1,4 @@
+import dataclasses
 import datetime
 from typing import Any
 
@@ -494,3 +495,21 @@ def test_a_wave_531_return_line_cuts_the_training_max_before_rounding_once() -> 
         (1, Load(62.5, "total"), 5),
         (1, Load(70, "total"), 5),
     ]
+
+
+COUNTED_PRIORITY = Dose(
+    per_muscle=10, lift={"bb_bench_press": LiftDose(8, ("bb_close_grip_bench_press",))}
+)
+
+
+def test_a_light_week_tests_the_priority_lift_and_never_its_counted_variant() -> None:
+    variant = dataclasses.replace(TOP_BACKOFF, exercise="bb_close_grip_bench_press")
+    sets = ((100, 3, 8), (85, 5, 6), (85, 5, 6), (85, 5, 6))
+    logged = an_exposure("2026-10-26", *sets, exercise_id="bb_close_grip_bench_press")
+    bench = an_exposure("2026-10-26", *sets)
+
+    on_variant = derive(variant, logged, overrides=(LIGHT_WEEK,), dose=COUNTED_PRIORITY)
+    on_lift = derive(TOP_BACKOFF, bench, overrides=(LIGHT_WEEK,), dose=COUNTED_PRIORITY)
+
+    assert "test" not in [g.type for g in on_variant.groups]
+    assert [g.type for g in on_lift.groups].count("test") == 1
