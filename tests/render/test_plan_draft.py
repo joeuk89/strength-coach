@@ -1,9 +1,11 @@
+import dataclasses
 import datetime
 import tomllib
 
 from support.exposures import an_exposure
 from support.prescribe import a_line, a_request
 
+from coach.core.flag import Scope, raise_flag
 from coach.core.plan_draft import AthleteNote, PlanDraft
 from coach.core.planned_week import RotationPosition
 from coach.core.prescribe import prescribe
@@ -91,3 +93,27 @@ def test_a_capped_set_carries_its_rpe_cap() -> None:
     working = tomllib.loads(plan_draft(draft, units="lb"))["session"][0]["line"][0]["sets"][-1]
 
     assert (working["rpe"], working["rpe_cap"]) == (8, 8)
+
+
+def test_every_flag_table_carries_the_key_and_params_hash_an_acknowledgement_copies() -> None:
+    session = prescribe(a_request(a_line(), exposures=(SQUAT,)))
+    squat = Scope("line", MONDAY, session_id="lower", exercise_id="bb_back_squat")
+    stall = raise_flag(
+        "stall_streak", squat, {"streak": 3, "exposures": ["exposure:h-1/bb_back_squat"]}, "m"
+    )
+    line = dataclasses.replace(session.lines[0], flags=(stall,))
+    session = dataclasses.replace(session, lines=(line,))
+    draft = PlanDraft(MONDAY, RotationPosition("A", "program_adopt"), (session,))
+
+    document = tomllib.loads(plan_draft(draft, units="lb"))
+
+    [week_flag] = document["flag"]
+    [line_flag] = document["session"][0]["line"][0]["flag"]
+    assert (week_flag["key"], week_flag["params_hash"]) == (
+        "rotation_unconfirmed@week:2026-11-02",
+        "sha256:15a498510e347e58c8eeb3465628f15434d46e9ce0be0adeb0f5fc56f30ddc46",
+    )
+    assert (line_flag["key"], line_flag["params_hash"]) == (
+        "stall_streak@line:2026-11-02/lower/bb_back_squat",
+        "sha256:947848d5ce2e2c8d418ac794802e5b2678a1b8ad0f35b43b6e648ce1a68e6af3",
+    )

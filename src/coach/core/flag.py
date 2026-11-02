@@ -189,9 +189,11 @@ class Flag:
         )
 
     def to_summary(self) -> dict[str, object]:
-        """The flag in a default summary: its key and what it says, the params left out."""
+        """The flag in a default summary: its key, its params hash and what it says, the params
+        left out."""
         return {
             "key": self.key,
+            "params_hash": self.params_hash,
             "code": self.code,
             "severity": self.severity,
             "message": self.message,

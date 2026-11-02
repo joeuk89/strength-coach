@@ -122,6 +122,19 @@ def test_the_flag_shape() -> None:
     }
 
 
+def test_the_summary_carries_the_key_and_params_hash_an_acknowledgement_copies() -> None:
+    flag = a_stall(streak=3, message="OHP has stalled for 3 exposures")
+
+    assert flag.to_summary() == {
+        "key": "stall_streak@line:2026-11-02/upper-a/bb_overhead_press",
+        "params_hash": "sha256:6440872b01f6353382fa704f80c63a360f64b7646b8ee8d9f404b5ce6fa94c6a",
+        "code": "stall_streak",
+        "severity": "warning",
+        "message": "OHP has stalled for 3 exposures",
+        "left": None,
+    }
+
+
 def test_severity_comes_from_the_registry() -> None:
     flag = raise_flag("load_off_grid", OHP_LINE, {"load": 43}, "off the grid")
 

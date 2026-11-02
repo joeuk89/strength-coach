@@ -112,6 +112,8 @@ def declared(argv: tuple[str, ...]) -> Declaration:
 OVER_BUDGET: dict[tuple[str, ...], str] = {
     ("checkin", "open"): "the card's sessions, dose and notes are the check-in itself",
     ("checkin", "open", "--date", "2026-11-01", "--tier", "deep"): "as checkin open",
+    ("plan", "draft"): "each flag carries the key and params hash an acknowledgement copies",
+    ("plan", "draft", "--week", "2026-11-02"): "as plan draft",
     ("plan", "apply", PLAN, "--dry-run"): "ADR 0006's 40-line approval prompt alone is about 3 KB",
     ("program", "adopt", ".coach/drafts/2026-10-30-program.toml", "--dry-run"): (
         "every adopt warning needs an answer before the version is adopted"

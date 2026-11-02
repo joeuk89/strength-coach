@@ -95,9 +95,10 @@ The envelope is ADR 0002's: `schema_version`, `ok`, `verb`, `result` or `error {
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
 - **3 KB default on every envelope.** Reads, write results, dry runs (the permission prompt shows
-  one) and errors all fit it. Three verbs are allowed over it, because their whole default
-  output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
-  0006's approval prompt) and `program adopt --dry-run` (every adopt warning). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
+  one) and errors all fit it. Four verbs are allowed over it, because their whole default
+  output is what the agent must act on: `checkin open` (the card), `plan draft` (every flag
+  with the key and params hash an acknowledgement copies), `plan apply --dry-run` (ADR 0006's
+  approval prompt) and `program adopt --dry-run` (every adopt warning). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
   paths into `result`, allowed on every verb, and excludes `--full`. One generated size test per
   declaration.
 - **Lists truncate, fields never drop.** A row list defaults to the newest 10 (`--last <n>`) and
@@ -141,7 +142,7 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
-| `plan draft` | path, hash, week, superseded plan id if any, line count, every violation and warning, rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`), `pull` |
+| `plan draft` | path, hash, week, superseded plan id if any, line count, every violation and warning with its key and params hash, rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`), `pull` |
 | `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, flags with acknowledgements, the hash |
 | `plan apply` | WeekPlan id, hash, per-routine outcome (written, verified, unverified), audit lines appended |
 | `program show` | version number, kind, emphasis, adopted date, `because`, sessions with line counts; with `--draft`: path and hash |
@@ -278,7 +279,7 @@ Generated from the declarations, none hand-written per verb:
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope but the three allowed over it is under 3 KB on the fixture instance,
+- Every default envelope but the four allowed over it is under 3 KB on the fixture instance,
   which overflows every list a default summary truncates (`testing.md`); this test lives in
   `tests/contract/` only.
 - Every verb declared `writes: hevy` or `git` declares `--dry-run`, and its dry run on the

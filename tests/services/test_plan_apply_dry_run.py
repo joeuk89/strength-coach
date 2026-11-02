@@ -1,4 +1,5 @@
-from typing import cast
+import tomllib
+from typing import Any, cast
 
 import pytest
 from support.clock import FixedClock
@@ -95,6 +96,20 @@ def test_one_violation_on_one_line_refuses_with_every_flag_and_the_fixed_fact_gi
     assert [f.code for f in fixed.flags if f.severity == "violation"] == []
 
 
+def test_the_refusal_names_each_flag_with_the_params_hash_an_acknowledgement_copies() -> None:
+    conn = a_squat_week()
+    standing = offgrid(run(conn, a_plan_draft(conn)))
+    write(conn, KNEE_CAP)
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, a_plan_draft(conn, overrides=PIN_115))
+
+    reported = cast(list[dict[str, object]], raised.value.details["flags"])
+    warning = next(f for f in reported if f["key"] == OFFGRID)
+    assert warning["params_hash"] == standing.params_hash
+    assert all(str(f["params_hash"]).startswith("sha256:") for f in reported)
+
+
 def acknowledge(key: str, params_hash: str, because: str = 'because = "kit"\n') -> str:
     return (
         f'[[acknowledge]]\nflag = "{key}"\nparams_hash = "{params_hash}"\n{because}'
@@ -120,6 +135,20 @@ def test_an_acknowledged_warning_is_left_until_its_params_change() -> None:
     assert (left.left.because, left.left.source) == ("kit", "weekplan")
     assert after.params["logged_load"] == 122
     assert after.left is None
+
+
+def test_the_key_and_params_hash_copied_from_the_drafts_flag_table_leave_the_warning() -> None:
+    conn = a_squat_week()
+    document: Any = tomllib.loads(a_plan_draft(conn).decode("utf-8"))
+    [flag] = document["session"][0]["line"][0]["flag"]
+
+    left = offgrid(
+        run(conn, a_plan_draft(conn, acknowledge=acknowledge(flag["key"], flag["params_hash"])))
+    )
+
+    assert flag["key"] == OFFGRID
+    assert left.left is not None
+    assert left.left.text == "The 121 was a mislabelled plate."
 
 
 def test_a_leave_warning_decision_in_force_leaves_the_warning_with_no_draft_entry() -> None:

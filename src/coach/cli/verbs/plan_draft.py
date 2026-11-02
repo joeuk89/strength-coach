@@ -52,7 +52,13 @@ def _week(value: object) -> datetime.date | None:
 
 def _summary(draft: PlanDraft, path: str, digest: str, last: int | None) -> Json:
     flags: list[Json] = [
-        {"key": f.key, "code": f.code, "severity": f.severity, "message": f.message}
+        {
+            "key": f.key,
+            "params_hash": f.params_hash,
+            "code": f.code,
+            "severity": f.severity,
+            "message": f.message,
+        }
         for f in draft.flags
     ]
     notes: list[Json] = [
@@ -82,7 +88,7 @@ DECLARATION = Declaration(
         "Derive every line of the week's planned sessions from the history and write the plan "
         "Draft to edit, with the Athlete notes since the last approved WeekPlan. Returns the "
         "path, hash, week, the plan it supersedes, the line count, every violation and "
-        "warning, the rotation position with its source and the notes."
+        "warning with its key and params hash, the rotation position with its source and the notes."
     ),
     writes="store",
     pulls_first=True,
@@ -111,7 +117,20 @@ DECLARATION = Declaration(
                 },
                 "required": ["week", "source"],
             },
-            "flags": {"type": "array"},
+            "flags": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string"},
+                        "params_hash": {"type": "string"},
+                        "code": {"type": "string"},
+                        "severity": {"enum": ["violation", "warning"]},
+                        "message": {"type": "string"},
+                    },
+                    "required": ["key", "params_hash", "code", "severity", "message"],
+                },
+            },
             "flag_count": {"type": "integer"},
             "flags_truncated": {"type": "boolean"},
             "notes": {"type": "array"},
