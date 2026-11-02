@@ -218,7 +218,7 @@ def _dose(
 def _dose_target(form: ProgramForm | None, priority: Sequence[str]) -> dict[str, int]:
     if form is None or form.dose is None:
         return {}
-    lifts = {lift: form.dose.lift[lift] for lift in priority if lift in form.dose.lift}
+    lifts = {lift: form.dose.lift[lift].sets for lift in priority if lift in form.dose.lift}
     return {"per_muscle": form.dose.per_muscle, **lifts}
 
 

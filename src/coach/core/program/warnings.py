@@ -107,7 +107,7 @@ class _Warnings:
         bands = dose_bands(self.form.emphasis, self.context.phase)
         targets = [
             ("per_muscle", dose.per_muscle, bands.per_muscle),
-            *((lift, target, bands.per_lift) for lift, target in dose.lift.items()),
+            *((lift, target.sets, bands.per_lift) for lift, target in dose.lift.items()),
         ]
         for target_of, target, (low, high) in targets:
             if not low <= target <= high:

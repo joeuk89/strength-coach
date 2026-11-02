@@ -5,7 +5,7 @@ import math
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
-from coach.core.program.form import Deload, Dose, Emphasis, ProgramForm, Session
+from coach.core.program.form import Deload, Dose, Emphasis, LiftDose, ProgramForm, Session
 from coach.core.registries.phase import PHASE
 
 PER_MUSCLE = 10
@@ -63,4 +63,4 @@ def default_dose(emphasis: Emphasis, priority_lifts: Sequence[str], phase: str |
         per_lift = math.ceil(per_lift / MAINTENANCE_SHARE)
     elif phase is not None and PHASE.get(phase).dose_default == "upper_half_of_band":
         per_muscle, per_lift = UPPER_HALF["per_muscle"], UPPER_HALF["per_lift"]
-    return Dose(per_muscle, {lift: per_lift for lift in priority_lifts})
+    return Dose(per_muscle, {lift: LiftDose(per_lift) for lift in priority_lifts})

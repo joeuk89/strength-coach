@@ -2,8 +2,8 @@ import pytest
 from support.program_drafts import WORKED_DRAFT, a_draft, a_line, a_session, toml
 
 from coach.core.errors import Invalid
-from coach.core.program.form import SchemeRef, SetGroup
-from coach.core.program.parse import parse_program_draft
+from coach.core.program.form import Dose, LiftDose, SchemeRef, SetGroup
+from coach.core.program.parse import parse_form, parse_program_draft
 
 
 def test_the_worked_draft_parses_into_its_sessions_lines_and_schedule() -> None:
@@ -142,3 +142,54 @@ def test_a_declared_exercise_keeps_its_typed_values() -> None:
     form = parse_program_draft(toml(draft), file="d.toml").form
 
     assert form.exercises["custom_ring_push_up"] == {"name": "Ring push-up", "muscles": muscles}
+
+
+COUNTED = {"sets": 8, "counts": ["negative_pull_up", "band_pull_up"]}
+
+
+def test_a_lift_dose_is_a_bare_target_or_a_table_naming_its_counted_variants() -> None:
+    draft = a_draft(dose={"per_muscle": 10, "lift": {"bb_bench_press": 8, "pull_up": COUNTED}})
+
+    parsed = parse_program_draft(toml(draft), file="d.toml")
+
+    assert parsed.unknown_keys == ()
+    assert parsed.form.dose == Dose(
+        10,
+        {
+            "bb_bench_press": LiftDose(8),
+            "pull_up": LiftDose(8, ("negative_pull_up", "band_pull_up")),
+        },
+    )
+
+
+def test_a_lift_dose_writes_back_bare_without_variants_and_as_a_table_with_them() -> None:
+    draft = a_draft(dose={"per_muscle": 10, "lift": {"bb_bench_press": 8, "pull_up": COUNTED}})
+    form = parse_program_draft(toml(draft), file="d.toml").form
+
+    document = form.to_document()
+
+    assert document["dose"] == {"per_muscle": 10, "lift": {"bb_bench_press": 8, "pull_up": COUNTED}}
+    assert parse_form(document, file="stored")[0] == form
+
+
+def test_a_lift_dose_table_key_outside_sets_and_counts_is_an_unknown_key() -> None:
+    lift: dict[str, object] = {"pull_up": {"sets": 8, "counts": [], "weight": 0.5}}
+
+    parsed = parse_program_draft(toml(a_draft(dose={"per_muscle": 10, "lift": lift})), file="d")
+
+    assert parsed.unknown_keys == ("dose.lift.pull_up.weight",)
+    assert parsed.form.dose == Dose(10, {"pull_up": LiftDose(8)})
+
+
+@pytest.mark.parametrize(
+    "value",
+    [{"sets": 0}, {"sets": "8"}, {"counts": ["band_pull_up"]}, {"sets": 8, "counts": [3]}, "8"],
+)
+def test_a_malformed_lift_dose_stops_the_read(value: object) -> None:
+    draft = a_draft(dose={"per_muscle": 10, "lift": {"pull_up": value}})
+
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(draft), file="d.toml")
+
+    assert raised.value.code == "invalid_argument"
+    assert "dose.lift.pull_up" in raised.value.message

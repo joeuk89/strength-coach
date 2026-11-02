@@ -18,6 +18,7 @@ from coach.core.program.form import (
     Deload,
     Dose,
     Emphasis,
+    LiftDose,
     Line,
     Number,
     ProgramForm,
@@ -108,11 +109,22 @@ def _dose(reader: "_Reader | None") -> Dose | None:
     if reader is None:
         return None
     lift = reader.optional_table("lift")
-    targets = {} if lift is None else {name: lift.count(name) for name in lift.names()}
+    targets = {} if lift is None else {name: _lift_dose(lift, name) for name in lift.names()}
     if lift is not None:
         lift.finish()
     dose = Dose(per_muscle=reader.count("per_muscle"), lift=targets)
     reader.finish()
+    return dose
+
+
+def _lift_dose(reader: "_Reader", lift: str) -> LiftDose:
+    if not isinstance(reader.raw(lift), Mapping):
+        return LiftDose(reader.count(lift))
+    table = reader.table(lift)
+    dose = LiftDose(
+        table.count("sets"), tuple(table.texts("counts")) if table.has("counts") else ()
+    )
+    table.finish()
     return dose
 
 

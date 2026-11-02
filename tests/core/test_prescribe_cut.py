@@ -15,7 +15,7 @@ from coach.core.prescription import (
     StatusSpan,
     Step,
 )
-from coach.core.program.form import Dose, Line, SetGroup
+from coach.core.program.form import Dose, LiftDose, Line, SetGroup
 
 RUNGS = [60, 50, 40, 30, 20, 10, 0]
 PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", rungs=RUNGS)
@@ -228,7 +228,9 @@ def test_a_hold_line_after_a_layoff_takes_the_return_band() -> None:
     assert (group.count, group.load, group.rpe_cap) == (3, Load(85, "total"), 7)
 
 
-PRIORITY = Dose(per_muscle=10, lift={"bb_bench_press": 8, "assisted_pull_up": 8})
+PRIORITY = Dose(
+    per_muscle=10, lift={"bb_bench_press": LiftDose(8), "assisted_pull_up": LiftDose(8)}
+)
 TOP_BACKOFF = a_line(
     "bb_bench_press",
     warm_up(5),
