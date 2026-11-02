@@ -301,7 +301,8 @@ a niggle's `rpe_cap`) has
 its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down (the model and its
 limits, rn:autoregulation.5 and .6). A set whose implied reps to failure would exceed 12 has its
 reps cut to fit the model. With no usable e1RM the load
-is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`.
+is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`, quoting the
+load as the rack step leaves it.
 
 ### The test set
 

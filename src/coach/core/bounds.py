@@ -104,6 +104,7 @@ class _Bounding:
     sets: tuple[SetGroup, ...]
     rpe_caps: list[tuple[Number, str]] = field(default_factory=list[tuple[Number, str]])
     load_ceilings: list[Load] = field(default_factory=list[Load])
+    unchecked_cap: Number | None = None
 
     def run(self) -> Bounded:
         self._cut()
@@ -119,6 +120,7 @@ class _Bounding:
         self._niggle_loads(constraints)
         cap = self._rpe_ceiling(constraints)
         self._rack()
+        self._unchecked()
         first = self.loads[0] if self.loads else None
         set_loads = self.loads if self.per_set else ()
         return Bounded(self.sets, first, cap, self._test(), set_loads=set_loads)
@@ -274,7 +276,7 @@ class _Bounding:
             return
         found = self.context.e1rm
         if found is None or self.loads[0].mode == "assisted":
-            self._unchecked(cap)
+            self._clip_to_anchor(cap)
             return
         self.sets = reps_within_model(self.sets, cap)
         reps = self._limiting_reps()
@@ -292,10 +294,17 @@ class _Bounding:
         reps = [r for g in working if (r := fewest_reps(g.reps)) is not None]
         return max(reps, default=None)
 
-    def _unchecked(self, cap: Number) -> None:
+    def _clip_to_anchor(self, cap: Number) -> None:
         top = self.context.anchor_top
         if top is not None:
             self._limit("rpe_ceiling", top, "anchor")
+        self.unchecked_cap = cap
+
+    def _unchecked(self) -> None:
+        """Raised after the rack step, so the load it quotes is the one the line prescribes."""
+        cap = self.unchecked_cap
+        if cap is None:
+            return
         anchor = self.context.anchor
         clipped = self._amounts()
         self._raise(
