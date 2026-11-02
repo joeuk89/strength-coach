@@ -49,9 +49,11 @@ GYM: dict[str, Any] = {
 HOME: dict[str, Any] = {
     "kind": "plate-pool",
     "kit": "home",
-    "collars": "clamp",
-    "dumbbells": "pair",
     "implements": {"barbell": "barbell", "dumbbell": "dumbbell"},
+    "implement": {
+        "barbell": {"hardware": "collar-clamp"},
+        "dumbbell": {"hardware": "screw-standard"},
+    },
 }
 
 # (session, weekday, ((exercise, start load in lb, weekly step in lb), ...)); a step of 0 stalls.

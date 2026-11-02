@@ -10,7 +10,7 @@ from coach.cli.kit import require_current_kit
 from coach.core.config import parse_config
 from coach.core.errors import Setup
 
-HOME = {"kind": "plate-pool", "kit": "home", "collars": "clamp", "dumbbells": "pair"}
+HOME = {"kind": "plate-pool", "kit": "home"}
 
 
 def an_instance_at_home(root: Path) -> Instance:

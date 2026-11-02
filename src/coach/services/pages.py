@@ -192,9 +192,8 @@ def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> Plat
     sha = rounded_to if isinstance(rounded_to, str) else files.inventory_sha256
     return PlatePoolKit(
         location=found.name,
-        collars=found.collars,
-        dumbbells=found.dumbbells,
         implements=found.implements,
+        implement=found.implement,
         short_hash=(sha or "")[:SHORT_HASH_LENGTH],
         inventory=files.inventory,
     )

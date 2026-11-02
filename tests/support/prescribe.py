@@ -4,7 +4,7 @@ import datetime
 from collections.abc import Mapping
 from typing import Any
 
-from coach.core.config import RackImplement
+from coach.core.config import ImplementChoice, RackImplement
 from coach.core.exposure import Exposure
 from coach.core.kit import parse_kit_tables
 from coach.core.load import LoadMode
@@ -30,7 +30,15 @@ from support.kit_fixtures import kit_tables
 
 PLANNED = datetime.date(2026, 11, 2)
 HOME_RACKS: Mapping[str, Rack] = parse_kit_tables(
-    kit_tables(), collars="clamp", dumbbells="pair", units="lb"
+    kit_tables(),
+    choices={
+        "barbell": ImplementChoice(hardware="collar-clamp"),
+        "dumbbell": ImplementChoice(hardware="screw-standard"),
+        "kettlebell": ImplementChoice(hardware="none"),
+        "leg": ImplementChoice(),
+        "vest": ImplementChoice(),
+    },
+    units="lb",
 ).racks
 
 

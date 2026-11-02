@@ -9,7 +9,6 @@ from coach.core.errors import Setup
 
 type Units = Literal["kg", "lb"]
 type Weekday = Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-type Dumbbells = Literal["pair", "single"]
 
 UNITS: tuple[Units, ...] = ("kg", "lb")
 WEEKDAYS: tuple[Weekday, ...] = (
@@ -21,7 +20,6 @@ WEEKDAYS: tuple[Weekday, ...] = (
     "saturday",
     "sunday",
 )
-DUMBBELLS: tuple[Dumbbells, ...] = ("pair", "single")
 DEFAULT_CHECKIN_CADENCE_DAYS = 7
 
 
@@ -62,12 +60,23 @@ type GridImplement = IncrementImplement | RackImplement
 
 
 @dataclass(frozen=True)
+class ImplementChoice:
+    """Which of a plate-pool implement's kit tables apply: a hardware id (`none` included) when
+    its tables offer hardware, and on a handle whether it is loaded single rather than a pair."""
+
+    hardware: str | None = None
+    single: bool = False
+
+
+@dataclass(frozen=True)
 class PlatePoolLocation:
     name: str
     kit: str
-    collars: str
-    dumbbells: Dumbbells
     implements: Mapping[str, str] = field(default_factory=dict[str, str])
+    implement: Mapping[str, ImplementChoice] = field(default_factory=dict[str, ImplementChoice])
+
+    def choices(self) -> dict[str, ImplementChoice]:
+        return {name: self.implement[name] for name in self.implements.values()}
 
 
 @dataclass(frozen=True)
@@ -157,17 +166,23 @@ def _location(name: str, table: Mapping[str, object]) -> Location:
     path = ("location", name)
     kind = _choice(_required(table, "kind", path), ("plate-pool", "grid"), (*path, "kind"))
     implements = _implements(table, path)
+    implement_tables = _optional_table(table, "implement", path)
     if kind == "plate-pool":
-        _only(table, {"kind", "kit", "collars", "dumbbells", "implements"}, path)
+        _only(table, {"kind", "kit", "implements", "implement"}, path)
+        for implement_name in implements.values():
+            _required(implement_tables, implement_name, (*path, "implement"))
         return PlatePoolLocation(
             name=name,
             kit=_field(table, "kit", path, _nonempty_text),
-            collars=_field(table, "collars", path, _nonempty_text),
-            dumbbells=_field(table, "dumbbells", path, _dumbbells),
             implements=implements,
+            implement={
+                key: _implement_choice(
+                    _table(implement_tables, key, (*path, "implement")), (*path, "implement", key)
+                )
+                for key in implement_tables
+            },
         )
     _only(table, {"kind", "implements", "implement"}, path)
-    implement_tables = _optional_table(table, "implement", path)
     implement = {
         key: _grid_implement(
             _table(implement_tables, key, (*path, "implement")), (*path, "implement", key)
@@ -188,6 +203,15 @@ def _implements(table: Mapping[str, object], path: tuple[str, ...]) -> dict[str,
     mapping = _optional_table(table, "implements", path)
     _only(mapping, set(EQUIPMENT_KINDS), here)
     return {kind: _nonempty_text(mapping[kind], (*here, kind)) for kind in mapping}
+
+
+def _implement_choice(table: Mapping[str, object], path: tuple[str, ...]) -> ImplementChoice:
+    _only(table, {"hardware", "single"}, path)
+    hardware = table.get("hardware")
+    return ImplementChoice(
+        hardware=None if hardware is None else _nonempty_text(hardware, (*path, "hardware")),
+        single=_bool(table.get("single", False), (*path, "single")),
+    )
 
 
 def _grid_implement(table: Mapping[str, object], path: tuple[str, ...]) -> GridImplement:
@@ -271,8 +295,10 @@ def _weekday(value: object, path: tuple[str, ...]) -> Weekday:
     raise _refuse(path, f"must be a weekday such as monday or mon, not {value!r}")
 
 
-def _dumbbells(value: object, path: tuple[str, ...]) -> Dumbbells:
-    return cast(Dumbbells, _choice(value, DUMBBELLS, path))
+def _bool(value: object, path: tuple[str, ...]) -> bool:
+    if not isinstance(value, bool):
+        raise _refuse(path, f"must be true or false, not {value!r}")
+    return value
 
 
 def _weekdays(value: object, path: tuple[str, ...]) -> tuple[Weekday, ...]:

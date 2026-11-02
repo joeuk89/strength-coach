@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from coach.core.check_in import Window
 from coach.core.check_in_card import Card
-from coach.core.config import Athlete, Dumbbells, Location, Units
+from coach.core.config import Athlete, ImplementChoice, Location, Units
 from coach.core.progress import Progress
 
 type Json = Mapping[str, object]
@@ -19,9 +19,8 @@ class PlatePoolKit:
     and the inventory inline in the set-up link (ADR 0021, "Routine pages")."""
 
     location: str
-    collars: str
-    dumbbells: Dumbbells
     implements: Mapping[str, str]
+    implement: Mapping[str, ImplementChoice]
     short_hash: str
     inventory: bytes | None
 

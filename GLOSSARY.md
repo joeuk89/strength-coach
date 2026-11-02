@@ -535,6 +535,17 @@ The athlete's plates, locking hardware and implements at one plate-pool location
 plate-pool's schema and owned by the instance. The engine never reads it; plate-pool does.
 _Avoid_: kit file, equipment list
 
+**Set-up link**:
+The one link on a plate-pool location's routine pages that carries its inventory inline, in the
+URL fragment, and installs it as the kit stored in plate-pool on the athlete's device.
+_Avoid_: kit link, import link
+
+**Per-line link**:
+The link on a loaded line of a routine page that opens plate-pool at the line's load on its
+implement, with the location's hardware choice and the short hash of the inventory the load was
+rounded to.
+_Avoid_: deep link (fine in prose), load link
+
 **Equipment kind**:
 What an exercise is done with: barbell, dumbbell, kettlebell, leg attachment, vest, machine,
 cable, band or bodyweight. A location maps each kind it supplies to one of its implements in its

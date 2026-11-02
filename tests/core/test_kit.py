@@ -3,7 +3,13 @@ from itertools import pairwise
 import pytest
 from support.kit_fixtures import kit_tables
 
-from coach.core.config import GridLocation, IncrementImplement, PlatePoolLocation, RackImplement
+from coach.core.config import (
+    GridLocation,
+    ImplementChoice,
+    IncrementImplement,
+    PlatePoolLocation,
+    RackImplement,
+)
 from coach.core.errors import Setup
 from coach.core.kit import (
     KitFiles,
@@ -15,9 +21,26 @@ from coach.core.kit import (
 from coach.core.load import Load
 from coach.core.rack import Position, RackRow, round_to_rack, warm_up_ladder
 
+CLAMP = ImplementChoice(hardware="collar-clamp")
+STANDARD_PAIR = ImplementChoice(hardware="screw-standard")
+HOME = {
+    "barbell": CLAMP,
+    "dumbbell": STANDARD_PAIR,
+    "kettlebell": ImplementChoice(hardware="none"),
+    "leg": ImplementChoice(),
+    "vest": ImplementChoice(),
+}
+
+
+def stale(choices: dict[str, ImplementChoice]) -> Setup:
+    with pytest.raises(Setup) as raised:
+        parse_kit_tables(kit_tables(), choices=choices, units="lb")
+    assert raised.value.code == "kit_tables_stale"
+    return raised.value
+
 
 def test_the_parser_builds_a_rack_per_implement_from_the_kit_fixture() -> None:
-    kit = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="lb")
+    kit = parse_kit_tables(kit_tables(), choices=HOME, units="lb")
 
     assert set(kit.racks) == {"barbell", "dumbbell", "kettlebell", "leg", "vest"}
     barbell = kit.racks["barbell"]
@@ -30,25 +53,82 @@ def test_the_parser_builds_a_rack_per_implement_from_the_kit_fixture() -> None:
     )
 
 
-def test_the_location_collars_choose_the_barbell_table() -> None:
-    kit = parse_kit_tables(kit_tables(), collars="spinlock", dumbbells="pair", units="lb")
+def test_the_barbell_hardware_choice_chooses_the_barbell_table() -> None:
+    choices = HOME | {"barbell": ImplementChoice(hardware="collar-spinlock")}
+
+    kit = parse_kit_tables(kit_tables(), choices=choices, units="lb")
 
     assert kit.racks["barbell"].bottom.load == 22.5
 
 
-def test_the_location_dumbbells_choose_the_pair_or_single_table() -> None:
-    pair = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="lb")
-    single = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="single", units="lb")
+def test_the_dumbbell_single_choice_chooses_the_pair_or_single_table() -> None:
+    single = HOME | {"dumbbell": ImplementChoice(hardware="screw-standard", single=True)}
+
+    pair = parse_kit_tables(kit_tables(), choices=HOME, units="lb")
+    one = parse_kit_tables(kit_tables(), choices=single, units="lb")
 
     assert pair.racks["dumbbell"].top == RackRow(
-        45, (Position("end-a", (10, 5, 2.5)), Position("end-b", (10, 5, 2.5)))
+        45, (Position("a", (10, 5, 2.5)), Position("b", (10, 5, 2.5)))
     )
-    single_top = single.racks["dumbbell"].top
+    single_top = one.racks["dumbbell"].top
     assert single_top is not None and single_top.load == 180
 
 
+def test_the_dumbbell_hardware_choice_chooses_the_dumbbell_table() -> None:
+    bare = HOME | {"dumbbell": ImplementChoice(hardware="none")}
+
+    kit = parse_kit_tables(kit_tables(), choices=bare, units="lb")
+
+    assert kit.racks["dumbbell"].bottom == RackRow(5, (Position("a", ()), Position("b", ())))
+    assert kit.racks["dumbbell"].top == RackRow(
+        40, (Position("a", (10, 5, 2.5)), Position("b", (10, 5, 2.5)))
+    )
+
+
+def test_an_implement_whose_tables_carry_no_hardware_needs_no_choice() -> None:
+    kit = parse_kit_tables(kit_tables(), choices={"leg": ImplementChoice()}, units="lb")
+
+    assert set(kit.racks) == {"leg"}
+    assert kit.racks["leg"].bottom.load == 2.5
+
+
+def test_an_implement_the_location_does_not_name_gets_no_rack_and_needs_no_choice() -> None:
+    kit = parse_kit_tables(kit_tables(), choices={"barbell": CLAMP}, units="lb")
+
+    assert set(kit.racks) == {"barbell"}
+
+
+def test_a_hardware_id_no_table_has_is_refused_naming_the_ids_on_offer() -> None:
+    error = stale(HOME | {"barbell": ImplementChoice(hardware="collar-magnetic")})
+
+    assert "barbell" in error.message
+    assert "collar-magnetic" in error.message
+    assert "collar-clamp, collar-spinlock, none" in error.message
+
+
+def test_no_hardware_choice_where_the_tables_carry_hardware_is_refused() -> None:
+    error = stale(HOME | {"dumbbell": ImplementChoice()})
+
+    assert "dumbbell" in error.message
+    assert "screw-standard, screw-long, none" in error.message
+
+
+def test_a_hardware_choice_where_the_tables_carry_none_is_refused() -> None:
+    error = stale(HOME | {"leg": ImplementChoice(hardware="none")})
+
+    assert "leg" in error.message
+    assert "no hardware" in error.message
+
+
+def test_single_where_the_tables_carry_no_pair_is_refused() -> None:
+    error = stale(HOME | {"barbell": ImplementChoice(hardware="collar-clamp", single=True)})
+
+    assert "barbell" in error.message
+    assert "single" in error.message
+
+
 def test_rows_are_read_in_the_athletes_units() -> None:
-    kit = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="kg")
+    kit = parse_kit_tables(kit_tables(), choices=HOME, units="kg")
 
     assert kit.racks["barbell"].bottom.load == 9.1
     assert [row.load for row in kit.racks["vest"].rows_within(0, 100)] == [2, 4, 6]
@@ -57,7 +137,7 @@ def test_rows_are_read_in_the_athletes_units() -> None:
 def test_the_header_carries_the_generator_version_and_the_inventory_hash() -> None:
     document = kit_tables()
 
-    kit = parse_kit_tables(document, collars="clamp", dumbbells="pair", units="lb")
+    kit = parse_kit_tables(document, choices=HOME, units="lb")
 
     assert kit.plate_pool == "0.3.0"
     assert kit.inventory_sha256 == document["inventory_sha256"]
@@ -69,21 +149,14 @@ def test_an_unknown_format_is_refused() -> None:
     document["format"] = 2
 
     with pytest.raises(Setup) as raised:
-        parse_kit_tables(document, collars="clamp", dumbbells="pair", units="lb")
+        parse_kit_tables(document, choices=HOME, units="lb")
 
     assert raised.value.code == "kit_tables_stale"
     assert "format 2" in raised.value.message
 
 
-def test_a_collar_choice_with_no_table_is_refused() -> None:
-    with pytest.raises(Setup) as raised:
-        parse_kit_tables(kit_tables(), collars="magnetic", dumbbells="pair", units="lb")
-
-    assert "magnetic" in raised.value.message
-
-
 def test_a_rounded_fixture_load_is_a_row_the_kit_can_build() -> None:
-    kit = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="lb")
+    kit = parse_kit_tables(kit_tables(), choices=HOME, units="lb")
 
     assert round_to_rack(kit.racks["barbell"], Load(118, "total"), "cut").load == Load(115, "total")
     assert round_to_rack(kit.racks["dumbbell"], Load(33, "per_hand_x2"), "step_up").load == Load(
@@ -92,9 +165,7 @@ def test_a_rounded_fixture_load_is_a_row_the_kit_can_build() -> None:
 
 
 def test_a_warm_up_ladder_on_the_fixture_barbell_never_strips_a_plate() -> None:
-    barbell = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="lb").racks[
-        "barbell"
-    ]
+    barbell = parse_kit_tables(kit_tables(), choices=HOME, units="lb").racks["barbell"]
 
     ladder = warm_up_ladder(barbell, (30, 81, 135))
 
@@ -136,9 +207,9 @@ def test_stale_tables_refuse_naming_the_location_and_the_generator_command() -> 
 
 def test_a_plate_pool_location_supplies_the_kit_rack_of_each_implement_it_maps() -> None:
     location = PlatePoolLocation(
-        "home", kit="home", collars="clamp", dumbbells="pair", implements={"barbell": "barbell"}
+        "home", kit="home", implements={"barbell": "barbell"}, implement={"barbell": CLAMP}
     )
-    kit = parse_kit_tables(kit_tables(), collars="clamp", dumbbells="pair", units="lb")
+    kit = parse_kit_tables(kit_tables(), choices=HOME, units="lb")
 
     racks = location_racks(location, kit)
 
@@ -161,7 +232,7 @@ def test_a_grid_location_supplies_the_rack_of_each_implement_table() -> None:
 
 def test_a_plate_pool_location_without_its_kit_supplies_nothing() -> None:
     location = PlatePoolLocation(
-        "home", kit="home", collars="clamp", dumbbells="pair", implements={"barbell": "barbell"}
+        "home", kit="home", implements={"barbell": "barbell"}, implement={"barbell": CLAMP}
     )
 
     assert location_racks(location, None) == {}
