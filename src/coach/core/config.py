@@ -76,7 +76,6 @@ class PlatePoolLocation:
     implement: Mapping[str, ImplementChoice] = field(default_factory=dict[str, ImplementChoice])
 
     def choices(self) -> dict[str, ImplementChoice]:
-        """The choice of each implement `implements` names."""
         return {name: self.implement[name] for name in self.implements.values()}
 
 
