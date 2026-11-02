@@ -49,6 +49,31 @@ def test_an_e1rm_asking_for_two_rows_above_the_anchor_prescribes_one_row_above()
     assert line.change == "1×3 @8 + 3×5: 100 → 102.5"
 
 
+def test_a_top_the_e1rm_lifts_names_the_e1rm_and_its_exposure_in_the_change() -> None:
+    # e1RM 100 × (1 + 6/30) = 120; three reps at RPE 8 is 102.86, down to 102.5
+    line = derive(bench_on("2026-10-26", top_rpe=7))
+
+    assert line.steps[0] == Step("scheme", 100, 102.5, "e1rm exposure:w-2026-10-26/bb_bench_press")
+    assert line.change == "1×3 @8 + 3×5: 100 → 102.5 (e1RM 120 from 2026-10-26, lower)"
+
+
+def test_an_e1rm_from_a_workout_that_matched_no_session_is_named_by_its_date_alone() -> None:
+    unmatched = an_exposure("2026-10-24", (100, 3, 7), *[(85, 5, 7)] * 3)
+
+    line = derive(unmatched, bench_on("2026-10-26", top_rpe=8))
+
+    assert line.change == "1×3 @8 + 3×5: 100 → 102.5 (e1RM 120 from 2026-10-24)"
+
+
+def test_the_e1rm_source_stays_on_the_change_when_a_later_step_lowers_the_top() -> None:
+    cap = NiggleConstraint("n-0001", "load_cap", exercise_id="bb_bench_press", value=101)
+
+    line = derive(bench_on("2026-10-26", top_rpe=7), niggle_constraints=(cap,))
+
+    assert working_loads(line)[0] == (1, Load(100, "total"))
+    assert line.change == "held (e1RM 120 from 2026-10-26, lower)"
+
+
 def test_an_e1rm_inside_one_row_sets_the_top_rounded_down() -> None:
     # e1RM 100 × (1 + 5.5/30) = 118.33; three reps at RPE 8 is 101.43, down to 100
     line = derive(bench_on("2026-10-26", top_rpe=7.5))
@@ -191,7 +216,8 @@ def test_the_week_after_a_return_carries_the_pre_layoff_e1rm_scaled_by_the_band(
     line = deadlift(AUGUST_BEST, ON_RAMP, RETURN, on="2026-11-08")
 
     assert working_loads(line) == [(1, Load(142.5, "total")), (2, Load(120, "total"))]
-    assert line.steps[0] == Step("scheme", 112.5, 142.5, "e1rm")
+    assert line.steps[0] == Step("scheme", 112.5, 142.5, "e1rm exposure:w-2026-08-26/bb_deadlift")
+    assert line.change == "1×6 @7.5 + 2×6: 112.5 → 142.5 (e1RM 185.99 from 2026-08-26, lower)"
     assert "no_e1rm" not in codes(line)
     carried = next(f for f in line.flags if f.code == "carried_e1rm")
     assert dict(carried.params) == {

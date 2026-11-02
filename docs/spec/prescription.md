@@ -124,6 +124,9 @@ Notes:
   gets back to its pre-layoff level in about one week rather than one row a week.
 - `top_backoff` reads the **best** point in the window, so one bad day never drops the top set;
   only a recovery ceiling or the window expiring lowers it.
+- When the e1RM moves the `top_backoff` top (the one-row cap does not bind), the `scheme` step
+  records `cause = e1rm <exposure ref>`, the exposure the e1RM came from (the pre-layoff one
+  while the carried e1RM binds), and the line's `change` ends with it (below).
 - With no next rack row (a band at the top of its ladder, a dumbbell rack's heaviest pair) a
   hit holds and the step records `cause = rack_top`; the agent swaps or the version changes.
 - A `test` single is never authored; the deload policy prescribes it in a light week, below.
@@ -348,7 +351,7 @@ Per line, in the `plan draft` envelope and the `plan apply --dry-run` envelope:
 | `derived_from` | `exposure:<workout>/<exercise>` or `start_load` |
 | `steps` | the derivation steps, in pipeline order, only those that changed something or found a ceiling not binding |
 | `flags` | the line's violations and warnings, `validation.md`'s shape |
-| `change` | one string, `4×6–8 @8: 120 → 125`, `held`, `first prescription`, `reset 120 → 107.5` |
+| `change` | one string, `4×6–8 @8: 120 → 125`, `held`, `first prescription`, `reset 120 → 107.5`; a `top_backoff` top the e1RM moved adds the e1RM and its exposure's date and session, `1×5 @8 + 4×5: 117.5 → 120 (e1RM 150 from 2026-10-13, pt-chest-back)`, whatever the later steps did to the load (the session is left out for a workout that matched none) |
 
 No prose rationale. The `plan-week` skill judges only lines carrying a flag or an override and
 shows the rest; its coaching questions are `skills.md`'s. `unexplained_drift` is the

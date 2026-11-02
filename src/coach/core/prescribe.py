@@ -174,6 +174,8 @@ class _Derivation:
         if pin is not None:
             self._check_increment(found.exposure, rack, before, bounded.load)
         change = _change(line, before, bounded, move.change, _racked(moved, rack, move.rounding))
+        if move.e1rm_source is not None:
+            change = f"{change} ({move.e1rm_source})"
         return self._bounded(line, found.derived_from, rack, bounded, change, read)
 
     def _bounded(
