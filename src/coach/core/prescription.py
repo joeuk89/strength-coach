@@ -98,6 +98,8 @@ class MatchedActivity:
 
 @dataclass(frozen=True)
 class PrescribeRequest:
+    """`redesigned` is the latest redesign's adoption date; `None` reads stalls unbounded."""
+
     version: ProgramVersion
     exposures: tuple[Exposure, ...]
     racks: Mapping[str, Mapping[str, Rack]]
@@ -109,6 +111,7 @@ class PrescribeRequest:
     status_spans: tuple[StatusSpan, ...] = ()
     hard_week_count: int = 0
     activities: Mapping[str, MatchedActivity] = field(default_factory=dict[str, MatchedActivity])
+    redesigned: datetime.date | None = None
 
 
 @dataclass(frozen=True)

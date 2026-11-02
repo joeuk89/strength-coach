@@ -11,7 +11,7 @@ from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
-from coach.core.line_history import newest_first, ordinary
+from coach.core.line_history import newest_first, ordinary, since_redesign
 from coach.core.linear import resets
 from coach.core.phase_trend import observed_rate, phase_condition_met
 from coach.core.planned_week import DAYS_IN_WEEK
@@ -57,6 +57,8 @@ def progress(
     priority = stored.goal.priority_lifts if stored else ()
     signals = cadence_signals(conn, closed, units=units, on=on)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
+    opened = programs.block_opened(conn)
+    redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     weigh_ins = {
         datetime.date.fromisoformat(str(r["date"])): float(str(r["kg"]))
         for r in readings.live(conn, "weigh_in")
@@ -70,6 +72,7 @@ def progress(
                 exposures,
                 spans,
                 _scheme_since(versions, exercise),
+                redesigned,
                 on,
                 by_exercise.get(exercise),
             )
@@ -113,6 +116,7 @@ def _lift(
     exposures: Sequence[Exposure],
     spans: Sequence[BlockSpan],
     since: datetime.date | None,
+    redesigned: datetime.date | None,
     today: datetime.date,
     signal: str | None,
 ) -> LiftProgress:
@@ -134,7 +138,7 @@ def _lift(
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
-        stall_streak=len(stall_streak(line, history)) if line else 0,
+        stall_streak=len(stall_streak(line, since_redesign(history, redesigned))) if line else 0,
         resets=_resets(line, history),
         signal=signal,
     )

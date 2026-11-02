@@ -10,7 +10,13 @@ from coach.core.bounds import Proposal
 from coach.core.e1rm import WINDOW_DAYS, e1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
-from coach.core.line_history import line_history, loads_on_grid, ordinary, top_on_grid
+from coach.core.line_history import (
+    line_history,
+    loads_on_grid,
+    ordinary,
+    since_redesign,
+    top_on_grid,
+)
 from coach.core.linear import misses_at, misses_before_reset, reset_load
 from coach.core.load import Load, LoadMode
 from coach.core.prescription import PrescribeRequest, Step
@@ -108,7 +114,10 @@ class SchemeMoves:
         return self._held(self._start_load(found))
 
     def stall(self, exposure: Exposure) -> None:
-        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        history = since_redesign(
+            ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on)),
+            self.given.request.redesigned,
+        )
         streak = stall_streak(self.line, history)
         if streak:
             self._raise(
