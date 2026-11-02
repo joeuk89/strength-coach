@@ -115,6 +115,74 @@ def test_a_dry_run_shows_each_start_load_with_its_hevy_kg_and_writes_nothing() -
     } in result.start_loads
 
 
+def test_a_dry_run_lists_every_session_with_its_minutes_and_time_estimate() -> None:
+    result = run(the_worked_store(), WORKED_DRAFT_COMPLETE, dry_run=True, session_minutes=75)
+
+    elided = [
+        "a-wed-lower",
+        "a-fri-push",
+        "a-sun-push",
+        "b-mon-pull",
+        "b-wed-push",
+        "b-fri-lower",
+        "b-sun-pull",
+    ]
+    assert list(result.sessions) == [
+        {"id": "pt-tuesday", "minutes": None, "estimate": None},
+        {"id": "a-mon-lower", "minutes": 75, "estimate": 49},
+        {"id": "b-sat-push", "minutes": 90, "estimate": 22},
+        {"id": "a-sat-pull", "minutes": 90, "estimate": 17},
+        *({"id": id_, "minutes": 75, "estimate": 8} for id_ in elided),
+    ]
+
+
+def test_a_session_estimate_is_the_one_session_over_minutes_reports() -> None:
+    draft = toml(a_draft(a_session("push", minutes=5)))
+
+    result = run(the_worked_store(), draft, dry_run=True)
+
+    over = [flag for flag in result.warnings if flag.code == "session_over_minutes"]
+    assert [dict(flag.params) for flag in over] == [{"estimate": 8, "minutes": 5}]
+    assert list(result.sessions) == [{"id": "push", "minutes": 5, "estimate": 8}]
+
+
+def test_a_dry_run_of_the_draft_in_force_still_lists_its_sessions() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, session_minutes=75)
+
+    again = run(conn, WORKED_DRAFT_COMPLETE, dry_run=True, session_minutes=75)
+
+    assert again.no_op
+    assert again.sessions[:2] == (
+        {"id": "pt-tuesday", "minutes": None, "estimate": None},
+        {"id": "a-mon-lower", "minutes": 75, "estimate": 49},
+    )
+
+
+def test_a_conditioning_session_with_lines_but_no_minutes_has_no_estimate() -> None:
+    emom = {
+        "name": "emom_density",
+        "minutes": 12,
+        "minutes_cap": 16,
+        "minutes_step": 2,
+        "reps": {"kb_swing": 12},
+        "reps_cap": {"kb_swing": 15},
+        "rpe_target": 7,
+    }
+    swings = a_session(
+        "swings",
+        a_line("pull_up", scheme={"name": "hold"}, start_load=None),
+        kind="conditioning",
+        tier="optional",
+        cadence="standing",
+        scheme=emom,
+    )
+
+    result = run(the_worked_store(), toml(a_draft(a_session("push"), swings)), dry_run=True)
+
+    assert {"id": "swings", "minutes": None, "estimate": None} in result.sessions
+
+
 def test_a_per_hand_start_load_reports_the_dumbbell_total_hevy_stores() -> None:
     dumbbells = a_line("db_bulgarian_split_squat", start_load=15)
     draft = toml(a_draft(a_session("legs", dumbbells), location="gym"))
