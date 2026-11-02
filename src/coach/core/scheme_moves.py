@@ -8,7 +8,7 @@ from coach.core.anchor import StartLoad, anchor_load
 from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
 from coach.core.carried_e1rm import E1rmRead
-from coach.core.e1rm import PRECISION, WINDOW_DAYS
+from coach.core.e1rm import PRECISION, WINDOW_DAYS, E1rm
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.line_history import (
@@ -63,12 +63,14 @@ class SchemeInput:
 @dataclass(frozen=True)
 class Move:
     """The proposal `bound()` takes, the rounding it asks for, the line's sets as the scheme
-    shapes them, and the change where the scheme names one."""
+    shapes them, the change where the scheme names one, and the e1RM that moved the load,
+    which the line's change names whatever the later steps do."""
 
     proposal: Proposal
     rounding: Rounding
     sets: tuple[SetGroup, ...]
     change: str | None = None
+    e1rm_source: str | None = None
 
 
 @dataclass
@@ -196,10 +198,21 @@ class SchemeMoves:
         if before is None:
             return self._held(before)
         floor = self._heaviest_top(exposure, before)
-        top = top_set(found.load.as_mode(self.given.mode), self.line, floor, self.given.rack)
-        if top.load != before:
-            self.steps.append(Step("scheme", before.amount, top.load.amount, top.cause))
-        return Move(top.load, "hold", self.given.sets)
+        e1rm_load = found.load.as_mode(self.given.mode)
+        top = top_set(e1rm_load, self.line, floor, self.given.rack)
+        if top.load == before:
+            return Move(top.load, "hold", self.given.sets)
+        cause, source = top.cause, None
+        if top.cause == "e1rm":
+            cause, source = f"e1rm {found.exposure}", self._e1rm_source(found, e1rm_load)
+        self.steps.append(Step("scheme", before.amount, top.load.amount, cause))
+        return Move(top.load, "hold", self.given.sets, e1rm_source=source)
+
+    def _e1rm_source(self, found: E1rm, load: Load) -> str:
+        """`e1RM 120 from 2026-10-26, lower`: the session is left out of an unmatched workout."""
+        source = next(e for e in self.given.request.exposures if e.ref == found.exposure)
+        where = "" if source.session_id is None else f", {source.session_id}"
+        return f"e1RM {load.amount:g} from {source.date.isoformat()}{where}"
 
     def _heaviest_top(self, exposure: Exposure, anchor_top: Load) -> Load:
         """The one-row cap counts from the line's heaviest top in the e1RM window, so a lighter

@@ -355,6 +355,19 @@ def test_with_no_usable_e1rm_a_capped_line_is_clipped_to_the_anchor_and_warns() 
     assert line.groups[-1].load == Load(120, "total")
 
 
+def test_with_no_usable_e1rm_the_clipped_load_is_quoted_as_the_rack_rounds_it() -> None:
+    logged = squat_on("2026-10-26", *[(120, 15, 7)] * 4)
+    restated = PlanOverride("light_week", params={"load_cut_pct": 15})
+
+    line = derive(a_line(), logged, overrides=(restated,))
+
+    # the hit's 125 cut by 15% is 106.25, off the rack; the rack rounds it down to 105
+    unchecked = next(f for f in line.flags if f.code == "rpe_ceiling_unchecked")
+    assert unchecked.params["clipped_load"] == 105
+    assert unchecked.message.endswith("the load is held at 105")
+    assert line.groups[-1].load == Load(105, "total")
+
+
 def test_a_light_week_restating_the_load_cut_cuts_load_and_sets() -> None:
     restated = PlanOverride("light_week", params={"load_cut_pct": 10})
 
