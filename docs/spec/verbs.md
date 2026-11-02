@@ -219,7 +219,7 @@ Six parametrised reads under `query`, each within the cap, each a row list:
 
 | View | Params | Rows |
 | --- | --- | --- |
-| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | date, session, load, reps, RPE, e1RM, annotations applied |
+| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, e1RM, annotations applied |
 | `readings` | `--kind weigh_in\|sleep_night\|activity`, `--last <n>` | the record's fields with source |
 | `flags` | `--code`, `--severity`, `--scope`, `--summary`, `--draft <path>` | flags frozen on the plan in force, or, with `--draft`, on that plan Draft re-validated now (the same validation `plan apply --dry-run` runs, read-only). With no filter, one row per flag code: `code`, `severity`, `count`, `keys[]` (each key with its params hash, in the Draft's order); the message is the registry's (`schema --registry flags`). A filter (`--code`, `--severity`, `--scope`) or `--full` gives one row per flag with its message; `--summary` gives counts by (code, severity) |
 | `lines` | `--exercise`, `--session`, `--date`, `--changed`, `--draft <path>` | lines of the plan in force, or of the named Draft: date, session, exercise, prescription, change from last week, flags |
