@@ -57,6 +57,11 @@ Per line, in this order:
    opening position (`program.md`, the scheme table). A load-bearing line with neither is
    `start_load_missing`.
 
+A lifting or rehab line never anchors on an Exposure from a workout matched to a conditioning
+session, by any step, and the e1RM window below never reads one: those sets anchor their own
+session's lines and nothing else (ADR 0010). A conditioning line's `hold` anchors within its own
+session by step 1, and with no history of its own falls through to steps 2 and 3 as any line.
+
 On a line in a rack mode (`total`, `per_hand_x2`, `single_implement`), steps 1 and 2 also skip
 an exposure with no working set at a positive load (a logging gap, such as a carry logged at 0):
 it has no usable anchor load, so the next older exposure anchors, and with none, step 3 applies.

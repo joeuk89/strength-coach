@@ -17,8 +17,10 @@ from support.programs import a_config, the_worked_store
 from coach.core.errors import Invalid
 from coach.core.plan_draft import PlanDraft
 from coach.services.closed_weeks import closed_weeks
+from coach.services.history import read_history
 from coach.services.plan_draft import plan_draft
 from coach.services.program import adopt, show_draft
+from coach.services.query import exposures
 from coach.store import programs
 
 SWINGS = a_session(
@@ -253,3 +255,59 @@ def test_the_program_draft_keeps_the_two_session_day_and_adopts_again_unchanged(
 
     assert tomllib.loads(text)["schedule"]["A"] == {"mon": ["lower", "cond-swings"]}
     assert "schedule" not in again.diff.version
+
+
+def test_each_exposure_of_a_derived_match_carries_the_session_id_and_kind() -> None:
+    exposures = read_history(a_swings_monday(), "kg").exposures
+
+    assert {(e.ref, e.match and (e.match.session_id, e.match.kind)) for e in exposures} == {
+        ("exposure:h-1/bb_back_squat", ("lower", "lifting")),
+        ("exposure:h-2/kb_swing", ("cond-swings", "conditioning")),
+    }
+
+
+def test_query_exposures_shows_the_conditioning_rows_with_their_session() -> None:
+    rows = exposures(a_swings_monday(), exercises=(), since=None, last=10, units="kg").rows
+
+    assert {(r["exposure"], r["session"]) for r in rows} == {
+        ("exposure:h-1/bb_back_squat", "lower"),
+        ("exposure:h-2/kb_swing", "cond-swings"),
+    }
+
+
+def test_the_closed_week_log_and_the_history_read_agree_on_every_match() -> None:
+    conn = a_swings_monday()
+    an_approved_plan(conn, monday(1))
+    a_logged_workout(
+        conn,
+        "w-0001",
+        monday(1),
+        (SWING_TEMPLATE, ((24.0, 12, 8.0),) * 12),
+        session_id="cond-swings",
+    )
+    an_approved_plan(conn, monday(2))
+    tuesday = (datetime.date.fromisoformat(monday(2)) + datetime.timedelta(days=1)).isoformat()
+    squat_logged(conn, "h-3", tuesday, *[(120, 8, 8)] * 4)
+    an_annotation(
+        conn, "a-1", "match", "workout:h-3", planned_session=f"planned_session:{monday(2)}/lower"
+    )
+    closed_through(conn, 3)
+
+    logged = {
+        s.workout_id: s.session.session_id
+        for week in closed_weeks(conn).weeks
+        for s in week.sessions
+        if s.workout_id is not None
+    }
+    read = {e.workout_id: e.session_id for e in read_history(conn, "kg").exposures}
+
+    assert (
+        logged
+        == read
+        == {
+            "h-1": "lower",
+            "h-2": "cond-swings",
+            "w-0001": "cond-swings",
+            "h-3": "lower",
+        }
+    )

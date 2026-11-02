@@ -113,7 +113,7 @@ def plan_draft(
     )
     locations = {*version.form.locations(), *(s.location for s in planned)}
     racks = racks_by_location(config, kits, locations)
-    history = read_history(conn, config.athlete.units)
+    history = read_history(conn, config.athlete.units, log)
     program = ProgramVersion(version.form, _exercise_facts(conn))
     constraints = niggles.open_constraints(conn)
     opened = programs.block_opened(conn)

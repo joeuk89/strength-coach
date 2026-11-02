@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
+amended: 2026-11-02 by #202 (a conditioning workout's sets anchor its own session's lines and nothing else; they enter no hard sets, muscle balance, lifting day or e1RM)
 ---
 
 # Sessions outside the rotation are Sessions by kind and cadence; rehab is carried by the niggle
@@ -31,8 +32,9 @@ WeekPlan override, a longer park or resume is a Decision.
 
 - A workout matched to a lifting or rehab session yields Exposures: progression, e1RM and hard
   sets by the one rule (a working set above RPE 5). Rehab sets count only when logged above it.
-- A conditioning workout yields an Activity (kind conditioning, quality, RPE from the log or 7)
-  and no Exposures, so it enters concurrent-training spacing and never the muscle balance.
+- A conditioning workout yields an Activity (kind conditioning, quality, RPE from the log or 7),
+  so it enters concurrent-training spacing. Its sets anchor its own session's lines and nothing
+  else: they count toward no hard sets, no muscle balance, no lifting day and no e1RM.
 - A practice workout yields a match and nothing else. A daily dead hang never feeds the dead-hang
   line's progression or the balance, even when the same exercise sits in a lifting session.
 
@@ -91,6 +93,7 @@ WeekPlan override, a longer park or resume is a Decision.
   and resume session as Decision kinds.
 - The Hevy integration (wayfinder #17) carries the second folder and routine retire (ADR 0011).
 - Program authoring (wayfinder #22) carries session-level conditioning schemes and the hold scheme.
-- Regression tests: a conditioning workout produces no Exposure; a practice workout produces no
+- Regression tests: a conditioning workout's sets anchor only its own session's lines and change
+  no lifting line's anchor or e1RM, no hard sets and no lifting day; a practice workout produces no
   Exposure for an exercise that also sits in a lifting session; a parked session is absent from
   the plan without a new program version; a rehab session leaves the plan when its niggle resolves.

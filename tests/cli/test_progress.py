@@ -19,7 +19,7 @@ def instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(app, "engine_version", lambda: ENGINE)
     root = an_instance(tmp_path, pin=ENGINE)
     (root / ".coach").mkdir()
-    built = two_closed_blocks(bench_tops=(100, 105, 105, 110, 115, 115))
+    built = two_closed_blocks(bench_tops=(100, 105, 105, 110, 115, 115), thursday_pull_ups=True)
     on_disk = connect(root / ".coach" / "coach.db")
     built.backup(on_disk)
     on_disk.close()

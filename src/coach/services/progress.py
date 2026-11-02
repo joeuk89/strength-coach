@@ -49,7 +49,7 @@ def progress(
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
     dosed = _weeks_in(closed, block)
-    exposures = read_history(conn, units).exposures
+    exposures = read_history(conn, units).lifting
     versions = programs.newest_first(conn)
     form = versions[0].form if versions else None
     stored = _goal(conn)

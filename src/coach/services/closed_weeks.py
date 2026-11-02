@@ -3,7 +3,8 @@
 import datetime
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import cached_property
 from typing import cast
 
 from coach.core.closed_week.block import Block, blocks
@@ -14,13 +15,14 @@ from coach.core.closed_week.match import PlannedRef, WeekWorkout, workout_class
 from coach.core.closed_week.sessions import PlannedWork, TargetSet
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
-from coach.core.exposure import Annotation, Exposure, LoggedWorkout, resolve
+from coach.core.days_off import SessionTrained
+from coach.core.exposure import Annotation, Exposure, LoggedWorkout, Matched, lifting_reads, resolve
+from coach.core.log import WorkoutVersion
 from coach.core.muscles import read_muscles
 from coach.core.planned_week import DAYS_IN_WEEK, choose_sessions, planned_sessions, week_monday
 from coach.core.prescription import PlannedSession, PlanOverride, StatusSpan
 from coach.core.program.form import ProgramForm
 from coach.core.ref import Ref
-from coach.services.history import trained_without_sets
 from coach.store import (
     annotations,
     check_ins,
@@ -129,6 +131,8 @@ class WeekLog:
             )
             for v in current
         )
+        self._by_id = {w.id: w for w in self.workouts}
+        self._named = sessions
         self.claims = _claims(live, self.workouts, sessions)
         self.trained_unlogged = _planned_refs(live, "trained_unlogged")
         self.cancelled = _planned_refs(live, "cancelled")
@@ -144,13 +148,14 @@ class WeekLog:
         self.conditioning = frozenset(
             w.id for w in self.workouts if self._matched_kind(w) == "conditioning"
         )
+        self.trained = trained_without_sets(live, current, sessions)
         self.lifting_dates = [
             *(
                 w.date
                 for w in self.workouts
                 if w.kind == "lifting" and w.id not in self.conditioning
             ),
-            *(t.date for t in trained_without_sets(live, current, sessions)),
+            *(t.date for t in self.trained),
         ]
 
     def closed_by(self, windows: WindowList) -> ClosedWeeks:
@@ -165,13 +170,40 @@ class WeekLog:
         return self._weeks[monday]
 
     def workout(self, workout_id: str) -> WeekWorkout:
-        return next(w for w in self.workouts if w.id == workout_id)
+        return self._by_id[workout_id]
+
+    @cached_property
+    def matched_exposures(self) -> tuple[Exposure, ...]:
+        """Every Exposure, each carrying its workout's Match."""
+        matches = {w.id: self.match_of(w.id) for w in self.workouts}
+        return tuple(replace(e, match=matches[w.id]) for w in self.workouts for e in w.exposures)
 
     @property
     def exposures(self) -> tuple[Exposure, ...]:
-        """A workout matched to a conditioning session yields an Activity, not Exposures (ADR
-        0010), whatever its sets carry."""
-        return tuple(e for w in self.workouts if w.id not in self.conditioning for e in w.exposures)
+        """A workout matched to a conditioning session yields an Activity, not lifting
+        Exposures (ADR 0010), whatever its sets carry."""
+        return lifting_reads(self.matched_exposures)
+
+    def match_of(self, workout_id: str) -> Matched | None:
+        """The week's derived Match; a manual coach-led workout the derivation leaves unplaced
+        still names its own session."""
+        monday = self._week_of(self.workout(workout_id))
+        plan = self._plan(monday)
+        light = any(o.kind == "light_week" for o in plan.overrides)
+        session = self._matched(monday).get(workout_id)
+        if session is not None:
+            lines = frozenset(
+                line for w in plan.planned if w.session == session for line in w.returned
+            )
+            return Matched(session.session_id, light, lines, session.kind)
+        named = self._named.get(workout_id)
+        if named is None:
+            return None
+        authored = plan.form.session(named) if plan.form else None
+        lines = frozenset(
+            line for w in plan.planned if w.session.session_id == named for line in w.returned
+        )
+        return Matched(named, light, lines, authored.kind if authored else None)
 
     def _matched_kind(self, workout: WeekWorkout) -> str | None:
         """The kind of the planned session the workout matched in its week, if any. Match reads
@@ -281,6 +313,21 @@ class WeekLog:
             )
             for s in sessions
         )
+
+
+def trained_without_sets(
+    live: Sequence[Annotation], current: Sequence[WorkoutVersion], sessions: Mapping[str, str]
+) -> tuple[SessionTrained, ...]:
+    """The session dates trained with no logged sets: each `trained_unlogged` Annotation and each
+    hand-entered Workout with no sets."""
+    return (
+        *(SessionTrained(*_planned_ref(a.target)) for a in live if a.kind == "trained_unlogged"),
+        *(
+            SessionTrained(_day(v.date), sessions.get(v.id))
+            for v in current
+            if v.source == "manual" and not v.sets
+        ),
+    )
 
 
 def _targets(
