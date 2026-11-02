@@ -56,10 +56,7 @@ def delivered_lift_dose(
         hard[exposure.exercise_id] = hard.get(exposure.exercise_id, 0) + sum(
             1 for s in exposure.working if is_hard(s.rpe)
         )
-    return {
-        lift: sum(hard.get(exercise, 0) for exercise in (lift, *target.counts))
-        for lift, target in lifts.items()
-    }
+    return {lift: _with_variants(hard, lift, target.counts) for lift, target in lifts.items()}
 
 
 def trailing_mean(weeks: Iterable[ClosedWeek], muscle: str) -> float | None:
@@ -107,9 +104,7 @@ def lift_dose_under_target(
     for lift in counted:
         trailing = [w for w in ordinary if lift in w.lift_dose_target]
         figures = [w.lift_dose.get(lift, 0) for w in trailing]
-        under = sum(
-            1 for w, f in zip(trailing, figures, strict=True) if f < w.lift_dose_target[lift]
-        )
+        under = sum(1 for w in trailing if w.lift_dose.get(lift, 0) < w.lift_dose_target[lift])
         if under >= UNDER_IN:
             target = trailing[-1].lift_dose_target[lift]
             return raise_flag(
@@ -160,8 +155,7 @@ def minimum_week_floor(
         for line in session.lines:
             hard[line.exercise_id] = hard.get(line.exercise_id, 0) + _hard_sets(line)
     for lift in priority_lifts:
-        variants = (counted or {}).get(lift, ())
-        if sum(hard.get(exercise, 0) for exercise in (lift, *variants)) < PRIORITY_FLOOR:
+        if _with_variants(hard, lift, (counted or {}).get(lift, ())) < PRIORITY_FLOOR:
             return raise_flag(
                 "minimum_week_floor",
                 Scope("week", monday),
@@ -173,6 +167,10 @@ def minimum_week_floor(
 
 def _trailing(weeks: Iterable[ClosedWeek]) -> list[ClosedWeek]:
     return sorted((w for w in weeks if w.ordinary), key=lambda w: w.monday)[-TRAILING_WEEKS:]
+
+
+def _with_variants(hard: Mapping[str, int], lift: str, variants: Sequence[str]) -> int:
+    return sum(hard.get(exercise, 0) for exercise in (lift, *variants))
 
 
 def _hard_sets(line: LinePrescription) -> int:

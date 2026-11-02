@@ -48,6 +48,7 @@ def progress(
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
     block = spans[-1] if spans else None
+    dosed = _weeks_in(closed, block)
     exposures = read_history(conn, units).exposures
     versions = programs.newest_first(conn)
     form = versions[0].form if versions else None
@@ -80,8 +81,8 @@ def progress(
             milestone_read(m, exposures, weigh_ins, units)
             for m in (stored.goal.milestones if stored else ())
         ),
-        dose=_dose(closed, block),
-        dose_target=_dose_target(closed, block),
+        dose=_dose(dosed),
+        dose_target=_dose_target(dosed),
         adherence=_adherence(conn, closed, block),
         phase=_phase(conn, weigh_ins, on, bodyweight_units),
         goal=GoalRead(stored.goal.kind, stored.adopted, stored.goal.why) if stored else None,
@@ -189,7 +190,7 @@ def _weeks_in(closed: ClosedWeeks, block: BlockSpan | None) -> list[ClosedWeek]:
     return [w for w in closed.weeks if block.holds(w.monday)]
 
 
-def _dose(closed: ClosedWeeks, block: BlockSpan | None) -> tuple[DoseWeek, ...]:
+def _dose(weeks: Sequence[ClosedWeek]) -> tuple[DoseWeek, ...]:
     return tuple(
         DoseWeek(
             week.monday,
@@ -197,13 +198,12 @@ def _dose(closed: ClosedWeeks, block: BlockSpan | None) -> tuple[DoseWeek, ...]:
             {m: round(v, 1) for m, v in sorted(week.dose.items())},
             dict(week.lift_dose),
         )
-        for week in _weeks_in(closed, block)
+        for week in weeks
     )
 
 
-def _dose_target(closed: ClosedWeeks, block: BlockSpan | None) -> dict[str, int]:
+def _dose_target(weeks: Sequence[ClosedWeek]) -> dict[str, int]:
     """The targets the block's newest closed week was judged against."""
-    weeks = _weeks_in(closed, block)
     if not weeks or weeks[-1].dose_target is None:
         return {}
     return {"per_muscle": weeks[-1].dose_target, **weeks[-1].lift_dose_target}
