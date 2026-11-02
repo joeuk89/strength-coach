@@ -46,8 +46,8 @@ def weigh_ins(conn: Connection) -> dict[datetime.date, float]:
 
 
 def activities(conn: Connection, log: WeekLog) -> list[LoggedActivity]:
-    """Activities, and the Activity view of every conditioning workout (week.md, "What an
-    unmatched workout is")."""
+    """Activities, and the Activity view of every conditioning workout: one matched to a
+    conditioning session, or an unmatched one classed by its content (week.md, "Match")."""
     found = [
         LoggedActivity(
             str(r["id"]),
@@ -61,7 +61,7 @@ def activities(conn: Connection, log: WeekLog) -> list[LoggedActivity]:
         for r in readings.live(conn, "activity")
     ]
     for workout in log.workouts:
-        if workout.kind != "conditioning":
+        if workout.kind != "conditioning" and log.matched_kind(workout) != "conditioning":
             continue
         rated = [s.rpe for e in workout.exposures for s in e.sets if s.rpe is not None]
         view = conditioning_activity(workout.date, workout.minutes, rated)

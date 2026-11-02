@@ -148,6 +148,11 @@ class WeekLog:
     def workout(self, workout_id: str) -> WeekWorkout:
         return next(w for w in self.workouts if w.id == workout_id)
 
+    def matched_kind(self, workout: WeekWorkout) -> str | None:
+        """The kind of the planned session the workout matched in its week, if any."""
+        week = self.week(self._week_of(workout))
+        return next((s.session.kind for s in week.sessions if s.workout_id == workout.id), None)
+
     def facts(self, monday: datetime.date) -> WeekFacts:
         sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
         plan = week_plans.in_force(self.conn, monday.isoformat())
