@@ -106,7 +106,13 @@ def _param(value: object) -> object:
 
 
 def _flag(flag: Flag) -> Table:
-    return {"key": flag.key, "code": flag.code, "severity": flag.severity, "message": flag.message}
+    return {
+        "key": flag.key,
+        "params_hash": flag.params_hash,
+        "code": flag.code,
+        "severity": flag.severity,
+        "message": flag.message,
+    }
 
 
 def _note(note: AthleteNote) -> Table:

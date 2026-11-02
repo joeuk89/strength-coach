@@ -1,4 +1,5 @@
-from typing import cast
+import tomllib
+from typing import Any, cast
 
 import pytest
 from support.clock import FixedClock
@@ -134,6 +135,20 @@ def test_an_acknowledged_warning_is_left_until_its_params_change() -> None:
     assert (left.left.because, left.left.source) == ("kit", "weekplan")
     assert after.params["logged_load"] == 122
     assert after.left is None
+
+
+def test_the_key_and_params_hash_copied_from_the_drafts_flag_table_leave_the_warning() -> None:
+    conn = a_squat_week()
+    document: Any = tomllib.loads(a_plan_draft(conn).decode("utf-8"))
+    [flag] = document["session"][0]["line"][0]["flag"]
+
+    left = offgrid(
+        run(conn, a_plan_draft(conn, acknowledge=acknowledge(flag["key"], flag["params_hash"])))
+    )
+
+    assert flag["key"] == OFFGRID
+    assert left.left is not None
+    assert left.left.text == "The 121 was a mislabelled plate."
 
 
 def test_a_leave_warning_decision_in_force_leaves_the_warning_with_no_draft_entry() -> None:
