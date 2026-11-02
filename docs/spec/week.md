@@ -185,7 +185,7 @@ Three rules, each a code; the rest of the old activity layer is gone (ADR 0004 a
 | --- | --- | --- |
 | Quality bouts (session RPE 7 or more) capped at 2 a week, runs and conditioning together | `activity_cap_exceeded` | outside a plan, history |
 | A run over 1.10 times the longest run in the previous 30 days, judged only once 14 days of activity history exist before it | `run_spike` | outside a plan, history; clears when the week closes |
-| A planned quality conditioning session within 24 hours before a planned heavy squat or hinge session (a working set at RPE 7 or above, or 6 reps or fewer with no RPE), or on the same day as any lifting session with under 6 hours between | `session_drop_suggested`, reason `quality_stack` | plan draft |
+| A planned quality conditioning session within 24 hours before a planned heavy squat or hinge session (a working set at RPE 7 or above, or 6 reps or fewer with no RPE), or on the same day as any lifting session with under 6 hours between. The rule reads only planned sessions with a day (`weekly` and `daily`); a `standing` session is outside it on either side, and its stacking is judged from the logged Activity | `session_drop_suggested`, reason `quality_stack` | plan draft |
 
 Citations: rn:running-load.5 and .6; rn:running-load.1 and .4; rn:concurrent-training.4 and .5.
 Dropped: the warning on each conditioning session in a light week, the "sleep debt" reason (the

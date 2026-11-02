@@ -18,6 +18,7 @@ SPIKE_LOOKBACK_DAYS = 30
 # rn:running-load.4: judged only once 14 days of activity history exist before the run.
 SPIKE_HISTORY_DAYS = 14
 RUN = "run"
+STANDING = "standing"
 # rn:concurrent-training.5: a heavy squat or hinge session has a working set at RPE 7 or above,
 # or of 6 reps or fewer when no RPE is set.
 HEAVY_PATTERNS = ("squat", "hinge")
@@ -99,13 +100,15 @@ def quality_stack(
 ) -> list[Flag]:
     """A planned quality conditioning session the day before a heavy squat or hinge session, or on
     the day of any lifting session. Planned sessions carry no time of day, so the day before
-    stands for "within 24 hours" and the same day for "under 6 hours between"."""
+    stands for "within 24 hours" and the same day for "under 6 hours between". A standing session
+    has no day, so it is outside the rule; its stacking is seen in the logged Activity."""
+    dated = [s for s in sessions if s.session.cadence != STANDING]
     found: list[Flag] = []
-    for conditioning in sessions:
+    for conditioning in dated:
         planned = conditioning.session
         if planned.kind != "conditioning" or planned.session_id not in quality:
             continue
-        for lifting in sessions:
+        for lifting in dated:
             other = lifting.session
             if other.kind != "lifting":
                 continue
