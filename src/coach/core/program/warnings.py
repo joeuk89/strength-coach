@@ -302,7 +302,7 @@ class _Warnings:
                 return
 
     def _minutes(self, session: Session, scope: Scope) -> None:
-        estimate = session_estimate(session.lines)
+        estimate = session_estimate(session)
         if session.minutes is None or estimate is None:
             return
         if estimate > session.minutes:

@@ -313,7 +313,7 @@ def _session_estimates(form: ProgramForm) -> tuple[Mapping[str, object], ...]:
         {
             "id": session.id,
             "minutes": session.minutes,
-            "estimate": None if session.minutes is None else session_estimate(session.lines),
+            "estimate": session_estimate(session),
         }
         for session in form.sessions
     )
