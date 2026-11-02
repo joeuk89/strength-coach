@@ -133,6 +133,20 @@ def test_weeks_before_the_lift_had_a_target_never_count_against_it() -> None:
     assert lift_dose_under_target(weeks, MONDAY, PULL_UP_COUNTS) is None
 
 
+def test_a_lift_the_version_in_force_no_longer_targets_raises_nothing() -> None:
+    weeks = [
+        ClosedWeek(
+            MONDAY - datetime.timedelta(weeks=n + 1),
+            "hard",
+            lift_dose={"bb_back_squat": 0},
+            lift_dose_target={"bb_back_squat": 8},
+        )
+        for n in (3, 2, 1, 0)
+    ]
+
+    assert lift_dose_under_target(weeks, MONDAY, PULL_UP_COUNTS) is None
+
+
 def pull_session(*lines: tuple[str, int]) -> SessionPrescription:
     planned = PlannedSession("pull", MONDAY, "home", "lifting", ())
     return SessionPrescription(

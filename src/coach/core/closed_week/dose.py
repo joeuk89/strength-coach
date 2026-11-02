@@ -101,11 +101,10 @@ def dose_under_target(
 def lift_dose_under_target(
     weeks: Iterable[ClosedWeek], monday: datetime.date, counted: Mapping[str, Sequence[str]]
 ) -> Flag | None:
-    """The first lift under its target, its counted variants included, in three of the
-    trailing four ordinary weeks that carried a target for it."""
+    """The first lift the version in force targets that ran under its target, its counted
+    variants included, in three of the trailing four ordinary weeks that carried a target for it."""
     ordinary = _trailing(weeks)
-    lifts = dict.fromkeys(lift for w in ordinary for lift in w.lift_dose_target)
-    for lift in lifts:
+    for lift in counted:
         trailing = [w for w in ordinary if lift in w.lift_dose_target]
         figures = [w.lift_dose.get(lift, 0) for w in trailing]
         under = sum(
@@ -120,7 +119,7 @@ def lift_dose_under_target(
                     "exercise_id": lift,
                     "target": target,
                     "weekly_figures": figures,
-                    "counted": list(counted.get(lift, ())),
+                    "counted": list(counted[lift]),
                 },
                 f"{lift} was under its {target} hard sets in {under} of the last "
                 f"{len(trailing)} ordinary weeks",
