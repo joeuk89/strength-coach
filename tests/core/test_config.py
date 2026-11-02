@@ -257,3 +257,46 @@ def test_a_missing_engine_version_is_refused_naming_it() -> None:
     error = refusal(a_document(engine={}))
 
     assert "engine.version" in error.message
+
+
+@pytest.mark.parametrize("written", ["mon", "Mon", "MONDAY", "monday", "Monday"])
+def test_week_starts_reads_a_short_or_full_weekday_in_any_case_as_the_full_name(
+    written: str,
+) -> None:
+    document = a_document()
+    document["athlete"]["week_starts"] = written
+
+    assert parse_config(document).athlete.week_starts == "monday"
+
+
+def test_available_days_read_short_and_full_names_as_full_names() -> None:
+    document = a_document()
+    document["athlete"]["available_days"] = ["mon", "Wednesday", "fri", "sun"]
+
+    assert parse_config(document).athlete.available_days == (
+        "monday",
+        "wednesday",
+        "friday",
+        "sunday",
+    )
+
+
+def test_a_weekday_named_twice_in_both_forms_is_refused() -> None:
+    document = a_document()
+    document["athlete"]["available_days"] = ["mon", "monday"]
+
+    error = refusal(document)
+
+    assert "athlete.available_days names a weekday twice" in error.message
+
+
+@pytest.mark.parametrize("fact", ["week_starts", "available_days"])
+def test_a_bad_weekday_is_refused_showing_both_accepted_forms(fact: str) -> None:
+    document = a_document()
+    document["athlete"][fact] = ["mo"] if fact == "available_days" else "mo"
+
+    error = refusal(document)
+
+    assert f"athlete.{fact}" in error.message
+    assert "monday or mon" in error.message
+    assert "'mo'" in error.message

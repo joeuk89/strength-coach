@@ -205,6 +205,75 @@ def test_init_with_hevy_unreachable_leaves_the_instance_written_and_exits_4(
     assert (pull["kind"], pull["workouts"]["new"]) == ("full", 1)
 
 
+def no_hevy() -> MakeClient:
+    return serving(FakeHevy(FixedClock()))
+
+
+def test_short_day_names_on_the_flags_are_written_as_full_names(
+    empty_directory: Path, release: None
+) -> None:
+    run = run_coach(
+        "init", "--defaults", "--available-days", "mon,tue,thu", "--hevy", "no",
+        make_client=no_hevy(),
+    )  # fmt: skip
+
+    assert run.code == 0, run.stdout
+    athlete = coach_toml(empty_directory)["athlete"]
+    assert isinstance(athlete, dict)
+    assert athlete["available_days"] == ["monday", "tuesday", "thursday"]
+
+
+@pytest.mark.parametrize("written", ["mon", "Monday"])
+def test_week_starts_takes_a_short_or_capitalised_day(
+    empty_directory: Path, release: None, written: str
+) -> None:
+    run = run_coach("init", "--defaults", "--week-starts", written, make_client=no_hevy())
+
+    assert run.code == 0, run.stdout
+    athlete = coach_toml(empty_directory)["athlete"]
+    assert isinstance(athlete, dict)
+    assert athlete["week_starts"] == "monday"
+
+
+def test_a_day_named_in_both_forms_is_refused_as_named_twice(
+    empty_directory: Path, release: None
+) -> None:
+    run = run_coach("init", "--defaults", "--available-days", "mon,monday", make_client=no_hevy())
+
+    assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
+    assert "names a weekday twice" in run.envelope["error"]["message"]
+    assert tree(empty_directory) == set()
+
+
+def test_a_bad_day_is_refused_showing_both_accepted_forms(
+    empty_directory: Path, release: None
+) -> None:
+    run = run_coach("init", "--defaults", "--available-days", "mo", make_client=no_hevy())
+
+    assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
+    message = run.envelope["error"]["message"]
+    assert message.startswith("--available-days: ")
+    assert "monday or mon" in message
+    assert tree(empty_directory) == set()
+
+
+def test_the_prompt_takes_short_day_names(
+    empty_directory: Path, release: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    answers = ["", "", "Sun", "Asia/Tokyo", "mon, wed,FRI", "", "", "no", "y"]
+    monkeypatch.setattr(sys, "stdin", typed(*answers))
+
+    run = run_coach("init", make_client=no_hevy())
+
+    assert run.code == 0, run.stdout
+    athlete = coach_toml(empty_directory)["athlete"]
+    assert isinstance(athlete, dict)
+    assert (athlete["week_starts"], athlete["available_days"]) == (
+        "sunday",
+        ["monday", "wednesday", "friday"],
+    )
+
+
 def test_a_hevy_key_beside_an_existing_env_stops_before_a_file_is_written(
     empty_directory: Path, release: None
 ) -> None:

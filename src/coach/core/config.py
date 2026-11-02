@@ -264,7 +264,11 @@ def _units(value: object, path: tuple[str, ...]) -> Units:
 
 
 def _weekday(value: object, path: tuple[str, ...]) -> Weekday:
-    return cast(Weekday, _choice(value, WEEKDAYS, path))
+    written = value.lower() if isinstance(value, str) else None
+    for day in WEEKDAYS:
+        if written in (day, day[:3]):
+            return day
+    raise _refuse(path, f"must be a weekday such as monday or mon, not {value!r}")
 
 
 def _dumbbells(value: object, path: tuple[str, ...]) -> Dumbbells:

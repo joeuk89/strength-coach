@@ -2,6 +2,9 @@ from pathlib import Path
 
 import pytest
 from support.cli import run_coach
+from support.clock import FixedClock
+from support.fake_hevy import FakeHevy
+from support.fixture_instances import serving
 
 from coach.cli.envelope import BUDGET_BYTES
 from coach.cli.registry import declarations
@@ -20,6 +23,14 @@ def test_help_lists_every_declared_leaf() -> None:
     names = [leaf["name"] for leaf in run.envelope["result"]["verbs"]]
     assert names == [d.name for d in declarations()]
     assert {"status", "schema"} <= set(names)
+
+
+def test_help_lists_version_among_the_options_and_in_the_usage() -> None:
+    result = run_coach("--help", make_client=serving(FakeHevy(FixedClock()))).envelope["result"]
+
+    (option,) = [o for o in result["options"] if o["name"] == "--version"]
+    assert option["help"]
+    assert "coach --version" in result["usage"]
 
 
 def test_no_arguments_prints_the_help() -> None:
