@@ -110,7 +110,9 @@ Three rules every leaf obeys:
   carries `count` and `truncated`; meeting the cap by truncating rows is allowed, meeting it by
   omitting a declared field is not. A grouped flag list (one row per flag code with its
   `keys[]`) never loses a row: the cap trims trailing keys from the longest `keys[]` first and
-  marks that row `keys_truncated: true`, so every code stays visible.
+  marks that row `keys_truncated: true`, so every code stays visible. The `plan apply --dry-run`
+  flag list is never cut, by `--last` or the cap, because the agent approves against it: it
+  carries `flag_count` and no `flags_truncated`.
 
 ## Drafts written by the engine
 
@@ -152,7 +154,7 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
 | `record --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `plan draft` | path, hash, week, superseded plan id if any, line count, every flag code with its count and keys (each key with the params hash an acknowledgement copies), rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`), `pull` |
-| `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, flags with acknowledgements, the hash |
+| `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, every flag in validation order as `{key, code, severity, params_hash, left}` (`left` the acknowledgement that leaves it, or null; `--full` gives each flag whole) with `flag_count`, the hash |
 | `plan apply` | WeekPlan id, hash, per-routine outcome (written, verified, unverified), audit lines appended |
 | `program show` | version number, kind, emphasis, adopted date, `because`, sessions with line counts; with `--draft`: path and hash |
 | `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`), `pull` |

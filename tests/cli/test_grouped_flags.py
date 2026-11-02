@@ -105,3 +105,56 @@ def test_query_help_shows_the_full_flag_list_example(instance: Path) -> None:
     examples = coach("query", "--help").envelope["result"]["examples"]
 
     assert ["coach", "query", "flags", "--full"] in [example["argv"] for example in examples]
+
+
+def a_confirmed_plan_draft(instance: Path) -> tuple[str, dict[str, str]]:
+    """The fixture's plan Draft with its rotation confirmed, and each flag key `plan draft`
+    lists with its params hash."""
+    drafted = coach("plan", "draft").envelope["result"]
+    path = instance / drafted["path"]
+    path.write_text(path.read_text().replace("confirmed = false", "confirmed = true"))
+    return str(path), grouped_hashes(drafted["flags"])
+
+
+def test_the_plan_apply_dry_run_lists_every_flag_with_what_an_acknowledgement_needs(
+    instance: Path,
+) -> None:
+    draft, hashes = a_confirmed_plan_draft(instance)
+
+    result = coach("plan", "apply", draft, "--dry-run").envelope["result"]
+
+    assert (len(result["flags"]), result["flag_count"]) == (21, 21)
+    assert "flags_truncated" not in result
+    assert all(
+        set(row) == {"key", "code", "severity", "params_hash", "left"} for row in result["flags"]
+    )
+    assert {row["key"]: row["params_hash"] for row in result["flags"]} == {
+        key: digest for key, digest in hashes.items() if not key.startswith("rotation_")
+    }
+    assert result["flags"][0] == {
+        "key": "stall_streak@line:2026-11-02/lower-a/bb_romanian_deadlift",
+        "code": "stall_streak",
+        "severity": "warning",
+        "params_hash": hashes["stall_streak@line:2026-11-02/lower-a/bb_romanian_deadlift"],
+        "left": None,
+    }
+
+
+def test_the_plan_apply_dry_run_never_cuts_its_flags_to_last(instance: Path) -> None:
+    draft, _ = a_confirmed_plan_draft(instance)
+
+    result = coach("plan", "apply", draft, "--dry-run", "--last", "2").envelope["result"]
+
+    assert (len(result["flags"]), result["flag_count"]) == (21, 21)
+
+
+def test_each_dry_run_flag_carries_the_params_hash_full_shows(instance: Path) -> None:
+    draft, _ = a_confirmed_plan_draft(instance)
+
+    brief = coach("plan", "apply", draft, "--dry-run").envelope["result"]["flags"]
+    full = coach("plan", "apply", draft, "--dry-run", "--full").envelope["result"]["flags"]
+
+    assert [(f["key"], f["params_hash"]) for f in brief] == [
+        (f["key"], f["params_hash"]) for f in full
+    ]
+    assert all("message" in f and "params" in f and "scope" in f for f in full)
