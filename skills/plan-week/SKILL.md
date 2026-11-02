@@ -62,7 +62,7 @@ Quote every load and change from the Draft or the dry run; never retype one. Nam
 and Decision and its reason in plain words. Lines with no flag and no override are shown, not
 explained.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach plan draft`, `coach plan apply`, `coach query`, `coach record`

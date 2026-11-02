@@ -71,7 +71,7 @@ it and answered with a recorded reason. Not every code gets an entry; the schema
 <what the athlete should come away knowing. Every figure is quoted from an envelope or the
 rendered draft, never retyped. Ends with the fixed line below>
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 <the verbs this skill uses, as a plain list in no order: for the contract test and so a new agent
@@ -193,7 +193,7 @@ when there is one. Quote every number from the card or the rendered record; neve
 Name each decision and its reason in plain words. Say what next week will feel like, not what
 it will contain; the plan does that.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach checkin open`, `coach checkin record`, `coach query`
@@ -269,7 +269,7 @@ that move it week to week. Say why each exercise is there and what would earn a 
 every load, set count and filled default from the adopt dry run; never retype one. For a
 revision, lead with what the report says changed and what this version does about it.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach progress`, `coach program show`, `coach program adopt`,
@@ -381,7 +381,7 @@ week's shape and why it has it, limits, how they want to be coached, history. Th
 Phase as the draft states them. Say what changes each: the Goal when the aim changes, the
 profile when they say so, the Phase at a check-in or a block boundary.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach query`, `coach goal adopt`

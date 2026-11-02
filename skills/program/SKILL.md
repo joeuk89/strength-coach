@@ -55,7 +55,7 @@ that move it week to week. Say why each exercise is there and what would earn a 
 every load, set count and filled default from the adopt dry run; never retype one. For a
 revision, lead with what the report says changed and what this version does about it.
 
-The athlete sees what will be recorded and says yes before any verb records it.
+Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach progress`, `coach program show`, `coach program adopt`,

@@ -659,8 +659,9 @@ a permission prompt attaches to; each has a dry run. Four in v1.
 _Avoid_: gated command, mutation, asked verb (the same four, seen from the prompt)
 
 **Dry run**:
-A writing verb run without writing, returning what it would send and whether a guard would refuse
-it. What the permission prompt shows.
+A verb run without writing, returning exactly what the real run would return and whether a guard
+would refuse it. On a Writing verb it is what the permission prompt shows; on a Draft verb it is
+what the athlete approves.
 _Avoid_: preview, simulate, plan (which is a noun here)
 
 **Service**:

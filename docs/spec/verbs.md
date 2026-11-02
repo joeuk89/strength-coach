@@ -32,13 +32,13 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
 | `import [--full]` | store write | Hevy workouts append-only with tombstones (ADR 0011); kit is a committed file, never imported (ADR 0021); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
 | `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | store write (the pull) | the check-in card (`check-in.md`) |
-| `checkin record <draft>` | store write | the Check-in row plus every record the file carries |
-| `record <draft>` | store write | ledger writes outside a check-in, any mix of record kinds |
+| `checkin record <draft> [--dry-run]` | store write | the Check-in row plus every record the file carries |
+| `record <draft> [--dry-run]` | store write | ledger writes outside a check-in, any mix of record kinds |
 | `plan draft [--week <monday>] [--out <path>]` | store write (the pull), writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context), returns its path and summary |
 | `plan apply <draft> [--dry-run] [--expect <hash>]` | Writing verb (Hevy) | the one Hevy write (ADR 0006, 0011) |
 | `program show [--draft [--apply-plan <week>]]` | read, may write a Draft file | the version in force, or the current version as a Draft to edit |
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
-| `goal adopt <draft>` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
+| `goal adopt <draft> [--dry-run]` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
 | `progress` | store write (the pull) | the progress view (`goals.md`) |
 | `query <view> [params]` | read | one of the six read views below |
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
@@ -54,8 +54,11 @@ four asked verbs are the four Writing verbs: `plan apply` (`hevy`), `publish`, `
 `init` (`git`). Every one declares `--dry-run`, which is what the hook's prompt shows: `plan
 apply` the Hevy actions and the hash (ADR 0006), `publish` the files it would write, the
 athlete-authored files it would commit and the export row counts per table, `upgrade` the migrations it would run and the files it would
-regenerate, `init` the tree it would write. A Writing verb's dry run opens no transaction and
-touches no file.
+regenerate, `init` the tree it would write. A Writing verb's dry run touches no file.
+
+A Draft verb's dry run runs the real write inside its transaction and rolls back instead of
+committing, so the ids it reports are the ones the next real run assigns, barring another write
+in between. A Writing verb's dry run opens no transaction.
 
 **The pull.** A verb whose result derives from workouts pulls Hevy first, through the same
 service function `import` runs, when `[hevy]` is on: `checkin open`, `plan draft`, `progress`,
@@ -142,7 +145,9 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
 | `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
+| `checkin record --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
+| `record --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `plan draft` | path, hash, week, superseded plan id if any, line count, every flag code with its count and keys (each key with the params hash an acknowledgement copies), rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`), `pull` |
 | `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, flags with acknowledgements, the hash |
 | `plan apply` | WeekPlan id, hash, per-routine outcome (written, verified, unverified), audit lines appended |
@@ -150,6 +155,7 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`), `pull` |
 | `program adopt` | version number, kind, Block reset or kept, acknowledgements frozen, `pull` |
 | `goal adopt` | goal id, kind, priority lifts, phase opened or closed |
+| `goal adopt --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `progress` | `goals.md`'s view: per priority lift e1RM trend and cadence signal, milestones, Phase status, Block, `pull` |
 | `query` | `rows[]`, `count`, `truncated` |
 | `publish` | commit hash, files written and deleted, export rows per table; with `--dry-run` the same with no commit hash |
@@ -285,6 +291,8 @@ Generated from the declarations, none hand-written per verb:
   `tests/contract/` only.
 - Every verb declared `writes: hevy` or `git` declares `--dry-run`, and its dry run on the
   fixture instance writes no file and opens no transaction.
+- Every verb with a `draft` argument declares `--dry-run`, and its dry run on the fixture
+  instance leaves the tree and the store unchanged.
 - Every violation code's clearing verb or record exists (`validation.md`).
 - The registries `schema --registry` prints are the ones the validator, the record parser and
   `query` dispatch on.
