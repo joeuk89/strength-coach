@@ -273,3 +273,41 @@ def test_query_exposures_shows_the_conditioning_rows_with_their_session() -> Non
         ("exposure:h-1/bb_back_squat", "lower"),
         ("exposure:h-2/kb_swing", "cond-swings"),
     }
+
+
+def test_the_closed_week_log_and_the_history_read_agree_on_every_match() -> None:
+    conn = a_swings_monday()
+    an_approved_plan(conn, monday(1))
+    a_logged_workout(
+        conn,
+        "w-0001",
+        monday(1),
+        (SWING_TEMPLATE, ((24.0, 12, 8.0),) * 12),
+        session_id="cond-swings",
+    )
+    an_approved_plan(conn, monday(2))
+    tuesday = (datetime.date.fromisoformat(monday(2)) + datetime.timedelta(days=1)).isoformat()
+    squat_logged(conn, "h-3", tuesday, *[(120, 8, 8)] * 4)
+    an_annotation(
+        conn, "a-1", "match", "workout:h-3", planned_session=f"planned_session:{monday(2)}/lower"
+    )
+    closed_through(conn, 3)
+
+    logged = {
+        s.workout_id: s.session.session_id
+        for week in closed_weeks(conn).weeks
+        for s in week.sessions
+        if s.workout_id is not None
+    }
+    read = {e.workout_id: e.session_id for e in read_history(conn, "kg").exposures}
+
+    assert (
+        logged
+        == read
+        == {
+            "h-1": "lower",
+            "h-2": "cond-swings",
+            "w-0001": "cond-swings",
+            "h-3": "lower",
+        }
+    )
