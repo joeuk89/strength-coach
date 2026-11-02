@@ -63,10 +63,10 @@ def test_a_routine_page_at_a_plate_pool_location_links_each_loaded_line_with_the
 
     assert kit.inventory_sha256 is not None
     short = kit.inventory_sha256[:8]
-    assert re.findall(r"\?(?:barbell|dumbbells)=[^)]*", page) == [
-        f"?dumbbells=175lb&kit={short}",
+    assert re.findall(r"\?(?:barbell|dumbbell)[.=][^)]*", page) == [
+        f"?dumbbell=175lb&dumbbell.hardware=screw-standard&kit={short}",
     ]
-    assert len(re.findall(r"\?kit=", page)) == 1
+    assert len(re.findall(r"#inventory=", page)) == 1
 
 
 def test_a_routine_page_at_a_grid_location_has_no_plate_pool_link_even_with_a_kit_file() -> None:

@@ -9,6 +9,7 @@ from coach.core.config import (
     Engine,
     GridLocation,
     Hevy,
+    ImplementChoice,
     IncrementImplement,
     PlatePoolLocation,
     RackImplement,
@@ -34,9 +35,11 @@ DOCUMENT: dict[str, Any] = {
         "home": {
             "kind": "plate-pool",
             "kit": "home",
-            "collars": "clamp",
-            "dumbbells": "pair",
             "implements": {"barbell": "barbell", "dumbbell": "dumbbell"},
+            "implement": {
+                "barbell": {"hardware": "collar-clamp"},
+                "dumbbell": {"hardware": "screw-standard", "single": True},
+            },
         },
         "gym": {
             "kind": "grid",
@@ -81,9 +84,11 @@ def test_a_whole_coach_toml_parses_into_a_typed_config() -> None:
             PlatePoolLocation(
                 name="home",
                 kit="home",
-                collars="clamp",
-                dumbbells="pair",
                 implements={"barbell": "barbell", "dumbbell": "dumbbell"},
+                implement={
+                    "barbell": ImplementChoice(hardware="collar-clamp"),
+                    "dumbbell": ImplementChoice(hardware="screw-standard", single=True),
+                },
             ),
             GridLocation(
                 name="gym",
@@ -242,7 +247,7 @@ def test_a_grid_implement_of_the_wrong_shape_is_refused(implement: dict[str, Any
 
 @pytest.mark.parametrize(
     ("key", "value"),
-    [("kind", "garage"), ("dumbbells", "three"), ("kit", ""), ("collars", 1)],
+    [("kind", "garage"), ("kit", ""), ("collars", "clamp"), ("dumbbells", "pair")],
 )
 def test_a_location_of_the_wrong_shape_is_refused(key: str, value: Any) -> None:
     document = a_document()
@@ -251,6 +256,49 @@ def test_a_location_of_the_wrong_shape_is_refused(key: str, value: Any) -> None:
     error = refusal(document)
 
     assert f"location.home.{key}" in error.message
+
+
+def test_a_plate_pool_implement_choice_names_no_single_so_the_handle_is_a_pair() -> None:
+    document = a_document()
+    document["location"]["home"]["implement"]["dumbbell"] = {"hardware": "none"}
+
+    home = parse_config(document).locations[0]
+
+    assert isinstance(home, PlatePoolLocation)
+    assert home.implement["dumbbell"] == ImplementChoice(hardware="none", single=False)
+
+
+def test_a_plate_pool_implement_choice_may_name_no_hardware() -> None:
+    document = a_document()
+    document["location"]["home"]["implements"]["leg_attachment"] = "leg"
+    document["location"]["home"]["implement"]["leg"] = {}
+
+    home = parse_config(document).locations[0]
+
+    assert isinstance(home, PlatePoolLocation)
+    assert home.implement["leg"] == ImplementChoice()
+
+
+def test_a_plate_pool_implement_with_no_choice_table_is_refused_naming_it() -> None:
+    document = a_document()
+    del document["location"]["home"]["implement"]["dumbbell"]
+
+    error = refusal(document)
+
+    assert "location.home.implement.dumbbell is missing" in error.message
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("hardware", ""), ("hardware", 1), ("single", "yes"), ("collars", "clamp")],
+)
+def test_a_plate_pool_implement_choice_of_the_wrong_shape_is_refused(key: str, value: Any) -> None:
+    document = a_document()
+    document["location"]["home"]["implement"]["barbell"][key] = value
+
+    error = refusal(document)
+
+    assert f"location.home.implement.barbell.{key}" in error.message
 
 
 def test_a_missing_engine_version_is_refused_naming_it() -> None:

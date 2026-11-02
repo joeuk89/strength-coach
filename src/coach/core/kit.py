@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from coach.core.config import Dumbbells, GridLocation, Location, Units
+from coach.core.config import GridLocation, ImplementChoice, Location, Units
 from coach.core.errors import Setup
 from coach.core.rack import ListedRack, Position, Rack, RackRow, grid_rack
 
@@ -37,31 +37,53 @@ class KitFiles:
 
 
 def parse_kit_tables(
-    document: Mapping[str, object], *, collars: str, dumbbells: Dumbbells, units: Units
+    document: Mapping[str, object], *, choices: Mapping[str, ImplementChoice], units: Units
 ) -> KitRacks:
+    """The rack of each implement in `choices`, from the one table its choice selects."""
     kit_format = document.get("format")
     if kit_format not in KIT_FORMATS:
         raise _unparseable(f"format {kit_format!r} is not one this engine parses {KIT_FORMATS}")
     tables = [_mapping(table, "tables[]") for table in _list(document.get("tables"), "tables")]
-    applicable = [
-        table
-        for table in tables
-        if table.get("collars", collars) == collars
-        and table.get("pair", dumbbells == "pair") == (dumbbells == "pair")
-    ]
-    racks = {
-        _text(table.get("implement"), "implement"): ListedRack(
-            tuple(_row(row, units) for row in _list(table.get("rows"), "rows"))
-        )
-        for table in applicable
-    }
-    if "barbell" in {table.get("implement") for table in tables} and "barbell" not in racks:
-        raise _unparseable(f"no barbell table has collars {collars!r}")
+    racks: dict[str, ListedRack] = {}
+    for implement, choice in choices.items():
+        offered = [table for table in tables if table.get("implement") == implement]
+        if offered:
+            table = _chosen(implement, offered, choice)
+            racks[implement] = ListedRack(
+                tuple(_row(row, units) for row in _list(table.get("rows"), "rows"))
+            )
     return KitRacks(
         plate_pool=_text(document.get("plate_pool"), "plate_pool"),
         inventory_sha256=_text(document.get("inventory_sha256"), "inventory_sha256"),
         racks=racks,
     )
+
+
+def _chosen(
+    implement: str, offered: Sequence[Mapping[str, object]], choice: ImplementChoice
+) -> Mapping[str, object]:
+    hardware = list(
+        dict.fromkeys(_text(t["hardware"], "tables[].hardware") for t in offered if "hardware" in t)
+    )
+    if hardware and choice.hardware not in hardware:
+        named = "no hardware" if choice.hardware is None else choice.hardware
+        raise _unmatched(
+            f"offer {implement} hardware {', '.join(hardware)}, and the location names {named}"
+        )
+    if not hardware and choice.hardware is not None:
+        raise _unmatched(f"offer {implement} no hardware, and the location names {choice.hardware}")
+    pairs = any("pair" in t for t in offered)
+    if not pairs and choice.single:
+        raise _unmatched(f"offer {implement} no pair or single, and the location names single")
+    matching = [
+        t
+        for t in offered
+        if (not hardware or t.get("hardware") == choice.hardware)
+        and (not pairs or t.get("pair") == (not choice.single))
+    ]
+    if len(matching) != 1:
+        raise _unparseable(f"hold {len(matching)} {implement} tables for one choice, not 1")
+    return matching[0]
 
 
 def location_racks(location: Location, kit: KitRacks | None) -> dict[str, Rack]:
@@ -135,6 +157,14 @@ def _number(value: object, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise _unparseable(f"{where} is not a number")
     return value
+
+
+def _unmatched(why: str) -> Setup:
+    return Setup(
+        "kit_tables_stale",
+        f"the kit tables {why}; name one on offer in the location's implement table or "
+        "regenerate the tables with plate-pool",
+    )
 
 
 def _unparseable(why: str) -> Setup:

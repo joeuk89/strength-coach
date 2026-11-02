@@ -233,9 +233,8 @@ def test_an_unknown_timezone_stops_status_with_config_unknown_key(
 HOME = {
     "kind": "plate-pool",
     "kit": "home",
-    "collars": "clamp",
-    "dumbbells": "pair",
     "implements": {"barbell": "barbell"},
+    "implement": {"barbell": {"hardware": "collar-clamp"}},
 }
 
 

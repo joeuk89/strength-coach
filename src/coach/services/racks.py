@@ -37,11 +37,6 @@ def _racks(
             tables = files.get(location.name) or KitFiles(location.name, location.kit, None, None)
             require_current_tables(tables)
             assert tables.tables is not None
-            kit = parse_kit_tables(
-                tables.tables,
-                collars=location.collars,
-                dumbbells=location.dumbbells,
-                units=units,
-            )
+            kit = parse_kit_tables(tables.tables, choices=location.choices(), units=units)
         racks[location.name] = location_racks(location, kit)
     return racks
