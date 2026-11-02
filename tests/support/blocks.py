@@ -31,6 +31,7 @@ PULL_UP_LINE = a_line("pull_up", sets=[{"count": 3, "reps": [5, 8], "rpe": 8}], 
 LIGHT_WEEKS = (2, 5)
 WEEKS = 6
 FLAT_BENCH = (100.0,) * WEEKS
+_THREE_DAYS = datetime.timedelta(days=3)
 
 
 WHY = "Look athletic in a t-shirt, and bench my bodyweight before I'm 40."
@@ -66,10 +67,13 @@ def two_closed_blocks(
     pull_up_reps: Sequence[int] = (6,) * WEEKS,
     steps: Sequence[dict[str, object]] = (),
     bench_line: dict[str, object] = BENCH_LINE,
+    thursday_pull_ups: bool = False,
 ) -> Connection:
     """Six weeks of `push` on each Monday, weeks 3 and 6 light, all closed by one Check-in:
     Blocks b-2026-10-30 and b-2026-11-23 closed, b-2026-12-14 open. Bench logs a top set of
-    `bench_tops[week]` × 5 at RPE 8 and three back-offs at 85 %, in lb."""
+    `bench_tops[week]` × 5 at RPE 8 and three back-offs at 85 %, in lb. With
+    `thursday_pull_ups` each ordinary week also logs the week's pull-ups in an unplanned
+    Thursday workout, so each Block holds three ordinary pull-up exposures."""
     conn = a_push_program(bench_line)
     for week in range(WEEKS):
         plan_id = an_approved_plan(conn, monday(week))
@@ -95,6 +99,9 @@ def two_closed_blocks(
             (BENCH_TEMPLATE, tuple((_kg(lb), reps, rpe) for lb, reps, rpe in bench)),
             (PULL_UP_TEMPLATE, pull_ups),
         )
+        if thursday_pull_ups and week not in LIGHT_WEEKS:
+            thursday = (datetime.date.fromisoformat(monday(week)) + _THREE_DAYS).isoformat()
+            a_logged_workout(conn, f"h-pull-{week}", thursday, (PULL_UP_TEMPLATE, pull_ups))
     closed_through(conn, WEEKS)
     return conn
 

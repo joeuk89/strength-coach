@@ -34,7 +34,7 @@ def signals_in_status(conn: Connection) -> dict[str, Flag]:
 
 
 def test_checkin_open_reports_cadence_slow_on_a_flat_bench_and_a_stalled_pull_up() -> None:
-    found = signals_at_check_in(two_closed_blocks())
+    found = signals_at_check_in(two_closed_blocks(thursday_pull_ups=True))
 
     assert {k: (f.code, f.params["scheme"]) for k, f in found.items()} == {
         "bb_bench_press": ("cadence_slow", "top_backoff"),
@@ -45,7 +45,10 @@ def test_checkin_open_reports_cadence_slow_on_a_flat_bench_and_a_stalled_pull_up
 
 
 def test_status_reports_the_same_signals() -> None:
-    assert set(signals_in_status(two_closed_blocks())) == {"bb_bench_press", "pull_up"}
+    assert set(signals_in_status(two_closed_blocks(thursday_pull_ups=True))) == {
+        "bb_bench_press",
+        "pull_up",
+    }
 
 
 def test_a_rising_bench_raises_no_signal() -> None:

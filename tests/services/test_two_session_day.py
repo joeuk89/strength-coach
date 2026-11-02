@@ -17,8 +17,10 @@ from support.programs import a_config, the_worked_store
 from coach.core.errors import Invalid
 from coach.core.plan_draft import PlanDraft
 from coach.services.closed_weeks import closed_weeks
+from coach.services.history import read_history
 from coach.services.plan_draft import plan_draft
 from coach.services.program import adopt, show_draft
+from coach.services.query import exposures
 from coach.store import programs
 
 SWINGS = a_session(
@@ -253,3 +255,21 @@ def test_the_program_draft_keeps_the_two_session_day_and_adopts_again_unchanged(
 
     assert tomllib.loads(text)["schedule"]["A"] == {"mon": ["lower", "cond-swings"]}
     assert "schedule" not in again.diff.version
+
+
+def test_each_exposure_of_a_derived_match_carries_the_session_id_and_kind() -> None:
+    exposures = read_history(a_swings_monday(), "kg").exposures
+
+    assert {(e.ref, e.match and (e.match.session_id, e.match.kind)) for e in exposures} == {
+        ("exposure:h-1/bb_back_squat", ("lower", "lifting")),
+        ("exposure:h-2/kb_swing", ("cond-swings", "conditioning")),
+    }
+
+
+def test_query_exposures_shows_the_conditioning_rows_with_their_session() -> None:
+    rows = exposures(a_swings_monday(), exercises=(), since=None, last=10, units="kg").rows
+
+    assert {(r["exposure"], r["session"]) for r in rows} == {
+        ("exposure:h-1/bb_back_squat", "lower"),
+        ("exposure:h-2/kb_swing", "cond-swings"),
+    }
