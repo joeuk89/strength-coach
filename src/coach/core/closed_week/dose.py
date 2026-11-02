@@ -69,6 +69,13 @@ def trailing_mean(weeks: Iterable[ClosedWeek], muscle: str) -> float | None:
     return sum(w.dose.get(muscle, 0) for w in trailing) / len(trailing)
 
 
+def lift_trailing_mean(weeks: Iterable[ClosedWeek], lift: str) -> float | None:
+    trailing = [w for w in _trailing(weeks) if lift in w.lift_dose_target]
+    if not trailing:
+        return None
+    return sum(w.lift_dose.get(lift, 0) for w in trailing) / len(trailing)
+
+
 def dose_under_target(
     weeks: Iterable[ClosedWeek],
     monday: datetime.date,

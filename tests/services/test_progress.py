@@ -65,6 +65,25 @@ def test_the_report_shows_dose_by_muscle_and_lift_for_each_week_of_the_closed_bl
     assert first.lifts == {"bb_bench_press": 4, "pull_up": 3}
 
 
+def test_the_dose_target_is_the_one_the_blocks_newest_closed_week_carried() -> None:
+    conn = a_store()
+    later = a_draft(
+        a_session("push", BENCH_LINE, PULL_UP_LINE),
+        kind="amend",
+        dose={"per_muscle": 12, "lift": {"bb_bench_press": 9, "pull_up": 7}},
+    )
+    adopt(
+        conn,
+        toml(later),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert report(conn).dose_target == {"per_muscle": 10, "bb_bench_press": 8, "pull_up": 8}
+
+
 def test_the_report_shows_the_phase_trend_and_the_goals_why_verbatim() -> None:
     found = report(a_store())
 

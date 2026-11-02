@@ -9,6 +9,7 @@ from support.check_in_cards import (
     opened,
 )
 from support.clock import FixedClock
+from support.history import a_logged_workout
 from support.ledger import a_store, a_weigh_in
 from support.plans import squat_logged
 
@@ -137,3 +138,17 @@ def test_the_weight_field_shows_the_average_in_bodyweight_units() -> None:
     weight = field_of(opened(conn, datetime.date(2026, 11, 29)), "weight_phase")
 
     assert (weight.facts["average_14_days"], weight.facts["units"]) == (79.4, "kg")
+
+
+def test_the_dose_line_reads_each_priority_lifts_figure_and_target_from_the_closed_week() -> None:
+    conn = a_two_session_program()
+    a_planned_two_session_week(conn, monday(0))
+    squat_logged(conn, "h-1", monday(0), *[(120, 8, 8)] * 4)
+    a_logged_workout(conn, "h-2", "2026-11-04", ("79D0BB3A", ((60, 8, 8), (60, 8, 8), (60, 8, 4))))
+
+    lifts = field_of(opened(conn), "dose").facts["lifts"]
+
+    assert lifts == [
+        {"lift": "bb_bench_press", "delivered": 2, "target": 8, "mean": 2.0},
+        {"lift": "pull_up", "delivered": 0, "target": 8, "mean": 0.0},
+    ]
