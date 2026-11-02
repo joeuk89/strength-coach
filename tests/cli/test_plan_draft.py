@@ -89,7 +89,7 @@ def test_plan_draft_writes_the_draft_and_returns_its_summary(instance: Path) -> 
     assert 'change = "first prescription"' in text
 
 
-def test_each_flag_in_the_summary_carries_the_params_hash_its_draft_table_carries(
+def test_each_flag_key_in_the_summary_carries_the_params_hash_its_draft_table_carries(
     instance: Path,
 ) -> None:
     result = coach("plan", "draft", "--week", "2026-11-02").envelope["result"]
@@ -97,20 +97,28 @@ def test_each_flag_in_the_summary_carries_the_params_hash_its_draft_table_carrie
     [row] = result["flags"]
     [table] = tomllib.loads((instance / result["path"]).read_text())["flag"]
     assert row == {
-        "key": "rotation_unconfirmed@week:2026-11-02",
-        "params_hash": "sha256:15a498510e347e58c8eeb3465628f15434d46e9ce0be0adeb0f5fc56f30ddc46",
         "code": "rotation_unconfirmed",
         "severity": "violation",
-        "message": table["message"],
+        "count": 1,
+        "keys": [
+            {
+                "key": "rotation_unconfirmed@week:2026-11-02",
+                "params_hash": (
+                    "sha256:15a498510e347e58c8eeb3465628f15434d46e9ce0be0adeb0f5fc56f30ddc46"
+                ),
+            }
+        ],
     }
-    assert table["params_hash"] == row["params_hash"]
+    assert table["params_hash"] == row["keys"][0]["params_hash"]
 
 
-def test_the_declared_flag_rows_require_the_key_and_params_hash() -> None:
+def test_the_declared_flag_keys_require_the_key_and_params_hash() -> None:
     declared = next(d for d in declarations() if d.name == "plan draft")
     properties: Any = declared.output["properties"]
+    row = properties["flags"]["items"]
 
-    assert {"key", "params_hash"} <= set(properties["flags"]["items"]["required"])
+    assert set(row["required"]) == {"code", "severity", "count", "keys"}
+    assert {"key", "params_hash"} <= set(row["properties"]["keys"]["items"]["required"])
 
 
 def test_plan_draft_twice_on_an_unchanged_store_returns_the_same_path_and_hash(

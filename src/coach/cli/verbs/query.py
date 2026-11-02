@@ -129,7 +129,8 @@ DECLARATION = Declaration(
     name="query",
     summary="One read view as a row list: exposures (each exercise in a workout with its "
     "annotations applied and its e1RM), readings (Weigh-ins, Sleep nights, Activities), "
-    "flags and lines (of the plan in force, or of a plan Draft validated now with --draft), "
+    "flags and lines (of the plan in force, or of a plan Draft validated now with --draft; "
+    "flags gives one row per code with its keys, and a filter or --full gives one row per flag), "
     "routines (the Routine map with each routine's folder, status and last verify) or "
     "ledger (one record kind with its withdrawals or event history, or one record by id).",
     writes="none",
@@ -174,6 +175,10 @@ DECLARATION = Declaration(
         Example(("query", "ledger", "--kind", "status_span", "--open"), "Status spans in force."),
         Example(("query", "ledger", "--kind", "niggle", "--open"), "Open niggles."),
         Example(("query", "flags", "--summary"), "Counts of the plan in force's flags by code."),
+        Example(
+            ("query", "flags", "--full"),
+            "Every flag of the plan in force, one row each with its message.",
+        ),
         Example(("query", "lines", "--changed"), "The plan in force's lines that moved."),
     ),
 )
