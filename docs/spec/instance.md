@@ -75,7 +75,7 @@ location, stops every verb with exit 5, `error.code = config_unknown_key`, namin
 | `[engine]` | engine | `version`, the engine pin (ADR 0007) |
 | `[athlete]` | athlete | the facts rules read (ADR 0009): `units`, `bodyweight_units`, `week_starts`, `timezone`, `available_days`, `session_minutes`, `checkin_cadence_days`; each has a reader, below |
 | `[hevy]` | athlete | present when Hevy is used; empty in v1 |
-| `[location.<name>]` | athlete | `kind = "plate-pool"` with `kit = "<name>"` (naming `kit/<name>.json` and `kit/<name>.achievable.json`) and one `[location.<name>.implement.<id>]` table per inventory implement id `implements` names, its `hardware` (a hardware id or `none`) and, on a handle, `single` (default false, a pair) choosing which tables apply ("Kit"), or `kind = "grid"` with one `[location.<name>.implement.<implement>]` table per implement; either kind carries `implements`, the map from equipment kind to implement ("Locations", ADR 0008, ADR 0021). No URL: the engine fetches nothing |
+| `[location.<name>]` | athlete | `kind = "plate-pool"` with `kit = "<name>"` (naming `kit/<name>.json` and `kit/<name>.achievable.json`) and one `[location.<name>.implement.<id>]` table per inventory implement id `implements` names, its `hardware` (a hardware id or `none`, or a list of them) and, on a handle, `single` (default false, a pair) choosing which tables apply ("Kit"), or `kind = "grid"` with one `[location.<name>.implement.<implement>]` table per implement; either kind carries `implements`, the map from equipment kind to implement ("Locations", ADR 0008, ADR 0021). No URL: the engine fetches nothing |
 
 No lifting goal (the Goal is a record and the emphasis is on the Program version, ADR 0014), no
 `experience` (level is derived per lift), no caps, no thresholds, no feature toggles (ADR 0004).
@@ -179,9 +179,15 @@ Each table names an `implement` (an inventory implement id), and carries `hardwa
 implement has hardware options and `pair` on a handle. For each implement `implements` names, the
 engine reads the one table whose `hardware` equals the location's choice and whose `pair` equals
 `not single`. Hardware is required and never defaulted; plate-pool's `default` flag is not read.
+`hardware` may instead be a list of ids, `none` among them like any other, for an implement whose
+hardware options each reach part of its range (`hardware = ["screw-standard", "screw-long"]`).
+The engine then reads the union of the tables each id selects: every row of each, one row per
+`total.<units>`, sorted by load. Where two tables build the same total, the row of the id listed
+first is kept. Each row keeps the hardware id of the table it came from.
 A missing hardware choice where the tables carry `hardware`, a hardware id no table of that
-implement has, a hardware choice where they carry none, and `single` where they carry no `pair`
-each stop with `kit_tables_stale`, naming the implement and the ids on offer. Implements
+implement has, a hardware choice where they carry none, an empty list, an id listed twice, and
+`single` where they carry no `pair` each stop with `kit_tables_stale`, naming the implement and
+the ids on offer. Implements
 `implements` does not name are ignored. A row's rack load is `total.<units>` and its loading
 `loading.positions[].name` and `.plates`; nothing reads `uneven`, `smallest` or `ids`.
 
@@ -191,7 +197,9 @@ bytes compressed as raw deflate (no zlib header or trailer), base64url with `=` 
 stripped, in the fragment, never the query. Each loaded line carries a per-line link,
 `https://joeuk89.github.io/plate-pool/?<id>=<load><unit>&<id>.hardware=<hardware id|none>&kit=<first 8 hex of inventory_sha256>`:
 `<id>.single=` in place of `<id>=` for a handle rounded single, and `<id>.hardware=` only when
-the location names a hardware choice for that implement.
+the location names a hardware choice for that implement. The load is the line's heaviest working
+load. For a list choice, `<id>.hardware=` names the hardware of the row that load lands on, or
+the first listed id when no row holds it (a frozen load off the rack).
 The `kit` skill edits these files and runs the generator for the athlete (`skills.md`). A grid
 location has no files: its kit is the `[location.<name>]` table and its implement tables alone.
 

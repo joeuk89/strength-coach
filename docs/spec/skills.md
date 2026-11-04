@@ -317,8 +317,10 @@ what it weighs.
 - **Location.** `[location.<name>]` is `kind = "plate-pool"`, `kit = "<name>"`, `implements`,
   and one `[location.<name>.implement.<id>]` table per implement `implements` names. Give
   `hardware` (an id from that implement's hardware options, or `none`) to every implement with
-  options, the dumbbell included; never leave it to a default. Add `single = true` only on a
-  handle loaded single.
+  options, the dumbbell included; never leave it to a default. When the options each reach part
+  of the implement's range (one screw to 80 lb, a longer one from 67.5 to 120 lb), give a list
+  instead, preferred hardware first, since the first id keeps a load two tables share; add
+  `none` to keep the bare handle. Add `single = true` only on a handle loaded single.
 - **Map.** `implements` names one implement at the location for every equipment kind the
   athlete's exercises use, or the kind is unsupplied there and `equipment_unsupplied` says so
   at adopt.
