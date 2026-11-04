@@ -1,6 +1,6 @@
 [project]
 name = "coach"
-version = "0.3.0"
+version = "0.4.0"
 description = "Strength coach engine"
 readme = "README.md"
 requires-python = ">=3.12"
