@@ -37,7 +37,7 @@ class PlatePoolKit:
         row = next(iter(rack.rows_within(load, load)), None) if rack else None
         if row is not None and row.hardware is not None:
             return row.hardware
-        return next(iter(choice.hardware), None)
+        return choice.hardware[0] if choice.hardware else None
 
 
 @dataclass(frozen=True)
