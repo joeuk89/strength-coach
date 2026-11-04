@@ -155,7 +155,7 @@ def split_refusal(implement: str, hardware: tuple[str, ...]) -> Setup:
     return raised.value
 
 
-def test_a_hardware_list_reads_the_union_of_its_tables_with_the_first_id_winning_a_shared_total() -> (
+def test_a_hardware_list_reads_the_union_of_its_tables_the_first_id_keeping_a_shared_total() -> (
     None
 ):
     rows = split(("screw-standard", "screw-long"))

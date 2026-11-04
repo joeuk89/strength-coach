@@ -20,6 +20,7 @@ from coach.core.pages import (
     WeekPage,
 )
 from coach.core.program.form import Session
+from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.progress import newest_day, progress
 from coach.store import (
@@ -195,11 +196,9 @@ def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> Plat
         for name, choice in found.choices().items()
         if isinstance(choice.hardware, tuple)
     }
-    racks = (
-        parse_kit_tables(files.tables, choices=listed, units=config.athlete.units).racks
-        if listed and files.tables is not None
-        else {}
-    )
+    racks: Mapping[str, ListedRack] = {}
+    if listed and files.tables is not None:
+        racks = parse_kit_tables(files.tables, choices=listed, units=config.athlete.units).racks
     return PlatePoolKit(
         location=found.name,
         implements=found.implements,
