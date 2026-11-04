@@ -6,7 +6,7 @@ from typing import Literal, cast
 
 from coach.core.config import GridLocation, ImplementChoice, Location, Units
 from coach.core.errors import Setup
-from coach.core.rack import ListedRack, Position, Rack, RackRow, grid_rack
+from coach.core.rack import PRECISION, ListedRack, Position, Rack, RackRow, grid_rack
 
 KIT_FORMATS = (1,)
 SHORT_HASH_LENGTH = 8
@@ -39,7 +39,8 @@ class KitFiles:
 def parse_kit_tables(
     document: Mapping[str, object], *, choices: Mapping[str, ImplementChoice], units: Units
 ) -> KitRacks:
-    """The rack of each implement in `choices`, from the one table its choice selects."""
+    """The rack of each implement in `choices`: the rows of the tables its choice selects, one
+    row per total, the table of the hardware id listed first winning a total two tables build."""
     kit_format = document.get("format")
     if kit_format not in KIT_FORMATS:
         raise _unparseable(f"format {kit_format!r} is not one this engine parses {KIT_FORMATS}")
@@ -48,10 +49,12 @@ def parse_kit_tables(
     for implement, choice in choices.items():
         offered = [table for table in tables if table.get("implement") == implement]
         if offered:
-            table = _chosen(implement, offered, choice)
-            racks[implement] = ListedRack(
-                tuple(_row(row, units) for row in _list(table.get("rows"), "rows"))
-            )
+            rows: dict[float, RackRow] = {}
+            for hardware, table in _chosen(implement, offered, choice):
+                for row in _list(table.get("rows"), "rows"):
+                    parsed = _row(row, units, hardware)
+                    rows.setdefault(round(parsed.load, PRECISION), parsed)
+            racks[implement] = ListedRack(tuple(rows.values()))
     return KitRacks(
         plate_pool=_text(document.get("plate_pool"), "plate_pool"),
         inventory_sha256=_text(document.get("inventory_sha256"), "inventory_sha256"),
@@ -61,29 +64,48 @@ def parse_kit_tables(
 
 def _chosen(
     implement: str, offered: Sequence[Mapping[str, object]], choice: ImplementChoice
-) -> Mapping[str, object]:
+) -> list[tuple[str | None, Mapping[str, object]]]:
     hardware = list(
         dict.fromkeys(_text(t["hardware"], "tables[].hardware") for t in offered if "hardware" in t)
     )
-    if hardware and choice.hardware not in hardware:
-        named = "no hardware" if choice.hardware is None else choice.hardware
-        raise _unmatched(
-            f"offer {implement} hardware {', '.join(hardware)}, and the location names {named}"
-        )
-    if not hardware and choice.hardware is not None:
-        raise _unmatched(f"offer {implement} no hardware, and the location names {choice.hardware}")
+    ids = _chosen_hardware(implement, hardware, choice)
     pairs = any("pair" in t for t in offered)
     if not pairs and choice.single:
         raise _unmatched(f"offer {implement} no pair or single, and the location names single")
-    matching = [
-        t
-        for t in offered
-        if (not hardware or t.get("hardware") == choice.hardware)
-        and (not pairs or t.get("pair") == (not choice.single))
-    ]
-    if len(matching) != 1:
-        raise _unparseable(f"hold {len(matching)} {implement} tables for one choice, not 1")
-    return matching[0]
+    chosen: list[tuple[str | None, Mapping[str, object]]] = []
+    for hardware_id in ids:
+        matching = [
+            t
+            for t in offered
+            if t.get("hardware") == hardware_id
+            and (not pairs or t.get("pair") == (not choice.single))
+        ]
+        if len(matching) != 1:
+            raise _unparseable(f"hold {len(matching)} {implement} tables for one choice, not 1")
+        chosen.append((hardware_id, matching[0]))
+    return chosen
+
+
+def _chosen_hardware(
+    implement: str, hardware: Sequence[str], choice: ImplementChoice
+) -> tuple[str | None, ...]:
+    """The hardware ids whose tables `choice` selects, `(None,)` where the tables carry none."""
+    ids = choice.hardware_ids
+    named = "no hardware" if choice.hardware is None else ", ".join(ids) or "an empty list"
+    if not hardware:
+        if choice.hardware is not None:
+            raise _unmatched(f"offer {implement} no hardware, and the location names {named}")
+        return (None,)
+    offer = f"offer {implement} hardware {', '.join(hardware)}"
+    if not ids:
+        raise _unmatched(f"{offer}, and the location names {named}")
+    unknown = next((i for i in ids if i not in hardware), None)
+    if unknown is not None:
+        raise _unmatched(f"{offer}, and the location names {unknown}")
+    repeated = next((i for i in ids if ids.count(i) > 1), None)
+    if repeated is not None:
+        raise _unmatched(f"{offer}, and the location names {repeated} twice")
+    return ids
 
 
 def location_racks(location: Location, kit: KitRacks | None) -> dict[str, Rack]:
@@ -119,7 +141,7 @@ def generator_command(kit: str) -> str:
     return f"npx plate-pool achievable --inventory kit/{kit}.json > kit/{kit}.achievable.json"
 
 
-def _row(row: object, units: Units) -> RackRow:
+def _row(row: object, units: Units, hardware: str | None) -> RackRow:
     fields = _mapping(row, "rows[]")
     total = _mapping(fields.get("total"), "total")
     loading = _mapping(fields.get("loading"), "loading")
@@ -132,7 +154,7 @@ def _row(row: object, units: Units) -> RackRow:
             _mapping(item, "positions[]") for item in _list(loading.get("positions"), "positions")
         )
     )
-    return RackRow(_number(total.get(units), f"total.{units}"), positions)
+    return RackRow(_number(total.get(units), f"total.{units}"), positions, hardware)
 
 
 def _mapping(value: object, where: str) -> Mapping[str, object]:

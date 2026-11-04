@@ -1,7 +1,13 @@
 from itertools import pairwise
 
 import pytest
-from support.kit_fixtures import kit_tables
+from support.kit_fixtures import (
+    SPLIT_BARE_PAIR,
+    SPLIT_LONG_PAIR,
+    SPLIT_STANDARD_PAIR,
+    kit_tables,
+    split_hardware_tables,
+)
 
 from coach.core.config import (
     GridLocation,
@@ -44,7 +50,9 @@ def test_the_parser_builds_a_rack_per_implement_from_the_kit_fixture() -> None:
 
     assert set(kit.racks) == {"barbell", "dumbbell", "kettlebell", "leg", "vest"}
     barbell = kit.racks["barbell"]
-    assert barbell.bottom == RackRow(20, (Position("left", ()), Position("right", ())))
+    assert barbell.bottom == RackRow(
+        20, (Position("left", ()), Position("right", ())), "collar-clamp"
+    )
     assert barbell.top is not None and barbell.top.load == 190
     assert [row.load for row in barbell.rows_within(110, 125)] == [110, 115, 120, 125]
     assert barbell.rows_within(120, 120)[0].positions == (
@@ -68,7 +76,7 @@ def test_the_dumbbell_single_choice_chooses_the_pair_or_single_table() -> None:
     one = parse_kit_tables(kit_tables(), choices=single, units="lb")
 
     assert pair.racks["dumbbell"].top == RackRow(
-        45, (Position("a", (10, 5, 2.5)), Position("b", (10, 5, 2.5)))
+        45, (Position("a", (10, 5, 2.5)), Position("b", (10, 5, 2.5))), "screw-standard"
     )
     single_top = one.racks["dumbbell"].top
     assert single_top is not None and single_top.load == 180
@@ -79,9 +87,11 @@ def test_the_dumbbell_hardware_choice_chooses_the_dumbbell_table() -> None:
 
     kit = parse_kit_tables(kit_tables(), choices=bare, units="lb")
 
-    assert kit.racks["dumbbell"].bottom == RackRow(5, (Position("a", ()), Position("b", ())))
+    assert kit.racks["dumbbell"].bottom == RackRow(
+        5, (Position("a", ()), Position("b", ())), "none"
+    )
     assert kit.racks["dumbbell"].top == RackRow(
-        40, (Position("a", (10, 5, 2.5)), Position("b", (10, 5, 2.5)))
+        40, (Position("a", (10, 5, 2.5)), Position("b", (10, 5, 2.5))), "none"
     )
 
 
@@ -125,6 +135,112 @@ def test_single_where_the_tables_carry_no_pair_is_refused() -> None:
 
     assert "barbell" in error.message
     assert "single" in error.message
+
+
+def split(hardware: str | tuple[str, ...] | None, *, single: bool = False) -> list[RackRow]:
+    choice = ImplementChoice(hardware=hardware, single=single)
+    kit = parse_kit_tables(split_hardware_tables(), choices={"dumbbell": choice}, units="lb")
+    return list(kit.racks["dumbbell"].rows)
+
+
+def split_refusal(implement: str, hardware: tuple[str, ...]) -> Setup:
+    with pytest.raises(Setup) as raised:
+        parse_kit_tables(
+            split_hardware_tables(),
+            choices={implement: ImplementChoice(hardware=hardware)},
+            units="lb",
+        )
+    assert raised.value.code == "kit_tables_stale"
+    assert implement in raised.value.message
+    return raised.value
+
+
+def test_a_hardware_list_reads_the_union_of_its_tables_with_the_first_id_winning_a_shared_total() -> (
+    None
+):
+    rows = split(("screw-standard", "screw-long"))
+
+    assert [(row.load, row.hardware) for row in rows] == [
+        (7.5, "screw-standard"),
+        (10, "screw-standard"),
+        (67.5, "screw-long"),
+        (70, "screw-standard"),
+        (75, "screw-standard"),
+        (80, "screw-standard"),
+        (100, "screw-long"),
+        (120, "screw-long"),
+    ]
+
+
+def test_a_hardware_list_in_the_other_order_gives_the_shared_totals_to_the_other_id() -> None:
+    rows = split(("screw-long", "screw-standard"))
+
+    assert [(row.load, row.hardware) for row in rows if row.load in (70, 75, 80)] == [
+        (70, "screw-long"),
+        (75, "screw-long"),
+        (80, "screw-long"),
+    ]
+    assert [row.load for row in rows] == [7.5, 10, 67.5, 70, 75, 80, 100, 120]
+
+
+def test_none_in_a_hardware_list_adds_the_bare_handle_rows() -> None:
+    rows = split(("screw-standard", "screw-long", "none"))
+
+    assert (rows[0].load, rows[0].hardware) == (5, "none")
+    assert len(rows) == 9
+
+
+def test_a_hardware_string_reads_its_one_table_as_before() -> None:
+    rows = split("screw-standard")
+
+    assert [row.load for row in rows] == list(SPLIT_STANDARD_PAIR)
+    assert {row.hardware for row in rows} == {"screw-standard"}
+    assert [row.load for row in split("none")] == list(SPLIT_BARE_PAIR)
+    assert [row.load for row in split("screw-long")] == list(SPLIT_LONG_PAIR)
+
+
+def test_single_with_a_hardware_list_reads_the_single_table_of_each_id() -> None:
+    rows = split(("screw-standard", "screw-long"), single=True)
+
+    assert [(row.load, row.hardware) for row in rows] == [
+        (10, "screw-standard"),
+        (35, "screw-long"),
+        (40, "screw-standard"),
+        (60, "screw-long"),
+    ]
+
+
+def test_the_rows_of_an_implement_with_no_hardware_carry_none() -> None:
+    kit = parse_kit_tables(split_hardware_tables(), choices={"leg": ImplementChoice()}, units="lb")
+
+    assert {row.hardware for row in kit.racks["leg"].rows} == {None}
+
+
+def test_a_hardware_list_naming_an_id_no_table_has_is_refused_naming_the_ids_on_offer() -> None:
+    error = split_refusal("dumbbell", ("screw-standard", "screw-magnetic"))
+
+    assert "screw-magnetic" in error.message
+    assert "screw-standard, screw-long, none" in error.message
+
+
+def test_a_hardware_list_where_the_tables_carry_no_hardware_is_refused() -> None:
+    error = split_refusal("leg", ("none",))
+
+    assert "no hardware" in error.message
+
+
+def test_an_empty_hardware_list_is_refused_naming_the_ids_on_offer() -> None:
+    error = split_refusal("dumbbell", ())
+
+    assert "empty" in error.message
+    assert "screw-standard, screw-long, none" in error.message
+
+
+def test_a_hardware_list_naming_an_id_twice_is_refused_naming_the_ids_on_offer() -> None:
+    error = split_refusal("dumbbell", ("screw-long", "screw-standard", "screw-long"))
+
+    assert "screw-long twice" in error.message
+    assert "screw-standard, screw-long, none" in error.message
 
 
 def test_rows_are_read_in_the_athletes_units() -> None:
