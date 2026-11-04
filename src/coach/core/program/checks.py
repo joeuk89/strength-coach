@@ -8,7 +8,7 @@ from typing import cast
 from coach.core.closed_week.adherence import Adherence
 from coach.core.config import WEEKDAYS, Weekday
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag, Scope, raise_flag
+from coach.core.flag import Flag, FlagKey, Scope, raise_flag
 from coach.core.goal import Goal
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
@@ -430,7 +430,7 @@ class _Checks:
         return text in self.context.raised_warnings
 
     def _migration(self, text: str) -> str:
-        if text != f"dose_off_band@version:{self.context.version_id}":
+        if text != str(FlagKey("dose_off_band", self.version_scope)):
             return ""
         prefix = f"dose_off_band@dose:{self.context.version_id}/"
         keys = sorted(key for key in self.context.raised_warnings if key.startswith(prefix))
