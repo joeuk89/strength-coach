@@ -350,7 +350,7 @@ ADOPT_WARNINGS = (
     ),
     adopt_warning(
         "dose_off_band",
-        ("version",),
+        ("dose",),
         ("target_of", "target", "band", "phase"),
         ("rn:goal-programming §3",),
     ),

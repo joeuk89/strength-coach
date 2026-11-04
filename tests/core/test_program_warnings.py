@@ -154,7 +154,7 @@ def test_a_dose_target_outside_its_band_warns_dose_off_band_with_the_phase() -> 
 
     assert the("dose_off_band", high) == [
         (
-            "dose_off_band@version:pv-1",
+            "dose_off_band@dose:pv-1/per_muscle",
             {"target_of": "per_muscle", "target": 25, "band": [10, 20], "phase": None},
         )
     ]
@@ -167,6 +167,44 @@ def test_a_dose_target_outside_its_band_warns_dose_off_band_with_the_phase() -> 
     assert the("dose_off_band", surplus)[0][1]["band"] == [15, 20]
     assert the("dose_off_band", warnings_of(dosed(12, bb_bench_press=8))) == []
     assert the("dose_off_band", warnings_of(dosed(4, "maintenance", bb_bench_press=3))) == []
+
+
+def test_every_off_band_lift_target_warns_on_its_own_key() -> None:
+    flags = warnings_of(dosed(12, pull_up=1, bb_deadlift=4))
+
+    assert the("dose_off_band", flags) == [
+        (
+            "dose_off_band@dose:pv-1/pull_up",
+            {"target_of": "pull_up", "target": 1, "band": [5, 15], "phase": None},
+        ),
+        (
+            "dose_off_band@dose:pv-1/bb_deadlift",
+            {"target_of": "bb_deadlift", "target": 4, "band": [5, 15], "phase": None},
+        ),
+    ]
+
+
+def test_an_off_band_muscle_target_and_lift_target_warn_on_two_keys() -> None:
+    flags = warnings_of(dosed(25, bb_deadlift=4))
+
+    assert [key for key, _ in the("dose_off_band", flags)] == [
+        "dose_off_band@dose:pv-1/per_muscle",
+        "dose_off_band@dose:pv-1/bb_deadlift",
+    ]
+
+
+def test_acknowledging_one_of_two_off_band_targets_leaves_the_other_standing() -> None:
+    entry = {"flag": "dose_off_band@dose:pv-1/pull_up", "because": "coach_judgement", "text": "x"}
+    draft = {**dosed(12, pull_up=1, bb_deadlift=4), "acknowledge": [entry]}
+    form = parse_program_draft(toml(draft), file="d.toml").form
+
+    left = leave_warnings(adopt_warnings(form, a_context()), form.acknowledgements)
+
+    standing = {f.key: f.left is not None for f in left if f.code == "dose_off_band"}
+    assert standing == {
+        "dose_off_band@dose:pv-1/pull_up": True,
+        "dose_off_band@dose:pv-1/bb_deadlift": False,
+    }
 
 
 def test_a_deload_off_the_emphasis_shape_warns_deload_off_emphasis() -> None:
