@@ -8,7 +8,7 @@ from typing import cast
 from coach.core.closed_week.adherence import Adherence
 from coach.core.config import WEEKDAYS, Weekday
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag, Scope, raise_flag
+from coach.core.flag import Flag, FlagKey, Scope, raise_flag
 from coach.core.goal import Goal
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
@@ -20,11 +20,18 @@ from coach.core.program.form import (
     SetGroup,
 )
 from coach.core.rack import Rack, on_rack, rows_beside
+from coach.core.registries.flags import FLAGS
 from coach.core.registries.program import LOAD_MODES
 from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
+# Warnings raised once per case; acknowledging the version-wide key names the per-case keys.
+PER_CASE_WARNINGS = {
+    "dose_off_band": "dose target",
+    "priority_lift_absent": "priority lift",
+    "counted_variant_off_pattern": "counted variant",
+}
 
 
 @dataclass(frozen=True)
@@ -415,18 +422,48 @@ class _Checks:
             )
 
     def acknowledgements(self) -> None:
-        for entry in self.form.acknowledgements:
-            if not self._matches(entry.flag):
-                self.raise_(
-                    "acknowledgement_unmatched",
-                    self.version_scope,
-                    {"flag_key": entry.flag},
-                    f"adopt raised no {entry.flag}; remove the [[acknowledge]] entry",
-                )
-                return
+        unmatched = [e.flag for e in self.form.acknowledgements if not self._matches(e.flag)]
+        if not unmatched:
+            return
+        if len(unmatched) == 1:
+            [key] = unmatched
+            message = f"adopt raised no {key}; remove the [[acknowledge]] entry"
+            replaced = self._replaced_by(key)
+            if replaced is not None:
+                message += (" and " if replaced else ": ") + _instead(key, replaced)
+        else:
+            message = (
+                f"adopt raised no {', '.join(unmatched)}; remove those [[acknowledge]] entries"
+            )
+            for key in unmatched:
+                replaced = self._replaced_by(key)
+                if replaced is not None:
+                    message += f"; for {key}, {_instead(key, replaced)}"
+        self.raise_(
+            "acknowledgement_unmatched",
+            self.version_scope,
+            {"flag_key": unmatched[0], "flag_keys": unmatched},
+            message,
+        )
 
     def _matches(self, text: str) -> bool:
         return text in self.context.raised_warnings
+
+    def _replaced_by(self, text: str) -> tuple[str, ...] | None:
+        """The keys adopt raised on this Draft for a per-case warning when `text` is that code's
+        old version-wide key; None for any other text."""
+        code = text.partition("@")[0]
+        if code not in PER_CASE_WARNINGS or text != str(FlagKey(code, self.version_scope)):
+            return None
+        prefix = f"{code}@{FLAGS.get(code).scopes[0]}:{self.context.version_id}/"
+        return tuple(sorted(k for k in self.context.raised_warnings if k.startswith(prefix)))
+
+
+def _instead(text: str, replaced: Sequence[str]) -> str:
+    code = text.partition("@")[0]
+    if not replaced:
+        return f"adopt raised no {code} on this Draft"
+    return f"acknowledge each {PER_CASE_WARNINGS[code]} on its own key: {', '.join(replaced)}"
 
 
 def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:

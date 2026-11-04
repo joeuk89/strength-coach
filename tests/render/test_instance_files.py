@@ -43,10 +43,18 @@ def test_coach_toml_parses_back_to_the_config_it_was_written_from() -> None:
             PlatePoolLocation(
                 "home",
                 kit="home",
-                implements={"barbell": "barbell", "dumbbell": "dumbbell", "vest": "vest"},
+                implements={
+                    "barbell": "barbell",
+                    "dumbbell": "dumbbell",
+                    "kettlebell": "kettlebell",
+                    "vest": "vest",
+                },
                 implement={
                     "barbell": ImplementChoice(hardware="none"),
                     "dumbbell": ImplementChoice(hardware="screw-long", single=True),
+                    "kettlebell": ImplementChoice(
+                        hardware=("screw-standard", "screw-long", "none")
+                    ),
                     "vest": ImplementChoice(),
                 },
             ),
@@ -111,6 +119,21 @@ def test_coach_toml_writes_a_plate_pool_location_as_implement_choice_tables() ->
             "barbell": {"hardware": "collar-clamp"},
             "dumbbell": {"hardware": "screw-standard", "single": True},
         },
+    }
+
+
+def test_coach_toml_writes_a_hardware_list_as_a_toml_list() -> None:
+    home = PlatePoolLocation(
+        "home",
+        kit="home",
+        implements={"dumbbell": "dumbbell"},
+        implement={"dumbbell": ImplementChoice(hardware=("screw-standard", "screw-long"))},
+    )
+
+    document = tomllib.loads(coach_toml(Config(Engine("0.3.0"), ATHLETE, locations=(home,))))
+
+    assert document["location"]["home"]["implement"] == {
+        "dumbbell": {"hardware": ["screw-standard", "screw-long"]}
     }
 
 

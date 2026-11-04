@@ -47,6 +47,9 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 | `workout` | Hevy workout id | a workout version at import |
 | `instance` | none | the instance itself (setup, pins, snapshots) |
 | `version` | program version id | a program version at adopt (ADR 0014) |
+| `dose` | program version id, dose target (`per_muscle` or the `[dose.lift]` lift id) | one dose target of a program version at adopt |
+| `priority_lift` | program version id, priority lift exercise id | one priority lift of the Goal at a program version's adopt |
+| `counted_variant` | program version id, lift id, counted variant exercise id | one variant in a `[dose.lift]` lift's `counts` at adopt |
 | `exercise` | exercise id | one exercise across blocks, for cadence signals and milestones (ADR 0014) |
 
 Two flags with the same code on the same scope cannot exist: a code states one condition per
@@ -66,6 +69,9 @@ block_ceiling_exceeded@week:2026-11-03
 scheme_off_emphasis@line:a-sat-pull/pull_up
 routine_drift@routine:3f9d2c7e-1b44-4a0e-8d55-c6a1e2b7f904
 engine_pin_dev@instance
+dose_off_band@dose:pv-2/bb_deadlift
+priority_lift_absent@priority_lift:pv-2/pull_up
+counted_variant_off_pattern@counted_variant:pv-2/pull_up/lat_pulldown
 ```
 
 That string is what the agent writes in a Draft to acknowledge a warning and what `--fields`
@@ -240,7 +246,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on | `null` |
-| `acknowledgement_unmatched` | version | flag key | removing the stale `[[acknowledge]]` entry | `null` |
+| `acknowledgement_unmatched` | version | the first stale flag key, every stale flag key in Draft order | removing the stale `[[acknowledge]]` entries | `null` |
 | `counted_variant_unknown` | version | lift, exercise id | an `[exercise.<id>]` declaration in the Draft, a library id, or removing it from the lift's `counts` (`program.md`, "Dose and deload") | `null` |
 | `counted_variant_not_exclusive` | version | exercise id, the lifts counting it | the exercise in one lift's `counts` only, and no priority lift in any | `null` |
 | `record_kind_not_allowed` | instance | record kind, verb | moving the table to the file that may carry it (`verbs.md`: an Observation only in a check-in file) | `null` |
@@ -281,10 +287,10 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | --- | --- | --- | --- |
 | `emphasis_off_goal` | version | goal kind, emphasis | `null` |
 | `scheme_off_emphasis` | line | line scheme, emphasis, expected band (`goals.md` names the band per emphasis) | rn:goal-programming §4 |
-| `priority_lift_absent` | version | exercise id | `null` |
+| `priority_lift_absent` | priority_lift | exercise id | `null` |
 | `priority_lift_not_first` | session | exercise id, position among the lines carrying a working group | rn:goal-programming §7 |
-| `dose_off_band` | version | muscle or lift, target, band, phase | rn:goal-programming §3 |
-| `counted_variant_off_pattern` | version | lift, counted variant, the two patterns, the two primary muscle lists | `null` |
+| `dose_off_band` | dose | muscle or lift, target, band, phase | rn:goal-programming §3 |
+| `counted_variant_off_pattern` | counted_variant | lift, counted variant, the two patterns, the two primary muscle lists | `null` |
 | `deload_off_emphasis` | version | deload policy, expected shape | rn:goal-programming §6 |
 | `muscle_no_hard_sets` | version | muscle, sessions searched | rn:volume-frequency.1 |
 | `session_over_minutes` | session | estimate, `minutes` | `null` |

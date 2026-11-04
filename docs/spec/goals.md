@@ -183,10 +183,10 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `priority_lifts_required` | violation | version | emphasis | a Goal with priority lifts, or a different emphasis |
 | `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
 | `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, or `double_progression` with a rep range inside 3–6 |
-| `priority_lift_absent` | warning | version | exercise id | Acknowledgement, or a line for it |
+| `priority_lift_absent` | warning | priority_lift | exercise id | Acknowledgement, or a line for it |
 | `priority_lift_not_first` | warning | session | exercise id, position among the session's lines that carry a working group (an activation-only or warm-up line never counts) | Acknowledgement, or reordering |
-| `dose_off_band` | warning | version | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
-| `counted_variant_off_pattern` | warning | version | lift, counted variant, the two patterns, the two primary muscle lists | Acknowledgement, or a variant sharing the lift's pattern and primary muscles |
+| `dose_off_band` | warning | dose | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
+| `counted_variant_off_pattern` | warning | counted_variant | lift, counted variant, the two patterns, the two primary muscle lists | Acknowledgement, or a variant sharing the lift's pattern and primary muscles |
 | `deload_off_emphasis` | warning | version | deload policy, expected shape | Acknowledgement, or the expected shape |
 | `scheme_change_off_signal` | warning | line | previous scheme, new scheme, signal key or none, `may_schemes` | Acknowledgement, or keeping the scheme, or a scheme the signal lists (**Response to a cadence signal**) |
 

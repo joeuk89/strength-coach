@@ -172,9 +172,10 @@ safety bound: no override waives it, only the days off behind it move.
 _Avoid_: limit, safety cap
 
 **Flag**:
-A violation or a warning: a named condition the engine found on one of nine typed scopes (a
+A violation or a warning: a named condition the engine found on one of twelve typed scopes (a
 week, a planned session, a line, an exposure, a routine, a workout, the instance, a program
-version or an exercise). Its identity is the code and the scope, never its message.
+version, a dose target, a priority lift or a counted variant of a program version, or an
+exercise). Its identity is the code and the scope, never its message.
 _Avoid_: issue, check result, finding
 
 **Violation**:
@@ -527,8 +528,10 @@ _Avoid_: grid (which is an increment rule, not a list), inventory
 
 **Kit tables**:
 The achievable loads per implement that plate-pool generates from an inventory, committed in the
-instance beside it and read by the engine as the rack of a plate-pool location. Stale when the
-inventory has changed since they were generated.
+instance beside it and read by the engine as the rack of a plate-pool location. A location reads
+one table per implement, or, where it names a list of hardware ids, the union of their tables,
+the id listed first keeping a load two of them build. Stale when the inventory has changed since
+they were generated.
 _Avoid_: snapshot, kit snapshot, achievable.json (fine in prose, not as the noun)
 
 **Inventory**:
@@ -543,8 +546,9 @@ _Avoid_: kit link, import link
 
 **Per-line link**:
 The link on a loaded line of a routine page that opens plate-pool at the line's load on its
-implement, with the location's hardware choice and the short hash of the inventory the load was
-rounded to.
+implement, with the hardware that builds that load (the location's hardware choice, or for a
+list of hardware ids the one whose table holds the load) and the short hash of the inventory the
+load was rounded to.
 _Avoid_: deep link (fine in prose), load link
 
 **Equipment kind**:

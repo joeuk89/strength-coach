@@ -13,7 +13,8 @@ PLATE_POOL = "https://joeuk89.github.io/plate-pool/"
 
 def line_link(line: PageLine, kit: PlatePoolKit, units: Units) -> str | None:
     """`?barbell=175lb&barbell.hardware=collar-clamp&kit=<hash>` from the line's heaviest working
-    load; none for a line with no load or an equipment kind the kit has no implement for."""
+    load and the hardware that builds it; none for a line with no load or an equipment kind the
+    kit has no implement for."""
     implement = kit.implements.get(line.equipment_kind or "")
     loads = [
         float(str(g["load"]))
@@ -25,8 +26,9 @@ def line_link(line: PageLine, kit: PlatePoolKit, units: Units) -> str | None:
     choice = kit.implement.get(implement, ImplementChoice())
     key = f"{implement}.single" if choice.single else implement
     parameters = [(key, f"{number(max(loads))}{units}")]
-    if choice.hardware is not None:
-        parameters.append((f"{implement}.hardware", choice.hardware))
+    hardware = kit.hardware_at(implement, max(loads))
+    if hardware is not None:
+        parameters.append((f"{implement}.hardware", hardware))
     parameters.append(("kit", kit.short_hash))
     return PLATE_POOL + "?" + "&".join(f"{name}={value}" for name, value in parameters)
 

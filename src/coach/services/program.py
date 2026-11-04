@@ -11,7 +11,7 @@ from coach.core.closed_week.adherence import adherence
 from coach.core.config import Config
 from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag, FlagKey, Scope
+from coach.core.flag import REFS, Flag, FlagKey
 from coach.core.goal import Goal
 from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
@@ -182,13 +182,13 @@ class ShownDraft:
 
 
 def show_draft(conn: Connection, *, apply_plan: datetime.date | None = None) -> ShownDraft:
-    """The version in force as a Draft for the next version; a version-scoped acknowledgement
-    names that next version and keeps its params hash, so it leaves only an unchanged warning.
+    """The version in force as a Draft for the next version; an acknowledgement whose scope names
+    a version names the next one and keeps its params hash, so it leaves only an unchanged warning.
     With `apply_plan`, that week's approved WeekPlan's line overrides are folded in
     (overrides.md, "What `--apply-plan` folds")."""
     version = _in_force(conn)
-    next_scope = Scope("version", version_id=f"pv-{version.sequence + 1}")
-    carried = tuple(_carried(entry, next_scope) for entry in version.form.acknowledgements)
+    next_id = f"pv-{version.sequence + 1}"
+    carried = tuple(_carried(entry, next_id) for entry in version.form.acknowledgements)
     form = replace(version.form, acknowledgements=carried)
     if apply_plan is None:
         return ShownDraft(program_draft(form))
@@ -199,11 +199,11 @@ def show_draft(conn: Connection, *, apply_plan: datetime.date | None = None) -> 
     return ShownDraft(program_draft(folded.form, folded_pins=folded.pins), folded.folded)
 
 
-def _carried(entry: AcknowledgeEntry, next_scope: Scope) -> AcknowledgeEntry:
+def _carried(entry: AcknowledgeEntry, next_id: str) -> AcknowledgeEntry:
     key = FlagKey.parse(entry.flag)
-    if key.scope.kind != "version":
+    if "version_id" not in REFS[key.scope.kind]:
         return entry
-    return replace(entry, flag=str(FlagKey(key.code, next_scope)))
+    return replace(entry, flag=str(FlagKey(key.code, replace(key.scope, version_id=next_id))))
 
 
 def _current_goal(conn: Connection) -> Goal | None:

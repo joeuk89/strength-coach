@@ -166,7 +166,9 @@ trained mostly through its rungs (a strict pull-up built with negatives and band
 a target inside the band this way. Adopt never fills `counts`; choosing a lift's variants is
 coaching judgement. The variants count toward the target and the disrupted-week floor only:
 they do not stand in for the lift on a line (`priority_lift_absent`), are never tested, and
-need not come first in a session. `dose_off_band` reads `sets`.
+need not come first in a session. `dose_off_band` reads `sets`, and adopt raises one for each
+target outside its band, keyed on the target: `dose_off_band@dose:pv-2/per_muscle`,
+`dose_off_band@dose:pv-2/bb_deadlift`.
 
 ### New exercises
 
@@ -195,7 +197,12 @@ set here (it is written by `plan apply` after a verified create, ADR 0011).
 
 The same shape as the plan Draft's (`validation.md`, "Leaving a warning"). Adopt freezes them on
 the version; an entry whose key adopt did not raise is a violation so a stale acknowledgement
-cannot ride along.
+cannot ride along. Adopt raises it once, naming every such entry in Draft order. An entry under
+the old version-wide key of a warning now raised once per case (`dose_off_band@version:<id>`,
+`priority_lift_absent@version:<id>`, `counted_variant_off_pattern@version:<id>`) is one: its
+message says to remove it and lists the keys adopt raised for that code
+(`dose_off_band@dose:...`, `priority_lift_absent@priority_lift:...`,
+`counted_variant_off_pattern@counted_variant:...`).
 
 ```toml
 [[acknowledge]]
@@ -324,7 +331,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `set_groups_off_scheme` | line | the working groups do not fit the scheme's row: a `top_backoff` first working group with `count` other than 1 or a range for `reps`, or no back-off group; more than one working group under `assistance_ladder`; a `wave_531` working group stating `reps` |
 | `rpe_missing` | line | a working group the scheme's row requires `rpe` on has none |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011); only when `coach.toml` has a `[hevy]` table (`validation.md`) |
-| `acknowledgement_unmatched` | version | an `[[acknowledge]]` key adopt did not raise |
+| `acknowledgement_unmatched` | version | one or more `[[acknowledge]]` keys adopt did not raise, all named in one flag |
 | `goal_missing` | version | no current Goal (`goals.md`) |
 | `priority_lifts_required` | version | `strength` emphasis under a Goal with no priority lifts (`goals.md`) |
 | `counted_variant_unknown` | version | a `counts` entry not in the library and not declared in the Draft |

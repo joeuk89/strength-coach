@@ -227,6 +227,82 @@ def test_a_malformed_key_is_invalid(key: str) -> None:
         FlagKey.parse(key)
 
 
+def test_a_dose_key_names_the_version_then_the_target() -> None:
+    key = FlagKey.parse("dose_off_band@dose:pv-2/bb_deadlift")
+
+    assert key.scope == Scope("dose", version_id="pv-2", target="bb_deadlift")
+    assert str(key) == "dose_off_band@dose:pv-2/bb_deadlift"
+    assert key.scope.to_json() == {"kind": "dose", "version": "pv-2", "target": "bb_deadlift"}
+
+
+@pytest.mark.parametrize(
+    "key", ["dose_off_band@dose:pv-2", "dose_off_band@dose:pv-2/bb_deadlift/extra"]
+)
+def test_a_dose_key_with_one_ref_or_three_has_the_wrong_refs(key: str) -> None:
+    with pytest.raises(Invalid, match="wrong refs for a dose scope"):
+        FlagKey.parse(key)
+
+
+def test_a_dose_scope_takes_its_target_and_no_other_kind_does() -> None:
+    with pytest.raises(ValueError):
+        Scope("dose", version_id="pv-2")
+    with pytest.raises(ValueError):
+        Scope("version", version_id="pv-2", target="per_muscle")
+
+
+@pytest.mark.parametrize(
+    ("text", "scope", "document"),
+    [
+        (
+            "priority_lift_absent@priority_lift:pv-2/pull_up",
+            Scope("priority_lift", version_id="pv-2", exercise_id="pull_up"),
+            {"kind": "priority_lift", "version": "pv-2", "exercise": "pull_up"},
+        ),
+        (
+            "counted_variant_off_pattern@counted_variant:pv-2/pull_up/lat_pulldown",
+            Scope("counted_variant", version_id="pv-2", lift="pull_up", variant="lat_pulldown"),
+            {
+                "kind": "counted_variant",
+                "version": "pv-2",
+                "lift": "pull_up",
+                "variant": "lat_pulldown",
+            },
+        ),
+    ],
+)
+def test_a_case_key_names_the_version_then_the_case(
+    text: str, scope: Scope, document: dict[str, object]
+) -> None:
+    key = FlagKey.parse(text)
+
+    assert key.scope == scope
+    assert str(key) == text
+    assert key.scope.to_json() == document
+
+
+@pytest.mark.parametrize(
+    ("key", "kind"),
+    [
+        ("priority_lift_absent@priority_lift:pv-2", "priority_lift"),
+        ("priority_lift_absent@priority_lift:pv-2/pull_up/x", "priority_lift"),
+        ("counted_variant_off_pattern@counted_variant:pv-2/pull_up", "counted_variant"),
+        ("counted_variant_off_pattern@counted_variant:pv-2/pull_up/a/b", "counted_variant"),
+    ],
+)
+def test_a_case_key_with_the_wrong_ref_count_is_invalid(key: str, kind: str) -> None:
+    with pytest.raises(Invalid, match=f"wrong refs for a {kind} scope"):
+        FlagKey.parse(key)
+
+
+def test_a_counted_variant_scope_takes_its_lift_and_variant_and_no_other_kind_does() -> None:
+    with pytest.raises(ValueError):
+        Scope("counted_variant", version_id="pv-2", lift="pull_up")
+    with pytest.raises(ValueError):
+        Scope("priority_lift", version_id="pv-2", exercise_id="pull_up", lift="pull_up")
+    with pytest.raises(ValueError):
+        Scope("version", version_id="pv-2", variant="lat_pulldown")
+
+
 def an_acknowledgement(
     key: str, params_hash: str, *, source: AcknowledgementSource = "weekplan"
 ) -> Acknowledgement:

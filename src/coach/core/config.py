@@ -61,11 +61,18 @@ type GridImplement = IncrementImplement | RackImplement
 
 @dataclass(frozen=True)
 class ImplementChoice:
-    """Which of a plate-pool implement's kit tables apply: a hardware id (`none` included) when
-    its tables offer hardware, and on a handle whether it is loaded single rather than a pair."""
+    """Which of a plate-pool implement's kit tables apply: a hardware id (`none` included), or a
+    list of them whose tables are read as one, when its tables offer hardware, and on a handle
+    whether it is loaded single rather than a pair."""
 
-    hardware: str | None = None
+    hardware: str | tuple[str, ...] | None = None
     single: bool = False
+
+    @property
+    def hardware_ids(self) -> tuple[str, ...]:
+        if self.hardware is None:
+            return ()
+        return (self.hardware,) if isinstance(self.hardware, str) else self.hardware
 
 
 @dataclass(frozen=True)
@@ -207,11 +214,18 @@ def _implements(table: Mapping[str, object], path: tuple[str, ...]) -> dict[str,
 
 def _implement_choice(table: Mapping[str, object], path: tuple[str, ...]) -> ImplementChoice:
     _only(table, {"hardware", "single"}, path)
-    hardware = table.get("hardware")
     return ImplementChoice(
-        hardware=None if hardware is None else _nonempty_text(hardware, (*path, "hardware")),
+        hardware=_hardware(table.get("hardware"), (*path, "hardware")),
         single=_bool(table.get("single", False), (*path, "single")),
     )
+
+
+def _hardware(value: object, path: tuple[str, ...]) -> str | tuple[str, ...] | None:
+    if value is None:
+        return None
+    if _is_list(value):
+        return tuple(_nonempty_text(item, path) for item in cast(list[object], value))
+    return _nonempty_text(value, path)
 
 
 def _grid_implement(table: Mapping[str, object], path: tuple[str, ...]) -> GridImplement:
