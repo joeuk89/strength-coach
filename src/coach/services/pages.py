@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from typing import cast
 
 from coach.core.config import Config, PlatePoolLocation, Units
-from coach.core.kit import SHORT_HASH_LENGTH, KitFiles
+from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
     AthletePage,
     CheckInRecord,
@@ -190,12 +190,23 @@ def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> Plat
         return None
     rounded_to = files.tables.get("inventory_sha256") if files.tables else None
     sha = rounded_to if isinstance(rounded_to, str) else files.inventory_sha256
+    listed = {
+        name: choice
+        for name, choice in found.choices().items()
+        if isinstance(choice.hardware, tuple)
+    }
+    racks = (
+        parse_kit_tables(files.tables, choices=listed, units=config.athlete.units).racks
+        if listed and files.tables is not None
+        else {}
+    )
     return PlatePoolKit(
         location=found.name,
         implements=found.implements,
         implement=found.implement,
         short_hash=(sha or "")[:SHORT_HASH_LENGTH],
         inventory=files.inventory,
+        racks=racks,
     )
 
 

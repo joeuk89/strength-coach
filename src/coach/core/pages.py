@@ -3,12 +3,13 @@ to `render` whole, so no page reads the store itself."""
 
 import datetime
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from coach.core.check_in import Window
 from coach.core.check_in_card import Card
 from coach.core.config import Athlete, ImplementChoice, Location, Units
 from coach.core.progress import Progress
+from coach.core.rack import ListedRack
 
 type Json = Mapping[str, object]
 
@@ -16,13 +17,27 @@ type Json = Mapping[str, object]
 @dataclass(frozen=True)
 class PlatePoolKit:
     """What a page links a plate-pool location with: the kit's short hash on every line link
-    and the inventory inline in the set-up link (ADR 0021, "Routine pages")."""
+    and the inventory inline in the set-up link (ADR 0021, "Routine pages"). `racks` holds the
+    rack of each implement whose choice lists several hardware ids."""
 
     location: str
     implements: Mapping[str, str]
     implement: Mapping[str, ImplementChoice]
     short_hash: str
     inventory: bytes | None
+    racks: Mapping[str, ListedRack] = field(default_factory=dict[str, ListedRack])
+
+    def hardware_at(self, implement: str, load: float) -> str | None:
+        """The hardware a per-line link names for `load`: a list choice names the hardware of
+        the row at that load, or its first id when no row has it."""
+        choice = self.implement.get(implement, ImplementChoice())
+        if not isinstance(choice.hardware, tuple):
+            return choice.hardware
+        rack = self.racks.get(implement)
+        row = next(iter(rack.rows_within(load, load)), None) if rack else None
+        if row is not None and row.hardware is not None:
+            return row.hardware
+        return next(iter(choice.hardware), None)
 
 
 @dataclass(frozen=True)
