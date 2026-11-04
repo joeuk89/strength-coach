@@ -1,13 +1,15 @@
+import dataclasses
 import datetime
 import re
 
 from support.blocks import two_closed_blocks
 from support.closed_weeks import a_check_in, a_planned_squat_week, monday
-from support.kit_fixtures import kit_files
+from support.kit_fixtures import kit_files, split_hardware_tables
 from support.pages import the_pages
 from support.plans import a_frozen_prescription, a_squat_program
 from support.programs import a_config
 
+from coach.core.config import Config, ImplementChoice, PlatePoolLocation
 from coach.core.hevy_actions import MapStatus
 from coach.core.mirror import MirroredRoutine
 from coach.render.pages import render_pages
@@ -67,6 +69,44 @@ def test_a_routine_page_at_a_plate_pool_location_links_each_loaded_line_with_the
         f"?dumbbell=175lb&dumbbell.hardware=screw-standard&kit={short}",
     ]
     assert len(re.findall(r"#inventory=", page)) == 1
+
+
+def a_config_with_both_screws() -> Config:
+    config = a_config()
+    both = ImplementChoice(hardware=("screw-standard", "screw-long"))
+    locations = tuple(
+        dataclasses.replace(loc, implement={**loc.implement, "dumbbell": both})
+        if isinstance(loc, PlatePoolLocation)
+        else loc
+        for loc in config.locations
+    )
+    return dataclasses.replace(config, locations=locations)
+
+
+def a_curl_page(load: float, *, with_tables: bool = True) -> str:
+    conn = a_squat_program()
+    plan_id = a_planned_squat_week(conn, monday(1))
+    working = AT_175 | {"load": load}
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(1), "db_curl", set_groups=[working], change="held"
+    )
+    a_routine_written(conn, "lower", plan_id)
+    kit = kit_files(tables=split_hardware_tables()["tables"])
+    if not with_tables:
+        kit = dataclasses.replace(kit, tables=None)
+    facts = page_facts(conn, config=a_config_with_both_screws(), kits=(kit,), profile=None)
+    return render_pages(facts)["pages/routines/lower.md"]
+
+
+def test_a_hardware_list_links_each_line_with_the_hardware_of_its_row_in_the_kit_tables() -> None:
+    assert "?dumbbell=100lb&dumbbell.hardware=screw-long&" in a_curl_page(100)
+    assert "?dumbbell=75lb&dumbbell.hardware=screw-standard&" in a_curl_page(75)
+
+
+def test_a_hardware_list_without_its_kit_tables_links_its_first_id() -> None:
+    page = a_curl_page(100, with_tables=False)
+
+    assert "?dumbbell=100lb&dumbbell.hardware=screw-standard&" in page
 
 
 def test_a_routine_page_at_a_grid_location_has_no_plate_pool_link_even_with_a_kit_file() -> None:

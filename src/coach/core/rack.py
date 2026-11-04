@@ -20,10 +20,12 @@ class Position:
 
 @dataclass(frozen=True)
 class RackRow:
-    """`positions` is `None` where the plates are unknown: every grid location."""
+    """`positions` is `None` where the plates are unknown: every grid location. `hardware` is the
+    hardware id of the kit table the row came from, `None` where that table carries none."""
 
     load: float
     positions: tuple[Position, ...] | None = None
+    hardware: str | None = None
 
     @property
     def plates_per_side(self) -> int:

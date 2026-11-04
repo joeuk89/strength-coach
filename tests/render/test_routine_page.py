@@ -5,6 +5,7 @@ import zlib
 
 from coach.core.config import ImplementChoice
 from coach.core.pages import PageLine, PlatePoolKit, RoutinePage
+from coach.core.rack import ListedRack, RackRow
 from coach.render.routine_page import routine_page
 
 INVENTORY = b'{"plates": [{"lb": 45, "count": 4}, {"lb": 25, "count": 2}]}\n'
@@ -90,6 +91,57 @@ def test_a_handle_rounded_single_is_linked_by_its_single_key() -> None:
         "https://joeuk89.github.io/plate-pool/?dumbbell.single=30lb&dumbbell.hardware=none&kit=3f9a01bc"
         in links(text)
     )
+
+
+SPLIT_DUMBBELL = ListedRack(
+    (
+        RackRow(30, hardware="screw-standard"),
+        RackRow(70, hardware="screw-standard"),
+        RackRow(100, hardware="screw-long"),
+    )
+)
+
+
+def a_curl_at(load: float) -> PageLine:
+    working = {"type": "working", "count": 3, "range": [10, 12], "load": load}
+    return dataclasses.replace(CURL, set_groups=(working,))
+
+
+def a_curl_link(load: float, hardware: str | tuple[str, ...] | None) -> str:
+    kit = dataclasses.replace(
+        HOME,
+        implement={**HOME.implement, "dumbbell": ImplementChoice(hardware=hardware)},
+        racks={"dumbbell": SPLIT_DUMBBELL},
+    )
+    page = dataclasses.replace(a_page(kit=kit), lines=(a_curl_at(load),))
+    return next(link for link in links(routine_page(page, units="lb")) if "kit=" in link)
+
+
+def test_a_hardware_list_links_the_hardware_of_the_row_the_heaviest_load_lands_on() -> None:
+    choice = ("screw-standard", "screw-long")
+
+    assert a_curl_link(100, choice).endswith(
+        "?dumbbell=100lb&dumbbell.hardware=screw-long&kit=3f9a01bc"
+    )
+    assert a_curl_link(70, choice).endswith(
+        "?dumbbell=70lb&dumbbell.hardware=screw-standard&kit=3f9a01bc"
+    )
+
+
+def test_a_hardware_list_links_its_first_id_for_a_load_no_row_has() -> None:
+    link = a_curl_link(85, ("screw-long", "screw-standard"))
+
+    assert link.endswith("?dumbbell=85lb&dumbbell.hardware=screw-long&kit=3f9a01bc")
+
+
+def test_a_hardware_string_links_its_one_id_whatever_row_the_load_lands_on() -> None:
+    assert a_curl_link(100, "screw-standard").endswith(
+        "?dumbbell=100lb&dumbbell.hardware=screw-standard&kit=3f9a01bc"
+    )
+
+
+def test_an_implement_with_no_hardware_links_no_hardware() -> None:
+    assert a_curl_link(100, None).endswith("?dumbbell=100lb&kit=3f9a01bc")
 
 
 def test_a_plate_pool_routine_page_carries_one_set_up_link_with_the_inventory_inline() -> None:
