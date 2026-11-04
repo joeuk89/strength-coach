@@ -82,7 +82,7 @@ def match_week(
             if workout.routine_id is not None
             and routines.get(planned[i].session_id) == workout.routine_id
         ]
-        if own or candidates:
+        if candidates:
             chosen = own[0] if own else min(candidates, key=lambda i: window_days(planned[i]))
             taken.add(chosen)
             found[workout.id] = planned[chosen]
