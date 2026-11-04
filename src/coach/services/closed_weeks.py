@@ -36,6 +36,7 @@ from coach.store import (
     workouts,
 )
 from coach.store.connection import Connection
+from coach.store.programs import VersionRow
 from coach.store.rows import Row
 
 WEEK_OVERRIDES = ("light_week", "minimum_week", "one_off_week")
@@ -96,10 +97,56 @@ def _closed_mondays(windows: WindowList, first: datetime.date) -> list[datetime.
 
 
 @dataclass(frozen=True)
-class _WeekPlan:
-    form: ProgramForm | None
+class PlannedWeek:
+    """The sessions a stored WeekPlan plans, as the version in force when it was approved
+    derives them. The closed week and the week page both read this, so they agree."""
+
+    version: VersionRow | None
     overrides: tuple[PlanOverride, ...]
-    planned: tuple[PlannedWork, ...]
+    sessions: tuple[PlannedSession, ...]
+
+    @property
+    def form(self) -> ProgramForm | None:
+        return self.version.form if self.version else None
+
+    @property
+    def dropped(self) -> frozenset[str]:
+        return frozenset(
+            o.session_id for o in self.overrides if o.kind == "drop_session" and o.session_id
+        )
+
+    @property
+    def kept(self) -> tuple[PlannedSession, ...]:
+        """The sessions the week trains: a dropped session left out."""
+        return tuple(s for s in self.sessions if s.session_id not in self.dropped)
+
+    def refs(self) -> frozenset[PlannedRef]:
+        return frozenset((s.date, s.session_id) for s in self.sessions)
+
+
+def planned_week(conn: Connection, plan: Row, rehab: Sequence[niggles.RehabHistory]) -> PlannedWeek:
+    """A plan with no version in force at its approval plans nothing."""
+    version = programs.in_force_at(conn, str(plan["approved_at"]))
+    overrides = week_plans.stored_overrides(conn, str(plan["id"]))
+    sessions = plan_sessions(conn, plan, version.form, overrides, rehab) if version else ()
+    return PlannedWeek(version, overrides, sessions)
+
+
+@dataclass(frozen=True)
+class _WeekPlan:
+    """A week's PlannedWeek with each session's frozen targets. A week with no WeekPlan still
+    reads the version in force at its end, for its dose targets."""
+
+    week: PlannedWeek
+    planned: tuple[PlannedWork, ...] = ()
+
+    @property
+    def form(self) -> ProgramForm | None:
+        return self.week.form
+
+    @property
+    def overrides(self) -> tuple[PlanOverride, ...]:
+        return self.week.overrides
 
 
 class WeekLog:
@@ -146,7 +193,7 @@ class WeekLog:
         self._plans: dict[datetime.date, _WeekPlan] = {}
         self._matches: dict[datetime.date, dict[str, PlannedSession]] = {}
         self.conditioning = frozenset(
-            w.id for w in self.workouts if self._matched_kind(w) == "conditioning"
+            w.id for w in self.workouts if self.kind_of(w.id) == "conditioning"
         )
         self.trained = trained_without_sets(live, current, sessions)
         self.lifting_dates = [
@@ -205,11 +252,11 @@ class WeekLog:
         )
         return Matched(named, light, lines, authored.kind if authored else None)
 
-    def _matched_kind(self, workout: WeekWorkout) -> str | None:
-        """The kind of the planned session the workout matched in its week, if any. Match reads
-        no week kind, so it is known before the return week's lifting dates."""
-        session = self._matched(self._week_of(workout)).get(workout.id)
-        return None if session is None else session.kind
+    def kind_of(self, workout_id: str) -> str | None:
+        """The workout's effective kind: its Match's session kind, else its own class. Match
+        reads no week kind, so it is known before the return week's lifting dates."""
+        match = self.match_of(workout_id)
+        return self.workout(workout_id).kind if match is None else match.kind
 
     def facts(self, monday: datetime.date) -> WeekFacts:
         plan = self._plan(monday)
@@ -249,14 +296,14 @@ class WeekLog:
 
     def _plan(self, monday: datetime.date) -> _WeekPlan:
         if monday not in self._plans:
-            sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
             plan = week_plans.in_force(self.conn, monday.isoformat())
-            at = str(plan["approved_at"]) if plan else f"{sunday.isoformat()}T23:59:59"
-            version = programs.in_force_at(self.conn, at)
-            form = version.form if version else None
-            overrides = week_plans.stored_overrides(self.conn, str(plan["id"])) if plan else ()
-            planned = self._planned(plan, form, overrides) if plan and form else ()
-            self._plans[monday] = _WeekPlan(form, overrides, planned)
+            if plan is None:
+                sunday = monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
+                version = programs.in_force_at(self.conn, f"{sunday.isoformat()}T23:59:59")
+                self._plans[monday] = _WeekPlan(PlannedWeek(version, (), ()))
+            else:
+                week = planned_week(self.conn, plan, self.rehab)
+                self._plans[monday] = _WeekPlan(week, self._work(str(plan["id"]), week))
         return self._plans[monday]
 
     def _workouts_of(self, monday: datetime.date) -> tuple[WeekWorkout, ...]:
@@ -267,19 +314,12 @@ class WeekLog:
         claim = self.claims.get(workout.id)
         return week_monday(claim[0] if claim else workout.date)
 
-    def _planned(
-        self,
-        plan: Row,
-        form: ProgramForm,
-        overrides: Sequence[PlanOverride],
-    ) -> tuple[PlannedWork, ...]:
-        plan_id = str(plan["id"])
-        dropped = {o.session_id for o in overrides if o.kind == "drop_session"}
-        held = {(o.session_id, o.exercise_id) for o in overrides if o.kind == "hold"}
-        sessions = plan_sessions(self.conn, plan, form, overrides, self.rehab)
+    def _work(self, plan_id: str, week: PlannedWeek) -> tuple[PlannedWork, ...]:
+        """Each planned session with its frozen targets; a drop stays as a Miss."""
+        held = {(o.session_id, o.exercise_id) for o in week.overrides if o.kind == "hold"}
         hold_lines = held | {
             (s.session_id, line.exercise)
-            for s in sessions
+            for s in week.sessions
             for line in s.lines
             if line.scheme.name == "hold"
         }
@@ -290,10 +330,10 @@ class WeekLog:
             PlannedWork(
                 s,
                 targets.get((s.date, s.session_id), {}),
-                dropped=s.session_id in dropped,
+                dropped=s.session_id in week.dropped,
                 returned=returned.get((s.date, s.session_id), frozenset()),
             )
-            for s in sessions
+            for s in week.sessions
         )
 
 

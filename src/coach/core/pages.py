@@ -69,12 +69,16 @@ class RoutinePage:
 
 @dataclass(frozen=True)
 class PlannedSessionPage:
+    """A session the plan derives, or (`derived` false) frozen rows the derivation no longer
+    plans, kept so an approved row is never lost. `estimated_sets` stands in for lines."""
+
     session_id: str
     title: str
     date: datetime.date
     kind: str
     lines: tuple[PageLine, ...]
     estimated_sets: Mapping[str, int] | None = None
+    derived: bool = True
 
 
 @dataclass(frozen=True)

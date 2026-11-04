@@ -89,15 +89,22 @@ def match_week(
     return found
 
 
-def covers(session: PlannedSession, day: datetime.date) -> bool:
+def window(session: PlannedSession) -> tuple[datetime.date, datetime.date]:
+    """The first and last day a workout can match the session on (week.md, "Match")."""
     if session.cadence == "standing":
         monday = week_monday(session.date)
-        return monday <= day < monday + datetime.timedelta(days=DAYS_IN_WEEK)
-    return day == session.date
+        return monday, monday + datetime.timedelta(days=DAYS_IN_WEEK - 1)
+    return session.date, session.date
+
+
+def covers(session: PlannedSession, day: datetime.date) -> bool:
+    first, last = window(session)
+    return first <= day <= last
 
 
 def window_days(session: PlannedSession) -> int:
-    return DAYS_IN_WEEK if session.cadence == "standing" else 1
+    first, last = window(session)
+    return (last - first).days + 1
 
 
 def workout_class(sets: Iterable[StoredSet], library: Mapping[str, LibraryEntry]) -> WorkoutClass:

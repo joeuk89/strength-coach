@@ -10,6 +10,7 @@ from support.history import a_logged_workout
 from support.plans import SQUAT_LINE, a_squat_program, an_approved_plan, squat_logged
 from support.program_drafts import a_line, a_session
 
+from coach.services.closed_weeks import WeekLog
 from coach.store.connection import Connection
 
 HANG_TEMPLATE = "B9380898"
@@ -116,3 +117,22 @@ def test_an_unmatched_workout_with_a_load_mode_set_yields_no_activity() -> None:
     squat_logged(conn, "h-2", day(3), (135, 5, 7))
 
     assert activity_ids(conn) == []
+
+
+def test_a_manual_workout_naming_a_conditioning_session_off_its_day_is_conditioning_in_both_reads() -> (  # noqa: E501
+    None
+):
+    """No planned `cond-swings` covers Friday, so the derivation leaves the workout unplaced and
+    only the session it names makes it conditioning: the closed week and the Activity rule agree."""
+    conn = a_squat_program(LOWER, SWINGS)
+    an_approved_plan(conn, monday(0))
+    a_logged_workout(
+        conn, "w-1", day(4), (SWING_TEMPLATE, ((24.0, 12, 8.0),) * 6), session_id="cond-swings"
+    )
+
+    log = WeekLog(conn, "lb")
+
+    assert log.kind_of("w-1") == "conditioning"
+    assert "w-1" in log.conditioning
+    assert datetime.date.fromisoformat(day(4)) not in log.lifting_dates
+    assert activity_ids(conn) == ["w-1"]
