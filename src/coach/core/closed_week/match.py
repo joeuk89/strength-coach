@@ -50,7 +50,7 @@ def match_week(
     """Workout id to the planned session it took. A claim (a `match` Annotation, or a manual
     coach-led workout naming its session) is honoured first, inside the claimed session's window;
     every other workout takes, in date then start-time order, the session of its routine inside
-    its window or else the first untaken candidate."""
+    its window or else the untaken candidate with the narrowest window, plan order breaking ties."""
     ordered = sorted(workouts, key=lambda w: (w.date, w.started, w.id))
     taken: set[int] = set()
     found: dict[str, PlannedSession] = {}
@@ -83,7 +83,7 @@ def match_week(
             and routines.get(planned[i].session_id) == workout.routine_id
         ]
         if own or candidates:
-            chosen = (own or candidates)[0]
+            chosen = own[0] if own else min(candidates, key=lambda i: window_days(planned[i]))
             taken.add(chosen)
             found[workout.id] = planned[chosen]
     return found
@@ -94,6 +94,10 @@ def covers(session: PlannedSession, day: datetime.date) -> bool:
         monday = week_monday(session.date)
         return monday <= day < monday + datetime.timedelta(days=DAYS_IN_WEEK)
     return day == session.date
+
+
+def window_days(session: PlannedSession) -> int:
+    return DAYS_IN_WEEK if session.cadence == "standing" else 1
 
 
 def workout_class(sets: Iterable[StoredSet], library: Mapping[str, LibraryEntry]) -> WorkoutClass:
