@@ -15,6 +15,8 @@ type ScopeKind = Literal[
     "instance",
     "version",
     "dose",
+    "priority_lift",
+    "counted_variant",
     "exercise",
 ]
 type Refs = tuple[str, ...]
@@ -201,7 +203,9 @@ VIOLATIONS = (
     violation("set_type_not_allowed", ("line",), ("set_type", "scheme"), ("program adopt",)),
     violation("set_groups_off_scheme", ("line",), ("scheme", "expected_shape"), ("program adopt",)),
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
-    violation("acknowledgement_unmatched", ("version",), ("flag_key",), ("program adopt",)),
+    violation(
+        "acknowledgement_unmatched", ("version",), ("flag_key", "flag_keys"), ("program adopt",)
+    ),
     violation("counted_variant_unknown", ("version",), ("lift", "exercise_id"), ("program adopt",)),
     violation(
         "counted_variant_not_exclusive", ("version",), ("exercise_id", "lifts"), ("program adopt",)
@@ -341,7 +345,7 @@ ADOPT_WARNINGS = (
         ("scheme", "emphasis", "expected_band"),
         ("rn:goal-programming §4",),
     ),
-    adopt_warning("priority_lift_absent", ("version",), ("exercise_id",)),
+    adopt_warning("priority_lift_absent", ("priority_lift",), ("exercise_id",)),
     adopt_warning(
         "priority_lift_not_first",
         ("session",),
@@ -356,7 +360,7 @@ ADOPT_WARNINGS = (
     ),
     adopt_warning(
         "counted_variant_off_pattern",
-        ("version",),
+        ("counted_variant",),
         ("lift", "variant", "patterns", "primary_muscles"),
     ),
     adopt_warning(

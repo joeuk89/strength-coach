@@ -119,7 +119,7 @@ def test_a_priority_lift_on_no_line_warns_priority_lift_absent() -> None:
     flags = warnings_of(bench(), priority("bb_bench_press", "pull_up"))
 
     assert the("priority_lift_absent", flags) == [
-        ("priority_lift_absent@version:pv-1", {"exercise_id": "pull_up"})
+        ("priority_lift_absent@priority_lift:pv-1/pull_up", {"exercise_id": "pull_up"})
     ]
     assert the("priority_lift_absent", warnings_of(bench(), priority("bb_bench_press"))) == []
 
@@ -518,6 +518,33 @@ def test_a_move_outside_the_signals_may_schemes_warns_scheme_change_off_signal()
     ]
 
 
+def test_every_priority_lift_on_no_line_warns_on_its_own_key() -> None:
+    flags = warnings_of(bench(), priority("pull_up", "bb_bench_press", "bb_deadlift"))
+
+    assert the("priority_lift_absent", flags) == [
+        ("priority_lift_absent@priority_lift:pv-1/pull_up", {"exercise_id": "pull_up"}),
+        ("priority_lift_absent@priority_lift:pv-1/bb_deadlift", {"exercise_id": "bb_deadlift"}),
+    ]
+
+
+def test_acknowledging_one_of_two_absent_priority_lifts_leaves_the_other_standing() -> None:
+    entry = {
+        "flag": "priority_lift_absent@priority_lift:pv-1/pull_up",
+        "because": "coach_judgement",
+        "text": "x",
+    }
+    form = a_form(a_draft(a_session("push", a_line()), acknowledge=[entry]))
+    raised = adopt_warnings(form, priority("pull_up", "bb_deadlift"))
+
+    left = leave_warnings(raised, form.acknowledgements)
+
+    standing = {f.key: f.left is not None for f in left if f.code == "priority_lift_absent"}
+    assert standing == {
+        "priority_lift_absent@priority_lift:pv-1/pull_up": True,
+        "priority_lift_absent@priority_lift:pv-1/bb_deadlift": False,
+    }
+
+
 def test_an_unchanged_scheme_or_an_exercise_new_to_the_version_raises_nothing() -> None:
     new_exercise = a_context(
         version_id="pv-2", previous=a_form(a_draft(a_session("push", a_line("db_curl"))))
@@ -564,7 +591,7 @@ def test_a_variant_off_the_lifts_pattern_or_muscles_warns_counted_variant_off_pa
 
     assert the("counted_variant_off_pattern", flags) == [
         (
-            "counted_variant_off_pattern@version:pv-1",
+            "counted_variant_off_pattern@counted_variant:pv-1/pull_up/bb_bench_press",
             {
                 "lift": "pull_up",
                 "variant": "bb_bench_press",
@@ -578,9 +605,57 @@ def test_a_variant_off_the_lifts_pattern_or_muscles_warns_counted_variant_off_pa
     ]
 
 
+def test_every_off_pattern_variant_of_a_lift_warns_on_its_own_key() -> None:
+    flags = warnings_of(counting("straight_arm_pulldown", "bb_bench_press"), PULL_UP_PRIORITY)
+
+    assert [key for key, _ in the("counted_variant_off_pattern", flags)] == [
+        "counted_variant_off_pattern@counted_variant:pv-1/pull_up/straight_arm_pulldown",
+        "counted_variant_off_pattern@counted_variant:pv-1/pull_up/bb_bench_press",
+    ]
+
+
+def two_lifts_counting(acknowledge: list[dict[str, str]] | None = None) -> dict[str, Any]:
+    lift = {
+        "pull_up": {"sets": 8, "counts": ["bb_bench_press"]},
+        "bb_bench_press": {"sets": 8, "counts": ["lat_pulldown"]},
+    }
+    draft = a_draft(
+        a_session("pull", a_line("pull_up"), a_line("bb_bench_press")),
+        dose={"per_muscle": 10, "lift": lift},
+    )
+    return {**draft, "acknowledge": acknowledge} if acknowledge else draft
+
+
+def test_one_off_pattern_variant_on_each_of_two_lifts_warns_twice() -> None:
+    flags = warnings_of(two_lifts_counting(), PULL_UP_PRIORITY)
+
+    assert [(p["lift"], p["variant"]) for _, p in the("counted_variant_off_pattern", flags)] == [
+        ("pull_up", "bb_bench_press"),
+        ("bb_bench_press", "lat_pulldown"),
+    ]
+    assert [key for key, _ in the("counted_variant_off_pattern", flags)] == [
+        "counted_variant_off_pattern@counted_variant:pv-1/pull_up/bb_bench_press",
+        "counted_variant_off_pattern@counted_variant:pv-1/bb_bench_press/lat_pulldown",
+    ]
+
+
+def test_acknowledging_one_of_two_off_pattern_variants_leaves_the_other_standing() -> None:
+    key = "counted_variant_off_pattern@counted_variant:pv-1/bb_bench_press/lat_pulldown"
+    entry = {"flag": key, "because": "coach_judgement", "text": "x"}
+    form = a_form(two_lifts_counting([entry]))
+
+    left = leave_warnings(adopt_warnings(form, PULL_UP_PRIORITY), form.acknowledgements)
+
+    standing = {f.key: f.left is not None for f in left if f.code == "counted_variant_off_pattern"}
+    assert standing == {
+        "counted_variant_off_pattern@counted_variant:pv-1/pull_up/bb_bench_press": False,
+        key: True,
+    }
+
+
 def test_an_acknowledgement_leaves_counted_variant_off_pattern() -> None:
     entry = {
-        "flag": "counted_variant_off_pattern@version:pv-1",
+        "flag": "counted_variant_off_pattern@counted_variant:pv-1/pull_up/bb_bench_press",
         "because": "coach_judgement",
         "text": "the coach counts it on purpose",
     }
@@ -599,5 +674,5 @@ def test_a_lifts_counted_variants_on_lines_never_stand_in_for_the_lift() -> None
     )
 
     assert the("priority_lift_absent", warnings_of(draft, PULL_UP_PRIORITY)) == [
-        ("priority_lift_absent@version:pv-1", {"exercise_id": "pull_up"})
+        ("priority_lift_absent@priority_lift:pv-1/pull_up", {"exercise_id": "pull_up"})
     ]

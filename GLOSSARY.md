@@ -172,10 +172,10 @@ safety bound: no override waives it, only the days off behind it move.
 _Avoid_: limit, safety cap
 
 **Flag**:
-A violation or a warning: a named condition the engine found on one of ten typed scopes (a
+A violation or a warning: a named condition the engine found on one of twelve typed scopes (a
 week, a planned session, a line, an exposure, a routine, a workout, the instance, a program
-version, a dose target of a program version or an exercise). Its identity is the code and the
-scope, never its message.
+version, a dose target, a priority lift or a counted variant of a program version, or an
+exercise). Its identity is the code and the scope, never its message.
 _Avoid_: issue, check result, finding
 
 **Violation**:

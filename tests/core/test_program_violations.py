@@ -294,7 +294,7 @@ def test_a_version_wide_dose_acknowledgement_names_the_dose_keys_adopt_raised() 
     [flag] = flags_of(a_draft(acknowledge=[entry]), raised)
 
     assert flag.key == "acknowledgement_unmatched@version:pv-1"
-    assert dict(flag.params) == {"flag_key": stale}
+    assert dict(flag.params) == {"flag_key": stale, "flag_keys": [stale]}
     assert flag.message == (
         f"adopt raised no {stale}; remove the [[acknowledge]] entry and acknowledge each dose "
         "target on its own key: dose_off_band@dose:pv-1/bb_deadlift, "
@@ -312,6 +312,82 @@ def test_a_version_wide_dose_acknowledgement_with_no_dose_raised_just_goes() -> 
         f"adopt raised no {stale}; remove the [[acknowledge]] entry: adopt raised no "
         "dose_off_band on this Draft"
     )
+
+
+def stale(*keys: str) -> dict[str, Any]:
+    return a_draft(
+        acknowledge=[{"flag": key, "because": "coach_judgement", "text": "x"} for key in keys]
+    )
+
+
+def test_every_stale_acknowledgement_is_named_in_one_violation_in_draft_order() -> None:
+    first = "stall_streak@line:push/bb_bench_press"
+    second = "emphasis_off_goal@version:pv-1"
+
+    [flag] = flags_of(stale(first, second))
+
+    assert flag.key == "acknowledgement_unmatched@version:pv-1"
+    assert dict(flag.params) == {"flag_key": first, "flag_keys": [first, second]}
+    assert flag.message == (
+        f"adopt raised no {first}, {second}; remove those [[acknowledge]] entries"
+    )
+
+
+@pytest.mark.parametrize(
+    ("old", "raised", "noun"),
+    [
+        (
+            "priority_lift_absent@version:pv-1",
+            (
+                "priority_lift_absent@priority_lift:pv-1/pull_up",
+                "priority_lift_absent@priority_lift:pv-1/bb_deadlift",
+            ),
+            "priority lift",
+        ),
+        (
+            "counted_variant_off_pattern@version:pv-1",
+            (
+                "counted_variant_off_pattern@counted_variant:pv-1/pull_up/db_fly",
+                "counted_variant_off_pattern@counted_variant:pv-1/bb_bench_press/lat_pulldown",
+            ),
+            "counted variant",
+        ),
+    ],
+)
+def test_a_version_wide_key_of_a_per_case_warning_names_the_keys_adopt_raised(
+    old: str, raised: tuple[str, str], noun: str
+) -> None:
+    context = a_context(raised_warnings=frozenset({*raised, "emphasis_off_goal@version:pv-1"}))
+
+    [flag] = flags_of(stale(old), context)
+
+    assert flag.message == (
+        f"adopt raised no {old}; remove the [[acknowledge]] entry and acknowledge each {noun} "
+        f"on its own key: {raised[1]}, {raised[0]}"
+    )
+
+
+def test_several_stale_entries_list_the_new_keys_for_each_version_wide_one() -> None:
+    plain = "stall_streak@line:push/bb_bench_press"
+    lift = "priority_lift_absent@version:pv-1"
+    dose = "dose_off_band@version:pv-1"
+    context = a_context(raised_warnings=frozenset({"dose_off_band@dose:pv-1/per_muscle"}))
+
+    [flag] = flags_of(stale(plain, lift, dose), context)
+
+    assert flag.params["flag_keys"] == [plain, lift, dose]
+    assert flag.message == (
+        f"adopt raised no {plain}, {lift}, {dose}; remove those [[acknowledge]] entries; "
+        f"for {lift}, adopt raised no priority_lift_absent on this Draft; "
+        f"for {dose}, acknowledge each dose target on its own key: "
+        "dose_off_band@dose:pv-1/per_muscle"
+    )
+
+
+def test_an_acknowledgement_whose_flag_is_not_a_key_is_unmatched() -> None:
+    [flag] = flags_of(stale("not a key", "priority_lift_absent@nowhere"))
+
+    assert flag.params["flag_keys"] == ["not a key", "priority_lift_absent@nowhere"]
 
 
 def test_every_violation_is_reported_in_one_run() -> None:

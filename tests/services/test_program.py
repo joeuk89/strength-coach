@@ -747,14 +747,14 @@ def test_a_lat_pulldown_counts_toward_the_pull_up_and_a_fly_warns() -> None:
     )
     fly = run(the_worked_store(), with_pull_up_counting("db_fly"), available_days=EVERY_DAY)
 
-    assert "counted_variant_off_pattern@version:pv-1" not in keys(pulldown)
-    assert "counted_variant_off_pattern@version:pv-1" in keys(fly)
+    assert [k for k in keys(pulldown) if k.startswith("counted_variant_off_pattern")] == []
+    assert "counted_variant_off_pattern@counted_variant:pv-1/pull_up/db_fly" in keys(fly)
 
 
-def test_an_acknowledgement_leaves_counted_variant_off_pattern_on_the_version() -> None:
+def test_an_acknowledgement_leaves_counted_variant_off_pattern_on_its_variant() -> None:
     entry = """
 [[acknowledge]]
-flag = "counted_variant_off_pattern@version:pv-1"
+flag = "counted_variant_off_pattern@counted_variant:pv-1/pull_up/db_fly"
 because = "coach_judgement"
 text = "Counted on purpose."
 """
@@ -767,3 +767,39 @@ text = "Counted on purpose."
     [flag] = [f for f in result.warnings if f.code == "counted_variant_off_pattern"]
     assert flag.left is not None
     assert flag.params["variant"] == "db_fly"
+
+
+def test_a_version_wide_counted_variant_acknowledgement_is_refused_naming_the_new_key() -> None:
+    old = "counted_variant_off_pattern@version:pv-1"
+    entry = f'\n[[acknowledge]]\nflag = "{old}"\nbecause = "coach_judgement"\ntext = "x"\n'
+
+    with pytest.raises(Invalid) as refused:
+        run(
+            the_worked_store(),
+            with_pull_up_counting("db_fly", acknowledge=entry),
+            available_days=EVERY_DAY,
+        )
+
+    [violation] = cast(list[dict[str, Any]], refused.value.details["violations"])
+    assert violation["code"] == "acknowledgement_unmatched"
+    assert violation["params"] == {"flag_key": old, "flag_keys": [old]}
+    assert violation["message"].endswith(
+        "acknowledge each counted variant on its own key: "
+        "counted_variant_off_pattern@counted_variant:pv-1/pull_up/db_fly"
+    )
+
+
+def test_two_stale_acknowledgements_are_refused_as_one_violation_naming_both() -> None:
+    keys = ("emphasis_off_goal@version:pv-1", "priority_lift_absent@priority_lift:pv-1/pull_up")
+    entries = "".join(
+        f'\n[[acknowledge]]\nflag = "{key}"\nbecause = "coach_judgement"\ntext = "x"\n'
+        for key in keys
+    )
+
+    with pytest.raises(Invalid) as refused:
+        run(the_worked_store(), WORKED_DRAFT_COMPLETE + entries, available_days=EVERY_DAY)
+
+    violations = cast(list[dict[str, Any]], refused.value.details["violations"])
+    assert [(v["code"], v["params"]["flag_keys"]) for v in violations] == [
+        ("acknowledgement_unmatched", list(keys))
+    ]
