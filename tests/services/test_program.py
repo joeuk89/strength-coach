@@ -693,6 +693,23 @@ def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version
     )
 
 
+def test_dose_acknowledgements_re_adopt_from_show_draft_under_the_next_version() -> None:
+    conn = the_worked_store()
+    both = ("dose_off_band@dose:pv-1/bb_bench_press", "dose_off_band@dose:pv-1/pull_up")
+    adopted = run(conn, off_band_dose(*both), available_days=EVERY_DAY)
+
+    again = run(conn, show_draft(conn).text, available_days=EVERY_DAY)
+
+    dose = {f.key: f.left is not None for f in again.warnings if f.code == "dose_off_band"}
+    assert dose == {
+        "dose_off_band@dose:pv-2/bb_bench_press": True,
+        "dose_off_band@dose:pv-2/pull_up": True,
+    }
+    hashes = {e.flag: e.params_hash for e in adopted.acknowledgements}
+    frozen = {e.flag: e.params_hash for e in programs.acknowledgements(conn, "pv-2")}
+    assert {k: frozen[k.replace("pv-1", "pv-2")] for k in both} == {k: hashes[k] for k in both}
+
+
 def with_pull_up_counting(*variants: str, acknowledge: str = "") -> str:
     counts = ", ".join(f'"{v}"' for v in variants)
     return (
