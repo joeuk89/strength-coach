@@ -8,7 +8,7 @@ from typing import cast
 from coach.core.closed_week.adherence import Adherence
 from coach.core.config import WEEKDAYS, Weekday
 from coach.core.exposure import Exposure
-from coach.core.flag import Flag, Scope, raise_flag
+from coach.core.flag import Flag, FlagKey, Scope, raise_flag
 from coach.core.goal import Goal
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
@@ -421,12 +421,22 @@ class _Checks:
                     "acknowledgement_unmatched",
                     self.version_scope,
                     {"flag_key": entry.flag},
-                    f"adopt raised no {entry.flag}; remove the [[acknowledge]] entry",
+                    f"adopt raised no {entry.flag}; remove the [[acknowledge]] entry"
+                    + self._migration(entry.flag),
                 )
                 return
 
     def _matches(self, text: str) -> bool:
         return text in self.context.raised_warnings
+
+    def _migration(self, text: str) -> str:
+        if text != str(FlagKey("dose_off_band", self.version_scope)):
+            return ""
+        prefix = f"dose_off_band@dose:{self.context.version_id}/"
+        keys = sorted(key for key in self.context.raised_warnings if key.startswith(prefix))
+        if not keys:
+            return ": adopt raised no dose_off_band on this Draft"
+        return f" and acknowledge each dose target on its own key: {', '.join(keys)}"
 
 
 def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:

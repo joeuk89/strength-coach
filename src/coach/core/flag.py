@@ -25,9 +25,10 @@ REFS: dict[ScopeKind, tuple[str, ...]] = {
     "workout": ("workout_id",),
     "instance": (),
     "version": ("version_id",),
+    "dose": ("version_id", "target"),
     "exercise": ("exercise_id",),
 }
-REF_FIELDS = ("session_id", "exercise_id", "workout_id", "routine_id", "version_id")
+REF_FIELDS = ("session_id", "exercise_id", "workout_id", "routine_id", "version_id", "target")
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class Scope:
     workout_id: str | None = None
     routine_id: str | None = None
     version_id: str | None = None
+    target: str | None = None
 
     def __post_init__(self) -> None:
         wanted = REFS[self.kind]

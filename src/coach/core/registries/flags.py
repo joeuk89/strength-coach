@@ -6,7 +6,16 @@ from coach.core.registries.registry import Registry, Row
 
 type Severity = Literal["violation", "warning"]
 type ScopeKind = Literal[
-    "week", "session", "line", "exposure", "routine", "workout", "instance", "version", "exercise"
+    "week",
+    "session",
+    "line",
+    "exposure",
+    "routine",
+    "workout",
+    "instance",
+    "version",
+    "dose",
+    "exercise",
 ]
 type Refs = tuple[str, ...]
 type AcknowledgementSource = Literal["weekplan", "version", "decision"]
@@ -341,7 +350,7 @@ ADOPT_WARNINGS = (
     ),
     adopt_warning(
         "dose_off_band",
-        ("version",),
+        ("dose",),
         ("target_of", "target", "band", "phase"),
         ("rn:goal-programming §3",),
     ),

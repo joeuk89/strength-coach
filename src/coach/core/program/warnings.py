@@ -112,7 +112,7 @@ class _Warnings:
             if not low <= target <= high:
                 self.raise_(
                     "dose_off_band",
-                    self.version_scope,
+                    Scope("dose", version_id=self.context.version_id, target=target_of),
                     {
                         "target_of": target_of,
                         "target": target,
@@ -121,7 +121,6 @@ class _Warnings:
                     },
                     f"dose {target_of} = {target} is outside {low}-{high} hard sets a week",
                 )
-                return
 
     def counted_variants(self) -> None:
         dose = self.form.dose

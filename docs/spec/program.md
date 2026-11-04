@@ -166,7 +166,9 @@ trained mostly through its rungs (a strict pull-up built with negatives and band
 a target inside the band this way. Adopt never fills `counts`; choosing a lift's variants is
 coaching judgement. The variants count toward the target and the disrupted-week floor only:
 they do not stand in for the lift on a line (`priority_lift_absent`), are never tested, and
-need not come first in a session. `dose_off_band` reads `sets`.
+need not come first in a session. `dose_off_band` reads `sets`, and adopt raises one for each
+target outside its band, keyed on the target: `dose_off_band@dose:pv-2/per_muscle`,
+`dose_off_band@dose:pv-2/bb_deadlift`.
 
 ### New exercises
 
@@ -195,7 +197,8 @@ set here (it is written by `plan apply` after a verified create, ADR 0011).
 
 The same shape as the plan Draft's (`validation.md`, "Leaving a warning"). Adopt freezes them on
 the version; an entry whose key adopt did not raise is a violation so a stale acknowledgement
-cannot ride along.
+cannot ride along. An entry under the old version-wide key `dose_off_band@version:<id>` is one:
+its message says to remove it and lists the `dose_off_band@dose:...` keys adopt raised.
 
 ```toml
 [[acknowledge]]

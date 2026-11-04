@@ -579,6 +579,56 @@ def test_an_acknowledgement_whose_params_hash_moved_leaves_nothing_and_freezes_n
     assert result.acknowledgements == () == programs.acknowledgements(conn, "pv-1")
 
 
+def off_band_dose(*acknowledged: str) -> str:
+    dose = "[dose]\nper_muscle = 10\n[dose.lift]\nbb_bench_press = 4\npull_up = 1\n\n[[session]]"
+    entries = "".join(
+        f'\n[[acknowledge]]\nflag = "{key}"\nbecause = "coach_judgement"\ntext = "Rungs."\n'
+        for key in acknowledged
+    )
+    return WORKED_DRAFT_COMPLETE.replace("[[session]]", dose, 1) + entries
+
+
+def test_acknowledging_one_off_band_dose_target_leaves_the_other_standing() -> None:
+    result = run(
+        the_worked_store(),
+        off_band_dose("dose_off_band@dose:pv-1/pull_up"),
+        available_days=EVERY_DAY,
+        dry_run=True,
+    )
+
+    dose = {f.key: f.left is not None for f in result.warnings if f.code == "dose_off_band"}
+    assert dose == {
+        "dose_off_band@dose:pv-1/bb_bench_press": False,
+        "dose_off_band@dose:pv-1/pull_up": True,
+    }
+
+
+def test_a_draft_with_every_off_band_dose_target_acknowledged_adopts() -> None:
+    conn = the_worked_store()
+    both = ("dose_off_band@dose:pv-1/bb_bench_press", "dose_off_band@dose:pv-1/pull_up")
+
+    result = run(conn, off_band_dose(*both), available_days=EVERY_DAY)
+
+    assert [f.key for f in result.warnings if f.left is None] == []
+    frozen = [entry.flag for entry in programs.acknowledgements(conn, "pv-1")]
+    assert set(both) <= set(frozen)
+
+
+def test_a_version_wide_dose_acknowledgement_is_refused_naming_the_dose_keys() -> None:
+    with pytest.raises(Invalid) as refused:
+        run(
+            the_worked_store(),
+            off_band_dose("dose_off_band@version:pv-1"),
+            available_days=EVERY_DAY,
+        )
+
+    [violation] = cast(list[dict[str, Any]], refused.value.details["violations"])
+    assert violation["code"] == "acknowledgement_unmatched"
+    assert violation["message"].endswith(
+        "dose_off_band@dose:pv-1/bb_bench_press, dose_off_band@dose:pv-1/pull_up"
+    )
+
+
 def test_a_stale_acknowledgement_is_refused_as_acknowledgement_unmatched() -> None:
     stale = WORKED_DRAFT_COMPLETE.replace("a-sat-pull/pull_up", "b-sat-push/bb_bench_press")
 
@@ -641,6 +691,23 @@ def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version
         "emphasis_off_goal@version:pv-2",
         adopted.acknowledgements[0].params_hash,
     )
+
+
+def test_dose_acknowledgements_re_adopt_from_show_draft_under_the_next_version() -> None:
+    conn = the_worked_store()
+    both = ("dose_off_band@dose:pv-1/bb_bench_press", "dose_off_band@dose:pv-1/pull_up")
+    adopted = run(conn, off_band_dose(*both), available_days=EVERY_DAY)
+
+    again = run(conn, show_draft(conn).text, available_days=EVERY_DAY)
+
+    dose = {f.key: f.left is not None for f in again.warnings if f.code == "dose_off_band"}
+    assert dose == {
+        "dose_off_band@dose:pv-2/bb_bench_press": True,
+        "dose_off_band@dose:pv-2/pull_up": True,
+    }
+    hashes = {e.flag: e.params_hash for e in adopted.acknowledgements}
+    frozen = {e.flag: e.params_hash for e in programs.acknowledgements(conn, "pv-2")}
+    assert {k: frozen[k.replace("pv-1", "pv-2")] for k in both} == {k: hashes[k] for k in both}
 
 
 def with_pull_up_counting(*variants: str, acknowledge: str = "") -> str:

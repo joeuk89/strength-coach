@@ -47,6 +47,7 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 | `workout` | Hevy workout id | a workout version at import |
 | `instance` | none | the instance itself (setup, pins, snapshots) |
 | `version` | program version id | a program version at adopt (ADR 0014) |
+| `dose` | program version id, dose target (`per_muscle` or the `[dose.lift]` lift id) | one dose target of a program version at adopt |
 | `exercise` | exercise id | one exercise across blocks, for cadence signals and milestones (ADR 0014) |
 
 Two flags with the same code on the same scope cannot exist: a code states one condition per
@@ -66,6 +67,7 @@ block_ceiling_exceeded@week:2026-11-03
 scheme_off_emphasis@line:a-sat-pull/pull_up
 routine_drift@routine:3f9d2c7e-1b44-4a0e-8d55-c6a1e2b7f904
 engine_pin_dev@instance
+dose_off_band@dose:pv-2/bb_deadlift
 ```
 
 That string is what the agent writes in a Draft to acknowledge a warning and what `--fields`
@@ -283,7 +285,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `scheme_off_emphasis` | line | line scheme, emphasis, expected band (`goals.md` names the band per emphasis) | rn:goal-programming §4 |
 | `priority_lift_absent` | version | exercise id | `null` |
 | `priority_lift_not_first` | session | exercise id, position among the lines carrying a working group | rn:goal-programming §7 |
-| `dose_off_band` | version | muscle or lift, target, band, phase | rn:goal-programming §3 |
+| `dose_off_band` | dose | muscle or lift, target, band, phase | rn:goal-programming §3 |
 | `counted_variant_off_pattern` | version | lift, counted variant, the two patterns, the two primary muscle lists | `null` |
 | `deload_off_emphasis` | version | deload policy, expected shape | rn:goal-programming §6 |
 | `muscle_no_hard_sets` | version | muscle, sessions searched | rn:volume-frequency.1 |

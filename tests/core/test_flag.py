@@ -227,6 +227,29 @@ def test_a_malformed_key_is_invalid(key: str) -> None:
         FlagKey.parse(key)
 
 
+def test_a_dose_key_names_the_version_then_the_target() -> None:
+    key = FlagKey.parse("dose_off_band@dose:pv-2/bb_deadlift")
+
+    assert key.scope == Scope("dose", version_id="pv-2", target="bb_deadlift")
+    assert str(key) == "dose_off_band@dose:pv-2/bb_deadlift"
+    assert key.scope.to_json() == {"kind": "dose", "version": "pv-2", "target": "bb_deadlift"}
+
+
+@pytest.mark.parametrize(
+    "key", ["dose_off_band@dose:pv-2", "dose_off_band@dose:pv-2/bb_deadlift/extra"]
+)
+def test_a_dose_key_with_one_ref_or_three_has_the_wrong_refs(key: str) -> None:
+    with pytest.raises(Invalid, match="wrong refs for a dose scope"):
+        FlagKey.parse(key)
+
+
+def test_a_dose_scope_takes_its_target_and_no_other_kind_does() -> None:
+    with pytest.raises(ValueError):
+        Scope("dose", version_id="pv-2")
+    with pytest.raises(ValueError):
+        Scope("version", version_id="pv-2", target="per_muscle")
+
+
 def an_acknowledgement(
     key: str, params_hash: str, *, source: AcknowledgementSource = "weekplan"
 ) -> Acknowledgement:
