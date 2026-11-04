@@ -26,7 +26,7 @@ from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
-# Warnings once raised on the version scope and now raised once per case on a scope of their own.
+# Warnings raised once per case; acknowledging the version-wide key names the per-case keys.
 PER_CASE_WARNINGS = {
     "dose_off_band": "dose target",
     "priority_lift_absent": "priority lift",
