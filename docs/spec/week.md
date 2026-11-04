@@ -24,12 +24,15 @@ A workout can match only a planned session whose **window** covers the workout's
 | `daily` | the day itself (each day is its own planned session) |
 
 Among the planned sessions whose window covers the date, a workout whose `routine_id` equals the
-session's routine takes that session first; otherwise it takes the first unmatched candidate in
-session order. Each workout matches at most one planned session and each planned session takes
-at most one workout, so two workouts on a day with one planned session leave the second
-unmatched. A routine id is a hint inside the window, never a Match on its own: a workout logged
-from a routine on a day no session's window covers is unmatched. Workouts are matched in date
-order, then by Hevy start time.
+session's routine takes that session first, whatever its window. Otherwise it takes the unmatched
+candidate with the narrowest window: a `weekly` or `daily` session planned on that day before a
+`standing` one, so a standing session takes a workout only on a day no unmatched one-day session
+claims it. Session order breaks ties between candidates of the same window. Each workout
+matches at most one planned session and each planned session takes at most one workout, so two
+workouts on a day with one planned session leave the second unmatched. A routine id is a hint
+inside the window, never a Match on its own: a workout logged from a routine on a day no
+session's window covers is unmatched. Workouts are matched in date order, then by Hevy start
+time.
 
 A `match` Annotation naming the planned session overrides the rule for that workout (two
 workouts on one day, a session logged on the wrong date). Pre-cutover workouts have no Match
