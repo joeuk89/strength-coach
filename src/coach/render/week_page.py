@@ -34,7 +34,17 @@ def week_page(week: WeekPage | None, *, units: Units, pin: str) -> str:
 def _session(session: PlannedSessionPage, units: Units, pin: str) -> str:
     day = DAY_NAMES[session.date.weekday()]
     heading = f"## {day} {session.date.isoformat()}: {session.title}"
+    if not session.lines:
+        return "\n\n".join([heading, _lineless(session)])
     return "\n\n".join([heading, *(_line(line, units, pin) for line in session.lines)])
+
+
+def _lineless(session: PlannedSessionPage) -> str:
+    kind = session.kind.replace("_", "-").capitalize()
+    if not session.estimated_sets:
+        return kind
+    sets = ", ".join(f"{muscle} {count}" for muscle, count in session.estimated_sets.items())
+    return f"{kind} · estimated sets: {sets}"
 
 
 def _line(line: PageLine, units: Units, pin: str) -> str:

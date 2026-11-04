@@ -6,7 +6,8 @@ from support.blocks import two_closed_blocks
 from support.closed_weeks import a_check_in, a_planned_squat_week, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
 from support.pages import the_pages
-from support.plans import a_frozen_prescription, a_squat_program
+from support.plans import SQUAT_LINE, a_frozen_prescription, a_squat_program
+from support.program_drafts import a_session
 from support.programs import a_config
 
 from coach.core.config import Config, ImplementChoice, PlatePoolLocation
@@ -195,3 +196,24 @@ def test_the_progress_page_shows_each_priority_lifts_e1rm_now() -> None:
 
     bench = next(line for line in page.splitlines() if line.startswith("| bb_bench_press"))
     assert bench.split(" | ")[2] == "141.83"
+
+
+PT = a_session(
+    "pt",
+    title="PT · chest and back",
+    kind="coach_led",
+    line=None,
+    estimated_sets={"chest": 4, "lats": 4, "biceps": 3},
+)
+
+
+def test_the_week_page_heads_a_coach_led_session_with_its_estimated_sets() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), PT)
+    a_planned_squat_week(conn, monday(0))
+
+    page = the_pages(conn)["pages/week.md"]
+
+    assert (
+        "## Wed 2026-11-04: PT · chest and back\n\n"
+        "Coach-led · estimated sets: chest 4, lats 4, biceps 3"
+    ) in page

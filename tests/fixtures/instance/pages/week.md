@@ -4,18 +4,29 @@
 
 Plan `wp-2026-10-26`, rotation week A, approved 2026-10-25T12:00:00Z.
 
-## Mon 2026-10-26: Calves
+## Mon 2026-10-26: Lower-A
 
-### Calf Raise (Dumbbell)
+### Back Squat (Barbell)
 
-- 3×8–10 @8 at 30 lb
+- 3×8–10 @8 at 260 lb
 
-Change: first prescription. From `start_load`.
+Change: held. From `exposure:00000000-0000-4000-8000-005000000000/bb_back_squat`.
 
 | step | from | to | cause |
 | --- | --- | --- | --- |
-| scheme | – | 30 | start_load |
-| rack | 30 | 30 | row |
+| rack | 260 | 260 | row |
+
+### Romanian Deadlift (Barbell)
+
+- 3×8–10 @8 at 135 lb
+
+Change: held. From `exposure:00000000-0000-4000-8000-005000000000/bb_romanian_deadlift`.
+
+| step | from | to | cause |
+| --- | --- | --- | --- |
+| rack | 135 | 135 | row |
+
+- warning `stall_streak`: 3 exposures in a row with no gain on the double_progression metric ([rn:progression-methods §4](https://github.com/joeuk89/strength-coach/blob/v1.0.0/docs/spec/progression-methods.md))
 
 ## Mon 2026-10-26: Core-A
 
@@ -43,29 +54,18 @@ Change: first prescription. From `start_load`.
 | scheme | – | 40 | start_load |
 | rack | 40 | 40 | row |
 
-## Mon 2026-10-26: Lower-A
+## Mon 2026-10-26: Calves
 
-### Back Squat (Barbell)
+### Calf Raise (Dumbbell)
 
-- 3×8–10 @8 at 260 lb
+- 3×8–10 @8 at 30 lb
 
-Change: held. From `exposure:00000000-0000-4000-8000-005000000000/bb_back_squat`.
-
-| step | from | to | cause |
-| --- | --- | --- | --- |
-| rack | 260 | 260 | row |
-
-### Romanian Deadlift (Barbell)
-
-- 3×8–10 @8 at 135 lb
-
-Change: held. From `exposure:00000000-0000-4000-8000-005000000000/bb_romanian_deadlift`.
+Change: first prescription. From `start_load`.
 
 | step | from | to | cause |
 | --- | --- | --- | --- |
-| rack | 135 | 135 | row |
-
-- warning `stall_streak`: 3 exposures in a row with no gain on the double_progression metric ([rn:progression-methods §4](https://github.com/joeuk89/strength-coach/blob/v1.0.0/docs/spec/progression-methods.md))
+| scheme | – | 30 | start_load |
+| rack | 30 | 30 | row |
 
 ## Mon 2026-10-26: Shoulders
 
