@@ -278,6 +278,42 @@ def test_an_acknowledgement_of_a_warning_adopt_did_not_raise_is_unmatched() -> N
     assert keyed(a_draft(acknowledge=[entry])) == ["acknowledgement_unmatched@version:pv-1"]
 
 
+def test_a_version_wide_dose_acknowledgement_names_the_dose_keys_adopt_raised() -> None:
+    stale = "dose_off_band@version:pv-1"
+    entry = {"flag": stale, "because": "coach_judgement", "text": "x"}
+    raised = a_context(
+        raised_warnings=frozenset(
+            {
+                "dose_off_band@dose:pv-1/pull_up",
+                "dose_off_band@dose:pv-1/bb_deadlift",
+                "emphasis_off_goal@version:pv-1",
+            }
+        )
+    )
+
+    [flag] = flags_of(a_draft(acknowledge=[entry]), raised)
+
+    assert flag.key == "acknowledgement_unmatched@version:pv-1"
+    assert dict(flag.params) == {"flag_key": stale}
+    assert flag.message == (
+        f"adopt raised no {stale}; remove the [[acknowledge]] entry and acknowledge each dose "
+        "target on its own key: dose_off_band@dose:pv-1/bb_deadlift, "
+        "dose_off_band@dose:pv-1/pull_up"
+    )
+
+
+def test_a_version_wide_dose_acknowledgement_with_no_dose_raised_just_goes() -> None:
+    stale = "dose_off_band@version:pv-1"
+    entry = {"flag": stale, "because": "coach_judgement", "text": "x"}
+
+    [flag] = flags_of(a_draft(acknowledge=[entry]))
+
+    assert flag.message == (
+        f"adopt raised no {stale}; remove the [[acknowledge]] entry: adopt raised no "
+        "dose_off_band on this Draft"
+    )
+
+
 def test_every_violation_is_reported_in_one_run() -> None:
     draft = a_draft(
         a_session("push", a_line(start_load=61), a_line("db_curl", start_load=None)),
