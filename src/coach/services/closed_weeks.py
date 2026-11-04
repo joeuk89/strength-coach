@@ -255,7 +255,7 @@ class WeekLog:
             version = programs.in_force_at(self.conn, at)
             form = version.form if version else None
             overrides = week_plans.stored_overrides(self.conn, str(plan["id"])) if plan else ()
-            planned = self._planned(plan, form, overrides, monday) if plan and form else ()
+            planned = self._planned(plan, form, overrides) if plan and form else ()
             self._plans[monday] = _WeekPlan(form, overrides, planned)
         return self._plans[monday]
 
@@ -272,29 +272,11 @@ class WeekLog:
         plan: Row,
         form: ProgramForm,
         overrides: Sequence[PlanOverride],
-        monday: datetime.date,
     ) -> tuple[PlannedWork, ...]:
-        """A drop stays in the week as a Miss, so the sessions derive without it. The rehab
-        sessions are those open when the plan was approved, so a later niggle event leaves the
-        week as it closed."""
         plan_id = str(plan["id"])
-        approved_on = str(plan["approved_at"])[:10]
-        rehab = tuple(r.session for r in self.rehab if r.open_on(approved_on))
         dropped = {o.session_id for o in overrides if o.kind == "drop_session"}
         held = {(o.session_id, o.exercise_id) for o in overrides if o.kind == "hold"}
-        sessions = choose_sessions(
-            planned_sessions(
-                form,
-                position=str(plan["position"]),
-                monday=monday,
-                rehab=rehab,
-                parked=parked_sessions(self.conn, monday),
-            ),
-            [o for o in overrides if o.kind != "drop_session"],
-            form=form,
-            monday=monday,
-            rehab=rehab,
-        )
+        sessions = plan_sessions(self.conn, plan, form, overrides, self.rehab)
         hold_lines = held | {
             (s.session_id, line.exercise)
             for s in sessions
@@ -313,6 +295,34 @@ class WeekLog:
             )
             for s in sessions
         )
+
+
+def plan_sessions(
+    conn: Connection,
+    plan: Row,
+    form: ProgramForm,
+    overrides: Sequence[PlanOverride],
+    rehab: Sequence[niggles.RehabHistory],
+) -> tuple[PlannedSession, ...]:
+    """The sessions a stored plan plans, in date then plan order. A drop stays in the week as a
+    Miss, so the sessions derive without it. The rehab sessions are those open when the plan was
+    approved, so a later niggle event leaves the week as it closed."""
+    monday = datetime.date.fromisoformat(str(plan["week"]))
+    approved_on = str(plan["approved_at"])[:10]
+    open_rehab = tuple(r.session for r in rehab if r.open_on(approved_on))
+    return choose_sessions(
+        planned_sessions(
+            form,
+            position=str(plan["position"]),
+            monday=monday,
+            rehab=open_rehab,
+            parked=parked_sessions(conn, monday),
+        ),
+        [o for o in overrides if o.kind != "drop_session"],
+        form=form,
+        monday=monday,
+        rehab=open_rehab,
+    )
 
 
 def trained_without_sets(
