@@ -90,14 +90,14 @@ class _Warnings:
 
     def priority_lift_absent(self) -> None:
         on_lines = {line.exercise for session in self.form.sessions for line in session.lines}
-        absent = [lift for lift in self.priority_lifts if lift not in on_lines]
-        if absent:
-            self.raise_(
-                "priority_lift_absent",
-                self.version_scope,
-                {"exercise_id": absent[0]},
-                f"priority lift {absent[0]} is on no line of the version",
-            )
+        for lift in self.priority_lifts:
+            if lift not in on_lines:
+                self.raise_(
+                    "priority_lift_absent",
+                    Scope("priority_lift", version_id=self.context.version_id, exercise_id=lift),
+                    {"exercise_id": lift},
+                    f"priority lift {lift} is on no line of the version",
+                )
 
     def dose(self) -> None:
         dose = self.form.dose
@@ -133,7 +133,12 @@ class _Warnings:
                 if patterns[0] != patterns[1] or set(primary[0]) != set(primary[1]):
                     self.raise_(
                         "counted_variant_off_pattern",
-                        self.version_scope,
+                        Scope(
+                            "counted_variant",
+                            version_id=self.context.version_id,
+                            lift=lift,
+                            variant=variant,
+                        ),
                         {
                             "lift": lift,
                             "variant": variant,
@@ -142,7 +147,6 @@ class _Warnings:
                         },
                         f"{lift} counts {variant}, whose pattern or primary muscles differ",
                     )
-                    return
 
     def _fields(self, exercise_id: str) -> Mapping[str, object]:
         declared = self.form.exercises.get(exercise_id) or {}

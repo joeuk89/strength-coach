@@ -15,6 +15,8 @@ type ScopeKind = Literal[
     "instance",
     "version",
     "dose",
+    "priority_lift",
+    "counted_variant",
     "exercise",
 ]
 type Refs = tuple[str, ...]
@@ -341,7 +343,7 @@ ADOPT_WARNINGS = (
         ("scheme", "emphasis", "expected_band"),
         ("rn:goal-programming §4",),
     ),
-    adopt_warning("priority_lift_absent", ("version",), ("exercise_id",)),
+    adopt_warning("priority_lift_absent", ("priority_lift",), ("exercise_id",)),
     adopt_warning(
         "priority_lift_not_first",
         ("session",),
@@ -356,7 +358,7 @@ ADOPT_WARNINGS = (
     ),
     adopt_warning(
         "counted_variant_off_pattern",
-        ("version",),
+        ("counted_variant",),
         ("lift", "variant", "patterns", "primary_muscles"),
     ),
     adopt_warning(

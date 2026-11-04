@@ -747,14 +747,14 @@ def test_a_lat_pulldown_counts_toward_the_pull_up_and_a_fly_warns() -> None:
     )
     fly = run(the_worked_store(), with_pull_up_counting("db_fly"), available_days=EVERY_DAY)
 
-    assert "counted_variant_off_pattern@version:pv-1" not in keys(pulldown)
-    assert "counted_variant_off_pattern@version:pv-1" in keys(fly)
+    assert [k for k in keys(pulldown) if k.startswith("counted_variant_off_pattern")] == []
+    assert "counted_variant_off_pattern@counted_variant:pv-1/pull_up/db_fly" in keys(fly)
 
 
-def test_an_acknowledgement_leaves_counted_variant_off_pattern_on_the_version() -> None:
+def test_an_acknowledgement_leaves_counted_variant_off_pattern_on_its_variant() -> None:
     entry = """
 [[acknowledge]]
-flag = "counted_variant_off_pattern@version:pv-1"
+flag = "counted_variant_off_pattern@counted_variant:pv-1/pull_up/db_fly"
 because = "coach_judgement"
 text = "Counted on purpose."
 """
