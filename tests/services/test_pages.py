@@ -6,7 +6,8 @@ from support.blocks import two_closed_blocks
 from support.closed_weeks import a_check_in, a_planned_squat_week, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
 from support.pages import the_pages
-from support.plans import a_frozen_prescription, a_squat_program
+from support.plans import SQUAT_LINE, a_frozen_prescription, a_plan_override, a_squat_program
+from support.program_drafts import a_session
 from support.programs import a_config
 
 from coach.core.config import Config, ImplementChoice, PlatePoolLocation
@@ -195,3 +196,80 @@ def test_the_progress_page_shows_each_priority_lifts_e1rm_now() -> None:
 
     bench = next(line for line in page.splitlines() if line.startswith("| bb_bench_press"))
     assert bench.split(" | ")[2] == "141.83"
+
+
+PT = a_session(
+    "pt",
+    title="PT · chest and back",
+    kind="coach_led",
+    line=None,
+    estimated_sets={"chest": 4, "lats": 4, "biceps": 3},
+)
+
+
+def test_the_week_page_heads_a_coach_led_session_with_its_estimated_sets() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), PT)
+    a_planned_squat_week(conn, monday(0))
+
+    page = the_pages(conn)["pages/week.md"]
+
+    assert (
+        "## Wed 2026-11-04: PT · chest and back\n\n"
+        "Coach-led · estimated sets: chest 4, lats 4, biceps 3"
+    ) in page
+
+
+def test_the_week_page_heads_a_planned_session_with_no_frozen_lines_with_its_kind() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), a_session("upper"))
+    a_planned_squat_week(conn, monday(0))
+
+    page = the_pages(conn)["pages/week.md"]
+
+    assert "## Wed 2026-11-04: Upper\n\nLifting\n" in page
+
+
+def headings(page: str) -> list[str]:
+    return [line for line in page.splitlines() if line.startswith("## ")]
+
+
+def test_the_week_page_orders_sessions_by_date_then_plan_order() -> None:
+    conn = a_squat_program(
+        a_session("lower", SQUAT_LINE),
+        a_session("upper"),
+        a_session("core", title="Core", cadence="standing"),
+        schedule={"rotation": ["A"], "A": {"mon": "lower", "tue": "upper"}},
+    )
+    a_planned_squat_week(conn, monday(0))
+
+    assert headings(the_pages(conn)["pages/week.md"]) == [
+        "## Mon 2026-11-02: Lower",
+        "## Mon 2026-11-02: Core",
+        "## Tue 2026-11-03: Upper",
+    ]
+
+
+def test_the_week_page_leaves_out_a_session_the_plan_drops() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), PT)
+    plan_id = a_planned_squat_week(conn, monday(0))
+    a_plan_override(conn, plan_id, "drop_session", "pt", None)
+
+    assert headings(the_pages(conn)["pages/week.md"]) == [
+        "## Mon 2026-11-02: Lower",
+        "## Overrides",
+    ]
+
+
+def test_the_week_page_heads_a_daily_session_on_each_day() -> None:
+    conn = a_squat_program(
+        a_session("lower", SQUAT_LINE),
+        a_session("mobility", kind="practice", tier="optional", cadence="daily"),
+    )
+    a_planned_squat_week(conn, monday(0))
+
+    days = [h for h in headings(the_pages(conn)["pages/week.md"]) if h.endswith(": Mobility")]
+    assert days == [
+        f"## {day} 2026-11-{date:02d}: Mobility"
+        for day, date in zip(
+            ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), range(2, 9), strict=True
+        )
+    ]
