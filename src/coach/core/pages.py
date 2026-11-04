@@ -72,7 +72,9 @@ class PlannedSessionPage:
     session_id: str
     title: str
     date: datetime.date
+    kind: str
     lines: tuple[PageLine, ...]
+    estimated_sets: Mapping[str, int] | None = None
 
 
 @dataclass(frozen=True)

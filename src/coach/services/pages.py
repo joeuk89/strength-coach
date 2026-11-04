@@ -19,9 +19,11 @@ from coach.core.pages import (
     RoutinePage,
     WeekPage,
 )
+from coach.core.prescription import PlannedSession
 from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
+from coach.services.closed_weeks import plan_sessions
 from coach.services.progress import newest_day, progress
 from coach.store import (
     check_ins,
@@ -117,7 +119,7 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
     if plan is None:
         return None
     plan_id = str(plan["id"])
-    sessions, _ = _sessions(conn, plan)
+    authored, _ = _sessions(conn, plan)
     by_day: dict[tuple[str, str], list[Row]] = {}
     for row in week_plans.prescriptions(conn, plan_id):
         by_day.setdefault((str(row["date"]), str(row["session_id"])), []).append(row)
@@ -128,18 +130,38 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
         approved_at=str(plan["approved_at"]),
         sessions=tuple(
             PlannedSessionPage(
-                session_id=session_id,
-                title=_title(sessions, session_id),
-                date=datetime.date.fromisoformat(day),
-                lines=tuple(_line(row, names) for row in found),
+                session_id=s.session_id,
+                title=_title(authored, s.session_id),
+                date=s.date,
+                kind=s.kind,
+                lines=tuple(
+                    _line(row, names) for row in by_day.get((s.date.isoformat(), s.session_id), ())
+                ),
+                estimated_sets=_estimated_sets(authored, s.session_id),
             )
-            for (day, session_id), found in by_day.items()
+            for s in _planned(conn, plan)
         ),
         overrides=tuple(
             {k: row[k] for k in ("kind", "session_id", "exercise_id", "because", "text")}
             for row in week_plans.overrides(conn, plan_id)
         ),
     )
+
+
+def _planned(conn: Connection, plan: Row) -> tuple[PlannedSession, ...]:
+    """The plan's sessions as its closed week derives them, drops left out."""
+    version = programs.in_force_at(conn, str(plan["approved_at"]))
+    if version is None:
+        return ()
+    overrides = week_plans.stored_overrides(conn, str(plan["id"]))
+    dropped = {o.session_id for o in overrides if o.kind == "drop_session"}
+    planned = plan_sessions(conn, plan, version.form, overrides, niggles.rehab_histories(conn))
+    return tuple(s for s in planned if s.session_id not in dropped)
+
+
+def _estimated_sets(sessions: Mapping[str, Session], session_id: str) -> Mapping[str, int] | None:
+    session = sessions.get(session_id)
+    return session.estimated_sets if session else None
 
 
 def _routines(

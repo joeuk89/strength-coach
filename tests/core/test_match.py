@@ -88,6 +88,39 @@ def test_a_match_claim_moves_a_workout_to_the_session_it_names() -> None:
     assert found == {"h-1": "push", "h-2": "lower"}
 
 
+def test_an_unhinted_workout_takes_the_weekly_session_on_its_day_before_a_standing_one() -> None:
+    planned = [a_planned("circuit", 0, "standing"), a_planned("pt", 1)]
+
+    assert matched(planned, [a_workout("h-1", 1)]) == {"h-1": "pt"}
+
+
+def test_an_unhinted_workout_takes_the_daily_session_on_its_day_before_a_standing_one() -> None:
+    planned = [a_planned("circuit", 0, "standing"), a_planned("hang", 1, "daily")]
+
+    assert matched(planned, [a_workout("h-1", 1)]) == {"h-1": "hang"}
+
+
+def test_an_unhinted_workout_on_a_day_no_one_day_session_claims_takes_the_standing_one() -> None:
+    planned = [a_planned("circuit", 0, "standing"), a_planned("pt", 1)]
+
+    assert matched(planned, [a_workout("h-1", 3)]) == {"h-1": "circuit"}
+
+
+def test_the_standing_sessions_routine_beats_a_narrower_window() -> None:
+    planned = [a_planned("circuit", 0, "standing"), a_planned("pt", 1)]
+
+    found = matched(planned, [a_workout("h-1", 1, "r-circuit")], {"circuit": "r-circuit"})
+
+    assert found == {"h-1": "circuit"}
+
+
+def test_two_weekly_sessions_on_one_day_take_unhinted_workouts_in_plan_order() -> None:
+    planned = [a_planned("circuit", 0, "standing"), a_planned("push", 1), a_planned("pull", 1)]
+    workouts = [a_workout("h-1", 1, start="07:00"), a_workout("h-2", 1, start="18:00")]
+
+    assert matched(planned, workouts) == {"h-1": "push", "h-2": "pull"}
+
+
 def a_set(template: str) -> StoredSet:
     return StoredSet(0, template, None, "working", None, None, 1200, None, None, None)
 

@@ -96,6 +96,16 @@ def test_a_manual_coach_led_workout_on_a_wednesday_trains_its_standing_session()
     assert week.kind == "hard"
 
 
+def test_a_workout_on_a_weekly_sessions_day_trains_it_and_not_an_earlier_standing_one() -> None:
+    circuit = PlannedWork(PlannedSession("circuit", MONDAY, "home", "conditioning", (), "standing"))
+    facts = WeekFacts(MONDAY, (circuit, planned("push", 1)), (bench("h-1", 1),), muscles=MUSCLES)
+
+    week = close_week(facts)
+
+    assert [(s.trained, s.workout_id) for s in week.sessions] == [(False, None), (True, "h-1")]
+    assert week.dose == {"chest": 3, "triceps": 1.5}
+
+
 def test_a_rehab_workout_counts_only_its_sets_logged_above_rpe_5() -> None:
     def rehab_workout(id_: str, rpe: float | None) -> WeekWorkout:
         exposure = an_exposure(MONDAY.isoformat(), (20, 15, rpe), (20, 15, None), workout_id=id_)
