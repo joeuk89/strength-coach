@@ -279,6 +279,20 @@ def test_a_plate_pool_implement_choice_may_name_no_hardware() -> None:
     assert home.implement["leg"] == ImplementChoice()
 
 
+def test_a_plate_pool_implement_choice_may_name_a_list_of_hardware_ids() -> None:
+    document = a_document()
+    document["location"]["home"]["implement"]["dumbbell"] = {
+        "hardware": ["screw-standard", "screw-long", "none"]
+    }
+
+    home = parse_config(document).locations[0]
+
+    assert isinstance(home, PlatePoolLocation)
+    assert home.implement["dumbbell"] == ImplementChoice(
+        hardware=("screw-standard", "screw-long", "none")
+    )
+
+
 def test_a_plate_pool_implement_with_no_choice_table_is_refused_naming_it() -> None:
     document = a_document()
     del document["location"]["home"]["implement"]["dumbbell"]
@@ -290,7 +304,14 @@ def test_a_plate_pool_implement_with_no_choice_table_is_refused_naming_it() -> N
 
 @pytest.mark.parametrize(
     ("key", "value"),
-    [("hardware", ""), ("hardware", 1), ("single", "yes"), ("collars", "clamp")],
+    [
+        ("hardware", ""),
+        ("hardware", 1),
+        ("hardware", ["screw-long", ""]),
+        ("hardware", ["screw-long", 2]),
+        ("single", "yes"),
+        ("collars", "clamp"),
+    ],
 )
 def test_a_plate_pool_implement_choice_of_the_wrong_shape_is_refused(key: str, value: Any) -> None:
     document = a_document()
