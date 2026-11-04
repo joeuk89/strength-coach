@@ -31,12 +31,18 @@ def week_page(week: WeekPage | None, *, units: Units, pin: str) -> str:
     )
 
 
+NOT_DERIVED = "Not in the current derivation: frozen rows kept as approved."
+
+
 def _session(session: PlannedSessionPage, units: Units, pin: str) -> str:
     day = DAY_NAMES[session.date.weekday()]
-    heading = f"## {day} {session.date.isoformat()}: {session.title}"
+    parts = [f"## {day} {session.date.isoformat()}: {session.title}"]
+    if not session.derived:
+        parts.append(NOT_DERIVED)
     if not session.lines:
-        return "\n\n".join([heading, _lineless(session)])
-    return "\n\n".join([heading, *(_line(line, units, pin) for line in session.lines)])
+        parts.append(_lineless(session))
+    parts.extend(_line(line, units, pin) for line in session.lines)
+    return "\n\n".join(parts)
 
 
 def _lineless(session: PlannedSessionPage) -> str:

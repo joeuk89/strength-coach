@@ -194,6 +194,15 @@ Citations: rn:running-load.5 and .6; rn:running-load.1 and .4; rn:concurrent-tra
 Dropped: the warning on each conditioning session in a light week, the "sleep debt" reason (the
 Short-sleep week trigger covers it) and the 43+ re-test (ADR 0005 already says it is not a rule).
 
+## The weekly sheet
+
+`pages/week.md` lists the sessions the plan in force plans, derived from the version in force
+when the plan was approved exactly as the closed week derives them, a dropped session left out.
+A frozen prescription row whose (date, session) that derivation no longer plans is never lost:
+it renders after the derived sessions, in date then session order, marked as not in the current
+derivation. A plan with no version in force at its approval renders its frozen rows alone the
+same way.
+
 ## When a check-in is due
 
 | Tier | Due when |

@@ -4,6 +4,7 @@ import datetime
 from collections.abc import Mapping, Sequence
 from typing import cast
 
+from coach.core.closed_week.match import PlannedRef
 from coach.core.config import Config, PlatePoolLocation, Units
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
@@ -19,11 +20,10 @@ from coach.core.pages import (
     RoutinePage,
     WeekPage,
 )
-from coach.core.prescription import PlannedSession
 from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
-from coach.services.closed_weeks import plan_sessions
+from coach.services.closed_weeks import planned_week
 from coach.services.progress import newest_day, progress
 from coach.store import (
     check_ins,
@@ -37,6 +37,7 @@ from coach.store import (
     week_plans,
 )
 from coach.store.connection import Connection
+from coach.store.programs import VersionRow
 from coach.store.rows import Row
 
 ATHLETE_READS = 3
@@ -101,17 +102,16 @@ def _line(row: Row, names: Mapping[str, tuple[str, str | None]]) -> PageLine:
     )
 
 
-def _sessions(conn: Connection, plan: Row | None) -> tuple[dict[str, Session], str | None]:
-    """Every session as the version in force when the plan was approved names it, rehab
-    sessions included, and that version's default location."""
-    version = (
-        programs.in_force_at(conn, str(plan["approved_at"])) if plan else programs.latest(conn)
-    )
+def _version_of(conn: Connection, plan: Row | None) -> VersionRow | None:
+    return programs.in_force_at(conn, str(plan["approved_at"])) if plan else programs.latest(conn)
+
+
+def _authored(conn: Connection, version: VersionRow | None) -> dict[str, Session]:
+    """Every session as the version names it, rehab sessions included."""
     found = {s.id: s for s in niggles.every_rehab_session(conn)}
-    if version is None:
-        return found, None
-    found |= {s.id: s for s in version.form.sessions}
-    return found, version.form.location
+    if version is not None:
+        found |= {s.id: s for s in version.form.sessions}
+    return found
 
 
 def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> WeekPage | None:
@@ -119,28 +119,31 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
     if plan is None:
         return None
     plan_id = str(plan["id"])
-    authored, _ = _sessions(conn, plan)
-    by_day: dict[tuple[str, str], list[Row]] = {}
+    week = planned_week(conn, plan, niggles.rehab_histories(conn))
+    authored = _authored(conn, week.version)
+    frozen: dict[PlannedRef, list[Row]] = {}
     for row in week_plans.prescriptions(conn, plan_id):
-        by_day.setdefault((str(row["date"]), str(row["session_id"])), []).append(row)
+        frozen.setdefault((_day(row), str(row["session_id"])), []).append(row)
+    derived = tuple(
+        _session_page(
+            s.session_id, s.date, s.kind, frozen.get((s.date, s.session_id), ()), authored, names
+        )
+        for s in week.kept
+    )
+    planned = week.refs()
+    orphans = tuple(
+        _session_page(
+            session_id, day, _kind(authored, session_id), rows, authored, names, derived=False
+        )
+        for (day, session_id), rows in sorted(frozen.items())
+        if (day, session_id) not in planned
+    )
     return WeekPage(
         plan_id=plan_id,
         week=str(plan["week"]),
         position=str(plan["position"]),
         approved_at=str(plan["approved_at"]),
-        sessions=tuple(
-            PlannedSessionPage(
-                session_id=s.session_id,
-                title=_title(authored, s.session_id),
-                date=s.date,
-                kind=s.kind,
-                lines=tuple(
-                    _line(row, names) for row in by_day.get((s.date.isoformat(), s.session_id), ())
-                ),
-                estimated_sets=_estimated_sets(authored, s.session_id),
-            )
-            for s in _planned(conn, plan)
-        ),
+        sessions=derived + orphans,
         overrides=tuple(
             {k: row[k] for k in ("kind", "session_id", "exercise_id", "because", "text")}
             for row in week_plans.overrides(conn, plan_id)
@@ -148,20 +151,37 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
     )
 
 
-def _planned(conn: Connection, plan: Row) -> tuple[PlannedSession, ...]:
-    """The plan's sessions as its closed week derives them, drops left out."""
-    version = programs.in_force_at(conn, str(plan["approved_at"]))
-    if version is None:
-        return ()
-    overrides = week_plans.stored_overrides(conn, str(plan["id"]))
-    dropped = {o.session_id for o in overrides if o.kind == "drop_session"}
-    planned = plan_sessions(conn, plan, version.form, overrides, niggles.rehab_histories(conn))
-    return tuple(s for s in planned if s.session_id not in dropped)
+def _session_page(
+    session_id: str,
+    day: datetime.date,
+    kind: str,
+    rows: Sequence[Row],
+    authored: Mapping[str, Session],
+    names: Mapping[str, tuple[str, str | None]],
+    *,
+    derived: bool = True,
+) -> PlannedSessionPage:
+    session = authored.get(session_id)
+    return PlannedSessionPage(
+        session_id=session_id,
+        title=_title(authored, session_id),
+        date=day,
+        kind=kind,
+        lines=tuple(_line(row, names) for row in rows),
+        estimated_sets=session.estimated_sets if session and not rows else None,
+        derived=derived,
+    )
 
 
-def _estimated_sets(sessions: Mapping[str, Session], session_id: str) -> Mapping[str, int] | None:
-    session = sessions.get(session_id)
-    return session.estimated_sets if session else None
+def _kind(authored: Mapping[str, Session], session_id: str) -> str:
+    """A frozen row's session is no longer authored when its version is gone: it was a
+    prescribed line, so it reads as lifting."""
+    session = authored.get(session_id)
+    return session.kind if session else "lifting"
+
+
+def _day(row: Row) -> datetime.date:
+    return datetime.date.fromisoformat(str(row["date"]))
 
 
 def _routines(
@@ -181,9 +201,12 @@ def _routine(
     names: Mapping[str, tuple[str, str | None]],
 ) -> RoutinePage:
     plan = week_plans.by_id(conn, live.plan_id) if live.plan_id else None
-    sessions, default_location = _sessions(conn, plan)
+    version = _version_of(conn, plan)
+    sessions = _authored(conn, version)
     session = sessions.get(live.session_id)
-    location = (session.location if session else None) or default_location
+    location = (session.location if session else None) or (
+        version.form.location if version else None
+    )
     rows = (
         [
             r

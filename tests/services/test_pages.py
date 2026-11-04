@@ -3,10 +3,16 @@ import datetime
 import re
 
 from support.blocks import two_closed_blocks
-from support.closed_weeks import a_check_in, a_planned_squat_week, monday
+from support.closed_weeks import a_check_in, a_planned_squat_week, closed_through, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
 from support.pages import the_pages
-from support.plans import SQUAT_LINE, a_frozen_prescription, a_plan_override, a_squat_program
+from support.plans import (
+    SQUAT_LINE,
+    a_frozen_prescription,
+    a_plan_override,
+    a_squat_program,
+    an_approved_plan,
+)
 from support.program_drafts import a_session
 from support.programs import a_config
 
@@ -14,6 +20,7 @@ from coach.core.config import Config, ImplementChoice, PlatePoolLocation
 from coach.core.hevy_actions import MapStatus
 from coach.core.mirror import MirroredRoutine
 from coach.render.pages import render_pages
+from coach.services.closed_weeks import closed_weeks
 from coach.services.pages import page_facts
 from coach.store import mirrors, routine_map
 from coach.store.connection import Connection
@@ -257,6 +264,57 @@ def test_the_week_page_leaves_out_a_session_the_plan_drops() -> None:
         "## Mon 2026-11-02: Lower",
         "## Overrides",
     ]
+
+
+def test_the_closed_week_and_the_week_page_read_a_dropped_session_from_one_derivation() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), a_session("upper"))
+    plan_id = a_planned_squat_week(conn, monday(0))
+    a_plan_override(conn, plan_id, "drop_session", "upper", None)
+    closed_through(conn, 1)
+
+    [week] = closed_weeks(conn).weeks
+    page = the_pages(conn)["pages/week.md"]
+
+    assert [(s.session.session_id, s.work.dropped) for s in week.sessions] == [
+        ("lower", False),
+        ("upper", True),
+    ]
+    assert headings(page) == ["## Mon 2026-11-02: Lower", "## Overrides"]
+
+
+NOT_DERIVED = "Not in the current derivation: frozen rows kept as approved."
+
+
+def test_the_week_page_keeps_a_frozen_row_the_derivation_no_longer_plans_after_the_rest() -> None:
+    conn = a_squat_program(a_session("lower", SQUAT_LINE), a_session("upper"))
+    plan_id = a_planned_squat_week(conn, monday(0))
+    a_frozen_prescription(
+        conn, plan_id, "arms", "2026-11-03", "db_curl", set_groups=[AT_175], change="held"
+    )
+
+    page = the_pages(conn)["pages/week.md"]
+
+    assert headings(page) == [
+        "## Mon 2026-11-02: Lower",
+        "## Wed 2026-11-04: Upper",
+        "## Tue 2026-11-03: arms",
+    ]
+    assert f"## Tue 2026-11-03: arms\n\n{NOT_DERIVED}\n\n### Bicep Curl (Dumbbell)" in page
+    assert page.count(NOT_DERIVED) == 1
+
+
+def test_the_week_page_renders_the_frozen_rows_of_a_plan_with_no_version_in_force() -> None:
+    conn = a_squat_program()
+    plan_id = an_approved_plan(conn, monday(0), approved_at="2026-10-01T08:00:00+00:00")
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(0), "bb_front_squat", set_groups=[AT_175], change="held"
+    )
+
+    page = the_pages(conn)["pages/week.md"]
+
+    assert headings(page) == ["## Mon 2026-11-02: lower"]
+    assert NOT_DERIVED in page
+    assert "4×6–8 @8 at 175 lb" in page
 
 
 def test_the_week_page_heads_a_daily_session_on_each_day() -> None:
