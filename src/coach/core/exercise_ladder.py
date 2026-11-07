@@ -98,27 +98,17 @@ def climb_offer(
     """`rung_met` naming the next rung, or `ladder_top` on the last, when the newest run of
     ordinary exposures of the standing rung's exercise since its start each meet the rung's
     criterion. A `manual` rung waits for the athlete's word."""
-    criterion = full_criterion(ladder, standing.index)
-    if criterion.manual:
-        return None
-    rung = ladder.rungs[standing.index - 1]
-    since = standing.since
-    history = ordinary(
-        newest_first(
-            e
-            for e in exposures
-            if e.exercise_id == rung.exercise
-            and e.session_id in (None, scope.session_id)
-            and (since is None or since <= e.date)
-            and e.date < on
-        )
+    read = ladder_read(
+        ladder,
+        standing,
+        exposures,
+        session_id=str(scope.session_id),
+        line_key=str(scope.exercise_id),
+        before=on,
     )
-    needed = criterion.exposures or DEFAULT_EXPOSURES
-    run = history[:needed]
-    if len(run) < needed:
+    if not read.met:
         return None
-    if not all(_meets(rung.sets, criterion, exposure) for exposure in run):
-        return None
+    run = _qualifying_run(ladder, standing, exposures, read.session_id, on)[: read.exposures]
     if standing.index == len(ladder.rungs):
         return raise_flag(
             "ladder_top",
@@ -139,6 +129,81 @@ def climb_offer(
         f"rung {standing.index} met its criterion on {len(run)} exposures; rung "
         f"{standing.index + 1}, {following}, is offered",
     )
+
+
+@dataclass(frozen=True)
+class LadderRead:
+    """Where a line stands on its ladder: the standing rung, the newest run of exposures toward
+    its criterion out of the `needed` (none on a `manual` rung), and `met` where the climb is
+    offered as `rung_met` or `ladder_top`."""
+
+    session_id: str
+    line_key: str
+    rung: int
+    exercise: str
+    rungs: int
+    next: str | None
+    exposures: int
+    needed: int | None
+    met: bool
+
+
+def ladder_read(
+    ladder: ExerciseLadder,
+    standing: StandingRung,
+    exposures: Iterable[Exposure],
+    *,
+    session_id: str,
+    line_key: str,
+    before: datetime.date,
+) -> LadderRead:
+    """The line's ladder as the exposures logged before `before` leave it."""
+    criterion = full_criterion(ladder, standing.index)
+    needed = None if criterion.manual else criterion.exposures or DEFAULT_EXPOSURES
+    run = () if needed is None else _qualifying_run(ladder, standing, exposures, session_id, before)
+    count = len(run) if needed is None else min(len(run), needed)
+    top = standing.index == len(ladder.rungs)
+    return LadderRead(
+        session_id=session_id,
+        line_key=line_key,
+        rung=standing.index,
+        exercise=ladder.rungs[standing.index - 1].exercise,
+        rungs=len(ladder.rungs),
+        next=None if top else ladder.rungs[standing.index].exercise,
+        exposures=count,
+        needed=needed,
+        met=needed is not None and count >= needed,
+    )
+
+
+def _qualifying_run(
+    ladder: ExerciseLadder,
+    standing: StandingRung,
+    exposures: Iterable[Exposure],
+    session_id: str,
+    before: datetime.date,
+) -> Sequence[Exposure]:
+    """The newest ordinary exposures of the standing rung's exercise since its start, newest
+    first, up to the first that misses the rung's criterion."""
+    criterion = full_criterion(ladder, standing.index)
+    rung = ladder.rungs[standing.index - 1]
+    since = standing.since
+    history = ordinary(
+        newest_first(
+            e
+            for e in exposures
+            if e.exercise_id == rung.exercise
+            and e.session_id in (None, session_id)
+            and (since is None or since <= e.date)
+            and e.date < before
+        )
+    )
+    run: list[Exposure] = []
+    for exposure in history:
+        if not _meets(rung.sets, criterion, exposure):
+            break
+        run.append(exposure)
+    return run
 
 
 def _meets(sets: Sequence[SetGroup], criterion: Advance, exposure: Exposure) -> bool:
