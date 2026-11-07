@@ -18,11 +18,12 @@ from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.phase_trend import fourteen_day_average, observed_rate
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
+from coach.core.registries.program import COMPOUND_PATTERNS
 from coach.core.units import from_kg
 from coach.services.cadence import cadence_signals
 from coach.services.check_in_warnings import activities, check_in_warnings, weigh_ins
 from coach.services.closed_weeks import WeekLog
-from coach.services.fatigue import COMPOUND_PATTERNS, Fatigue
+from coach.services.fatigue import Fatigue
 from coach.services.status import check_in_due_on
 from coach.store import (
     annotations,

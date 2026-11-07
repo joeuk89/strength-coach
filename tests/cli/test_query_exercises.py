@@ -33,7 +33,7 @@ def test_the_library_reads_by_id_with_each_exercise_s_fields(instance: Path) -> 
         "name": "bb bench press",
         "load_mode": "total",
         "equipment_kind": "barbell",
-        "pattern": "push",
+        "pattern": "horizontal_push",
         "muscles": {"primary": ["chest"], "secondary": []},
         "hevy_template_id": "79D0BB3A",
         "source": "catalogue",
@@ -50,7 +50,7 @@ def test_match_pattern_and_muscle_narrow_the_library_together(instance: Path) ->
         "--pattern",
         "squat",
         "--pattern",
-        "push",
+        "horizontal_push",
         "--muscle",
         "chest",
     )

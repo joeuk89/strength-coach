@@ -176,6 +176,10 @@ VIOLATIONS = (
     violation("unknown_exercise", ("line",), ("exercise_id",), ("program adopt",)),
     violation("unknown_scheme", ("line", "session"), ("scheme", "param"), ("program adopt",)),
     violation("unknown_load_mode", ("line",), ("load_mode",), ("program adopt",)),
+    violation("unknown_pattern", ("exercise",), ("pattern",), ("[[exercise]]", "program adopt")),
+    violation(
+        "unknown_muscle", ("exercise", "session"), ("muscle",), ("[[exercise]]", "program adopt")
+    ),
     violation("duplicate_id", ("version",), ("session_id", "exercise_id"), ("program adopt",)),
     violation(
         "schedule_session_missing",
