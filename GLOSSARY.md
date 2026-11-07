@@ -450,6 +450,16 @@ the engine. When the system limits what the athlete wants, the coach says so pla
 the detail, and may offer to report it. A term of the engine's reaching them is a Voice leak.
 _Avoid_: tone, persona (the athlete's preferred manner is profile prose), system talk
 
+**Report**:
+A bug or a gap the coach files on the engine's issue tracker, after the athlete has approved its
+exact text. Filed for a bug or a gap only, never for the coach disagreeing with a rule.
+_Avoid_: ticket, feedback, complaint, issue (fine for what the tracker holds once it is filed)
+
+**Gap**:
+Something the athlete needs that the engine cannot do. One of the two things a Report is for;
+the other is a bug, in its ordinary sense.
+_Avoid_: limitation, missing feature, enhancement (the tracker's label, not the thing)
+
 **Athlete note**:
 Something the athlete said at a check-in, kept verbatim with the date and, when it is about one
 thing, a pointer to it. Surfaced where it is next useful, never classified by code.
@@ -676,9 +686,9 @@ refused a write, Hevy unreachable, or setup stops it. The specific reason lives 
 _Avoid_: status, error level
 
 **Writing verb**:
-A verb that changes something outside the engine's own store: Hevy, or git. The only kind of verb
-a permission prompt attaches to; each has a dry run. Four in v1.
-_Avoid_: gated command, mutation, asked verb (the same four, seen from the prompt)
+A verb that changes something outside the engine's own store: Hevy, git, or the engine's issue
+tracker. The only kind of verb a permission prompt attaches to; each has a dry run. Five in v1.
+_Avoid_: gated command, mutation, asked verb (the same five, seen from the prompt)
 
 **Dry run**:
 A verb run without writing, returning exactly what the real run would return and whether a guard
