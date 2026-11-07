@@ -2,7 +2,7 @@ from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, two_closed_blocks
 from support.check_in_cards import opened
 from support.clock import FixedClock, at
 from support.kit_fixtures import kit_files
-from support.program_drafts import a_draft, a_line, a_session, toml
+from support.program_drafts import a_draft, a_ladder_line, a_line, a_rung, a_session, toml
 from support.programs import a_config
 
 from coach.core.flag import Flag
@@ -125,3 +125,39 @@ def test_adopt_reads_the_open_signals_for_scheme_change_off_signal() -> None:
     assert [w.key for w in result.warnings if w.code == "scheme_change_off_signal"] == [
         "scheme_change_off_signal@line:push/pull_up"
     ]
+
+
+PULL_UP_LADDER = a_ladder_line(
+    "pull_up",
+    a_rung(sets=[{"count": 3, "reps": 6, "rpe": 8}]),
+    a_rung("chest_dip", sets=[{"count": 3, "reps": 8, "rpe": 8}]),
+)
+
+
+def ladder_blocks() -> Connection:
+    return two_closed_blocks(thursday_pull_ups=True, pull_up_line=PULL_UP_LADDER)
+
+
+def test_a_ladder_stalled_on_its_standing_rung_raises_cadence_slow_on_the_lines_key() -> None:
+    slow = signals_at_check_in(ladder_blocks())["pull_up"]
+
+    assert (slow.code, slow.params["scheme"], slow.params["never"]) == (
+        "cadence_slow",
+        "exercise_ladder",
+        "skip rungs",
+    )
+
+
+def test_a_ladder_standing_on_a_rung_with_no_exposures_raises_no_signal() -> None:
+    conn = ladder_blocks()
+    record(
+        conn,
+        (
+            b'[[decision]]\nkind = "ladder_rung"\nsession = "push"\nexercise = "pull_up"\n'
+            b'rung = 2\nbecause = "progress"\ntext = "on to dips"\n'
+        ),
+        file="d.toml",
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert "pull_up" not in signals_at_check_in(conn)

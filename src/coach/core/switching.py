@@ -52,6 +52,13 @@ SWITCHING: dict[tuple[CadenceSignal, str], Switch] = {
         "skip rungs",
         ("rn:progression-methods §4",),
     ),
+    ("cadence_slow", "exercise_ladder"): Switch(
+        ("double_progression", "linear", "top_backoff"),
+        "hold the rung, or add an easier rung by amend; at the top, move the line to "
+        "double_progression or a loaded scheme by amend",
+        "skip rungs",
+        ("rn:bodyweight-skill-progression.3",),
+    ),
     ("cadence_fast", "double_progression"): Switch(
         ("linear",),
         "propose linear on that lift while the rack has a next row; the signal is the "
