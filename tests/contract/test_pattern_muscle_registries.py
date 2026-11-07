@@ -1,3 +1,5 @@
+import json
+from importlib.resources import files
 from pathlib import Path
 
 from support.name_lists import name_lists
@@ -59,3 +61,24 @@ def test_a_planted_literal_list_of_pattern_names_is_found(tmp_path: Path) -> Non
     module.write_text('A = ("squat", "hinge")\nB = ("core", "optional")\n', encoding="utf-8")
 
     assert name_lists(tmp_path, {"squat", "hinge", "core"}) == ["coach/core/rules.py:1"]
+
+
+def catalogue_rows() -> list[dict[str, object]]:
+    text = files("coach.store").joinpath("catalogue.jsonl").read_text(encoding="utf-8")
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
+def test_every_catalogue_pattern_is_in_the_patterns_registry() -> None:
+    assert [row["id"] for row in catalogue_rows() if row["pattern"] not in PATTERNS] == []
+
+
+def test_every_catalogue_muscle_is_in_the_muscles_registry() -> None:
+    outside = [
+        (row["id"], name)
+        for row in catalogue_rows()
+        for names in json.loads(str(row["muscles"])).values()
+        for name in names
+        if name not in MUSCLES
+    ]
+
+    assert outside == []
