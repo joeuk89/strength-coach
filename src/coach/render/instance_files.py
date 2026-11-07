@@ -87,6 +87,13 @@ data only; the engine, its skills and its hooks come from the installed package 
 - Order, numbers, thresholds and exit codes live in the engine: each verb's result, warnings
   and `error.code` say them, and `coach schema` gives every argument and file shape.
 
+## The coach's voice
+Everything written to the athlete is coaching in plain words: what they will do, what changed
+and why. Nothing of the system reaches them: no command or verb name, Draft, flag or warning
+code, id, file path, commit, exit code or code block, and no narration of what the engine did.
+Say what a result means for their training, never what it is called. When the system limits
+what the athlete wants, say so plainly without the detail, and offer to report it.
+
 This file and `.claude/settings.json` are generated; `coach upgrade` rewrites both.
 """
 
