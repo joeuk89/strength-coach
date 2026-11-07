@@ -2,10 +2,11 @@
 (ADR 0011, "Push"; docs/spec/parity.md, the routine body and note rules)."""
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, cast
 
 from coach.core.config import Units
+from coach.core.exercise_ladder import rung_line
 from coach.core.mirror import Routine, RoutineSet
 from coach.core.program.form import Line
 
@@ -35,23 +36,57 @@ class FrozenLine:
 
 @dataclass(frozen=True)
 class SessionRoutine:
+    """`names` are the library's exercise names, for the next rung a ladder line's note names."""
+
     title: str
     folder_id: str
     week_line: str
     authored: Sequence[Line]
     lines: Sequence[FrozenLine]
+    names: Mapping[str, str] = field(default_factory=dict[str, str])
+
+
+@dataclass(frozen=True)
+class _Authored:
+    """The authored line a frozen line projects from: on a ladder, the line as the frozen rung
+    prescribes it, with the next rung's exercise."""
+
+    position: int
+    line: Line
+    next_rung: str | None = None
+
+
+def _authored(lines: Sequence[Line]) -> dict[str, _Authored]:
+    """Every authored line keyed on its exercise, and a ladder line on each rung's exercise too,
+    since the frozen row names the rung the week prescribed."""
+    found: dict[str, _Authored] = {}
+    for position, line in enumerate(lines):
+        found[line.exercise] = _Authored(position, line)
+        ladder = line.scheme.ladder
+        if ladder is None:
+            continue
+        for index, rung in enumerate(ladder.rungs, start=1):
+            following = ladder.rungs[index].exercise if index < len(ladder.rungs) else None
+            found[rung.exercise] = _Authored(position, rung_line(line, ladder, index), following)
+    return found
 
 
 def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], units: Units) -> Json:
     """The routine body: no null keys and no routine-level note, since Hevy drops it on PUT."""
-    authored = {line.exercise: line for line in session.authored}
-    order = {line.exercise: n for n, line in enumerate(session.authored)}
-    lines = sorted(session.lines, key=lambda f: order.get(f.authored_exercise, len(order)))
+    authored = _authored(session.authored)
+    last = len(session.authored)
+    lines = sorted(
+        session.lines,
+        key=lambda f: a.position if (a := authored.get(f.authored_exercise)) else last,
+    )
     supersets: dict[str, int] = {}
     exercises: list[Json] = []
     for position, frozen in enumerate(lines):
-        line = authored.get(frozen.authored_exercise)
+        found = authored.get(frozen.authored_exercise)
+        line = None if found is None else found.line
         notes = _notes(frozen, line, units)
+        if found is not None and found.next_rung is not None:
+            notes.append(f"Next: {session.names.get(found.next_rung, found.next_rung)}")
         if position == 0:
             notes = [session.week_line, *notes]
         exercise: Json = {
