@@ -314,7 +314,7 @@ PLAN_WARNINGS = (
         hashed=("rung", "next"),
     ),
     acknowledgeable_warning(
-        "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.2",)
+        "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.3",)
     ),
     acknowledgeable_warning(
         "rpe_ceiling_unchecked",

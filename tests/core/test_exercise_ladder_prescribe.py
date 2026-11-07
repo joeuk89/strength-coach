@@ -224,7 +224,7 @@ def test_the_criterion_met_on_the_last_rung_raises_ladder_top_not_rung_met() -> 
     )
 
     assert ladder_flags(line) == [("ladder_top", {"rung": 3})]
-    assert flag(line, "ladder_top").rn == "rn:bodyweight-skill-progression.2"
+    assert flag(line, "ladder_top").rn == "rn:bodyweight-skill-progression.3"
 
 
 def test_a_manual_rung_raises_neither() -> None:
