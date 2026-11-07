@@ -135,3 +135,20 @@ def test_the_follow_up_record_kind_is_spelled_as_its_table() -> None:
 
     rows = run.envelope["result"]["rows"]
     assert {"name": "follow_up", "table": "[[follow_up]]", "check_in_only": False} in rows
+
+
+def test_the_errors_registry_gives_each_code_its_class_exit_and_summary() -> None:
+    run = run_coach("schema", "--registry", "errors", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert run.code == 0
+    assert set(rows["hevy_unreachable"]) == {"code", "class", "exit", "summary"}
+    assert (rows["hevy_unreachable"]["class"], rows["hevy_unreachable"]["exit"]) == (
+        "unreachable",
+        4,
+    )
+    assert (rows["state_conflict"]["class"], rows["state_conflict"]["exit"]) == ("invalid", 1)
+    assert (rows["expect_mismatch"]["class"], rows["expect_mismatch"]["exit"]) == ("refused", 3)
+    assert (rows["no_instance"]["class"], rows["no_instance"]["exit"]) == ("setup", 5)
+    assert (rows["internal_error"]["class"], rows["internal_error"]["exit"]) == ("internal", 1)
+    assert all(row["summary"] for row in rows.values())
