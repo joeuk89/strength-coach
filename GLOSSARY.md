@@ -727,6 +727,13 @@ The coaching half of one moment in the loop: what to ask the athlete, what to ju
 explain, naming the verbs it uses and never their order. The procedure those verbs run is theirs.
 _Avoid_: command, workflow, playbook, procedure
 
+**Voice leak**:
+A term from the engine's own language reaching the athlete: a verb name, a flag or error code, a
+record kind, a read view, a Draft, an envelope, a store id, a file path, a commit hash or a code
+span in a message written to them. Counted mechanically by the transcript benchmark against the
+engine's registries; the count is a floor, since a leak in plain English is not seen.
+_Avoid_: jargon, tone problem, internals surfacing (fine in prose)
+
 **Contract test**:
 A test that the engine's declarations and documents agree: verb declarations against `--help` and
 `coach schema`, `schema.sql` against the SQL in `schema.md`, CHECK lists against registries,
