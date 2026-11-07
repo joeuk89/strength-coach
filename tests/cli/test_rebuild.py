@@ -8,6 +8,7 @@ from support.scenarios import a_history, a_session
 
 from coach.cli import app, registry
 from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Outcome, Writes
+from coach.store.chain import ENGINE as CHAIN
 from coach.store.connection import open_store
 from coach.store.export import export
 
@@ -80,7 +81,7 @@ def test_the_verb_after_a_rebuild_is_handed_the_manifest_schema_version(
     rebuilt = run_coach("stub")
     again = run_coach("stub")
 
-    assert rebuilt.envelope["result"] == {"rebuilt": 1}
+    assert rebuilt.envelope["result"] == {"rebuilt": CHAIN.version}
     assert again.envelope["result"] == {"rebuilt": None}
 
 
@@ -89,7 +90,7 @@ def test_a_manifest_newer_than_the_engine_stops_with_export_newer_than_engine(
 ) -> None:
     manifest_path = instance / "export" / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
-    manifest_path.write_text(json.dumps({**manifest, "schema_version": 2}))
+    manifest_path.write_text(json.dumps({**manifest, "schema_version": CHAIN.version + 1}))
     (instance / ".coach" / "coach.db").unlink()
 
     run = run_coach("status")

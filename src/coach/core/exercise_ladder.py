@@ -3,7 +3,7 @@ the criterion for climbing off it (ADR 0023)."""
 
 from dataclasses import replace
 
-from coach.core.program.form import Advance, ExerciseLadder
+from coach.core.program.form import Advance, ExerciseLadder, ProgramForm
 from coach.core.registries.schemes import DEFAULT_EXPOSURES
 
 # The scheme's opening position; the line stands here until a rung is a recorded choice.
@@ -27,3 +27,11 @@ def full_criterion(ladder: ExerciseLadder, index: int) -> Advance:
         exposures=DEFAULT_EXPOSURES,
     )
     return replace(filled, **criterion.stated())
+
+
+def ladder_of(form: ProgramForm, session_id: str, exercise_id: str) -> ExerciseLadder | None:
+    """The ladder of the session's line keyed on `exercise_id`, its first rung's exercise."""
+    session = form.session(session_id)
+    lines = () if session is None else session.lines
+    line = next((line for line in lines if line.exercise == exercise_id), None)
+    return None if line is None else line.scheme.ladder

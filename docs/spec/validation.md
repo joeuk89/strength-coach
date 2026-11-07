@@ -112,7 +112,7 @@ contract test holds that no verb declaration accepts a violation key as an ackno
 
 A warning is left by an **Acknowledgement**, a record of `{key, params_hash, because, text,
 evidence}`. The `because` categories are the override's (pain, kit, stall, fatigue, schedule,
-athlete request, coach judgement); the text is the coach's voice, unpoliced; evidence refs are
+athlete request, coach judgement, progress); the text is the coach's voice, unpoliced; evidence refs are
 optional (niggle, exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no
 `because`.
 

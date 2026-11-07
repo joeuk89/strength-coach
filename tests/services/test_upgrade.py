@@ -1,4 +1,4 @@
-from support.chains import ENGINE_PLUS_PROBE
+from support.chains import ENGINE_PLUS_PROBE, ENGINE_VERSION, PROBE_STEP
 from support.scenarios import a_catalogue_without, a_session
 
 from coach.services.upgrade import upgrade
@@ -14,14 +14,17 @@ def test_upgrade_migrates_merges_the_catalogue_and_exports_at_the_new_version() 
 
     upgraded = upgrade(conn, engine_version="0.4.0", chain=ENGINE_PLUS_PROBE)
 
-    assert upgraded.migrations == ("m0001",)
-    assert (upgraded.from_version, upgraded.to_version) == (1, 2)
+    assert upgraded.migrations == (PROBE_STEP,)
+    assert (upgraded.from_version, upgraded.to_version) == (
+        ENGINE_VERSION,
+        ENGINE_PLUS_PROBE.version,
+    )
     assert upgraded.catalogue_added == ("ab_wheel",)
-    assert schema_version(conn) == 2
+    assert schema_version(conn) == ENGINE_PLUS_PROBE.version
     files = upgraded.export.files
     assert files["session.jsonl"] == '{"id":"push_a","introduced_in":"pv-1"}\n'
     assert files["upgrade_probe.jsonl"] == ""
-    assert '"schema_version": 2' in files["manifest.json"]
+    assert f'"schema_version": {ENGINE_PLUS_PROBE.version}' in files["manifest.json"]
     assert '"engine_version": "0.4.0"' in files["manifest.json"]
 
 

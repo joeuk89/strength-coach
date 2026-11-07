@@ -5,6 +5,7 @@ import pytest
 from support.chains import TEMPORARY, TEMPORARY_V1
 
 from coach.core.errors import Setup
+from coach.store.chain import ENGINE
 from coach.store.connection import (
     connect,
     copy_to_memory,
@@ -30,10 +31,10 @@ def test_a_foreign_key_violation_is_refused_by_the_store() -> None:
         )
 
 
-def test_a_fresh_database_is_built_at_schema_version_1(tmp_path: Path) -> None:
+def test_a_fresh_database_is_built_at_the_engines_schema_version(tmp_path: Path) -> None:
     conn = open_store(tmp_path / "coach.db")
 
-    assert schema_version(conn) == 1
+    assert schema_version(conn) == ENGINE.version
     tables = {name for (name,) in conn.execute("SELECT name FROM sqlite_master")}
     assert {"week_plan", "workout", "routine_map"} <= tables
 
@@ -91,5 +92,5 @@ def test_an_in_memory_copy_takes_writes_the_store_never_sees(tmp_path: Path) -> 
     copy.commit()
 
     assert copy.execute("PRAGMA foreign_keys").fetchone() == (1,)
-    assert schema_version(copy) == 1
+    assert schema_version(copy) == ENGINE.version
     assert conn.execute("SELECT count(*) FROM session").fetchone() == (0,)

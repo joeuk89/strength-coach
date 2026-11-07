@@ -26,8 +26,9 @@ def test_a_registry_prints_as_rows() -> None:
         "schedule",
         "athlete_request",
         "coach_judgement",
+        "progress",
     ]
-    assert result["count"] == 7
+    assert result["count"] == 8
     assert result["truncated"] is False
 
 

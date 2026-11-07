@@ -312,6 +312,11 @@ def _decision_param(f: Fields, name: str) -> object | None:
             return _matching(f, name, DECISION_ID, "a Decision id, d-0007")
         case "ref":
             return str(f.ref(name, ("rn",)) or _missing(f, name))
+        case "rung":
+            rung = required(f.integer(name, required=True))
+            if rung < 1:
+                raise f.wrong(name, "a rung number of at least 1")
+            return rung
         case _:
             return f.number(name)
 
@@ -366,6 +371,8 @@ def supersede_subject(
             return ("session", session)
         case "training_max" | "safety_ceiling":
             return (kind, exercise)
+        case "ladder_rung":
+            return (kind, session, exercise)
         case "leave_warning":
             return (kind, params["flag"])
         case "activity_cap":

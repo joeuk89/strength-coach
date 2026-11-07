@@ -5,7 +5,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from support.chains import ENGINE_PLUS_PROBE
+from support.chains import ENGINE_PLUS_PROBE, ENGINE_VERSION, PROBE_STEP
 from support.cli import run_coach
 from support.git import commit_everything, commit_subjects, committed_files, isolate_git
 
@@ -92,19 +92,19 @@ def test_upgrade_from_an_older_pin_migrates_exports_regenerates_bumps_and_commit
     result = run.envelope["result"]
     assert result["from"] == PINNED
     assert result["to"] == NEWER
-    assert result["migrations"] == ["m0001"]
-    assert result["schema_version"] == {"from": 1, "to": 2}
+    assert result["migrations"] == [PROBE_STEP]
+    assert result["schema_version"] == {"from": ENGINE_VERSION, "to": ENGINE_PLUS_PROBE.version}
     assert {"CLAUDE.md", "coach.toml"} <= set(result["files"])
     assert "export/upgrade_probe.jsonl" in result["files"]
     assert commit_subjects(instance) == [f"coach upgrade v{NEWER}", f"coach init v{PINNED}"]
     assert result["commit"] is not None
     assert pin(instance) == NEWER
-    assert store_version(instance) == 2
+    assert store_version(instance) == ENGINE_PLUS_PROBE.version
     assert f"coach engine {NEWER}" in (instance / "CLAUDE.md").read_text()
     for relative, text in generated_files(NEWER).items():
         assert (instance / relative).read_text() == text
     manifest = json.loads((instance / "export" / "manifest.json").read_text())
-    assert manifest["schema_version"] == 2
+    assert manifest["schema_version"] == ENGINE_PLUS_PROBE.version
     assert manifest["engine_version"] == NEWER
     assert {"export/manifest.json", "export/upgrade_probe.jsonl"} <= committed_files(instance)
     assert run_coach("status").envelope["warnings"] == []
@@ -140,9 +140,9 @@ def test_a_second_machine_with_the_pin_current_and_its_store_behind_migrates_wit
 
     assert run.code == 0, run.stdout
     result = run.envelope["result"]
-    assert result["migrations"] == ["m0001"]
+    assert result["migrations"] == [PROBE_STEP]
     assert result["commit"] is None
-    assert store_version(instance) == 2
+    assert store_version(instance) == ENGINE_PLUS_PROBE.version
     assert commit_subjects(instance) == subjects
     assert {k: v for k, v in files_of(instance).items() if not k.startswith(".coach/")} == {
         k: v for k, v in before.items() if not k.startswith(".coach/")
@@ -160,7 +160,7 @@ def test_a_dry_run_lists_the_migrations_and_files_and_changes_nothing(
     assert run.code == 0, run.stdout
     result = run.envelope["result"]
     assert result["dry_run"] is True
-    assert result["migrations"] == ["m0001"]
+    assert result["migrations"] == [PROBE_STEP]
     assert {"CLAUDE.md", "coach.toml", "export/upgrade_probe.jsonl"} <= set(result["files"])
     assert "commit" not in result
     assert files_of(instance) == before
@@ -238,7 +238,7 @@ def test_no_ordinary_verb_migrates_a_store_behind_the_engine(
     assert behind.envelope["error"]["code"] == "schema_behind"
     assert upgraded.code == 0, upgraded.stdout
     assert after.code == 0, after.stdout
-    assert store_version(instance) == 2
+    assert store_version(instance) == ENGINE_PLUS_PROBE.version
 
 
 def test_upgrade_leaves_an_edited_catalogue_row_exactly_as_it_was(
@@ -313,5 +313,5 @@ def test_an_export_ahead_of_the_store_refuses_with_store_behind_export_and_chang
         assert run.envelope["error"]["code"] == "store_behind_export"
         assert "exercise" in run.envelope["error"]["message"]
     assert files_of(instance) == before
-    assert store_version(instance) == 1
+    assert store_version(instance) == ENGINE_VERSION
     assert commit_subjects(instance)[0] == "another machine published a row"

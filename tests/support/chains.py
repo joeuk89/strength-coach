@@ -3,7 +3,7 @@ engine's own schema with one probe table added, so `upgrade` migrates with no re
 
 import sqlite3
 
-from coach.store.chain import ENGINE, Chain
+from coach.store.chain import ENGINE, Chain, step_name
 from coach.store.migrations import rebuild_table
 
 KIND_V1 = """CREATE TABLE kind (
@@ -42,5 +42,10 @@ def add_probe(conn: sqlite3.Connection) -> None:
 
 
 ENGINE_PLUS_PROBE = Chain(
-    current=ENGINE.current + PROBE, frozen={1: ENGINE.current}, steps=(add_probe,)
+    current=ENGINE.current + PROBE,
+    frozen={**ENGINE.frozen, ENGINE.version: ENGINE.current},
+    steps=(*ENGINE.steps, add_probe),
 )
+# The engine's own schema version, which the probe chain moves one past.
+ENGINE_VERSION = ENGINE.version
+PROBE_STEP = step_name(ENGINE_VERSION)
