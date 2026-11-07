@@ -110,14 +110,12 @@ def test_schema_of_the_schema_verb_declares_its_optional_verb_argument() -> None
 
 
 def test_schema_of_the_schema_verb_declares_the_registry_names_it_lists() -> None:
-    output = run_coach("schema", "schema").envelope["result"]["output"]
+    registries = run_coach("schema", "schema").envelope["result"]["output"]["properties"][
+        "registries"
+    ]
 
-    assert output["properties"]["registries"] == {
-        "type": "array",
-        "items": {"type": "string"},
-        "description": output["properties"]["registries"]["description"],
-    }
-    assert output["properties"]["registries"]["description"]
+    assert (registries["type"], registries["items"]) == ("array", {"type": "string"})
+    assert registries["description"]
 
 
 def test_schema_of_an_unknown_verb_is_invalid() -> None:

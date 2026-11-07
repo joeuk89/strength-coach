@@ -1,15 +1,7 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from coach.cli import registry
-from coach.cli.declaration import (
-    Argument,
-    Call,
-    Declaration,
-    Example,
-    Json,
-    Outcome,
-    without_verb_or_registry,
-)
+from coach.cli.declaration import Argument, ArgValue, Call, Declaration, Example, Json, Outcome
 from coach.core import registries
 from coach.core.errors import Invalid
 
@@ -37,6 +29,10 @@ def _every_verb() -> Json:
         "truncated": False,
         "registries": [r.name for r in registries.REGISTRIES],
     }
+
+
+def _without_verb_or_registry(args: Mapping[str, ArgValue]) -> bool:
+    return "verb" not in args and "registry" not in args
 
 
 def _registry(name: str, call: Call) -> Json:
@@ -77,7 +73,7 @@ DECLARATION = Declaration(
         },
     },
     run=run,
-    over_budget=without_verb_or_registry,
+    over_budget=_without_verb_or_registry,
     examples=(
         Example(("schema",), "Every verb's declaration and the registry names."),
         Example(("schema", "status"), "The declaration of status."),
