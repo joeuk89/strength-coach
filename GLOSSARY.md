@@ -35,8 +35,8 @@ It knows nothing about the calendar.
 _Avoid_: routine, day, workout (which is what was logged), add-on
 
 **Session kind**:
-What a session is: lifting, conditioning, practice (a daily drill with nothing to progress), or
-coach-led.
+What a session is: lifting, conditioning, practice (a daily drill, optional and never judged),
+or coach-led.
 _Avoid_: type, category
 
 **Coach-led session**:
@@ -85,11 +85,23 @@ what it reads from history, how it moves the dose, when it counts a stall and wh
 deload. Declared once in the engine's registry; the form names it.
 _Avoid_: progression (alone), plugin, model
 
+**Ladder**:
+The ordered rungs a line climbs when there is no load to add: assisted loads on one exercise,
+or a run of exercises and set shapes each harder than the last. Declared whole on the line; the
+line stands on one rung at a time.
+_Avoid_: progression (alone), stages, pathway
+
 **Rung**:
-One position on an assistance ladder: a listed assistance load or leverage a line is on. The
-ladder moves one rung at a time on a hit and steps back by rungs in a return band instead of
-cutting load.
+One position on a ladder: an assistance load, or an exercise with its cues and set groups and
+the criterion for climbing off it. The ladder moves one rung at a time on a hit and steps back
+by rungs in a return band instead of cutting load.
 _Avoid_: level, step (which is a derivation step), stage
+
+**Advance criterion**:
+What the logs must show on a rung before the next is offered: every working set at the rung's
+reps or duration at or under its RPE for a run of exposures, or the athlete's word where the
+logs cannot tell.
+_Avoid_: trigger, unlock, mastery
 
 **Start load**:
 The load a line opens at before any exposure exists, in athlete units and per hand where the
