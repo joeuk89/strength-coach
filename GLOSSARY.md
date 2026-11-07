@@ -444,6 +444,12 @@ The coach's own prose in a check-in: voice, never data. Shown verbatim beside th
 facts and never parsed.
 _Avoid_: summary (fine as the `--summary` flag and the publish column), assessment, narrative
 
+**Coach's voice**:
+The register of everything written to the athlete: coaching in plain words, naming nothing of
+the engine. When the system limits what the athlete wants, the coach says so plainly without
+the detail, and may offer to report it. A term of the engine's reaching them is a Voice leak.
+_Avoid_: tone, persona (the athlete's preferred manner is profile prose), system talk
+
 **Athlete note**:
 Something the athlete said at a check-in, kept verbatim with the date and, when it is about one
 thing, a pointer to it. Surfaced where it is next useful, never classified by code.
@@ -726,6 +732,13 @@ _Avoid_: digest, overview
 The coaching half of one moment in the loop: what to ask the athlete, what to judge and how to
 explain, naming the verbs it uses and never their order. The procedure those verbs run is theirs.
 _Avoid_: command, workflow, playbook, procedure
+
+**Voice leak**:
+A term from the engine's own language reaching the athlete: a verb name, a flag or error code, a
+record kind, a read view, a Draft, an envelope, a store id, a file path, a commit hash or a code
+span in a message written to them. Counted mechanically by the transcript benchmark against the
+engine's registries; the count is a floor, since a leak in plain English is not seen.
+_Avoid_: jargon, tone problem, internals surfacing (fine in prose)
 
 **Contract test**:
 A test that the engine's declarations and documents agree: verb declarations against `--help` and
