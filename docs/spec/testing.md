@@ -27,7 +27,11 @@ exists in the shape a code constant names and never what it says:
   It reads headings and claim numbers, never the claim's text, and nothing at runtime reads a
   note.
 
-No third exception is added without amending this paragraph.
+One more sits outside `tests/contract/`: the voice-leak test in `tests/benchmark/` reads the
+hand-marked uuids from `scripts/benchmark/transcripts/README.md`. That table is test data, the
+reference the leak count is measured against (`benchmark.md`), not the prose of a rule.
+
+No further exception is added without amending this paragraph.
 
 `docs/spec/parity.md` is the 2026-10-26 review of the old system's behaviours. It is reference,
 not a test source: later decisions changed or dropped many of its rows, and where they differ

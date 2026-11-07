@@ -188,7 +188,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`schema --registry`** takes the name of any registry a `schema.md` CHECK list or a Draft
   parser is tested against: `schemes`, `flags`, `record-kinds`, `views`, `decision-kinds`,
   `override-kinds`, `reasons` (the seven `because` values), `annotation-kinds`,
-  `constraint-kinds`, `set-types`, `load-modes`, `equipment-kinds`. It is the one source every
+  `constraint-kinds`, `set-types`, `load-modes`, `equipment-kinds`, `errors` (every `error.code`
+  with its exit class). It is the one source every
   contract test reads a registry from. `flags` carries each code's `rn` citation, the one place
   a new agent sees every code with its evidence (ADR 0020).
 - **`init --pin`** is required on a `.dev` build of the engine: `init` refuses (exit 5,
@@ -292,7 +293,8 @@ change the numbers, draft a superseding plan.
 | 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), `init` where git is not on the PATH (`git_unavailable`) or knows no committer (`git_identity_missing`), both before a file is written, `init` where a `.env` already exists (`env_file_exists`), before a file is written; `upgrade` on a git tree with uncommitted changes (`git_tree_dirty`), or git refuses the commit (`git_commit_failed`, naming the command that finishes it), or another git step fails (`git_failed`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import`, `plan apply` and every pulling verb but `init`, which leaves the pull to the next verb when no key is set yet), an unknown table or key in `coach.toml`, or an `implements` value naming no implement of its location (`config_unknown_key`, on every verb; `instance.md`), a plate-pool location whose `kit/<name>.achievable.json` is missing or carries an `inventory_sha256` other than the hash of `kit/<name>.json` (`kit_tables_stale`, naming the location and the generator command, on `plan draft` and `program adopt`; ADR 0021); on the rebuild, `export_newer_than_engine`, or an export row that does not parse (`jsonl_row_malformed`); on any store write, `store_behind_export` (`schema.md`, "The rebuild"); `report` with no `COACH_GITHUB_TOKEN` in the environment or `.env` (`github_token_missing`; its dry run needs none) |
 
 `error.code` carries the flag code or the refusal reason named above. Nothing else refuses. A
-refusal reason is not a flag: it has no scope, no registry row and no `rn`.
+refusal reason is not a flag: it has no scope and no `rn`, and its one registry row is in
+`errors`.
 
 ## Contract tests
 
