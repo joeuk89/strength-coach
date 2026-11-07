@@ -536,7 +536,9 @@ _Avoid_: sleep trigger, poor sleep
 
 **Exercise**:
 A library entry a line references: name, load mode, equipment kind, pattern, muscles,
-the Hevy template columns and where the row came from (catalogue, Draft or record).
+the Hevy template columns and where the row came from (catalogue, Draft or record). The template
+type, equipment and muscle group take values from the `hevy-exercise-types`, `hevy-equipment` and
+`hevy-muscle-groups` registries, the values Hevy accepts.
 _Avoid_: movement, lift (fine in prose, not as the noun)
 
 **Equipment**:

@@ -183,7 +183,8 @@ load_mode = "bodyweight"
 equipment_kind = "bodyweight"
 pattern = "horizontal_push"
 muscles = { primary = ["chest"], secondary = ["triceps", "front_delts"] }
-# without a Hevy template id, the four template columns (ADR 0011):
+# without a Hevy template id, the four template columns (ADR 0011); the last three take
+# values from coach schema --registry hevy-exercise-types, hevy-equipment, hevy-muscle-groups:
 hevy_title = "Ring Push Up"
 hevy_exercise_type = "reps_only"
 hevy_equipment = "other"
@@ -192,6 +193,11 @@ hevy_muscle_group = "chest"
 
 A declared exercise that already exists is updated field by field; `hevy_template_id` is never
 set here (it is written by `plan apply` after a verified create, ADR 0011).
+
+`hevy_exercise_type`, `hevy_equipment` and `hevy_muscle_group` each name an entry of a registry
+of the values Hevy accepts: `hevy-exercise-types`, `hevy-equipment` and `hevy-muscle-groups`,
+listed by `coach schema --registry <name>`. Values match exactly, as Hevy matches them.
+`hevy_title` is free text.
 
 `pattern` names an entry of the `patterns` registry and every name in `muscles` an entry of the
 `muscles` registry (ADR 0024); `coach schema --registry patterns` and `--registry muscles` list
@@ -341,6 +347,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `set_groups_off_scheme` | line | the working groups do not fit the scheme's row: a `top_backoff` first working group with `count` other than 1 or a range for `reps`, or no back-off group; more than one working group under `assistance_ladder`; a `wave_531` working group stating `reps` |
 | `rpe_missing` | line | a working group the scheme's row requires `rpe` on has none |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011); only when `coach.toml` has a `[hevy]` table (`validation.md`) |
+| `hevy_template_value_unknown` | line | under the same conditions, a template column present on the new exercise holds a value outside its registry (`hevy-exercise-types`, `hevy-equipment`, `hevy-muscle-groups`); one flag per bad column, none for an absent one |
 | `acknowledgement_unmatched` | version | one or more `[[acknowledge]]` keys adopt did not raise, all named in one flag |
 | `goal_missing` | version | no current Goal (`goals.md`) |
 | `priority_lifts_required` | version | `strength` emphasis under a Goal with no priority lifts (`goals.md`) |

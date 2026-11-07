@@ -224,6 +224,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together; no override waives the band | rn:detraining-return.3 |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version | rn:deloads.3 |
 | `hevy_template_missing` | line | exercise id, missing columns | an Exercise with a `hevy_template_id`, or one with all four template columns so `plan apply` can create the template; an Exercise that has the id never needs the other three (`cutover.md`). Raised only when `coach.toml` has a `[hevy]` table: without Hevy no template is needed and the plan is approved on its numbers alone (ADR 0006) | `null` |
+| `hevy_template_value_unknown` | line | exercise id, column, value | a value from the column's registry (`hevy-exercise-types`, `hevy-equipment` or `hevy-muscle-groups`), listable with `coach schema --registry`. Raised under the same conditions as `hevy_template_missing`, once per present column outside its registry | `null` |
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` | `null` |
 | `rotation_unconfirmed` | week | inferred position, source | the agent confirming the rotation position in the Draft | `null` |
 | `goal_missing` | version | none | `goal adopt` | `null` |
