@@ -15,7 +15,12 @@ class RecordKind:
     check_in_only: bool = False
 
     def describe(self) -> Row:
-        return {"name": self.name, "table": f"[[{self.name}]]", "check_in_only": self.check_in_only}
+        return {
+            "name": self.name,
+            "table": f"[[{self.name}]]",
+            "id_prefix": self.id_prefix,
+            "check_in_only": self.check_in_only,
+        }
 
 
 # docs/spec/verbs.md, "Record kinds"; tables and prefixes from schema.md, "Ids" and "Record kinds
