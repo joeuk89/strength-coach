@@ -172,6 +172,22 @@ def test_the_generated_claude_md_says_any_change_is_a_redrafted_and_reapplied_we
     assert "`/` command" in bullet
 
 
+def test_the_generated_claude_md_says_a_rung_moves_only_on_the_athletes_yes() -> None:
+    lines = claude_md("0.3.0").splitlines()
+
+    start = next(i for i, line in enumerate(lines) if "a change to the program" in line.lower())
+    end = next(i for i in range(start + 1, len(lines)) if not lines[i].startswith("  "))
+    bullet = " ".join(line.strip() for line in lines[start:end])
+    for step in (
+        "the check-in card or a plan flag",
+        "athlete's yes",
+        "`ladder_rung` Decision",
+        "`coach checkin record` or `coach record`",
+        "next `coach plan draft`",
+    ):
+        assert step in bullet
+
+
 def test_the_generated_claude_md_names_no_slash_command() -> None:
     assert re.findall(r"(?<![\w.])/[a-z][a-z-]*", claude_md("0.3.0")) == []
 

@@ -89,7 +89,9 @@ data only; the engine, its skills and its hooks come from the installed package 
 - Order, numbers, thresholds and exit codes live in the engine: each verb's result, warnings
   and `error.code` say them, and `coach schema` gives every argument and file shape.
 - A change to the program or to this week is a new Draft for the week, redrafted and applied
-  again. Each skill is also the `/` command of the same name.
+  again. Each skill is also the `/` command of the same name. A rung climbs only on the
+  athlete's yes to the check-in card or a plan flag: a `ladder_rung` Decision through
+  `coach checkin record` or `coach record`, then the next `coach plan draft` prescribes it.
 
 ## The coach's voice
 Everything written to the athlete is coaching in plain words: what they will do, what changed

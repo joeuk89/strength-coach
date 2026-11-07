@@ -46,10 +46,7 @@ def tokens(text: str) -> float:
 
 def undeclared_verbs(text: str, leaves: Set[str]) -> list[str]:
     """Every `coach ...` span that names no leaf, and every Verbs entry that is not a bare leaf."""
-    problems: list[str] = []
-    for span in CODE_SPAN.findall(text):
-        if span.startswith("coach ") and not _names_a_leaf(span, leaves):
-            problems.append(span)
+    problems = unknown_verb_spans(text, leaves)
 
     section = VERBS_SECTION.search(text)
     entries = CODE_SPAN.findall(section.group(1)) if section else []
@@ -60,6 +57,17 @@ def undeclared_verbs(text: str, leaves: Set[str]) -> list[str]:
             problems.append(entry)
 
     return list(dict.fromkeys(problems))
+
+
+def unknown_verb_spans(text: str, leaves: Set[str]) -> list[str]:
+    """Every `coach ...` span that names no leaf; an option of coach itself names none."""
+    return [
+        span
+        for span in CODE_SPAN.findall(text)
+        if span.startswith("coach ")
+        and not span.startswith("coach -")
+        and not _names_a_leaf(span, leaves)
+    ]
 
 
 def _names_a_leaf(span: str, leaves: Set[str]) -> bool:

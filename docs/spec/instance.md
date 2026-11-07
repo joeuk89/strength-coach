@@ -215,7 +215,9 @@ before any verb records); one line for the ad-hoc moment (a question outside the
 read-only: `coach status`, `coach progress`, `coach query`; `docs/spec/skills.md`); where the
 never-list's items live; one line that a change to the program or to this week is a new Draft
 for the week, redrafted and applied again, and that each skill is also the `/` command of the
-same name (`plan_behind_program` in `validation.md` says when a week is behind); after the bullet list, the Coach's voice section, verbatim from
+same name (`plan_behind_program` in `validation.md` says when a week is behind), and that a rung
+climbs only on the athlete's yes to the check-in card or a plan flag, a `ladder_rung` Decision
+through `checkin record` or `record` that the next `plan draft` prescribes (ADR 0023); after the bullet list, the Coach's voice section, verbatim from
 `docs/spec/voice.md` ("The rule"), then the one line on reporting a bug or a Gap, verbatim from
 `docs/spec/voice.md` ("Reporting"). Skills, hooks and permission rules
 come from the plugin and `settings.json`, so it lists none of them.
