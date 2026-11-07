@@ -750,6 +750,13 @@ span in a message written to them. Counted mechanically by the transcript benchm
 engine's registries; the count is a floor, since a leak in plain English is not seen.
 _Avoid_: jargon, tone problem, internals surfacing (fine in prose)
 
+**Lexicon**:
+The engine's own language as the transcript benchmark matches it: the verb names, flag and error
+codes, record kinds, read views, a fixed list of words such as Draft and envelope, and the shapes
+of a path, a store id, a commit hash and a code span. A term of it in a message to the athlete is
+a Voice leak.
+_Avoid_: dictionary, blocklist, term list, banned words
+
 **Contract test**:
 A test that the engine's declarations and documents agree: verb declarations against `--help` and
 `coach schema`, `schema.sql` against the SQL in `schema.md`, CHECK lists against registries,

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #46 (the Approval record is `approved_at` and `write_plan_hash` on the `week_plan` row, no route); 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011)
+amended: 2026-10-31 by wayfinder #46 (the Approval record is `approved_at` and `write_plan_hash` on the `week_plan` row, no route); 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011); 2026-11-07 by wayfinder #230 (the gate also covers `writes: github`, the `report` verb; its prompt shows the full issue body the athlete approves and is exempt from the 40-line budget, `docs/spec/voice.md`)
 ---
 
 # Approval is the human's yes to the one gated write, bound by a Write plan hash

@@ -68,10 +68,11 @@ names. The manner: one message, follow-ups only for a gap that blocks the next s
 it and answered with a recorded reason. Not every code gets an entry; the schema is the list>
 
 ## Explain
-<what the athlete should come away knowing. Every figure is quoted from an envelope or the
-rendered draft, never retyped. Ends with the fixed line below>
+<what the athlete should come away knowing. Every figure comes from an envelope or the rendered
+draft, so none is retyped. Ends with the fixed line below>
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 <the verbs this skill uses, as a plain list in no order: for the contract test and so a new agent
@@ -103,6 +104,8 @@ goes there instead.
 | A table the skill would "cite" (switching rule, per-emphasis defaults) | The flag's params (`may_schemes`, `may`, `never`) and the adopt diff; the skill's own Judge in its own words (ADR 0020) |
 | A research note, its claim or a pointer to one | The flag's `rn` field and `coach schema --registry flags`; a running agent reads no note (ADR 0020) |
 | A glossary term's avoid-list word | The glossary term |
+| A sentence that shows the athlete a Draft, dry run, flag or id | The generated CLAUDE.md's voice section (`voice.md`); skills quote figures from them |
+| An offer to report, or words for a report that could not be sent | The generated CLAUDE.md's reporting line (`voice.md`) |
 
 The generated CLAUDE.md carries no coaching content either: what the instance is, where the
 profile is, that `coach status` opens a session and `coach --help` is the manual.
@@ -193,7 +196,8 @@ when there is one. Quote every number from the card or the rendered record; neve
 Name each decision and its reason in plain words. Say what next week will feel like, not what
 it will contain; the plan does that.
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach checkin open`, `coach checkin record`, `coach query`
@@ -270,7 +274,8 @@ that move it week to week. Say why each exercise is there and what would earn a 
 every load, set count and filled default from the adopt dry run; never retype one. For a
 revision, lead with what the report says changed and what this version does about it.
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach progress`, `coach program show`, `coach program adopt`,
@@ -392,7 +397,8 @@ week's shape and why it has it, limits, how they want to be coached, history. Th
 Phase as the draft states them. Say what changes each: the Goal when the aim changes, the
 profile when they say so, the Phase at a check-in or a block boundary.
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach query`, `coach goal adopt`
