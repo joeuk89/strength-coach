@@ -98,17 +98,12 @@ def climb_offer(
     """`rung_met` naming the next rung, or `ladder_top` on the last, when the newest run of
     ordinary exposures of the standing rung's exercise since its start each meet the rung's
     criterion. A `manual` rung waits for the athlete's word."""
-    read = ladder_read(
-        ladder,
-        standing,
-        exposures,
-        session_id=str(scope.session_id),
-        line_key=str(scope.exercise_id),
-        before=on,
-    )
-    if not read.met:
+    needed = _needed(ladder, standing.index)
+    if needed is None:
         return None
-    run = _qualifying_run(ladder, standing, exposures, read.session_id, on)[: read.exposures]
+    run = _qualifying_run(ladder, standing, exposures, str(scope.session_id), on)[:needed]
+    if len(run) < needed:
+        return None
     if standing.index == len(ladder.rungs):
         return raise_flag(
             "ladder_top",
@@ -158,10 +153,12 @@ def ladder_read(
     before: datetime.date,
 ) -> LadderRead:
     """The line's ladder as the exposures logged before `before` leave it."""
-    criterion = full_criterion(ladder, standing.index)
-    needed = None if criterion.manual else criterion.exposures or DEFAULT_EXPOSURES
-    run = () if needed is None else _qualifying_run(ladder, standing, exposures, session_id, before)
-    count = len(run) if needed is None else min(len(run), needed)
+    needed = _needed(ladder, standing.index)
+    count = (
+        0
+        if needed is None
+        else min(len(_qualifying_run(ladder, standing, exposures, session_id, before)), needed)
+    )
     top = standing.index == len(ladder.rungs)
     return LadderRead(
         session_id=session_id,
@@ -174,6 +171,12 @@ def ladder_read(
         needed=needed,
         met=needed is not None and count >= needed,
     )
+
+
+def _needed(ladder: ExerciseLadder, index: int) -> int | None:
+    """The exposures rung `index` needs toward its criterion; none on a `manual` rung."""
+    criterion = full_criterion(ladder, index)
+    return None if criterion.manual else criterion.exposures or DEFAULT_EXPOSURES
 
 
 def _qualifying_run(
