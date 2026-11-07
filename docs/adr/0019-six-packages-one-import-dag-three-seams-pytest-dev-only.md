@@ -4,18 +4,19 @@ date: 2026-10-31
 amended: 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
 ---
 
-# The engine is six packages on one import DAG, with three injected seams; the suite is pytest, dev-only, under thirty seconds
+# The engine is seven packages on one import DAG, with four injected seams; the suite is pytest, dev-only, under thirty seconds
 
-The `coach` package has six sub-packages, each one layer of "functional core, imperative shell":
+The `coach` package has seven sub-packages, each one layer of "functional core, imperative shell":
 `core` (pure functions, frozen values, the code registries), `store` (`schema.sql`, the
 connection factory, migrations, row-to-value reads and writes), `hevy` (the allow-listed client
-and its payload parsing), `render` (pages and Drafts as text), `services` (one module per verb
-leaf, the transaction boundary) and `cli` (declarations, argv, envelope, exit codes, instance
-root, `.env`, git, filesystem, hooks). Imports run one way, `core` ← `store`, `hevy`, `render`
-← `services` ← `cli`, and a contract test walks every module with `ast` and fails on any other
-edge or on `sqlite3`, `urllib`, `os`, `pathlib`, `subprocess` or the system clock outside
-`store`, `hevy` and `cli`. Exactly three things are injected into a service: a bare
-`sqlite3.Connection`, a `HevyClient` protocol and a `Clock` protocol. The Hevy write audit is
+and its payload parsing), `github` (the allow-listed issue client), `render` (pages and Drafts
+as text), `services` (one module per verb leaf, the transaction boundary) and `cli`
+(declarations, argv, envelope, exit codes, instance root, `.env`, git, filesystem, hooks).
+Imports run one way, `core` ← `store`, `hevy`, `github`, `render` ← `services` ← `cli`, and a
+contract test walks every module with `ast` and fails on any other edge or on `sqlite3`,
+`urllib`, `os`, `pathlib`, `subprocess` or the system clock outside `store`, `hevy`, `github`
+and `cli`. Exactly four things are injected into a service: a bare `sqlite3.Connection`, a
+`HevyClient` protocol, a `GitHubClient` protocol and a `Clock` protocol. The Hevy write audit is
 the client's own work behind that protocol, so it adds no seam. Hooks reach the engine through a second console
 entry point, `coach-hook <event>`, not a leaf of `coach`. The runtime stays stdlib-only; pytest,
 ruff and pyright are a `uv` dev dependency group. The spec is `docs/spec/testing.md`.
@@ -32,9 +33,9 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
 
 ## Considered options
 
-- **Six packages, DAG enforced by a test, three injected seams (chosen).** The seams are the
+- **Seven packages, DAG enforced by a test, four injected seams (chosen).** The seams are the
   places where two adapters exist today: file or `:memory:` for the store, the real client or
-  `FakeHevy` for Hevy, the system or a fixed date for the clock. Nothing else varies, so nothing
+  `FakeHevy` for Hevy, the real client or the fake for GitHub, the system or a fixed date for the clock. Nothing else varies, so nothing
   else gets an abstraction. The import test makes the architecture a failing test rather than a
   convention a reviewer has to remember.
 - **A repository or storage interface over SQLite.** Rejected: one adapter is a hypothetical
@@ -45,8 +46,8 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
 - **`unittest` so even development is stdlib-only.** Rejected: "stdlib only" is a rule for the
   athlete's install, and the suite never ships. pytest buys plain `assert`, fixtures for the
   in-memory store and the fake client, and parametrised generated contract tests.
-- **`coach hook <event>` as a seventeenth leaf, or hidden.** Rejected: `verbs.md` caps the tree
-  at sixteen and its contract test says "no more"; a hidden leaf would be a special case in
+- **`coach hook <event>` as a leaf, or hidden.** Rejected: `verbs.md` caps the leaf count and
+  its contract test says "no more"; a hidden leaf would be a special case in
   `--help`, `schema` and the permission rules. A second entry point shares `cli` internals and
   touches none of them.
 
@@ -62,14 +63,14 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
   `[sys.executable, "-m", "coach", "--help"]`, the interpreter running the suite, never the
   `coach` on PATH.
 - **Import rule.** `core` imports stdlib and `core` only, and never `sqlite3`, I/O, the network or
-  the current time; dates arrive as values. `store`, `hevy` and `render` import `core`.
-  `services` imports those four. `cli` imports anything. `render` never imports `store`.
+  the current time; dates arrive as values. `store`, `hevy`, `github` and `render` import
+  `core`. `services` imports those five. `cli` imports anything. `render` never imports `store`.
   The kit splits along the same line: `core/kit.py` parses a `kit/<name>.achievable.json`
   document into enumerated racks and is pure; `cli` reads the committed file and the inventory's
   hash and hands both to the service as values (ADR 0021), so a service test at a plate-pool
   location reads `tests/fixtures/kit/` and nothing else. No `kit` module sits beside `hevy`, no
-  fetch of kit exists anywhere, and no module outside `store`, `hevy` and `cli` imports
-  `urllib`. The
+  fetch of kit exists anywhere, and no module outside `store`, `hevy`, `github` and `cli`
+  imports `urllib`. The
   four typed errors (`Refused`, `Invalid`, `Unreachable`, `Setup`) live where every layer can
   raise them, and only `cli` maps them to exit codes.
 - **Seams.** `HevyClient` is a `typing.Protocol` of the four allow-listed writes, the GETs
@@ -101,11 +102,12 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
   Zero runtime dependencies stands.
 - **Hooks.** The plugin's hook declarations call `coach-hook session-start` and
   `coach-hook pre-tool-use`. ADR 0007's `coach hook <event>` is read as this entry point. It is
-  absent from `--help`, `schema`, the sixteen-leaf count and the generated permission rules.
-- **Test pyramid.** Seven directories, one per package plus contract: `tests/core/` (values, no
+  absent from `--help`, `schema`, the leaf count and the generated permission rules.
+- **Test pyramid.** Eight directories, one per package plus contract: `tests/core/` (values, no
   database, the bulk), `tests/store/` (migrations, the rebuild, row round-trips), `tests/hevy/`
   (payload parsing from the fixture shapes, the real client against a recording opener: the
-  allow-list, the retry, the audit lines), `tests/render/` (page determinism, the check-in
+  allow-list, the retry, the audit lines), `tests/github/` (the real client against a recording
+  opener: the allow-list, the token scrubbed from every error), `tests/render/` (page determinism, the check-in
   renderer, the 40-line prompt, the TOML round-trip), `tests/services/` (`:memory:` from
   `schema.sql` through scenario builders, `FakeHevy`, a fixed clock), `tests/cli/` (in-process
   `main` per exit class with the fixture instance, a `FakeHevy` factory and a fixed clock; the
