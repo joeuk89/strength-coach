@@ -1,16 +1,48 @@
 import re
 from collections.abc import Set
 from pathlib import Path
+from typing import cast
+
+import yaml
 
 # docs/spec/skills.md, "Budgets": characters divided by four, frontmatter included.
 TOKEN_BUDGET = 1500
 
 CODE_SPAN = re.compile(r"`([^`]*)`")
+FRONTMATTER = re.compile(r"\A---\n(.*?)^---$", re.MULTILINE | re.DOTALL)
 VERBS_SECTION = re.compile(r"^## Verbs\n(.*?)(?=^## |\Z)", re.MULTILINE | re.DOTALL)
 
 
 def skill_files(root: Path) -> list[Path]:
     return sorted(root.glob("*/SKILL.md"))
+
+
+def frontmatter(text: str) -> object:
+    """The parsed block between the opening `---` and the next; raises yaml.YAMLError if invalid."""
+    block = FRONTMATTER.match(text)
+    if block is None:
+        raise ValueError("no frontmatter")
+    return yaml.safe_load(block.group(1))
+
+
+def frontmatter_problems(text: str, directory: str) -> list[str]:
+    """What stops the plugin loading the skill: a parse error, or a missing or wrong field."""
+    try:
+        parsed = frontmatter(text)
+    except (ValueError, yaml.YAMLError) as error:
+        return [str(error).splitlines()[0]]
+    if not isinstance(parsed, dict):
+        return ["frontmatter is not a mapping"]
+    fields = cast(dict[object, object], parsed)
+
+    problems = [
+        f"no {key}"
+        for key in ("name", "description")
+        if not isinstance(value := fields.get(key), str) or not value.strip()
+    ]
+    if "no name" not in problems and fields["name"] != directory:
+        problems.append(f"name {fields['name']} is not the directory {directory}")
+    return problems
 
 
 def tokens(text: str) -> float:
