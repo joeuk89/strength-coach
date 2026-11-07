@@ -25,10 +25,9 @@ rather than carrying them.
   shapes next week's dose; one bad night does not.
 - **Phase.** When the card says the until condition is met or the trend is off, propose
   closing or keeping it with the athlete; a new Phase opens in the record.
-- **Ladders.** When the card's Ladders field says `met`, or asks about a manual rung, put the
-  next rung to the athlete. On a yes, record a `ladder_rung` Decision naming it in the check-in
-  record, with `because = "progress"`; otherwise acknowledge the `rung_met` or `ladder_top`
-  warning with a reason.
+- **Ladders.** On the athlete's yes to the card's Ladders field (`met`, or the manual rung's
+  ask), record a `ladder_rung` Decision naming the next rung in the check-in record, with
+  `because = "progress"`.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain
   changes gait, sleep or daily tasks; never diagnose.
 - **Block and tier.** When the card's Block line carries a proposal or the derived tier is deep,

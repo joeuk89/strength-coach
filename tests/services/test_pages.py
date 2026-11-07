@@ -3,9 +3,11 @@ import datetime
 import re
 
 from support.blocks import two_closed_blocks
+from support.check_in_cards import field_of, opened
 from support.clock import FixedClock
 from support.closed_weeks import a_check_in, a_planned_squat_week, closed_through, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
+from support.ladders import a_ladder_program, logged
 from support.pages import the_pages
 from support.plans import (
     SQUAT_LINE,
@@ -20,6 +22,7 @@ from support.programs import a_config
 from coach.core.config import Config, ImplementChoice, PlatePoolLocation
 from coach.core.hevy_actions import MapStatus
 from coach.core.mirror import MirroredRoutine
+from coach.render.facts import facts_text
 from coach.render.pages import render_pages
 from coach.services.closed_weeks import closed_weeks
 from coach.services.pages import page_facts
@@ -380,3 +383,15 @@ def test_a_routine_page_marks_the_rung_a_ladder_rung_decision_names() -> None:
     assert "1. Plank: 2×30 s @6." in page
     assert "2. **Side Plank** (standing): 2×30 s @6." in page
     assert page.count("Ladder:") == 1
+
+
+def test_a_check_in_record_shows_the_cards_ladders_field() -> None:
+    conn = a_ladder_program()
+    logged(conn, "dead_bug", "2026-11-05", 10)
+    a_check_in(conn, monday(0), "2026-11-08")
+    ladders = facts_text(field_of(opened(conn), "ladders").facts)
+
+    page = the_pages(conn)["pages/check-ins/2026-11-08.md"]
+
+    assert f"## Ladders\n\n{ladders}\n" in page
+    assert "| dead_bug |" in ladders
