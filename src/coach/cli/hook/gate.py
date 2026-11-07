@@ -13,7 +13,7 @@ from coach.core.hevy_api import HEVY_HOST, WORKOUTS_PATH
 
 # ADR 0006, "The hook": the modes where a human sees the prompt.
 PROMPT_MODES = frozenset({"default", "acceptEdits", "plan", "auto"})
-GATED_WRITES = frozenset({"hevy", "git"})
+GATED_WRITES = frozenset({"hevy", "git", "github"})
 EXPECT = "--expect"
 HASH_FIELD = "write_plan_hash"
 PROMPT_FIELD = "prompt"

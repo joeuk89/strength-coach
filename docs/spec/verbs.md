@@ -1,21 +1,23 @@
 # Verb set and output budgets
 
-The sixteen verbs the agent, the hooks and a human terminal can run, what each returns by
+The seventeen verbs the agent, the hooks and a human terminal can run, what each returns by
 default, what a second identical call does, and the rule for adding one. Decided 2026-10-31
 (wayfinder #16). The architecture they sit on is ADR 0002: a CLI over plain service functions,
 one JSON envelope per call, one declaration per verb generating `--help`, `schema` and the
 contract tests. Amended 2026-10-31 by [Verb, hook and validation amendments](https://github.com/joeuk89/strength-coach/issues/43):
 the `writes` declaration field, `--dry-run` on every asked verb, the exit-class codes, the
-Draft-local key, `notes` in the plan Draft, and what `status` and `query` return.
+Draft-local key, `notes` in the plan Draft, and what `status` and `query` return. Amended
+2026-11-07 by the `report` verb (`voice.md`, "Reporting"): the seventeenth leaf, declared
+`writes: github`.
 
 ## Budget and admission
 
 A **verb** is one leaf the agent can run: `coach status` is one, `coach checkin open` and
 `coach checkin record` are two. A noun groups leaves only where two or more actions share it.
 
-The v1 set is sixteen leaves and that is the cap. A leaf is added later for exactly two reasons:
+The v1 set is seventeen leaves and that is the cap. A leaf is added later for exactly two reasons:
 
-1. A record the agent must change that no existing verb can write (ADR 0005: every hard
+1. A write the agent must make that no existing verb can make (ADR 0005: every hard
    constraint sits downstream of a record the agent can change through a verb).
 2. An inline filter in the transcript benchmark (`benchmark.md`) that `--fields` cannot remove.
 
@@ -24,7 +26,7 @@ hand edits of data files (now the `record` verb and the Drafts), 27 unwrapped an
 write, 25 projected fields, 5 discovered a schema, 15 stripped a stray `coach:` prefix the old CLI
 printed before its JSON, and the rest asked the six questions the `query` views answer.
 
-## The sixteen
+## The seventeen
 
 | Leaf | Kind | Does |
 | --- | --- | --- |
@@ -44,17 +46,20 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
 | `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`), then the full pull when Hevy is on and a key is set |
+| `report <draft> [--dry-run]` | Writing verb (github) | file a bug or a Gap on the engine's issue tracker, the engine's footer and labels added (`voice.md`, "Reporting") |
 
 Kinds: a **read** changes nothing (`program show` may write a Draft file, below). A **store write** changes
-only the engine's own store and is allowed without a prompt. A **Writing verb** changes Hevy or
-git and is asked (ADR 0006). The kind is one declaration field, `writes: none | store | hevy |
-git`, and nothing else separates them: the permission rules ask on `hevy` and `git`, the hook
-runs the dry run of a verb declared `hevy` or `git`, and `coach schema` prints the field. The
-four asked verbs are the four Writing verbs: `plan apply` (`hevy`), `publish`, `upgrade` and
-`init` (`git`). Every one declares `--dry-run`, which is what the hook's prompt shows: `plan
+only the engine's own store and is allowed without a prompt. A **Writing verb** changes Hevy,
+git or the engine's issue tracker and is asked (ADR 0006). The kind is one declaration field,
+`writes: none | store | hevy | git | github`, and nothing else separates them: the permission
+rules ask on `hevy`, `git` and `github`, the hook runs the dry run of a verb declared `hevy`,
+`git` or `github`, and `coach schema` prints the field. The five asked verbs are the five Writing
+verbs: `plan apply` (`hevy`), `publish`, `upgrade` and `init` (`git`), and `report` (`github`).
+Every one declares `--dry-run`, which is what the hook's prompt shows: `plan
 apply` the Hevy actions and the hash (ADR 0006), `publish` the files it would write, the
 athlete-authored files it would commit and the export row counts per table, `upgrade` the migrations it would run and the files it would
-regenerate, `init` the tree it would write. A Writing verb's dry run touches no file.
+regenerate, `init` the tree it would write, `report` the repo, title, labels and the whole
+issue body. A Writing verb's dry run touches no file.
 
 A Draft verb's dry run runs the real write inside its transaction and rolls back instead of
 committing, so the ids it reports are the ones the next real run assigns, barring another write
@@ -100,9 +105,10 @@ Three rules every leaf obeys:
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
 - **6 KB default on every envelope.** Reads, write results, dry runs (the permission prompt shows
-  one) and errors all fit it. Three verbs are allowed over it, because their whole default
+  one) and errors all fit it. Four verbs are allowed over it, because their whole default
   output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
-  0006's approval prompt) and `program adopt --dry-run` (every adopt warning). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
+  0006's approval prompt), `program adopt --dry-run` (every adopt warning) and `report
+  --dry-run` (the whole issue body the athlete approves). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
   paths into `result` only, allowed on every verb, and excludes `--full`; the envelope's own
   fields stay, `warnings[]` always present, and a path naming one is refused saying so. One generated size test per
   declaration.
@@ -165,6 +171,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `query` | `rows[]`, `count`, `truncated` |
 | `publish` | commit hash, files written and deleted, export rows per table; with `--dry-run` the same with no commit hash |
 | `upgrade`, `init` | ADR 0007 and `instance.md`, and `init`'s `pull`; with `--dry-run`, the migrations and files `upgrade` would touch, the tree `init` would write |
+| `report --dry-run` | repo, title, labels, the whole body as it will be sent, `similar[]` (open `bug` or `enhancement` issues sharing two or more title words, as `{number, title, url}`, or null with a warning when GitHub cannot be read), and the prompt |
+| `report` | `{number, url, labels}` of the filed issue |
 
 ## Arguments with rules
 
@@ -247,6 +255,9 @@ pull ("The pull"). A differing hash does what the record's spec says:
 | `goal adopt` | no-op, same goal id | a new Goal row; the earlier is superseded |
 | `plan apply` | resumes: re-PUTs only `unverified` routines and those whose stored projection differs, verifies, and is a no-op `ok` once all are verified (ADR 0006, 0011) | exit 3, `--expect` mismatch; nothing sent |
 
+`report` takes a Draft and stores nothing, so a second call files a second issue: the prompt
+asks each time, and the dry run's `similar[]` shows the first.
+
 Verbs without a Draft:
 
 | Leaf | Second call |
@@ -277,8 +288,8 @@ change the numbers, draft a superseding plan.
 | 0 | ok, including every no-op above |
 | 1 | a Draft with any violation on `plan apply --dry-run`, `program adopt`, `checkin record`, `record`, `goal adopt`; `draft_exists` on an explicit `--out`; an unknown view or record kind; a routine read-back that differs (`verify_failed`, ADR 0011); malformed input: an unknown or ill-typed argument, a Draft field that does not parse, an id in the wrong form, a file argument that cannot be read (`invalid_argument`); well-formed input that stored state or a rule forbids, the message naming the rule and the fact (`state_conflict`); a goal naming a priority lift twice (`priority_lift_duplicate`) or a milestone with no target (`milestone_target_missing`); a `[phase]` opening while another is open (`phase_already_open`) |
 | 3 | a guard refuses a write: `plan apply` without `--expect` (`expect_missing`), with a changed hash (`expect_mismatch`), with a routine moved in Hevy since the import (`routine_moved`, ADR 0011), with two Hevy folders sharing the title of a folder it must adopt (`folder_title_shared`, ADR 0011), or when the write audit cannot be opened for append (`audit_unwritable`, ADR 0011). Whether a permission mode allows the prompt is the hook's answer, never the verb's |
-| 4 | Hevy unreachable or answering with a payload the client cannot read, on `import`, `plan apply` and every pulling verb (`hevy_unreachable`); `init` exits 4 with its tree written and committed |
-| 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), `init` where git is not on the PATH (`git_unavailable`) or knows no committer (`git_identity_missing`), both before a file is written, `init` where a `.env` already exists (`env_file_exists`), before a file is written; `upgrade` on a git tree with uncommitted changes (`git_tree_dirty`), or git refuses the commit (`git_commit_failed`, naming the command that finishes it), or another git step fails (`git_failed`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import`, `plan apply` and every pulling verb but `init`, which leaves the pull to the next verb when no key is set yet), an unknown table or key in `coach.toml`, or an `implements` value naming no implement of its location (`config_unknown_key`, on every verb; `instance.md`), a plate-pool location whose `kit/<name>.achievable.json` is missing or carries an `inventory_sha256` other than the hash of `kit/<name>.json` (`kit_tables_stale`, naming the location and the generator command, on `plan draft` and `program adopt`; ADR 0021); on the rebuild, `export_newer_than_engine`, or an export row that does not parse (`jsonl_row_malformed`); on any store write, `store_behind_export` (`schema.md`, "The rebuild") |
+| 4 | Hevy unreachable or answering with a payload the client cannot read, on `import`, `plan apply` and every pulling verb (`hevy_unreachable`); `init` exits 4 with its tree written and committed; GitHub unreachable or answering `report` with anything but 201, with a hint naming `COACH_GITHUB_TOKEN` on 401, 403 and 404 (`github_unreachable`), the Draft kept |
+| 5 | setup stops it: `init` on an instance (`instance_exists`), `init` on a `.dev` build without `--pin` (`engine_pin_required`), `init` where git is not on the PATH (`git_unavailable`) or knows no committer (`git_identity_missing`), both before a file is written, `init` where a `.env` already exists (`env_file_exists`), before a file is written; `upgrade` on a git tree with uncommitted changes (`git_tree_dirty`), or git refuses the commit (`git_commit_failed`, naming the command that finishes it), or another git step fails (`git_failed`), a pin mismatch (`engine_pin_mismatch`), outside an instance (`no_instance`), a schema behind the engine (`schema_behind`), a `[hevy]` table with no key in the environment or `.env` (`hevy_key_missing`, on `import`, `plan apply` and every pulling verb but `init`, which leaves the pull to the next verb when no key is set yet), an unknown table or key in `coach.toml`, or an `implements` value naming no implement of its location (`config_unknown_key`, on every verb; `instance.md`), a plate-pool location whose `kit/<name>.achievable.json` is missing or carries an `inventory_sha256` other than the hash of `kit/<name>.json` (`kit_tables_stale`, naming the location and the generator command, on `plan draft` and `program adopt`; ADR 0021); on the rebuild, `export_newer_than_engine`, or an export row that does not parse (`jsonl_row_malformed`); on any store write, `store_behind_export` (`schema.md`, "The rebuild"); `report` with no `COACH_GITHUB_TOKEN` in the environment or `.env` (`github_token_missing`; its dry run needs none) |
 
 `error.code` carries the flag code or the refusal reason named above. Nothing else refuses. A
 refusal reason is not a flag: it has no scope, no registry row and no `rn`.
@@ -287,14 +298,14 @@ refusal reason is not a flag: it has no scope, no registry row and no `rn`.
 
 Generated from the declarations, none hand-written per verb:
 
-- Sixteen leaves exist and no more; every leaf a skill names exists (`skills.md`). `coach-hook`
+- Seventeen leaves exist and no more; every leaf a skill names exists (`skills.md`). `coach-hook`
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope but the three allowed over it is under 6 KB on the fixture instance,
+- Every default envelope but the four allowed over it is under 6 KB on the fixture instance,
   which overflows every list a default summary truncates (`testing.md`); this test lives in
   `tests/contract/` only.
-- Every verb declared `writes: hevy` or `git` declares `--dry-run`, and its dry run on the
+- Every verb declared `writes: hevy`, `git` or `github` declares `--dry-run`, and its dry run on the
   fixture instance writes no file and opens no transaction.
 - Every verb with a `draft` argument declares `--dry-run`, and its dry run on the fixture
   instance leaves the tree and the store unchanged.

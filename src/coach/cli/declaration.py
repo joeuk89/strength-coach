@@ -8,16 +8,19 @@ from coach.core.clock import Clock
 from coach.core.config import Config, Units
 from coach.core.flag import Flag
 from coach.core.message import Message
+from coach.github.protocol import GitHubClient
 from coach.hevy.protocol import HevyClient
 from coach.store.rebuild import Rebuilt
 
-type Writes = Literal["none", "store", "hevy", "git"]
+type Writes = Literal["none", "store", "hevy", "git", "github"]
 type Json = dict[str, object]
 type ArgValue = str | bool | tuple[str, ...]
 type OverBudget = Callable[[Mapping[str, ArgValue]], bool]
 # The real client's wiring: the API key, the Write audit path and the clock (ADR 0019).
 type MakeClient = Callable[[str, Path, Clock], HevyClient]
 type MakeClock = Callable[[str], Clock]
+# The token, or None for a read that needs none.
+type MakeGitHub = Callable[[str | None], GitHubClient]
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,7 @@ class Call:
     env: Mapping[str, str]
     make_client: MakeClient
     make_clock: MakeClock
+    make_github: MakeGitHub
     terminal: Terminal
 
 

@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 
 from coach.cli.declaration import Call, Instance, Json, Outcome
-from coach.cli.hevy_key import api_key
+from coach.cli.keys import hevy_key
 from coach.core.clock import Clock
 from coach.core.flag import Flag
 from coach.services.hevy_import import import_hevy
@@ -59,7 +59,7 @@ def pull(
 ) -> Pulled | None:
     if instance.config.hevy is None:
         return None
-    key = api_key(call.env, instance.root / ".env")
+    key = hevy_key(call.env, instance.root / ".env")
     client = call.make_client(key, instance.audit_path, clock)
     result = import_hevy(conn, client, clock, full=full, units=instance.units)
     summary: Json = {

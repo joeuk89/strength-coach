@@ -9,8 +9,8 @@ from coach.cli.declaration import (
     on_dry_run,
 )
 from coach.cli.drafts import read_draft
-from coach.cli.hevy_key import api_key
 from coach.cli.instance import open_instance_store
+from coach.cli.keys import hevy_key
 from coach.cli.kit import read_kit_files
 from coach.cli.terminal import Terminal
 from coach.core.config import Units
@@ -39,7 +39,7 @@ def run(call: InstanceCall) -> Outcome:
     expect = given if isinstance(given, str) else None
     client = None
     if instance.config.hevy is not None:
-        key = api_key(call.env, instance.root / ".env")
+        key = hevy_key(call.env, instance.root / ".env")
         client = call.make_client(key, instance.audit_path, call.clock)
     with open_instance_store(instance) as conn:
         found = expected(

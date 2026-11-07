@@ -5,6 +5,8 @@ from typing import Any
 import pytest
 from support.hook import HASH, a_bash_call, clean_dry_run, run_hook
 
+from coach.cli.verbs.report import DECLARATION as REPORT
+
 EVERY_MODE = ["default", "acceptEdits", "plan", "auto", "bypassPermissions", "dontAsk", None]
 
 
@@ -67,6 +69,20 @@ def test_the_dry_run_prompt_is_the_summary_shown_verbatim() -> None:
     )
 
     assert prompt in run.reason
+
+
+def test_coach_report_asks_with_its_dry_run_prompt_whole_however_long() -> None:
+    prompt = "Report to joeuk89/strength-coach\n" + "".join(f"line {n}\n" for n in range(300))
+    run = run_hook(
+        "pre-tool-use",
+        a_bash_call("coach report .coach/drafts/report.toml"),
+        declarations=[REPORT],
+        run_coach=clean_dry_run(prompt=prompt),
+    )
+
+    assert run.decision == "ask"
+    assert prompt in run.reason
+    assert run.dry_runs[0][0] == ["report", ".coach/drafts/report.toml", "--dry-run"]
 
 
 def test_a_dry_run_without_a_prompt_is_shown_as_its_result() -> None:
