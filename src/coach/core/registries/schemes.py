@@ -6,7 +6,15 @@ from coach.core.registries.registry import Registry, Row
 
 type CadenceSignal = Literal["cadence_slow", "cadence_fast"]
 type ParamType = Literal[
-    "integer", "fraction", "percent", "number", "loads", "per_exercise", "number_or_per_exercise"
+    "integer",
+    "fraction",
+    "percent",
+    "number",
+    "loads",
+    "per_exercise",
+    "number_or_per_exercise",
+    "rungs",
+    "criterion",
 ]
 type SetGroupShape = Literal["any", "one_working", "top_then_backoffs", "count_only"]
 type RpeOn = Literal["every_working", "top", "none"]
@@ -14,11 +22,12 @@ type RpeOn = Literal["every_working", "top", "none"]
 
 @dataclass(frozen=True)
 class Param:
-    """`default` is `None` when the form must state the param."""
+    """`default` is `None` when the form must state the param; `keys` are a table param's."""
 
     name: str
     type: ParamType
-    default: int | float | None = None
+    default: int | float | Mapping[str, object] | None = None
+    keys: tuple[str, ...] = ()
 
     @property
     def required(self) -> bool:
@@ -29,11 +38,17 @@ class Param:
         if self.required:
             row["required"] = True
         else:
-            row["default"] = self.default
+            default = self.default
+            row["default"] = dict(default) if isinstance(default, Mapping) else default
+        if self.keys:
+            row["keys"] = list(self.keys)
         return row
 
 
 LINE_SET_TYPES = ("warm_up", "working", "activation")
+RUNG_KEYS = ("exercise", "cues", "sets", "advance")
+CRITERION_KEYS = ("reps", "duration_s", "rpe_at_most", "exposures", "manual")
+DEFAULT_EXPOSURES = 2
 
 
 @dataclass(frozen=True)
@@ -113,6 +128,20 @@ SCHEMES = Registry(
             "line",
             reads="reps at RPE on the current rung",
             params=(Param("rungs", "loads"),),
+            set_types=("working",),
+            set_groups="one_working",
+            rpe_on="every_working",
+            opening="the first rung",
+            cadence_signals=("cadence_slow",),
+        ),
+        Scheme(
+            "exercise_ladder",
+            "line",
+            reads="reps or duration at RPE on the standing rung",
+            params=(
+                Param("rungs", "rungs", keys=RUNG_KEYS),
+                Param("advance", "criterion", {"exposures": DEFAULT_EXPOSURES}, CRITERION_KEYS),
+            ),
             set_types=("working",),
             set_groups="one_working",
             rpe_on="every_working",

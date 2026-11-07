@@ -209,6 +209,26 @@ def a_line(exercise: str = "bb_bench_press", **fields: Any) -> dict[str, Any]:
     return {key: value for key, value in line.items() if value is not None}
 
 
+def a_rung(exercise: str | None = None, **fields: Any) -> dict[str, Any]:
+    rung: dict[str, Any] = {
+        "exercise": exercise,
+        "cues": f"{exercise or 'first'} cues",
+        "sets": [{"count": 2, "duration_s": 30, "rpe": 6}],
+    }
+    rung.update(fields)
+    return {key: value for key, value in rung.items() if value is not None}
+
+
+def a_ladder_line(exercise: str = "plank", *rungs: dict[str, Any], **scheme: Any) -> dict[str, Any]:
+    """An `exercise_ladder` line: the rungs given, or the line's own exercise then side_plank."""
+    ladder = list(rungs) or [a_rung(), a_rung("side_plank")]
+    return {
+        "exercise": exercise,
+        "rest_s": 60,
+        "scheme": {"name": "exercise_ladder", **scheme, "rungs": ladder},
+    }
+
+
 def a_session(id_: str = "push", *lines: dict[str, Any], **fields: Any) -> dict[str, Any]:
     session: dict[str, Any] = {
         "id": id_,
