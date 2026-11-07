@@ -297,13 +297,13 @@ def test_hevy_without_a_key_writes_the_table_and_no_env(
     assert "pull" not in run.envelope["result"]
 
 
-def test_the_generated_settings_ask_on_exactly_the_verbs_declared_hevy_or_git(
+def test_the_generated_settings_ask_on_exactly_the_verbs_declared_hevy_git_or_github(
     empty_directory: Path, release: None
 ) -> None:
     run_coach("init", "--defaults")
 
     settings = json.loads((empty_directory / ".claude" / "settings.json").read_text())
-    asked = sorted(d.name for d in declarations() if d.writes in ("hevy", "git"))
+    asked = sorted(d.name for d in declarations() if d.writes in ("hevy", "git", "github"))
     assert settings["permissions"]["ask"] == [f"Bash(coach {name}:*)" for name in asked]
     assert "Bash(*api.hevyapp.com/v1/workouts*)" in settings["permissions"]["deny"]
 

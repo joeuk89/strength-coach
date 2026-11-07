@@ -88,7 +88,7 @@ def test_schema_without_a_verb_lists_the_declarations_as_rows_under_the_budget()
     assert run.code == 0
     assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
     assert [row["name"] for row in result["rows"]] == names[: len(result["rows"])]
-    assert (result["count"], result["truncated"]) == (16, True)
+    assert (result["count"], result["truncated"]) == (17, True)
 
 
 def test_schema_full_gives_every_declaration() -> None:
@@ -96,7 +96,7 @@ def test_schema_full_gives_every_declaration() -> None:
 
     result = run.envelope["result"]
     assert [row["name"] for row in result["rows"]] == [d.name for d in declarations()]
-    assert (result["count"], result["truncated"]) == (16, False)
+    assert (result["count"], result["truncated"]) == (17, False)
 
 
 def test_schema_of_the_schema_verb_declares_its_optional_verb_argument() -> None:

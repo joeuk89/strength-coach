@@ -17,6 +17,7 @@ from coach.cli.declaration import (
     Json,
     MakeClient,
     MakeClock,
+    MakeGitHub,
 )
 from coach.cli.instance import (
     find_root,
@@ -31,6 +32,7 @@ from coach.core.clock import Clock
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 from coach.core.flag import Flag
 from coach.core.message import Message
+from coach.github.client import GitHubApiClient
 from coach.hevy.client import HevyApiClient
 from coach.store.chain import engine as engine_chain
 
@@ -54,6 +56,7 @@ def main(
     stderr: TextIO,
     *,
     make_client: MakeClient = HevyApiClient,
+    make_github: MakeGitHub = GitHubApiClient,
     clock: Clock | None = None,
 ) -> int:
     verb: str | None = None
@@ -78,6 +81,7 @@ def main(
                 env=env,
                 make_client=make_client,
                 make_clock=_fixed(clock) if clock else clock_for,
+                make_github=make_github,
                 terminal=Terminal(sys.stdin, stderr),
             )
             match declaration.run:

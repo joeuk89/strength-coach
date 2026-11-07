@@ -7,6 +7,7 @@
       "Bash(coach init:*)",
       "Bash(coach plan apply:*)",
       "Bash(coach publish:*)",
+      "Bash(coach report:*)",
       "Bash(coach upgrade:*)"
     ],
     "deny": [

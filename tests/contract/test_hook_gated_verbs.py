@@ -13,12 +13,12 @@ def a_command(declaration: Declaration) -> str:
 
 
 @pytest.mark.parametrize("declaration", EVERY_DECLARATION, ids=lambda d: d.name)
-def test_the_hook_runs_the_dry_run_of_exactly_the_verbs_declared_hevy_or_git(
+def test_the_hook_runs_the_dry_run_of_exactly_the_verbs_declared_hevy_git_or_github(
     declaration: Declaration,
 ) -> None:
     run = run_hook("pre-tool-use", a_bash_call(a_command(declaration)), declarations=[declaration])
 
-    gated = declaration.writes in ("hevy", "git")
+    gated = declaration.writes in ("hevy", "git", "github")
     assert (run.decision is not None) == gated
     assert (len(run.dry_runs) == 1) == gated
 

@@ -84,7 +84,7 @@ def test_coach_hook_is_not_a_leaf_and_leaves_the_count_unchanged() -> None:
 
 
 def test_coach_hook_is_absent_from_help_schema_and_the_permission_rules() -> None:
-    asked = [d.name for d in declarations() if d.writes in ("hevy", "git")]
+    asked = [d.name for d in declarations() if d.writes in ("hevy", "git", "github")]
 
     for text in (run_coach("--help").stdout, run_coach("schema").stdout, settings_json(asked)):
         assert "coach-hook" not in text

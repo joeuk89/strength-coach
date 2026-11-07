@@ -27,6 +27,10 @@ CLOCK = FixedClock(at(TODAY))
 NEXT_WEEK = "2026-11-02"
 CHECK_IN = f'date = {TODAY}\ntier = "light"\nread = "a steady week"\n'
 RECORD = f"[[weigh_in]]\ndate = {TODAY}\nkg = 81.2\n"
+WHAT_WENT_WRONG = "\n".join(
+    f"Week {n}: the plan held three sets; Hevy showed two." for n in range(80)
+)
+REPORT = f'kind = "bug"\ntitle = "Plan apply drops a set"\nbody = """\n{WHAT_WENT_WRONG}\n"""\n'
 
 type Coach = Callable[..., Run]
 
@@ -53,6 +57,7 @@ def example_drafts(root: Path, coach: Coach) -> None:
     (drafts / "2026-10-30-goal.toml").write_text(GOAL)
     (drafts / "2026-11-01-checkin.toml").write_text(CHECK_IN)
     (drafts / "2026-10-30-record.toml").write_text(RECORD)
+    (drafts / "2026-11-07-report.toml").write_text(REPORT)
 
 
 PLAN = ".coach/drafts/2026-11-01-plan.toml"
@@ -115,6 +120,9 @@ OVER_BUDGET: dict[tuple[str, ...], str] = {
     ("plan", "apply", PLAN, "--dry-run"): "ADR 0006's 40-line approval prompt alone is about 3 KB",
     ("program", "adopt", ".coach/drafts/2026-10-30-program.toml", "--dry-run"): (
         "every adopt warning needs an answer before the version is adopted"
+    ),
+    ("report", ".coach/drafts/2026-11-07-report.toml", "--dry-run"): (
+        "the whole issue body is what the athlete approves, so it is never cut"
     ),
 }
 

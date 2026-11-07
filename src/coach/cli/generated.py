@@ -6,7 +6,7 @@ from pathlib import Path
 from coach.cli import registry
 from coach.render.instance_files import claude_md, settings_json
 
-ASKED = ("hevy", "git")
+ASKED = ("hevy", "git", "github")
 
 
 def generated_files(version: str) -> dict[str, str]:
