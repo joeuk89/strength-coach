@@ -33,6 +33,7 @@ class ExposureSet:
     load: Load | None
     reps: int | None
     rpe: float | None
+    duration_s: int | None = None
 
 
 @dataclass(frozen=True)
@@ -178,7 +179,12 @@ class _Corrected:
     def exposure_sets(self, units: Units) -> tuple[ExposureSet, ...]:
         return tuple(
             ExposureSet(
-                s.position, s.set_type, from_hevy_kg(s.weight_kg, self.mode, units), s.reps, s.rpe
+                s.position,
+                s.set_type,
+                from_hevy_kg(s.weight_kg, self.mode, units),
+                s.reps,
+                s.rpe,
+                s.duration_s,
             )
             for s in self.sets
             if s.set_type in EXPOSURE_SET_TYPES

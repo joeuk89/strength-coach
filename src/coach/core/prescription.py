@@ -63,6 +63,7 @@ class DecisionInForce:
     session_id: str | None = None
     exercise_id: str | None = None
     params: Mapping[str, object] = field(default_factory=dict[str, object])
+    on: datetime.date | None = None
 
 
 @dataclass(frozen=True)
@@ -98,7 +99,8 @@ class MatchedActivity:
 
 @dataclass(frozen=True)
 class PrescribeRequest:
-    """`redesigned` is the latest redesign's adoption date; `None` reads stalls unbounded."""
+    """`redesigned` is the latest redesign's adoption date; `None` reads stalls unbounded.
+    `adopted` is the version's own adoption date, where a ladder's first rung starts."""
 
     version: ProgramVersion
     exposures: tuple[Exposure, ...]
@@ -112,6 +114,7 @@ class PrescribeRequest:
     hard_week_count: int = 0
     activities: Mapping[str, MatchedActivity] = field(default_factory=dict[str, MatchedActivity])
     redesigned: datetime.date | None = None
+    adopted: datetime.date | None = None
 
 
 @dataclass(frozen=True)

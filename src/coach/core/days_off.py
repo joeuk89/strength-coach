@@ -4,7 +4,7 @@ import datetime
 import itertools
 import math
 import statistics
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 
 from coach.core.exposure import Exposure
@@ -71,12 +71,17 @@ def line_days_off(
     exercise_id: str,
     session_id: str,
     on: datetime.date,
+    rungs: Collection[str] = (),
 ) -> DaysOff:
+    """`rungs` are a ladder line's rung exercises: an exposure of any of them trains the line."""
     exposures = tuple(exposures)
     trained = tuple(trained)
     session_dates = [t.date for t in trained if t.session_id == session_id]
     return days_off(
         on,
-        line_dates=[*(e.date for e in exposures if e.exercise_id == exercise_id), *session_dates],
+        line_dates=[
+            *(e.date for e in exposures if e.exercise_id == exercise_id or e.exercise_id in rungs),
+            *session_dates,
+        ],
         lifting_dates=[*(e.date for e in exposures), *(t.date for t in trained)],
     )

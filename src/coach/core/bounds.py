@@ -62,6 +62,7 @@ class LineContext:
     scheme_load: Load | None = None
     pin: Load | None = None
     e1rm: E1rm | None = None
+    rung_exercises: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,7 @@ class _Bounding:
             exercise_id=self.context.line.exercise,
             session_id=request.planned.session_id,
             on=request.planned.date,
+            rungs=self.context.rung_exercises,
         )
         band = return_band(days.days)
         if band is not None:

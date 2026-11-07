@@ -50,6 +50,13 @@ class FlagCode:
     params: tuple[str, ...]
     rn: Citation = ()
     cleared_by: tuple[str, ...] = ()
+    hashed: tuple[str, ...] | None = None
+
+    def hashed_params(self, params: Mapping[str, object]) -> Mapping[str, object]:
+        """The params the hash covers: every one unless the row names fewer."""
+        if self.hashed is None:
+            return params
+        return {name: value for name, value in params.items() if name in self.hashed}
 
     def refs_for(self, params: Mapping[str, object]) -> Refs:
         if isinstance(self.rn, ByCase):
@@ -67,6 +74,8 @@ class FlagCode:
         }
         if self.cleared_by:
             row["cleared_by"] = list(self.cleared_by)
+        if self.hashed is not None:
+            row["hashed"] = list(self.hashed)
         return row
 
 
@@ -98,8 +107,10 @@ def acknowledgeable_warning(
     params: tuple[str, ...],
     rn: Citation = (),
     left_by: tuple[AcknowledgementSource, ...] = ON_A_PLAN,
+    *,
+    hashed: tuple[str, ...] | None = None,
 ) -> FlagCode:
-    return FlagCode(name, "warning", left_by, scopes, params, rn)
+    return FlagCode(name, "warning", left_by, scopes, params, rn, hashed=hashed)
 
 
 def adopt_warning(
@@ -294,6 +305,16 @@ PLAN_WARNINGS = (
         ("line",),
         ("training_max", "source", "rep_outs"),
         ("rn:progression-training-age.9",),
+    ),
+    acknowledgeable_warning(
+        "rung_met",
+        ("line",),
+        ("rung", "next", "exposures"),
+        ("rn:bodyweight-skill-progression.3",),
+        hashed=("rung", "next"),
+    ),
+    acknowledgeable_warning(
+        "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.2",)
     ),
     acknowledgeable_warning(
         "rpe_ceiling_unchecked",

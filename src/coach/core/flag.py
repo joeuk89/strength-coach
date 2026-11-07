@@ -171,7 +171,10 @@ class Flag:
 
     @property
     def params_hash(self) -> str:
-        canonical = json.dumps(self.params, sort_keys=True, separators=(",", ":"))
+        hashed = (
+            FLAGS.get(self.code).hashed_params(self.params) if self.code in FLAGS else self.params
+        )
+        canonical = json.dumps(hashed, sort_keys=True, separators=(",", ":"))
         return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def to_json(self) -> dict[str, object]:
