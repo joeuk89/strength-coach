@@ -34,6 +34,7 @@ def fold_overrides(form: ProgramForm, overrides: Sequence[PlanOverride]) -> Fold
     folding = sorted(
         (o for o in overrides if o.kind in FOLDING), key=lambda o: FOLDING.index(o.kind)
     )
+    folded: list[Folded] = []
     applied: list[PlanOverride] = []
     sessions: list[Session] = []
     for session in form.sessions:
@@ -45,6 +46,7 @@ def fold_overrides(form: ProgramForm, overrides: Sequence[PlanOverride]) -> Fold
                 if (o.session_id, o.exercise_id) == (session.id, line.exercise)
                 and not (line.scheme.ladder and o.kind in RUNGS_CARRY)
             ]
+            folded.extend(Folded(session.id, line.exercise, o.kind) for o in on_line)
             applied.extend(on_line)
             current: Line | None = line
             for override in on_line:
@@ -52,7 +54,6 @@ def fold_overrides(form: ProgramForm, overrides: Sequence[PlanOverride]) -> Fold
             if current is not None:
                 lines.append(current)
         sessions.append(replace(session, lines=tuple(lines)))
-    folded = [Folded(str(o.session_id), str(o.exercise_id), o.kind) for o in applied]
     pins = frozenset(
         (f.session_id, _exercise_after(f, applied)) for f in folded if f.kind == "pin_load"
     )
