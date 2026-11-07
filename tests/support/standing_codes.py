@@ -287,6 +287,17 @@ def frozen_load_off_rack(_: Path, __: pytest.MonkeyPatch) -> Standing:
     return Standing(raised, status_codes(conn, IMPORTED, locations=locations, kits=kits))
 
 
+def plan_behind_program(_: Path, __: pytest.MonkeyPatch) -> Standing:
+    """The 26 Oct plan was approved before the version adopted on 30 Oct; a superseding plan
+    applied for the week clears it."""
+    conn = a_squat_program()
+    an_approved_plan(conn, "2026-10-26")
+    raised = status_codes(conn, IMPORTED)
+    week = datetime.date(2026, 10, 26)
+    push(conn, FakeHevy(FixedClock()), a_plan_draft(conn, hevy=True, week=week))
+    return Standing(raised, status_codes(conn, IMPORTED))
+
+
 RELEASE = "0.3.0"
 
 
@@ -336,4 +347,5 @@ SCENARIOS: dict[str, Scenario] = {
     "run_spike": run_spike,
     "cadence_slow": cadence_slow,
     "cadence_fast": cadence_fast,
+    "plan_behind_program": plan_behind_program,
 }
