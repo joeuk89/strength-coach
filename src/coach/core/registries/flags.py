@@ -162,6 +162,12 @@ VIOLATIONS = (
         ("[[exercise]]", "program adopt"),
     ),
     violation(
+        "hevy_template_value_unknown",
+        ("line",),
+        ("exercise_id", "column", "value"),
+        ("[[exercise]]", "program adopt"),
+    ),
+    violation(
         "load_mode_mismatch",
         ("line",),
         ("exercise_load_mode", "line_load_mode"),
