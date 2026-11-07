@@ -21,23 +21,12 @@ from coach.core.fatigue import (
 )
 from coach.core.planned_week import week_monday
 from coach.core.program.form import Deload
+from coach.core.registries.program import COMPOUND_PATTERNS
 from coach.services.closed_weeks import WeekLog, WindowList
 from coach.store import check_ins, decisions, exercises, niggles, programs, readings, week_plans
 from coach.store.connection import Connection
 from coach.store.rows import Row
 
-# A compound lift is multi-joint: the patterns RPE drift reads (rn:autoregulation.4).
-COMPOUND_PATTERNS = frozenset(
-    {
-        "squat",
-        "hinge",
-        "lunge",
-        "horizontal_push",
-        "vertical_push",
-        "horizontal_pull",
-        "vertical_pull",
-    }
-)
 # Light and return work are not judged for drift.
 UNJUDGED_WEEKS = ("light", "return")
 

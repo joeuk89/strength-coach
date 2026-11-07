@@ -7,10 +7,10 @@ from collections.abc import Iterable, Mapping, Sequence
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
-from coach.core.muscles import DOSED_MUSCLES
 from coach.core.planned_week import week_monday
 from coach.core.prescription import LinePrescription, SessionPrescription
 from coach.core.program.form import LiftDose
+from coach.core.registries.program import DOSED_MUSCLES
 
 type MuscleMap = Mapping[str, Mapping[str, Sequence[str]]]
 

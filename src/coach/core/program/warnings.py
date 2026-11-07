@@ -7,7 +7,7 @@ from typing import cast
 from coach.core.closed_week.dose import is_hard
 from coach.core.config import WEEKDAYS
 from coach.core.flag import Acknowledgement, Flag, FlagKey, Scope, leave, raise_flag
-from coach.core.muscles import DOSED_MUSCLES, read_muscles
+from coach.core.muscles import read_muscles
 from coach.core.program.bands import (
     deload_shape,
     dose_bands,
@@ -20,6 +20,7 @@ from coach.core.program.estimate import session_estimate
 from coach.core.program.form import WEEKDAYS as SCHEDULE_DAYS
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm, Session
 from coach.core.registries.ledger import Reason
+from coach.core.registries.program import DOSED_MUSCLES
 
 LOW_ADHERENCE = ("watch", "low")
 
