@@ -302,7 +302,7 @@ class _Checks:
         elif scheme is not None:
             self._ladder(session, line, line.scheme.ladder, scheme, scope)
         self._start_load(session, line, exercise, scope)
-        self._template(line, exercise, scope)
+        self._template(line.exercise, exercise, scope)
 
     def _exercise(self, id_: str) -> Mapping[str, object] | None:
         stored = self.context.library.get(id_)
@@ -322,7 +322,8 @@ class _Checks:
                 f"the ladder on {line.exercise} has one rung; a ladder climbs to a second",
             )
         for index, rung in enumerate(ladder.rungs, start=1):
-            if index > 1 and self._exercise(rung.exercise) is None:
+            rung_exercise = self._exercise(rung.exercise) if index > 1 else None
+            if index > 1 and rung_exercise is None:
                 self.raise_(
                     "rung_exercise_unknown",
                     self.version_scope,
@@ -330,6 +331,8 @@ class _Checks:
                     f"rung {index} of {line.exercise} in {session.id} names {rung.exercise!r}, "
                     "which is not in the library and not declared in the Draft",
                 )
+            elif rung_exercise is not None:
+                self._template(rung.exercise, rung_exercise, scope)
             self._set_groups(session, line, rung.sets, scheme, scope, rung=index)
             key = _off_rung(rung, ladder.criterion(index))
             if key is not None:
@@ -442,8 +445,8 @@ class _Checks:
                 f"{line.start_load} is not on the {kind} rack at {location}; nearest {nearest}",
             )
 
-    def _template(self, line: Line, exercise: Mapping[str, object], scope: Scope) -> None:
-        if not self.context.hevy_on or line.exercise not in self.form.exercises:
+    def _template(self, id_: str, exercise: Mapping[str, object], scope: Scope) -> None:
+        if not self.context.hevy_on or id_ not in self.form.exercises:
             return
         if exercise.get("hevy_template_id"):
             return
@@ -452,8 +455,8 @@ class _Checks:
             self.raise_(
                 "hevy_template_missing",
                 scope,
-                {"exercise_id": line.exercise, "missing_columns": missing},
-                f"{line.exercise} has no Hevy template and lacks {', '.join(missing)}",
+                {"exercise_id": id_, "missing_columns": missing},
+                f"{id_} has no Hevy template and lacks {', '.join(missing)}",
             )
 
     def unknown_keys(self) -> None:

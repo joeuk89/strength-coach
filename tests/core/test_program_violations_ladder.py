@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -161,4 +162,25 @@ def test_a_rung_group_stating_neither_reps_nor_duration_is_set_groups_off_scheme
     assert flag.params == {
         "scheme": "exercise_ladder",
         "expected_shape": "one working group stating reps or duration_s",
+    }
+
+
+def test_a_declared_rung_exercise_with_no_template_is_hevy_template_missing() -> None:
+    line = a_ladder_line("plank", a_rung(), a_rung("custom_board"))
+    declared = {"custom_board": {"name": "Board", **DURATION}}
+    parsed = parse_program_draft(
+        toml(a_draft(a_session("core", line), exercise=declared)), file="d.toml"
+    )
+
+    [flag] = violations(parsed.form, replace(CONTEXT, hevy_on=True), parsed.unknown_keys)
+
+    assert flag.key == "hevy_template_missing@line:core/plank"
+    assert flag.params == {
+        "exercise_id": "custom_board",
+        "missing_columns": [
+            "hevy_title",
+            "hevy_exercise_type",
+            "hevy_equipment",
+            "hevy_muscle_group",
+        ],
     }
