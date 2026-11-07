@@ -7,11 +7,11 @@ ticket #11; first version of the table in the 2026-10-26 system review (old inst
 
 ## Baseline (measured 2026-10-26)
 
-| Session | Flow | Wall time | coach calls | Distinct subcommands | Bash calls with inline Python | Peak context | Athlete replies | Instruction tokens |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| d4f30a4f, 26 Oct | check-in → program-week → publish | 28 min | 82 | 47 | 27 | 186k | 3 | ~22k |
-| d4a44e8b, 18 Oct | check-in → program-week → fix → publish ×2 | 35 min | 141 | 61 | 33 | 300k | 7 | ~37k |
-| 08c4bfd8, 12–13 Oct | goals + deload (migration day: recipes, goals, program-week) | 41 min | 134 | 55 | 59 | 432k | 8 | ~22k |
+| Session | Flow | Wall time | coach calls | Distinct subcommands | Bash calls with inline Python | Peak context | Athlete replies | Instruction tokens | Voice leaks |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| d4f30a4f, 26 Oct | check-in → program-week → publish | 28 min | 82 | 47 | 27 | 186k | 3 | ~22k | not measured |
+| d4a44e8b, 18 Oct | check-in → program-week → fix → publish ×2 | 35 min | 141 | 61 | 33 | 300k | 7 | ~37k | not measured |
+| 08c4bfd8, 12–13 Oct | goals + deload (migration day: recipes, goals, program-week) | 41 min | 134 | 55 | 59 | 432k | 8 | ~22k | not measured |
 
 Instruction tokens by source (characters ÷ 4):
 
@@ -85,6 +85,21 @@ How each column is computed:
   before the session ended. A file missing at that commit counts zero and is listed as `null`.
   The attachment's `User` and `AutoMem` files (the global CLAUDE.md and the memory index) are
   summed separately as `outside_target` and never enter the figure.
+
+- **Voice leaks.** Athlete-facing messages holding at least one lexicon term, over all
+  athlete-facing messages, as `leaking/messages` (`voice.md`, "A voice leak"). A message is a
+  `text` block on a non-sidechain `assistant` record. The lexicon is read at run time from the
+  engine, `coach` on PATH or else `uv run coach`, through `--help` and `schema --registry` for
+  `flags`, `record-kinds`, `views` and `errors` with `--full`; `--lexicon <json>` replaces it for
+  a session measured against an older engine. The fixed list and the `path`, `store-id`, `hash`
+  and `code` patterns are the script's. Every URL is stripped before matching. There is no
+  exemption and no reading of prose, so a plain "I can't do that here" scores zero. The JSON
+  gives `athlete_messages`, `leaking_messages`, the leaking `uuid`s, `leak_hits` (each class's
+  sorted distinct terms) and `leaking_messages_by_class`, from which both Targets numbers are
+  read. The count is a floor: a leak in plain English is not seen, and the hand-marked
+  `scripts/benchmark/transcripts/README.md` is the reference. A test runs the count over those
+  three transcripts and asserts it marks the README's messages, plus pull-up-dose messages 9 to
+  13, which count by decision; incline-curl message 15 is a plain-English leak it misses.
 
 Known limits:
 
