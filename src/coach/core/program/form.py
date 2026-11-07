@@ -1,7 +1,7 @@
 """The authored program form as values (docs/spec/program.md, "The authored form")."""
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal
 
 type Emphasis = Literal["hypertrophy", "strength", "maintenance"]
@@ -31,9 +31,48 @@ class SetGroup:
 
 
 @dataclass(frozen=True)
+class Advance:
+    """An advance criterion as authored; a key left `None` is unsaid."""
+
+    reps: int | None = None
+    duration_s: int | None = None
+    rpe_at_most: Number | None = None
+    exposures: int | None = None
+    manual: bool | None = None
+
+    def stated(self) -> dict[str, object]:
+        return {key: value for key, value in vars(self).items() if value is not None}
+
+
+@dataclass(frozen=True)
+class Rung:
+    exercise: str
+    sets: tuple[SetGroup, ...]
+    cues: str | None = None
+    advance: Advance = Advance()
+
+
+@dataclass(frozen=True)
+class ExerciseLadder:
+    rungs: tuple[Rung, ...]
+    advance: Advance = Advance()
+
+    def criterion(self, index: int) -> Advance:
+        """Rung `index` (from 1)'s criterion: its own keys laid over the ladder's, or `manual`
+        alone when the rung says so."""
+        own = self.rungs[index - 1].advance
+        if own.manual:
+            return Advance(manual=True)
+        return replace(self.advance, **own.stated())
+
+
+@dataclass(frozen=True)
 class SchemeRef:
+    """`params` are as authored; `ladder` is an `exercise_ladder` line's rungs read from them."""
+
     name: str
     params: Mapping[str, object] = field(default_factory=dict[str, object])
+    ladder: ExerciseLadder | None = None
 
 
 @dataclass(frozen=True)
@@ -221,7 +260,8 @@ def line_document(line: Line) -> dict[str, object]:
     document: dict[str, object] = {"exercise": line.exercise}
     if line.load_mode is not None:
         document["load_mode"] = line.load_mode
-    document["sets"] = [group_document(group) for group in line.sets]
+    if line.scheme.ladder is None:
+        document["sets"] = [group_document(group) for group in line.sets]
     document["rest_s"] = line.rest_s
     optional: dict[str, object | None] = {
         "cues": line.cues,

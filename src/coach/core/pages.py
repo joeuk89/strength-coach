@@ -41,8 +41,21 @@ class PlatePoolKit:
 
 
 @dataclass(frozen=True)
+class PageRung:
+    """One rung of a line's ladder as the version authors it; `criterion` is in full."""
+
+    rung: int
+    name: str
+    cues: str | None
+    set_groups: tuple[Json, ...]
+    criterion: Json
+    standing: bool
+
+
+@dataclass(frozen=True)
 class PageLine:
-    """One frozen prescription row; `set_groups` carry `load` in athlete units."""
+    """One frozen prescription row; `set_groups` carry `load` in athlete units. `ladder` is the
+    whole ladder of an `exercise_ladder` line."""
 
     exercise_id: str
     name: str
@@ -52,6 +65,7 @@ class PageLine:
     flags: tuple[Json, ...] = ()
     change: str = ""
     derived_from: str = ""
+    ladder: tuple[PageRung, ...] = ()
 
 
 @dataclass(frozen=True)

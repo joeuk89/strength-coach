@@ -249,7 +249,10 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `no_working_sets` | line | scheme | a working group, or `hold` | `null` |
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
-| `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on | `null` |
+| `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on, a rung's included | `null` |
+| `rung_exercise_unknown` | version | rung index, exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id (`program.md`, "Schemes") | `null` |
+| `ladder_too_short` | line | rung count | a second rung, or another scheme | `null` |
+| `advance_criterion_off_rung` | line | rung index, criterion key | a criterion key the rung can read: `reps` on a reps rung, `duration_s` on a duration rung, `manual` alone | `null` |
 | `acknowledgement_unmatched` | version | the first stale flag key, every stale flag key in Draft order | removing the stale `[[acknowledge]]` entries | `null` |
 | `counted_variant_unknown` | version | lift, exercise id | an `[exercise.<id>]` declaration in the Draft, a library id, or removing it from the lift's `counts` (`program.md`, "Dose and deload") | `null` |
 | `counted_variant_not_exclusive` | version | exercise id, the lifts counting it | the exercise in one lift's `counts` only, and no priority lift in any | `null` |

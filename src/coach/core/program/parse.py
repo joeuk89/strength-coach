@@ -15,14 +15,17 @@ from coach.core.program.form import (
     TIERS,
     WEEKDAYS,
     AcknowledgeEntry,
+    Advance,
     Deload,
     Dose,
     Emphasis,
+    ExerciseLadder,
     LiftDose,
     Line,
     Number,
     ProgramForm,
     Reps,
+    Rung,
     Schedule,
     SchemeRef,
     Session,
@@ -183,13 +186,19 @@ def parse_set_groups(groups: Sequence[Table], *, file: str, where: str) -> tuple
 def _line(reader: "_Reader") -> Line:
     exercise = reader.text("exercise")
     reader.name_as((*reader.path[:-1], exercise))
-    scheme = _scheme(reader.optional_table("scheme"))
+    scheme = _scheme(reader.optional_table("scheme"), line_exercise=exercise)
     if scheme is None:
         raise reader.missing("scheme")
+    # A ladder's rungs carry the sets; the line stands on the first until a rung is chosen.
+    sets = (
+        scheme.ladder.rungs[0].sets
+        if scheme.ladder
+        else tuple(_group(r) for r in reader.tables("sets", required=True))
+    )
     line = Line(
         exercise=exercise,
         load_mode=reader.optional_text("load_mode"),
-        sets=tuple(_group(r) for r in reader.tables("sets", required=True)),
+        sets=sets,
         rest_s=reader.whole("rest_s"),
         cues=reader.optional_text("cues"),
         scheme=scheme,
@@ -212,11 +221,57 @@ def _group(reader: "_Reader") -> SetGroup:
     return group
 
 
-def _scheme(reader: "_Reader | None") -> SchemeRef | None:
+def _scheme(reader: "_Reader | None", *, line_exercise: str | None = None) -> SchemeRef | None:
     if reader is None:
         return None
     name = reader.text("name")
-    return SchemeRef(name, {key: reader.raw(key) for key in reader.names() if key != "name"})
+    ladder = (
+        _ladder(reader, line_exercise)
+        if name == "exercise_ladder" and line_exercise is not None
+        else None
+    )
+    params = {key: reader.raw(key) for key in reader.names() if key != "name"}
+    return SchemeRef(name, params, ladder)
+
+
+def _ladder(reader: "_Reader", line_exercise: str) -> ExerciseLadder:
+    rungs = tuple(
+        _rung(r, line_exercise if index == 0 else None)
+        for index, r in enumerate(reader.tables("rungs", required=True))
+    )
+    return ExerciseLadder(rungs, _advance(reader.optional_table("advance")))
+
+
+def _rung(reader: "_Reader", line_exercise: str | None) -> Rung:
+    """The first rung is the line's exercise, so it may leave `exercise` unsaid."""
+    if line_exercise is None:
+        exercise = reader.text("exercise")
+    else:
+        exercise = reader.optional_text("exercise") or line_exercise
+        if exercise != line_exercise:
+            raise reader.wrong("exercise", f"the line's exercise {line_exercise!r}, or unsaid")
+    rung = Rung(
+        exercise=exercise,
+        sets=tuple(_group(r) for r in reader.tables("sets", required=True)),
+        cues=reader.optional_text("cues"),
+        advance=_advance(reader.optional_table("advance")),
+    )
+    reader.finish()
+    return rung
+
+
+def _advance(reader: "_Reader | None") -> Advance:
+    if reader is None:
+        return Advance()
+    advance = Advance(
+        reps=reader.optional_count("reps"),
+        duration_s=reader.optional_count("duration_s"),
+        rpe_at_most=reader.optional_rpe("rpe_at_most"),
+        exposures=reader.optional_count("exposures"),
+        manual=reader.optional_boolean("manual"),
+    )
+    reader.finish()
+    return advance
 
 
 def _exercises(reader: "_Reader | None") -> dict[str, Mapping[str, object]]:
@@ -373,8 +428,14 @@ class _Reader:
         return muscles
 
     def boolean(self, key: str) -> bool:
+        value = self.optional_boolean(key)
+        if value is None:
+            raise self.wrong(key, "true or false")
+        return value
+
+    def optional_boolean(self, key: str) -> bool | None:
         value = self.raw(key)
-        if isinstance(value, bool):
+        if value is None or isinstance(value, bool):
             return value
         raise self.wrong(key, "true or false")
 

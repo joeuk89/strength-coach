@@ -14,8 +14,11 @@ from coach.core.muscles import read_muscles
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
     RACK_MODES,
+    Advance,
+    ExerciseLadder,
     Line,
     ProgramForm,
+    Rung,
     SchemeRef,
     Session,
     SetGroup,
@@ -187,11 +190,11 @@ class _Checks:
                 return
             seen.add(session.id)
             exercises: set[str] = set()
-            for line in session.lines:
-                if line.exercise in exercises:
-                    self._duplicate(session.id, line.exercise)
+            for exercise in (e for line in session.lines for e in _exercises_of(line)):
+                if exercise in exercises:
+                    self._duplicate(session.id, exercise)
                     return
-                exercises.add(line.exercise)
+                exercises.add(exercise)
 
     def _counted_variants(self) -> None:
         dose = self.form.dose
@@ -346,9 +349,12 @@ class _Checks:
             )
             return
         scheme = self._scheme(line.scheme, "line", scope)
-        self._set_groups(session, line, scheme, scope)
+        if line.scheme.ladder is None:
+            self._set_groups(session, line, line.sets, scheme, scope)
+        elif scheme is not None:
+            self._ladder(session, line, line.scheme.ladder, scheme, scope)
         self._start_load(session, line, exercise, scope)
-        self._template(line, exercise, scope)
+        self._template(line.exercise, exercise, scope)
 
     def _exercise(self, id_: str) -> Mapping[str, object] | None:
         stored = self.context.library.get(id_)
@@ -357,17 +363,58 @@ class _Checks:
             return None
         return {**(stored or {}), **(declared or {})}
 
-    def _set_groups(
-        self, session: Session, line: Line, scheme: Scheme | None, scope: Scope
+    def _ladder(
+        self, session: Session, line: Line, ladder: ExerciseLadder, scheme: Scheme, scope: Scope
     ) -> None:
-        for index, group in enumerate(line.sets, start=1):
+        if len(ladder.rungs) < 2:
+            self.raise_(
+                "ladder_too_short",
+                scope,
+                {"rungs": len(ladder.rungs)},
+                f"the ladder on {line.exercise} has one rung; a ladder climbs to a second",
+            )
+        for index, rung in enumerate(ladder.rungs, start=1):
+            rung_exercise = self._exercise(rung.exercise) if index > 1 else None
+            if index > 1 and rung_exercise is None:
+                self.raise_(
+                    "rung_exercise_unknown",
+                    self.version_scope,
+                    {"rung": index, "exercise_id": rung.exercise},
+                    f"rung {index} of {line.exercise} in {session.id} names {rung.exercise!r}, "
+                    "which is not in the library and not declared in the Draft",
+                )
+            elif rung_exercise is not None:
+                self._template(rung.exercise, rung_exercise, scope)
+            self._set_groups(session, line, rung.sets, scheme, scope, rung=index)
+            key = _off_rung(rung, ladder.criterion(index))
+            if key is not None:
+                self.raise_(
+                    "advance_criterion_off_rung",
+                    scope,
+                    {"rung": index, "criterion_key": key},
+                    f"rung {index} of {line.exercise} cannot advance on {key}: "
+                    "reps on a reps rung, duration_s on a duration rung, manual alone",
+                )
+
+    def _set_groups(
+        self,
+        session: Session,
+        line: Line,
+        groups: Sequence[SetGroup],
+        scheme: Scheme | None,
+        scope: Scope,
+        *,
+        rung: int | None = None,
+    ) -> None:
+        on = "" if rung is None else f" on rung {rung}"
+        for index, group in enumerate(groups, start=1):
             allowed = scheme.set_types if scheme else (group.type,)
             if group.type == "test" or group.type not in allowed:
                 self.raise_(
                     "set_type_not_allowed",
                     scope,
                     {"set_type": group.type, "scheme": line.scheme.name},
-                    f"a {group.type} group is not authored under {line.scheme.name}",
+                    f"a {group.type} group{on} is not authored under {line.scheme.name}",
                 )
                 return
             if group.type == "warm_up":
@@ -379,22 +426,24 @@ class _Checks:
                 )
         if scheme is None:
             return
-        working = [(i, g) for i, g in enumerate(line.sets, start=1) if g.working]
+        working = [(i, g) for i, g in enumerate(groups, start=1) if g.working]
         if not working and scheme.name != "hold":
             self.raise_(
                 "no_working_sets",
                 scope,
                 {"scheme": scheme.name},
-                f"{scheme.name} reads working sets and the line has none",
+                f"{scheme.name} reads working sets and the line{on} has none",
             )
             return
         shape = _off_shape(scheme, [g for _, g in working])
+        if shape is None and rung is not None:
+            shape = _off_rung_shape(working[0][1])
         if shape is not None:
             self.raise_(
                 "set_groups_off_scheme",
                 scope,
                 {"scheme": scheme.name, "expected_shape": shape},
-                f"the working groups do not fit {scheme.name}: {shape}",
+                f"the working groups{on} do not fit {scheme.name}: {shape}",
             )
             return
         wanting = working[:1] if scheme.rpe_on == "top" else working
@@ -404,7 +453,7 @@ class _Checks:
                     "rpe_missing",
                     scope,
                     {"scheme": scheme.name, "group_index": index},
-                    f"set group {index} needs an rpe under {scheme.name}",
+                    f"set group {index}{on} needs an rpe under {scheme.name}",
                 )
                 return
 
@@ -448,8 +497,8 @@ class _Checks:
                 f"{line.start_load} is not on the {kind} rack at {location}; nearest {nearest}",
             )
 
-    def _template(self, line: Line, exercise: Mapping[str, object], scope: Scope) -> None:
-        if not self.context.hevy_on or line.exercise not in self.form.exercises:
+    def _template(self, id_: str, exercise: Mapping[str, object], scope: Scope) -> None:
+        if not self.context.hevy_on or id_ not in self.form.exercises:
             return
         if exercise.get("hevy_template_id"):
             return
@@ -458,8 +507,8 @@ class _Checks:
             self.raise_(
                 "hevy_template_missing",
                 scope,
-                {"exercise_id": line.exercise, "missing_columns": missing},
-                f"{line.exercise} has no Hevy template and lacks {', '.join(missing)}",
+                {"exercise_id": id_, "missing_columns": missing},
+                f"{id_} has no Hevy template and lacks {', '.join(missing)}",
             )
         for column, registry in TEMPLATE_REGISTRIES.items():
             value = exercise.get(column)
@@ -467,8 +516,8 @@ class _Checks:
                 self.raise_(
                     "hevy_template_value_unknown",
                     scope,
-                    {"exercise_id": line.exercise, "column": column, "value": value},
-                    f"{line.exercise} has {column} {value!r}, which Hevy does not accept; "
+                    {"exercise_id": id_, "column": column, "value": value},
+                    f"{id_} has {column} {value!r}, which Hevy does not accept; "
                     f"coach schema --registry {registry.name}",
                     distinct=column,
                 )
@@ -529,6 +578,32 @@ def _instead(text: str, replaced: Sequence[str]) -> str:
     return f"acknowledge each {PER_CASE_WARNINGS[code]} on its own key: {', '.join(replaced)}"
 
 
+def _exercises_of(line: Line) -> tuple[str, ...]:
+    """The line's exercise and each later rung's: every exercise the line can put in a session."""
+    ladder = line.scheme.ladder
+    return (line.exercise, *(r.exercise for r in ladder.rungs[1:])) if ladder else (line.exercise,)
+
+
+def _off_rung_shape(group: SetGroup) -> str | None:
+    if group.reps is None and group.duration_s is None:
+        return "one working group stating reps or duration_s"
+    return None
+
+
+def _off_rung(rung: Rung, criterion: Advance) -> str | None:
+    """The criterion key the rung cannot read: `manual` beside another key, `reps` on a duration
+    rung, `duration_s` on a reps rung."""
+    for advance in (rung.advance, criterion):
+        if advance.manual and len(advance.stated()) > 1:
+            return "manual"
+    on_duration = any(g.duration_s is not None for g in rung.sets if g.working)
+    if on_duration and criterion.reps is not None:
+        return "reps"
+    if not on_duration and criterion.duration_s is not None:
+        return "duration_s"
+    return None
+
+
 def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:
     match scheme.set_groups:
         case "one_working":
@@ -581,4 +656,8 @@ _PARAM_TYPES: Mapping[ParamType, Callable[[object], bool]] = {
     "loads": _descending_loads,
     "per_exercise": _per_exercise,
     "number_or_per_exercise": lambda v: _positive(v) or _per_exercise(v),
+    "rungs": lambda v: (
+        isinstance(v, list) and all(isinstance(r, dict) for r in cast(list[object], v))
+    ),
+    "criterion": lambda v: isinstance(v, dict),
 }

@@ -5,7 +5,8 @@ from support.clock import FixedClock
 from support.history import a_status_span
 from support.kit_fixtures import kit_files
 from support.ledger import an_exercise
-from support.plans import a_note, a_squat_program, an_approved_plan, squat_logged
+from support.plans import SQUAT_LINE, a_note, a_squat_program, an_approved_plan, squat_logged
+from support.program_drafts import a_ladder_line, a_rung, a_session
 from support.programs import a_config, the_worked_store
 
 from coach.core.errors import Invalid, Setup
@@ -228,3 +229,16 @@ def test_held_squats_from_the_redesign_adoption_on_raise_stall_streak() -> None:
         squat_logged(conn, id_, on, *HELD_SQUAT)
 
     assert stall_codes(conn) == ["stall_streak"]
+
+
+def test_a_ladder_line_with_no_history_is_prescribed_its_first_rung() -> None:
+    ladder = a_ladder_line(
+        "plank", a_rung(), a_rung("side_plank", sets=[{"count": 3, "duration_s": 45, "rpe": 7}])
+    )
+
+    [_, line] = (
+        drafted(a_squat_program(a_session("lower", SQUAT_LINE, ladder))).draft.sessions[0].lines
+    )
+
+    assert line.exercise_id == "plank"
+    assert [(g.count, g.duration_s, g.rpe) for g in line.groups] == [(2, 30, 6)]

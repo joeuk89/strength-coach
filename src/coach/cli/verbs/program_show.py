@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+from typing import cast
 
 from coach.cli.declaration import (
     Argument,
@@ -13,6 +14,8 @@ from coach.cli.declaration import (
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Invalid
+from coach.core.exercise_ladder import OPENING_RUNG, full_criterion
+from coach.core.program.form import ExerciseLadder, Line, group_document
 from coach.services.program import ShowResult, show, show_draft
 
 
@@ -68,15 +71,36 @@ def _summary(shown: ShowResult, last: int | None) -> Json:
         "sessions": kept,
         "count": len(sessions),
         "truncated": len(kept) < len(sessions),
+        "ladders": [_ladder(session_id, line) for session_id, line in shown.ladders],
+    }
+
+
+def _ladder(session_id: str, line: Line) -> Json:
+    ladder = cast(ExerciseLadder, line.scheme.ladder)
+    return {
+        "session": session_id,
+        "exercise": line.exercise,
+        "rungs": [
+            {
+                "rung": index,
+                "exercise": rung.exercise,
+                "cues": rung.cues,
+                "sets": [group_document(group) for group in rung.sets],
+                "criterion": full_criterion(ladder, index).stated(),
+                "standing": index == OPENING_RUNG,
+            }
+            for index, rung in enumerate(ladder.rungs, start=1)
+        ],
     }
 
 
 DECLARATION = Declaration(
     name="program show",
     summary=(
-        "The Program version in force: number, kind, emphasis, adopted date, because and its "
-        "sessions with line counts; with --draft, write it as a Draft to edit and return the "
-        "path and hash; with --apply-plan, fold a week's line overrides into that Draft."
+        "The Program version in force: number, kind, emphasis, adopted date, because, its "
+        "sessions with line counts and every ladder rung by rung; with --draft, write it as a "
+        "Draft to edit and return the path and hash; with --apply-plan, fold a week's line "
+        "overrides into that Draft."
     ),
     writes="none",
     arguments=(
@@ -105,6 +129,37 @@ DECLARATION = Declaration(
             },
             "count": {"type": "integer"},
             "truncated": {"type": "boolean"},
+            "ladders": {
+                "type": "array",
+                "description": "every exercise_ladder line, the whole ladder",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "session": {"type": "string"},
+                        "exercise": {"type": "string"},
+                        "rungs": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "rung": {"type": "integer"},
+                                    "exercise": {"type": "string"},
+                                    "cues": {"type": ["string", "null"]},
+                                    "sets": {"type": "array", "items": {"type": "object"}},
+                                    "criterion": {
+                                        "type": "object",
+                                        "description": (
+                                            "reps or duration_s, rpe_at_most and exposures, "
+                                            "or manual alone"
+                                        ),
+                                    },
+                                    "standing": {"type": "boolean"},
+                                },
+                            },
+                        },
+                    },
+                },
+            },
             "path": {"type": "string", "description": "with --draft"},
             "hash": {"type": "string", "description": "with --draft"},
             "folded": {

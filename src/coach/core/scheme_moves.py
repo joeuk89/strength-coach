@@ -108,8 +108,8 @@ class SchemeMoves:
 
     def opening(self, found: StartLoad) -> Move:
         """No exposure anywhere: the start load at the scheme's opening position."""
-        ladder = rungs(self.line)
-        if self.line.scheme.name == "assistance_ladder" and ladder:
+        ladder = rungs(self.line) if self.line.scheme.name == "assistance_ladder" else ()
+        if ladder:
             first = Load(ladder[0], "assisted")
             self.steps.append(Step("scheme", None, first.amount, "first_rung"))
             return self._held(first)

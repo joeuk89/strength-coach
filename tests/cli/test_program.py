@@ -13,6 +13,7 @@ from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
 from support.plans import a_plan_override, an_approved_plan
 from support.program_drafts import (
+    BALANCE_BOARD_DRAFT,
     CUSTOM_EXERCISES,
     WORKED_DRAFT_COMPLETE,
     a_draft,
@@ -78,7 +79,7 @@ def instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def coach(*argv: str) -> Any:
-    return run_coach(*argv, clock=CLOCK)
+    return run_coach(*argv, clock=CLOCK, make_client=serving(FakeHevy(CLOCK)))
 
 
 def a_draft_file(root: Path, text: str | bytes, name: str = "v1.toml") -> str:
@@ -374,3 +375,38 @@ def test_apply_plan_needs_draft(instance: Path) -> None:
     run = coach("program", "show", "--apply-plan", "2026-10-26")
 
     assert run.envelope["error"]["code"] == "invalid_argument"
+
+
+def test_program_show_prints_every_rung_of_the_balance_board_ladder(instance: Path) -> None:
+    adopted = coach("program", "adopt", a_draft_file(instance, BALANCE_BOARD_DRAFT))
+
+    run = coach("program", "show")
+
+    assert adopted.code == 0, adopted.stdout
+    [ladder] = run.envelope["result"]["ladders"]
+    assert (ladder["session"], ladder["exercise"]) == (
+        "daily-balance",
+        "custom_balance_board_stand",
+    )
+    assert ladder["rungs"][0] == {
+        "rung": 1,
+        "exercise": "custom_balance_board_stand",
+        "cues": "both feet, still, near a wall · soft knees · eyes on a point ahead",
+        "sets": [{"count": 2, "duration_s": 30, "rpe": 5}],
+        "criterion": {"duration_s": 30, "rpe_at_most": 5, "exposures": 2},
+        "standing": True,
+    }
+    assert [(r["rung"], r["exercise"], r["standing"]) for r in ladder["rungs"]] == [
+        (1, "custom_balance_board_stand", True),
+        (2, "custom_balance_board_tilt", False),
+        (3, "custom_balance_board_eyes_closed", False),
+        (4, "custom_balance_board_one_foot", False),
+        (5, "custom_balance_board_one_foot_eyes_closed", False),
+    ]
+    assert ladder["rungs"][2]["criterion"] == {"duration_s": 45, "rpe_at_most": 6, "exposures": 3}
+
+
+def test_program_show_of_a_version_with_no_ladder_prints_no_ladders(instance: Path) -> None:
+    coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
+
+    assert coach("program", "show").envelope["result"]["ladders"] == []

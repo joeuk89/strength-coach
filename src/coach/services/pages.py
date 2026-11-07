@@ -2,10 +2,12 @@
 
 import datetime
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import cast
 
 from coach.core.closed_week.match import PlannedRef
 from coach.core.config import Config, PlatePoolLocation, Units
+from coach.core.exercise_ladder import OPENING_RUNG, full_criterion
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
     AthletePage,
@@ -14,13 +16,14 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
+    PageRung,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
     RoutinePage,
     WeekPage,
 )
-from coach.core.program.form import Session
+from coach.core.program.form import Session, group_document
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
@@ -217,14 +220,39 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
+    ladders = _ladders(session, names) if session else {}
     return RoutinePage(
         session_id=live.session_id,
         title=_title(sessions, live.session_id),
         week=str(plan["week"]) if plan else None,
         location=location,
-        lines=tuple(_line(r, names) for r in rows if r["date"] == first),
+        lines=tuple(
+            replace(line, ladder=ladders.get(line.exercise_id, ()))
+            for line in (_line(r, names) for r in rows if r["date"] == first)
+        ),
         kit=_kit(config, kits, location),
     )
+
+
+def _ladders(
+    session: Session, names: Mapping[str, tuple[str, str | None]]
+) -> dict[str, tuple[PageRung, ...]]:
+    """Each `exercise_ladder` line's rungs, keyed on the line's exercise."""
+    return {
+        line.exercise: tuple(
+            PageRung(
+                rung=index,
+                name=names.get(rung.exercise, (rung.exercise, None))[0],
+                cues=rung.cues,
+                set_groups=tuple(group_document(g) for g in rung.sets),
+                criterion=full_criterion(line.scheme.ladder, index).stated(),
+                standing=index == OPENING_RUNG,
+            )
+            for index, rung in enumerate(line.scheme.ladder.rungs, start=1)
+        )
+        for line in session.lines
+        if line.scheme.ladder is not None
+    }
 
 
 def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> PlatePoolKit | None:

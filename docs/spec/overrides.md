@@ -216,7 +216,8 @@ The agent then does one of three things, and nothing happens on its own:
 | `hold` | `scheme = { name = "hold" }` |
 
 Session and week kinds never fold: a dropped session is parked by Decision or removed by hand
-in the Draft.
+in the Draft. On an `exercise_ladder` line neither `swap_exercise` nor `restate_sets` folds:
+its rungs carry the exercises and sets, and are edited by hand in the Draft.
 
 ## Flags this catalogue adds
 
