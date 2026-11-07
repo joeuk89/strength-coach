@@ -40,6 +40,13 @@ From the review, per check-in plus programming pass:
   so the project CLAUDE.md alone was 4.8k.
 - **Zero Bash calls with inline Python.** Baseline: 27 and 33. Every one marks a verb whose
   output the agent could not use as printed.
+- **Zero voice leaks in any registry or pattern class, and fixed-list leaks in at most one
+  athlete message in ten.** A voice leak is a lexicon term in an athlete-facing message
+  (`voice.md`); the classes are `verb`, `flag`, `record`, `view`, `error`, `path`, `store-id`,
+  `hash` and `code`, then `fixed`. Baseline on the three transcripts, by hand: 3 of 4, 9 of 15 and
+  6 of 13 messages leaking. A URL the athlete uses is stripped before matching and is never a
+  leak. Measured on athlete sessions only; the script reports `leaking_messages` over
+  `athlete_messages` and `leak_hits` by class.
 
 ## Method
 
