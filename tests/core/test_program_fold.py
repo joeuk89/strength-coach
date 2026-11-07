@@ -1,10 +1,13 @@
 from dataclasses import replace
 
 from support.prescribe import a_line, a_rotation_form, working
+from support.program_drafts import a_draft, a_ladder_line, a_rung, a_session, toml
 
 from coach.core.prescription import PlanOverride
 from coach.core.program.fold import Folded, fold_overrides
-from coach.core.program.form import Line, ProgramForm, SchemeRef
+from coach.core.program.form import Line, ProgramForm, SchemeRef, SetGroup
+from coach.core.program.parse import parse_program_draft
+from coach.render.program_draft import program_draft
 
 
 def on_squat(kind: str, **params: object) -> PlanOverride:
@@ -110,4 +113,28 @@ def test_session_and_week_kinds_never_fold_and_the_draft_is_an_amend() -> None:
 
     assert folded.form.sessions == form.sessions
     assert folded.form.kind == "amend"
+    assert folded.folded == ()
+
+
+def a_ladder_form() -> ProgramForm:
+    draft = toml(a_draft(a_session("core", a_ladder_line("plank", a_rung(), a_rung("side_plank")))))
+    return parse_program_draft(draft, file="d.toml").form
+
+
+def test_a_swap_or_restated_sets_on_a_ladder_line_leaves_its_rungs_and_is_not_folded() -> None:
+    form = a_ladder_form()
+    on_plank = ("core", "plank")
+
+    folded = fold_overrides(
+        form,
+        (
+            PlanOverride("swap_exercise", *on_plank, params={"to": "dead_bug"}),
+            PlanOverride(
+                "restate_sets", *on_plank, params={"sets": (SetGroup(4, duration_s=50, rpe=7),)}
+            ),
+        ),
+    )
+
+    redrafted = parse_program_draft(program_draft(folded.form).encode(), file="d.toml").form
+    assert redrafted.sessions == form.sessions
     assert folded.folded == ()
