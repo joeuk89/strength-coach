@@ -42,11 +42,12 @@ for confirmation, never asked.
 
 ## Explain
 Read the profile back to the athlete, in their words and yours: who, the goal and why, the
-week's shape and why it has it, limits, how they want to be coached, history. Then the Goal and
-Phase as the draft states them. Say what changes each: the Goal when the aim changes, the
-profile when they say so, the Phase at a check-in or a block boundary.
+week's shape and why it has it, limits, how they want to be coached, history. Then the goal and
+where they are in it, as the Draft states them, in plain words. Say what changes each: the Goal
+when the aim changes, the profile when they say so, the Phase at a check-in or a block boundary.
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach query`, `coach goal adopt`
