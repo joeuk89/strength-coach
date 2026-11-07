@@ -146,6 +146,13 @@ def test_the_generated_claude_md_is_under_forty_lines_and_names_the_engine_versi
     assert "coach schema" in text
 
 
+def test_the_generated_claude_md_names_how_to_read_a_registry() -> None:
+    text = claude_md("0.3.0")
+
+    assert "coach schema --registry <name>" in text
+    assert "registry names" in text
+
+
 def test_the_generated_claude_md_names_the_profile_and_the_drafts_once() -> None:
     text = claude_md("0.3.0")
 

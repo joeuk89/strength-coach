@@ -4,6 +4,7 @@ import pytest
 from support.cli import run_coach
 
 from coach.cli.envelope import BUDGET_BYTES
+from coach.core.registries import REGISTRIES
 
 
 @pytest.fixture(autouse=True)
@@ -30,8 +31,31 @@ def test_a_registry_prints_as_rows() -> None:
     assert result["truncated"] is False
 
 
-def test_an_unknown_registry_is_exit_1() -> None:
+def test_schema_without_a_verb_names_every_registry_in_the_registries_order() -> None:
+    names = run_coach("schema").envelope["result"]["registries"]
+
+    assert names[:4] == ["schemes", "flags", "record-kinds", "views"]
+    assert names[-1] == "errors"
+    assert names == [r.name for r in REGISTRIES]
+
+
+def test_every_listed_registry_prints() -> None:
+    names = run_coach("schema").envelope["result"]["registries"]
+
+    failed = [n for n in names if run_coach("schema", "--registry", n).code != 0]
+    assert failed == []
+
+
+def test_an_unknown_registry_is_exit_1_and_names_the_registries() -> None:
     run = run_coach("schema", "--registry", "colours")
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == "invalid_argument"
+    assert "schemes, flags, record-kinds" in run.envelope["error"]["message"]
+
+
+def test_registry_without_a_name_is_refused() -> None:
+    run = run_coach("schema", "--registry")
 
     assert run.code == 1
     assert run.envelope["error"]["code"] == "invalid_argument"

@@ -105,10 +105,11 @@ Three rules every leaf obeys:
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
 - **6 KB default on every envelope.** Reads, write results, dry runs (the permission prompt shows
-  one) and errors all fit it. Four verbs are allowed over it, because their whole default
+  one) and errors all fit it. Five verbs are allowed over it, because their whole default
   output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
-  0006's approval prompt), `program adopt --dry-run` (every adopt warning) and `report
-  --dry-run` (the whole issue body the athlete approves). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
+  0006's approval prompt), `program adopt --dry-run` (every adopt warning), `report
+  --dry-run` (the whole issue body the athlete approves) and `schema` with no argument (every
+  verb's declaration and every registry name, the agent's one call to see them all). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
   paths into `result` only, allowed on every verb, and excludes `--full`; the envelope's own
   fields stay, `warnings[]` always present, and a path naming one is refused saying so. One generated size test per
   declaration.
@@ -186,11 +187,9 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
   Draft (`program.md`; the kinds and what each folds to are `overrides.md`'s).
 - **`schema --registry`** takes the name of any registry a `schema.md` CHECK list or a Draft
-  parser is tested against: `schemes`, `flags`, `record-kinds`, `views`, `decision-kinds`,
-  `override-kinds`, `reasons` (the seven `because` values), `annotation-kinds`,
-  `constraint-kinds`, `set-types`, `load-modes`, `equipment-kinds`, `errors` (every `error.code`
-  with its exit class). It is the one source every
-  contract test reads a registry from. `flags` carries each code's `rn` citation, the one place
+  parser is tested against, and `errors` (every `error.code` with its exit class).
+  `coach schema` with no argument lists every name it takes, in the code's order. It is the one
+  source every contract test reads a registry from. `flags` carries each code's `rn` citation, the one place
   a new agent sees every code with its evidence (ADR 0020).
 - **`init --pin`** is required on a `.dev` build of the engine: `init` refuses (exit 5,
   `engine_pin_required`) rather than write a `.dev` pin into `coach.toml`, since only `upgrade`
@@ -304,7 +303,7 @@ Generated from the declarations, none hand-written per verb:
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope but the four allowed over it is under 6 KB on the fixture instance,
+- Every default envelope but the five allowed over it is under 6 KB on the fixture instance,
   which overflows every list a default summary truncates (`testing.md`); this test lives in
   `tests/contract/` only.
 - Every verb declared `writes: hevy`, `git` or `github` declares `--dry-run`, and its dry run on the
