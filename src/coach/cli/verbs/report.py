@@ -13,6 +13,8 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import read_draft
 from coach.cli.keys import find_secret, github_token
+from coach.core.draft_schema import DraftKind
+from coach.core.drafts.report import report_kind
 from coach.core.report import REPO, Footer, Issue, athlete_name, issue_draft
 from coach.github.client import TOKEN_NAME
 from coach.render.report_prompt import report_prompt
@@ -70,6 +72,10 @@ def _footer(call: InstanceCall) -> Footer:
     )
 
 
+def _draft_kind() -> DraftKind:
+    return report_kind(tuple(d.name for d in registry.declarations()))
+
+
 def _ref(issue: Issue) -> Json:
     return {"number": issue.number, "title": issue.title, "url": issue.url}
 
@@ -111,6 +117,7 @@ DECLARATION = Declaration(
     },
     run=InInstance(run),
     over_budget=on_dry_run,
+    draft=_draft_kind,
     examples=(
         Example(
             ("report", ".coach/drafts/2026-11-07-report.toml", "--dry-run"),

@@ -3,9 +3,11 @@ Draft reader notes the key, its schema and whether it was required, under the ta
 Running the real parser over Drafts that reach every table gives the schema with no second
 source of truth."""
 
+import copy
 from collections.abc import Callable, Iterable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from functools import cache
 from typing import cast
 
 type Json = dict[str, object]
@@ -52,10 +54,10 @@ def path_of(location: Location) -> Path:
 @dataclass
 class _Key:
     fragments: list[Json] = field(default_factory=lambda: [])
-    reads: set[Visit] = field(default_factory=lambda: set())
     required: set[Visit] = field(default_factory=lambda: set())
     values: set[str] = field(default_factory=lambda: set())
     loose: bool = False
+    tested: bool = False
 
 
 @dataclass
@@ -111,8 +113,8 @@ class Recording:
         visit = (self._run, at)
         if fragment is None:
             entry.loose = entry.loose or not presence
+            entry.tested = entry.tested or presence
         else:
-            entry.reads.add(visit)
             if fragment not in entry.fragments:
                 entry.fragments.append(fragment)
             if required:
@@ -124,6 +126,15 @@ class Recording:
         node = self._nodes.get(at)
         entry = node.keys.get(key) if node else None
         return set(entry.values) if entry else set()
+
+    def paths(self) -> set[Path]:
+        """Every key path a read named."""
+        found: set[Path] = set()
+        for path, node in self._nodes.items():
+            found.update((*path, key) for key in node.keys)
+            if node.named is not None:
+                found.add((*path, ANY_KEY))
+        return found
 
     def unreached(self) -> list[str]:
         """The tables a read named that no recorded document entered."""
@@ -142,7 +153,11 @@ class Recording:
         properties: Json = {
             key: self._property(at, key, entry, replace or {}) for key, entry in node.keys.items()
         }
-        required = [key for key, entry in node.keys.items() if node.visits <= entry.required]
+        required = [
+            key
+            for key, entry in node.keys.items()
+            if node.visits <= entry.required and not entry.tested
+        ]
         named: object = False
         if node.named is not None:
             named = self._property(at, ANY_KEY, node.named, replace or {})
@@ -164,10 +179,20 @@ class Recording:
             if shape not in shapes:
                 shapes.append(shape)
         if not shapes:
-            return {}
+            return self._read_elsewhere(at, key, replace)
         if len(shapes) == 1:
             return shapes[0]
         return {"anyOf": shapes}
+
+    def _read_elsewhere(
+        self, at: Path, key: str, replace: Mapping[Path, Callable[[Json], Json]]
+    ) -> Json:
+        """A value read whole and handed to another reader: its shape is that reader's."""
+        if (*at, key, ITEMS) in self._nodes:
+            return {"type": "array", "items": self.schema((*at, key, ITEMS), replace)}
+        if (*at, key) in self._nodes:
+            return self.schema((*at, key), replace)
+        return {}
 
     def _filled(
         self, at: Path, key: str, fragment: Json, replace: Mapping[Path, Callable[[Json], Json]]
@@ -217,14 +242,31 @@ def record(read: Callable[[bytes], object], documents: Iterable[str]) -> Recordi
     return found
 
 
+def as_recorded(recording: Recording) -> Json:
+    return recording.schema()
+
+
 @dataclass(frozen=True)
-class DraftShape:
-    """What `coach schema <verb>` shows of the Draft the verb reads."""
+class DraftKind:
+    """A Draft a verb reads: its parser, one minimal example, and the coverage Drafts that
+    with the example reach every table and branch the parser reads. `shaped` turns the
+    recording into the schema, where a registry states a shape the parser reads loosely."""
 
     kind: str
-    schema: Json
+    read: Callable[[bytes], object]
     example: str
+    coverage: tuple[str, ...]
+    shaped: Callable[[Recording], Json] = as_recorded
+
+    def recording(self) -> Recording:
+        return record(self.read, (self.example, *self.coverage))
 
     def describe(self) -> Json:
-        schema = {"$schema": DIALECT, **self.schema}
-        return {"kind": self.kind, "schema": schema, "example": self.example}
+        """What `coach schema <verb>` shows of the Draft."""
+        return copy.deepcopy(_described(self))
+
+
+@cache
+def _described(kind: DraftKind) -> Json:
+    schema = {"$schema": DIALECT, **kind.shaped(kind.recording())}
+    return {"kind": kind.kind, "schema": schema, "example": kind.example}

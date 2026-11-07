@@ -10,6 +10,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
+from coach.core.drafts.ledger import RECORD
 from coach.services.record import record
 
 
@@ -49,6 +50,7 @@ DECLARATION = Declaration(
         "required": ["draft_hash", "ids", "withdrawn"],
     },
     run=InInstance(run),
+    draft=lambda: RECORD,
     examples=(
         Example(("record", ".coach/drafts/2026-10-30-record.toml"), "Record a ledger Draft."),
         Example(

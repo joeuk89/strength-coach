@@ -79,7 +79,8 @@ def calls() -> list[tuple[str, ...]]:
         *(("query", "ledger", "--kind", kind) for kind in RECORD_KINDS.names()),
         *(("query", "readings", "--kind", kind) for kind in READING_KINDS),
     ]
-    return list(dict.fromkeys([*examples, *lists, PUSH]))
+    drafts = [("schema", d.name) for d in declarations() if d.draft is not None]
+    return list(dict.fromkeys([*examples, *lists, *drafts, PUSH]))
 
 
 @pytest.fixture(scope="module")
@@ -125,7 +126,27 @@ OVER_BUDGET: dict[tuple[str, ...], str] = {
         "the whole issue body is what the athlete approves, so it is never cut"
     ),
     ("schema",): "every verb and every registry name, the agent's one call to see them all",
+    **{
+        ("schema", d.name): "the whole Draft schema is what the agent writes the Draft against"
+        for d in declarations()
+        if d.draft is not None
+    },
 }
+
+
+def test_the_schema_verb_keeps_whole_exactly_the_declarations_carrying_a_draft() -> None:
+    schema = declared(("schema",))
+
+    assert {d.name for d in declarations() if schema.over_budget({"verb": d.name})} == {
+        "program adopt",
+        "plan apply",
+        "record",
+        "checkin record",
+        "goal adopt",
+        "report",
+    }
+    assert schema.over_budget({})
+    assert not schema.over_budget({"registry": "flags"})
 
 
 def size(run: Run) -> int:

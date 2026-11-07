@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import math
 from collections.abc import Mapping
 from typing import cast
 
@@ -16,6 +17,10 @@ KEY_SHAPE: Json = {"type": "string", "pattern": f"^{KEY.pattern}$"}
 
 def draft_hash(data: bytes) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def number_shape(low: float) -> Json:
+    return {"type": "number", "minimum": low} if math.isfinite(low) else {"type": "number"}
 
 
 def ref_shape(kinds: tuple[str, ...]) -> Json:
@@ -52,7 +57,7 @@ class Fields:
         return self._text(name, required)
 
     def number(self, name: str, *, required: bool = False, low: float = 0.0) -> float | None:
-        self._note(name, {"type": "number", "minimum": low}, required)
+        self._note(name, number_shape(low), required)
         value = self._value(name, required)
         if value is None:
             return None
