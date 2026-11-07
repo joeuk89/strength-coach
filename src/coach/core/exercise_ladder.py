@@ -87,10 +87,6 @@ def rung_line(line: Line, ladder: ExerciseLadder, index: int) -> Line:
     )
 
 
-def since_start(history: Iterable[Exposure], standing: StandingRung) -> tuple[Exposure, ...]:
-    return tuple(e for e in history if standing.since is None or standing.since <= e.date)
-
-
 def climb_offer(
     ladder: ExerciseLadder,
     standing: StandingRung,
@@ -106,17 +102,20 @@ def climb_offer(
     if criterion.manual:
         return None
     rung = ladder.rungs[standing.index - 1]
+    since = standing.since
     history = ordinary(
         newest_first(
             e
             for e in exposures
             if e.exercise_id == rung.exercise
             and e.session_id in (None, scope.session_id)
+            and (since is None or since <= e.date)
             and e.date < on
         )
     )
-    run = since_start(history, standing)[: criterion.exposures or DEFAULT_EXPOSURES]
-    if len(run) < (criterion.exposures or DEFAULT_EXPOSURES):
+    needed = criterion.exposures or DEFAULT_EXPOSURES
+    run = history[:needed]
+    if len(run) < needed:
         return None
     if not all(_meets(rung.sets, criterion, exposure) for exposure in run):
         return None

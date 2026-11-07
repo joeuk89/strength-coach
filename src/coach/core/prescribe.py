@@ -321,8 +321,8 @@ class _Derivation:
         band = return_band(days.days)
         if band is not None:
             week = max(OPENING_RUNG, standing.index - band.rungs_back)
-            cause = f"return {band.label}, {days.days} days off"
             if week != standing.index:
+                cause = f"return {band.label}, {days.days} days off"
                 self.steps.append(Step("cut", standing_exercise, self.rungs[week - 1], cause))
         self._keep(
             climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
