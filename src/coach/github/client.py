@@ -59,7 +59,7 @@ class GitHubApiClient:
         found: list[Issue] = []
         for page in range(1, MAX_PAGES + 1):
             query = {"state": "open", "per_page": PAGE_SIZE, "page": page}
-            answer = self._expect_list(self.request("GET", ISSUES_PATH, query=query))
+            answer = self._expect_list(self.request("GET", ISSUES_PATH, query=query)[1])
             found.extend(_issue(item) for item in answer if "pull_request" not in item)
             if len(answer) < PAGE_SIZE:
                 break
@@ -130,8 +130,7 @@ class GitHubApiClient:
         except json.JSONDecodeError:
             raise _Failed(reply.status, "GitHub answered with a payload that is not JSON") from None
 
-    def _expect_list(self, reply: tuple[int, object]) -> list[Json]:
-        answer = reply[1]
+    def _expect_list(self, answer: object) -> list[Json]:
         if not isinstance(answer, list) or not all(
             isinstance(item, dict) for item in cast(list[object], answer)
         ):

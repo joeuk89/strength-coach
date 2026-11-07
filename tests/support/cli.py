@@ -31,17 +31,8 @@ def run_coach(
     """`coach <argv>` in process. GitHub is always a fake, an empty one unless `make_github`."""
     out = stdout if stdout is not None else io.StringIO()
     err = io.StringIO()
-    github = make_github or FakeGitHub().factory()
-    if make_client is None:
-        code = main(list(argv), env or {}, out, err, clock=clock, make_github=github)
-    else:
-        code = main(
-            list(argv),
-            env or {},
-            out,
-            err,
-            clock=clock,
-            make_client=make_client,
-            make_github=github,
-        )
+    clients: dict[str, Any] = {"make_github": make_github or FakeGitHub().factory()}
+    if make_client is not None:
+        clients["make_client"] = make_client
+    code = main(list(argv), env or {}, out, err, clock=clock, **clients)
     return Run(code, out.getvalue(), err.getvalue())
