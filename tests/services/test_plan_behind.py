@@ -54,6 +54,10 @@ def an_amend(conn: Connection, at: datetime.datetime, *, dry: bool = False) -> A
     )
 
 
+def behind(warnings: tuple[Flag, ...]) -> list[Flag]:
+    return [w for w in warnings if w.code == "plan_behind_program"]
+
+
 def standing(conn: Connection, at: datetime.datetime) -> list[Flag]:
     result = status(
         conn,
@@ -64,7 +68,7 @@ def standing(conn: Connection, at: datetime.datetime) -> list[Flag]:
         exported={},
         units="lb",
     )
-    return [w for w in result.warnings if w.code == "plan_behind_program"]
+    return behind(result.warnings)
 
 
 def a_week_planned_under_pv1() -> Connection:
@@ -92,9 +96,9 @@ def test_the_adopt_that_leaves_the_plan_behind_carries_the_warning() -> None:
 
     result = an_amend(conn, MIDWEEK)
 
-    behind = [w for w in result.warnings if w.code == "plan_behind_program"]
-    assert [w.params["version_id"] for w in behind] == ["pv-2"]
-    assert behind[0].left is None
+    (flag,) = behind(result.warnings)
+    assert flag.params["version_id"] == "pv-2"
+    assert flag.left is None
 
 
 def test_the_adopt_dry_run_carries_the_warning_for_the_version_it_would_record() -> None:
@@ -102,7 +106,7 @@ def test_the_adopt_dry_run_carries_the_warning_for_the_version_it_would_record()
 
     result = an_amend(conn, MIDWEEK, dry=True)
 
-    (flag,) = [w for w in result.warnings if w.code == "plan_behind_program"]
+    (flag,) = behind(result.warnings)
     assert flag.params["version_id"] == "pv-2"
     assert standing(conn, MIDWEEK) == []
 
@@ -114,7 +118,7 @@ def test_a_no_op_adopt_carries_no_warning_of_its_own() -> None:
     again = an_amend(conn, MIDWEEK + datetime.timedelta(hours=1))
 
     assert again.no_op
-    assert [w for w in again.warnings if w.code == "plan_behind_program"] == []
+    assert behind(again.warnings) == []
 
 
 def test_a_superseding_plan_applied_for_the_week_clears_it() -> None:
@@ -138,7 +142,7 @@ def test_no_plan_in_force_raises_nothing() -> None:
     result = an_amend(conn, MIDWEEK)
 
     assert standing(conn, MIDWEEK) == []
-    assert [w for w in result.warnings if w.code == "plan_behind_program"] == []
+    assert behind(result.warnings) == []
 
 
 def test_a_plan_whose_week_has_passed_raises_nothing() -> None:

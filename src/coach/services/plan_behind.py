@@ -14,13 +14,13 @@ def plan_behind(
 ) -> tuple[Flag, ...]:
     """`version_id` names the version in force, by default the latest; an adopt's dry run passes
     the one it would record."""
-    if version_id is None:
-        latest = programs.latest(conn)
-        version_id = latest.id if latest else None
     monday = week_monday(today)
     row = week_plans.in_force(conn, monday.isoformat())
     if row is None:
         return ()
+    if version_id is None:
+        latest = programs.latest(conn)
+        version_id = latest.id if latest else None
     under = programs.in_force_at(conn, str(row["approved_at"]))
     plan = PlanUnder(str(row["id"]), monday, under.id if under else None)
     return plan_behind_program(plan, version_id)
