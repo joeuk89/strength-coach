@@ -22,7 +22,7 @@ def run(call: Call) -> Outcome:
 
 
 def _every_verb() -> Json:
-    rows = [d.describe() for d in registry.declarations()]
+    rows = [d.describe(with_draft=False) for d in registry.declarations()]
     return {
         "rows": rows,
         "count": len(rows),
@@ -31,8 +31,13 @@ def _every_verb() -> Json:
     }
 
 
-def _without_verb_or_registry(args: Mapping[str, ArgValue]) -> bool:
-    return "verb" not in args and "registry" not in args
+def _whole(args: Mapping[str, ArgValue]) -> bool:
+    """The verb-less listing, or a verb's declaration carrying its Draft's schema."""
+    verb = args.get("verb")
+    if isinstance(verb, str):
+        declaration = registry.find(verb)
+        return declaration is not None and declaration.draft is not None
+    return "registry" not in args
 
 
 def _registry(name: str, call: Call) -> Json:
@@ -58,8 +63,9 @@ DECLARATION = Declaration(
     ),
     output={
         "type": "object",
-        "description": "one declaration with a verb; {rows: [declaration], count, truncated, "
-        "registries} without one, never cut; {registry, rows, count, truncated} with --registry",
+        "description": "one declaration with a verb, a Draft verb's with draft {kind, schema, "
+        "example}, never cut; {rows: [declaration without draft], count, truncated, registries} "
+        "without one, never cut; {registry, rows, count, truncated} with --registry",
         "properties": {
             "registry": {"type": "string", "description": "with --registry"},
             "rows": {"type": "array", "items": {"type": "object"}},
@@ -73,7 +79,7 @@ DECLARATION = Declaration(
         },
     },
     run=run,
-    over_budget=_without_verb_or_registry,
+    over_budget=_whole,
     examples=(
         Example(("schema",), "Every verb's declaration and the registry names."),
         Example(("schema", "status"), "The declaration of status."),

@@ -12,6 +12,7 @@ from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.cli.pull import PULL_SCHEMA
+from coach.core.drafts.program import PROGRAM
 from coach.services.program import AdoptResult, adopt
 
 
@@ -64,6 +65,7 @@ DECLARATION = Declaration(
     writes="store",
     pulls_first=True,
     over_budget=on_dry_run,
+    draft=lambda: PROGRAM,
     arguments=(
         Argument("draft", "path of the TOML program Draft", required=True),
         Argument(

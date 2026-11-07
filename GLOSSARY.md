@@ -691,7 +691,8 @@ _Avoid_: subcommand, tool, endpoint
 A file written for one verb to consume: a plan, a check-in record, a program text form, a ledger
 of records. The agent writes it, or a verb writes it as a form for the agent to edit, never over
 an existing one. Disposable; nothing reads it after the verb takes it, and no verb knows a
-current one: a read names the file by path or reads the plan in force.
+current one: a read names the file by path or reads the plan in force. Its shape, a JSON Schema
+and a minimal example, comes from `coach schema <verb>`.
 _Avoid_: proposal, overlay, working file, input file
 
 **Draft hash**:
