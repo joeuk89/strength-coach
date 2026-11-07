@@ -10,6 +10,7 @@ description: Authoring or revising a program version. Use for the first program 
 The profile, once. For a revision, the progress report from `coach progress` and the current
 version from `coach program show --draft`. For a first program, the imported history and any
 routines in the mirror, read as what the athlete has done, never as what they should do next.
+Before proposing a new exercise, check the library with `coach query exercises`.
 
 ## Ask
 State for confirmation what is already known: the days and minutes, each location and its kit,
