@@ -27,6 +27,7 @@ from coach.render.program_draft import program_draft
 from coach.services.cadence import cadence_signals
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
+from coach.services.ladders import rung_decisions, standing_rungs
 from coach.services.plan_behind import plan_behind
 from coach.services.racks import racks_by_location
 from coach.store import exercises, goals, phases, programs, routine_map, week_plans
@@ -54,13 +55,15 @@ class AdoptResult:
 
 @dataclass(frozen=True)
 class ShowResult:
+    """`ladders` holds each `exercise_ladder` line with its session and standing rung."""
+
     version_id: str
     kind: str
     emphasis: str
     adopted: str
     because: str
     sessions: tuple[tuple[str, int], ...]
-    ladders: tuple[tuple[str, Line], ...] = ()
+    ladders: tuple[tuple[str, Line, int], ...] = ()
 
 
 def adopt(
@@ -172,6 +175,7 @@ def _with_plan_behind(conn: Connection, result: AdoptResult, clock: Clock) -> Ad
 
 def show(conn: Connection) -> ShowResult:
     version = _in_force(conn)
+    standing = standing_rungs(version.form, rung_decisions(conn))
     return ShowResult(
         version_id=version.id,
         kind=version.form.kind,
@@ -180,7 +184,7 @@ def show(conn: Connection) -> ShowResult:
         because=version.form.because,
         sessions=tuple(programs.line_counts(conn, version.id)),
         ladders=tuple(
-            (session.id, line)
+            (session.id, line, standing[(session.id, line.exercise)])
             for session in version.form.sessions
             for line in session.lines
             if line.scheme.ladder is not None

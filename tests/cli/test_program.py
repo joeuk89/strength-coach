@@ -410,3 +410,18 @@ def test_program_show_of_a_version_with_no_ladder_prints_no_ladders(instance: Pa
     coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
 
     assert coach("program", "show").envelope["result"]["ladders"] == []
+
+
+def test_program_show_marks_the_rung_a_ladder_rung_decision_names(instance: Path) -> None:
+    coach("program", "adopt", a_draft_file(instance, BALANCE_BOARD_DRAFT))
+    decision = (
+        '[[decision]]\nkind = "ladder_rung"\nsession = "daily-balance"\n'
+        'exercise = "custom_balance_board_stand"\nrung = 3\nbecause = "progress"\n'
+        'text = "Steady tilts; the athlete said yes."\n'
+    )
+    recorded = coach("record", a_draft_file(instance, decision, "rung.toml"))
+
+    [ladder] = coach("program", "show").envelope["result"]["ladders"]
+
+    assert recorded.code == 0, recorded.stdout
+    assert [r["rung"] for r in ladder["rungs"] if r["standing"]] == [3]

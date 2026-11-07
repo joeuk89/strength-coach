@@ -3,6 +3,7 @@ import datetime
 import re
 
 from support.blocks import two_closed_blocks
+from support.clock import FixedClock
 from support.closed_weeks import a_check_in, a_planned_squat_week, closed_through, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
 from support.pages import the_pages
@@ -22,6 +23,7 @@ from coach.core.mirror import MirroredRoutine
 from coach.render.pages import render_pages
 from coach.services.closed_weeks import closed_weeks
 from coach.services.pages import page_facts
+from coach.services.record import record
 from coach.store import mirrors, routine_map
 from coach.store.connection import Connection
 
@@ -351,4 +353,30 @@ def test_a_routine_page_prints_a_ladder_line_rung_by_rung_from_the_version() -> 
         "Climb on 30 s at RPE 6 or under, 2 exposures running.\n"
         "2. Side Plank: 2×30 s @6. Climb on 30 s at RPE 6 or under, 2 exposures running."
     ) in page
+    assert page.count("Ladder:") == 1
+
+
+def test_a_routine_page_marks_the_rung_a_ladder_rung_decision_names() -> None:
+    ladder = a_ladder_line("plank", a_rung(cues=None), a_rung("side_plank", cues=None))
+    conn = a_squat_program(a_session("lower", SQUAT_LINE, ladder))
+    record(
+        conn,
+        (
+            b'[[decision]]\nkind = "ladder_rung"\nsession = "lower"\nexercise = "plank"\n'
+            b'rung = 2\nbecause = "progress"\ntext = "Two clean holds."\n'
+        ),
+        file="d.toml",
+        clock=FixedClock(),
+    )
+    plan_id = a_planned_squat_week(conn, monday(1))
+    side = {"type": "working", "count": 2, "duration_s": 30, "rpe": 6}
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(1), "side_plank", set_groups=[side], change="held"
+    )
+    a_routine_written(conn, "lower", plan_id)
+
+    page = the_pages(conn, kits=(kit_files(),))["pages/routines/lower.md"]
+
+    assert "1. Plank: 2×30 s @6." in page
+    assert "2. **Side Plank** (standing): 2×30 s @6." in page
     assert page.count("Ladder:") == 1

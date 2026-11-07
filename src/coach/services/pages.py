@@ -27,6 +27,7 @@ from coach.core.program.form import Session, group_document
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
+from coach.services.ladders import rung_decisions, standing_rungs
 from coach.services.progress import newest_day, progress
 from coach.store import (
     check_ins,
@@ -220,7 +221,8 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
-    ladders = _ladders(session, names) if session else {}
+    standing = standing_rungs(version.form, rung_decisions(conn)) if version else {}
+    ladders = _ladders(session, names, standing) if session else {}
     return RoutinePage(
         session_id=live.session_id,
         title=_title(sessions, live.session_id),
@@ -235,24 +237,31 @@ def _routine(
 
 
 def _ladders(
-    session: Session, names: Mapping[str, tuple[str, str | None]]
+    session: Session,
+    names: Mapping[str, tuple[str, str | None]],
+    standing: Mapping[tuple[str, str], int],
 ) -> dict[str, tuple[PageRung, ...]]:
-    """Each `exercise_ladder` line's rungs, keyed on the line's exercise."""
-    return {
-        line.exercise: tuple(
+    """Each `exercise_ladder` line's rungs, keyed on every rung's exercise, since the frozen
+    row names the rung the week prescribed."""
+    found: dict[str, tuple[PageRung, ...]] = {}
+    for line in session.lines:
+        ladder = line.scheme.ladder
+        if ladder is None:
+            continue
+        stands_on = standing.get((session.id, line.exercise), OPENING_RUNG)
+        rungs = tuple(
             PageRung(
                 rung=index,
                 name=names.get(rung.exercise, (rung.exercise, None))[0],
                 cues=rung.cues,
                 set_groups=tuple(group_document(g) for g in rung.sets),
-                criterion=full_criterion(line.scheme.ladder, index).stated(),
-                standing=index == OPENING_RUNG,
+                criterion=full_criterion(ladder, index).stated(),
+                standing=index == stands_on,
             )
-            for index, rung in enumerate(line.scheme.ladder.rungs, start=1)
+            for index, rung in enumerate(ladder.rungs, start=1)
         )
-        for line in session.lines
-        if line.scheme.ladder is not None
-    }
+        found |= {rung.exercise: rungs for rung in ladder.rungs}
+    return found
 
 
 def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> PlatePoolKit | None:
