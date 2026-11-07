@@ -184,3 +184,27 @@ def test_a_declared_rung_exercise_with_no_template_is_hevy_template_missing() ->
             "hevy_muscle_group",
         ],
     }
+
+
+def test_a_declared_rung_exercise_with_a_bad_template_value_names_the_rung_exercise() -> None:
+    line = a_ladder_line("plank", a_rung(), a_rung("custom_board"))
+    template = {
+        "hevy_title": "Board",
+        "hevy_exercise_type": "duration",
+        "hevy_equipment": "bands",
+        "hevy_muscle_group": "abdominals",
+    }
+    declared = {"custom_board": {"name": "Board", **DURATION, **template}}
+    parsed = parse_program_draft(
+        toml(a_draft(a_session("core", line), exercise=declared)), file="d.toml"
+    )
+
+    [flag] = violations(parsed.form, replace(CONTEXT, hevy_on=True), parsed.unknown_keys)
+
+    assert flag.key == "hevy_template_value_unknown@line:core/plank"
+    assert flag.params == {
+        "exercise_id": "custom_board",
+        "column": "hevy_equipment",
+        "value": "bands",
+    }
+    assert flag.message.startswith("custom_board has hevy_equipment 'bands'")

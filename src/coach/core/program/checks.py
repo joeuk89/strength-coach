@@ -25,10 +25,17 @@ from coach.core.program.form import (
 )
 from coach.core.rack import Rack, on_rack, rows_beside
 from coach.core.registries.flags import FLAGS
+from coach.core.registries.hevy import HEVY_EQUIPMENT, HEVY_EXERCISE_TYPES, HEVY_MUSCLE_GROUPS
 from coach.core.registries.program import LOAD_MODES, MUSCLES, PATTERNS
+from coach.core.registries.registry import Registry, Term
 from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
+TEMPLATE_REGISTRIES: Mapping[str, Registry[Term]] = {
+    "hevy_exercise_type": HEVY_EXERCISE_TYPES,
+    "hevy_equipment": HEVY_EQUIPMENT,
+    "hevy_muscle_group": HEVY_MUSCLE_GROUPS,
+}
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
 # Warnings raised once per case; acknowledging the version-wide key names the per-case keys.
 PER_CASE_WARNINGS = {
@@ -91,9 +98,17 @@ class _Checks:
     def flags(self) -> tuple[Flag, ...]:
         return tuple(self.found.values())
 
-    def raise_(self, code: str, scope: Scope, params: Mapping[str, object], message: str) -> None:
+    def raise_(
+        self,
+        code: str,
+        scope: Scope,
+        params: Mapping[str, object],
+        message: str,
+        *,
+        distinct: str = "",
+    ) -> None:
         flag = raise_flag(code, scope, params, message)
-        self.found.setdefault(flag.key, flag)
+        self.found.setdefault(f"{flag.key}#{distinct}" if distinct else flag.key, flag)
 
     def version(self) -> None:
         form, context = self.form, self.context
@@ -495,6 +510,17 @@ class _Checks:
                 {"exercise_id": id_, "missing_columns": missing},
                 f"{id_} has no Hevy template and lacks {', '.join(missing)}",
             )
+        for column, registry in TEMPLATE_REGISTRIES.items():
+            value = exercise.get(column)
+            if value and value not in registry:
+                self.raise_(
+                    "hevy_template_value_unknown",
+                    scope,
+                    {"exercise_id": id_, "column": column, "value": value},
+                    f"{id_} has {column} {value!r}, which Hevy does not accept; "
+                    f"coach schema --registry {registry.name}",
+                    distinct=column,
+                )
 
     def unknown_keys(self) -> None:
         if self.unknown:
