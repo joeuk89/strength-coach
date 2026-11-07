@@ -1,0 +1,20 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 6,
+ "uuid": "6a703667-9af6-48b4-8635-7d7d3f6fc398",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "The draft is settled and the dry run is clean. Nothing is recorded yet.\n\nWhat this version changes, as it stands now:\n\n- **Pull-up dose at 10.** Negatives and band pull-ups count toward it. Your planned week delivers 11 (3 negatives and 4 band sets on Wednesday, 3 band sets on Sunday, the strict single on Friday), so a full week clears the target and a lost Wednesday shows as under. The old pull-up acknowledgement is gone and no new pull-up warning appears.\n- **Deadlift at 4, acknowledged.** The reason on record: four is what Sunday plans (top set plus three back-offs), Friday's Romanian deadlift carries the hinge, and the PT sometimes adds deadlifts on Tuesday. A target of 5 would read as under every week you did the session as written.\n- **Swings out of Monday's lift, into their own session beside it.** Monday's lifting estimate drops from 58 to 47 minutes against its 75. The swing session is optional, 12 minutes stepping by 2 up to 16, 12 reps a minute up to 15, effort target 7, 40 lb bell (18.1 kg). Nothing else in Monday's session moves.\n- **Circuit untouched.** It no longer needs a weekly acknowledgement for sitting on a lifting day.\n\nThis continues the current block in position; it does not restart anything. The three warnings left on the dry run are the two acknowledged ones above (deadlift dose, and the strict pull-up single staying as a weekly test while the max is 1) plus the Monday routine drift in Hevy, which is unrelated to this amend and clears at the next weekly push.\n\nSay yes and I'll adopt it. Publish stays off until the plate-pool work ships.",
+  "seconds": 17.5,
+  "cost_usd": 1.0820130000000001,
+  "input_tokens": 53412,
+  "output_tokens": 1039
+ },
+ "first_hits": {
+  "fixed": [
+   "acknowledgement",
+   "dry run"
+  ]
+ }
+}

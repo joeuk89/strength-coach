@@ -1,0 +1,42 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 10,
+ "uuid": "2faea2ef-8093-4843-8f2d-2be188c1495e",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "The dry run is clean for the change. Here's what adopting records:\n\n**Version pv-4, kind amend, rotation position A, block b-2026-11-01 continues (no reset).**\n\n**Diff against pv-3:** one session changed, `mon-ohp`, one line added: `db_incline_curl`. Nothing removed, no other session touched, no defaults filled.\n\n**The new line:** Incline Curl (Dumbbell), 3 sets of 8\u201312 at RPE 8, 75 s rest, double progression, last on Monday after the lateral raise / rear delt fly superset. Cues: bench about 45\u00b0, arms hang straight down behind the torso, elbows stay back with a full stretch at the bottom, no shoulder swing.\n\n**Time:** Monday's estimate is 53 minutes against its 75-minute cap, so it fits with room. The other sessions are unchanged: Wed 39/75, Fri 65/75, Sat 65/90, Sun 65/90.\n\n**Start loads** are as before: farmers walk 50 lb (45.4 kg), kettlebell swing 40 lb (18.1 kg) in both conditioning sessions. The incline curl has no start load, so the first week's plan draft will set it from your old Hevy history.\n\n**Warnings:** none point at the new line. Three `routine_drift` warnings say your Hevy routines differ from the week plan in force (loads and durations you adjusted on the fly); the next plan apply resolves those. The `dose_off_band` on deadlift (4 sets against a 5\u201315 band) carries its existing acknowledgement from pv-3, and the `scheme_off_emphasis` on Friday's pull-up test single is the same one already in the current version.\n\nThe `because` on the version reads: \"direct biceps work was six sets in one session; an incline curl on Monday makes it nine over two days, at long muscle length, and keeps the lightest lifting day inside its cap.\"\n\nShall I adopt it?",
+  "seconds": 15.5,
+  "cost_usd": 0.652988,
+  "input_tokens": 32110,
+  "output_tokens": 924
+ },
+ "first_hits": {
+  "verb": [
+   "plan apply",
+   "plan draft"
+  ],
+  "flag": [
+   "dose_off_band",
+   "routine_drift",
+   "scheme_off_emphasis"
+  ],
+  "fixed": [
+   "acknowledgement",
+   "dry run"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-3",
+   "pv-4"
+  ],
+  "code": [
+   "`because`",
+   "`db_incline_curl`",
+   "`dose_off_band`",
+   "`mon-ohp`",
+   "`routine_drift`",
+   "`scheme_off_emphasis`"
+  ]
+ }
+}

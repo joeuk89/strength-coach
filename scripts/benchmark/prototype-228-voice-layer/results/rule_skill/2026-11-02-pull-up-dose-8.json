@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 8,
+ "uuid": "e92f8572-17d9-43e9-9499-34668bf94dfc",
+ "mechanism": "rule_skill",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Done. The new version is in force as of today: it continues the block you're in (no hard weeks counted yet, ceiling of six), and this week stays in rotation week A.\n\nWhat's now true:\n\n- **Pull-up.** The target is 10 hard sets a week, with negatives and band pull-ups counting toward it. Nothing in the sessions moved.\n- **Swings.** The eight-minute finisher is out of Monday's press session, which now estimates at 47 minutes of its 75. Swings live in their own optional conditioning session on Monday: 12 minutes, one set of 12 at the top of each minute with the 40 lb bell, aiming for about a 7. When a session comes in at or under that effort, it grows by two minutes toward 16; once it's there, the reps climb toward 15.\n- **Circuit.** Unchanged, and the weekly stacking note no longer applies to it.\n- **Deadlift.** The 4-set target stands, noted as deliberate: Sunday's top set plus three back-offs, with Friday's Romanian deadlift carrying the hinge.\n\nTwo things to know for the coming week:\n\n- Your Hevy routines haven't changed yet. Monday's routine still shows the swings as a finisher, and there's no routine for the new swing session. Both get sorted when next week's plan is pushed. For this Monday, do the swings as their own short workout after the press session, or skip them if the evening runs late; they're optional.\n- The pull-up dose figure and the swing check won't show anything until this week closes, since both read finished weeks. I'll confirm both at the first check-in after Sunday.\n\nNothing has been published; I'll leave that until the plate pool work is done, as you asked.",
+  "seconds": 18.9,
+  "cost_usd": 1.1151570000000002,
+  "input_tokens": 55230,
+  "output_tokens": 981
+ },
+ "first_hits": {}
+}

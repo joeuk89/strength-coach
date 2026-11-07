@@ -1,0 +1,19 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 4,
+ "uuid": "895ef7a0-1acb-4df2-bc6a-b8cd66f36c3f",
+ "mechanism": "rule_skill",
+ "system_tokens": 413,
+ "first": {
+  "text": "Yes, that's exactly what the long \"Set up the home kit in plate-pool\" link is. It carries your whole home inventory (bar, plates, dumbbells, kettlebell, leg attachment, vest, collars) and loads it all into plate-pool in one go. Once you've opened it once on your phone, plate-pool remembers the kit, and the shorter \"Load it in plate-pool\" links on each exercise then put the right weight on the bar for you.\n\nWhere it lives: it isn't on the athlete page or the front page of the repo. The only place it's published is the top of each routine page, the first link under the heading. So on your phone, open the training repo on GitHub, go into the routines folder, open any session (Monday's OHP page, say) and tap the first link. That's the one.\n\nIf it would help, I can give you that link on its own again here so you can copy it straight to your phone, or I can look at putting it somewhere easier to find, like the athlete page, at the next publish.",
+  "seconds": 12.4,
+  "cost_usd": 0.03301775,
+  "input_tokens": 12593,
+  "output_tokens": 597
+ },
+ "first_hits": {
+  "fixed": [
+   "the repo"
+  ]
+ }
+}

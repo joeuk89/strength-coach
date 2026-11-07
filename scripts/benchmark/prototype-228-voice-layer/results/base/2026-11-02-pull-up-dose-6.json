@@ -1,0 +1,48 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 6,
+ "uuid": "6a703667-9af6-48b4-8635-7d7d3f6fc398",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Dry run re-run with the deadlift acknowledgement in place. Here is what it shows:\n\n- Version `pv-2`, kind `amend`, block `b-2026-11-01` continues, position A.\n- Sessions: `cond-swings` added; `mon-ohp` changed, `kb_swing` line removed, nothing else touched.\n- Dose: `pull_up = { sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`, bench 5, OHP 5, deadlift 4, squat 5.\n- Flags, all three accounted for:\n  - `dose_off_band` on bb_deadlift at 4: now acknowledged (\"Four hard sets is what sun-deadlift plans: the top set and three back-offs\u2026\").\n  - `scheme_off_emphasis` on fri-squat/pull_up: acknowledged as before.\n  - `routine_drift` on the mon-ohp Hevy routine: not acknowledged and not this amend's business; the next plan apply resolves it.\n\nNo violations. So the draft is: pull-up target 10 with the two counted variants, the old pull-up acknowledgement dropped, swings out of mon-ohp and into `cond-swings` beside Monday (emom_density 12 \u2192 16 min by 2, 12 \u2192 15 reps, RPE 7, 40 lb / 18.1 kg), cond-circuit untouched, deadlift acknowledged at 4.\n\nSay yes and I'll run `coach program adopt .coach/drafts/2026-11-02-program.toml` to record pv-2. Publish stays off until plate-pool#52 ships.",
+  "seconds": 11.3,
+  "cost_usd": 1.068128,
+  "input_tokens": 53272,
+  "output_tokens": 762
+ },
+ "first_hits": {
+  "verb": [
+   "coach program adopt",
+   "plan apply"
+  ],
+  "flag": [
+   "dose_off_band",
+   "routine_drift",
+   "scheme_off_emphasis"
+  ],
+  "fixed": [
+   "acknowledgement"
+  ],
+  "path": [
+   ".coach/drafts/2026-11-02-program.toml"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-2"
+  ],
+  "code": [
+   "`amend`",
+   "`b-2026-11-01`",
+   "`coach program adopt .coach/drafts/2026-11-02-program.toml`",
+   "`cond-swings`",
+   "`dose_off_band`",
+   "`kb_swing`",
+   "`mon-ohp`",
+   "`pull_up = { sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`",
+   "`pv-2`",
+   "`routine_drift`",
+   "`scheme_off_emphasis`"
+  ]
+ }
+}

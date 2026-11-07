@@ -1,0 +1,33 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 12,
+ "uuid": "3b43f293-f8b6-421f-ac74-528c1226420a",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Adopted. Version pv-4 is in force: Monday's session now ends with the incline curl, the block b-2026-11-01 continues without a reset, and the rotation stays at week A. It reaches Hevy at the next plan draft and apply.\n\n**The deadlift dose acknowledgement**\n\nThe program sets a weekly hard-set target for each priority lift, and the engine checks each target against a band it considers normal for the phase. For the deadlift in maintenance that band is 5 to 15 hard sets a week. Your target is 4, so the engine raised `dose_off_band` and the program carries a note saying why it is left as is:\n\n> Four hard sets is what sun-deadlift plans: the top set and three back-offs. Friday's Romanian deadlift carries the hinge pattern, and the PT sometimes adds deadlifts on Tuesday. A target of 5 would fire under-target every week the session is done as written.\n\nIn plain terms: Sunday's deadlift is written as one top set of 5 at RPE 8 and three back-off sets of 5, which is four hard sets. If the target were 5, the lowest the band allows, every week you did the session exactly as written would show up as under target. The target was set to match the session rather than the band, with the reason that the hinge gets more work elsewhere: Friday's Romanian deadlift (3 sets) and whatever deadlifting the PT adds on a legs day. The direct deadlift dose is deliberately on the low side because it is the heaviest lift in the week and sits on a 90-minute Sunday that also carries a run.\n\nThe acknowledgement was written when the program was first adopted on 1 November and carries forward with each amend. It would only need revisiting if the progress report at the block boundary showed the deadlift stalling, in which case a fourth back-off set would be the natural move.",
+  "seconds": 11.3,
+  "cost_usd": 0.6590379999999999,
+  "input_tokens": 33250,
+  "output_tokens": 589
+ },
+ "first_hits": {
+  "verb": [
+   "plan draft"
+  ],
+  "flag": [
+   "dose_off_band"
+  ],
+  "fixed": [
+   "acknowledgement",
+   "the engine"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-4"
+  ],
+  "code": [
+   "`dose_off_band`"
+  ]
+ }
+}

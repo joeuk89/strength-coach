@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 13,
+ "uuid": "ead6c046-d8de-484e-9dbb-6f8d1d83503a",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Yes. The low deadlift count is not a hinge gap, because the hinge is spread across three lifts on two days rather than loaded onto the deadlift alone:\n\n| Day | Lift | Hard sets |\n| --- | --- | --- |\n| Friday | Romanian deadlift | 3 |\n| Sunday | Deadlift | 4 |\n| Sunday | Hip thrust | 3 |\n\nThat is 10 hard hinge sets a week, which is the per-muscle target this block uses, and it lands as a heavy pull from the floor, a long-stretch hamstring lift and a glute lift at the top of the hip, so the three cover the movement from different ends. On top of that the Monday kettlebell swing session is 12 minutes of hinge practice at a lower effort, and the trainer sometimes adds deadlifts on Tuesday.\n\nMuscle by muscle:\n\n- **Glutes** are the best fed muscle in the program: every hinge lift plus squat, Bulgarian split squat, split squat and goblet squat. Well over target.\n- **Lower back** gets the deadlift, the Romanian deadlift and the bent over row. Enough, and more than enough alongside three runs a week.\n- **Hamstrings** are the one to watch. The deadlift and Romanian deadlift train them directly, 7 sets; the hip thrust and split squat help but don't lead with them. That is a touch under the target as a lead mover, but it is normal for a program with no leg curl machine, and the running adds some.\n\nSo I'd leave it as it is. What would earn a change: if a progress report shows the hamstrings behind, or they feel like the weak link on deadlift day, the first move is a fourth Romanian deadlift set on Friday. That is cheap in time and keeps the heavy day as it is. A slider or Nordic leg curl is the fallback if you ever want a hamstring lift that isn't a hinge.",
+  "seconds": 23.0,
+  "cost_usd": 0.07646725,
+  "input_tokens": 34391,
+  "output_tokens": 1357
+ },
+ "first_hits": {}
+}

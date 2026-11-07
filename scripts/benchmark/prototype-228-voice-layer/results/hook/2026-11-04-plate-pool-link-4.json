@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 4,
+ "uuid": "895ef7a0-1acb-4df2-bc6a-b8cd66f36c3f",
+ "mechanism": "hook",
+ "system_tokens": 413,
+ "first": {
+  "text": "Yes, that's exactly what the \"Set up the home kit in plate-pool\" link is. It carries your whole home inventory \u2014 bar, plates, dumbbells, kettlebell, leg attachment, vest \u2014 and opening it once on your phone saves the kit in that browser. After that, the short \"Load it in plate-pool\" links beside each exercise will work on the phone too, since they only point at the saved kit rather than carrying it themselves.\n\nIt isn't published as its own standalone page; it sits at the top of each routine page, the first line under the title. The quickest way on your phone: open your training repo on GitHub, go into the routines folder, tap any session (Monday overhead press, for example), and tap that first link. The pages are up to date as of the last publish.\n\nIf you'd rather have it as a single dedicated page or a shorter link, that's not something I can produce from here, but I can report it as a request.",
+  "seconds": 17.1,
+  "cost_usd": 0.039717749999999996,
+  "input_tokens": 12593,
+  "output_tokens": 731
+ },
+ "first_hits": {}
+}

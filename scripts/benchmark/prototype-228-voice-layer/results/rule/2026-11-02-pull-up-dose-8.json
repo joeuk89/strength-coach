@@ -1,0 +1,20 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 8,
+ "uuid": "e92f8572-17d9-43e9-9499-34668bf94dfc",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "Done. The new version is in force as of today: an amend, same block, same week position. The three things it changes:\n\n- **Pull-ups.** The target is 10 hard sets a week, and negatives and band pull-ups count toward it. The sessions themselves are unchanged.\n- **Swings.** The finisher is out of Monday's lifting session and is its own optional session beside it: 12 minutes of swings at the top of each minute, 12 reps at 40 lb, growing toward 16 minutes and 15 reps as it stays at the target effort. Monday's lifting session drops to about 47 minutes against its 75.\n- **Circuit.** Untouched, and it no longer needs the weekly same-day acknowledgement.\n\nThe two standing notes (the deadlift at four sets, the Friday strict single on hold) are recorded with their reasons.\n\nWhat you'll see from here:\n\n- **This week** runs on the plan already approved, so Monday's session in Hevy still carries the swings at the end. The new shape shows up when next week is planned.\n- **The pull-up dose and the swing check** can't be confirmed on live data until the first week closes under the new version; the progress view is empty on dose until then. I'll read both at the first check-in after that.\n- **Publish is off**, as you asked. The export is behind the store and will stay that way until plate-pool#52 ships and you say go.",
+  "seconds": 16.3,
+  "cost_usd": 1.106703,
+  "input_tokens": 55214,
+  "output_tokens": 812
+ },
+ "first_hits": {
+  "fixed": [
+   "acknowledgement",
+   "the store"
+  ]
+ }
+}

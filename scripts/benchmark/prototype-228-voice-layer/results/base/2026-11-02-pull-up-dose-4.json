@@ -1,0 +1,89 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 4,
+ "uuid": "92ccb7b7-3692-4cf3-8d6e-29d63623f2a9",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Dry run is clean on both changes. Here is what it shows, every flag, and the two calls I need from you.\n\n**What changed in the draft (`.coach/drafts/2026-11-02-program.toml`, rewritten in place)**\n\n- `kind = \"amend\"`, Block `b-2026-11-01` continues, position A, `no_op: false`, nothing filled.\n- `[dose.lift] pull_up = { sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`, the old `dose_off_band` acknowledgement removed.\n- `kb_swing` removed from `mon-ohp`. New session `cond-swings`: `kind = \"conditioning\"`, `tier = \"optional\"`, scheme `emom_density` with `minutes = 12`, `minutes_cap = 16`, `minutes_step = 2`, `reps = { kb_swing = 12 }`, `reps_cap = { kb_swing = 15 }`, `rpe_target = 7`; one `hold` line at `start_load = 40` (dry run: 40 lb \u2192 18.1437 kg).\n- Schedule: `mon = [\"mon-ohp\", \"cond-swings\"]` in both A and B, lifting first.\n- `mon-ohp` estimate drops 58 \u2192 47 of 75 minutes. Every other estimate is unchanged: wed 39/75, fri 65/75, sat 65/90, sun 65/90. `cond-swings` shows null, as a conditioning session with no `minutes` does; the EMOM scheme owns its time.\n- `because` now reads: engine 0.2.0 lifts the cutover workarounds, counted variants give the pull-up a real target, a conditioning session can sit beside a lifting day.\n\n**1. Pull-up target: I propose 10, you decide.** A hard set is a working set above RPE 5 (activation sets excluded, so the scapular pull-ups don't count; the flexed-arm hang isn't a variant and doesn't count either). The week plans 3 negatives + 7 band sets + the Friday strict single = 11. The band is 5\u201315 and the engine's default for a lift is 8. 10 sits just under what's planned, so `lift_dose_under_target` (three of four weeks under) fires when you miss Wednesdays, not as background noise every week. 8 would be the engine default and more forgiving. Say which, or a number of your own; `dose_off_band` reads `sets` only, so anything 5\u201315 clears it.\n\n**2. Swings.** The spec and the dose code agree: a workout matched to a conditioning session yields an Activity and no Exposures, so swings logged under `cond-swings` will not count as hard sets. Today's workout matched `mon-ohp` and stays as it is (8 \u00d7 10 at 40, logged as exposures; history untouched). I'll confirm on the first `cond-swings` log via the check-in card's dose line.\n\nOne caveat the adopt dry run can't show: `session_drop_suggested` now reads only *scheduled* sessions, and an EMOM at RPE 7 is a quality bout by the engine's definition (RPE 7 or more). Scheduled on Monday it is within 6 hours of `mon-ohp` and, in week B, within 24 hours before PT legs. So `plan draft` may raise it on `cond-swings` with reason `quality_stack`. If it does, the choice is an acknowledgement on the WeekPlan or `rpe_target = 6`. I'd keep 7 and acknowledge.\n\n**3. cond-circuit.** No change to the session. Re-validating the 2026-11-01 plan draft under 0.2.0 returns zero `session_drop_suggested` rows (`coach query flags --draft ... --code session_drop_suggested` \u2192 `count: 0`); the plan in force (`wp-2026-11-02`) still carries the old acknowledged one because it was approved under 0.1. The next `plan draft` should need nothing. (That old draft also shows a `start_load_missing` violation when re-validated now; it's a stale draft, not the plan in force, so I'm noting it, not acting on it.)\n\n**Every flag in the dry run (3 warnings, 0 violations)**\n\n- `dose_off_band@version:pv-2` on **bb_deadlift = 4**, band 5\u201315, not acknowledged. New in the sense that it was hidden: the engine raised the pull-up one and stopped there. Options: lift the target to 5 (the band floor) or acknowledge why 4 stands (the hinge is also trained by the Friday RDL and the PT's occasional deadlifts). Your call; I lean toward acknowledging rather than adding a set to a lift that already runs top + back-offs on a 90-minute day.\n- `scheme_off_emphasis@line:fri-squat/pull_up`, `hold` on the strict single. Acknowledged, carried from pv-1, unchanged.\n- `routine_drift@routine:ce81b206\u2026`, the Hevy routine for `wp-2026-11-02` differs structurally from the plan (reps on exercise 1 sets 5\u20137, weights on exercise 2 sets 1\u20133). Unrelated to this amend; it resolves on the next push, which waits for plate-pool#52 as you said. I will not run `publish`.\n\nTell me the pull-up target (10 or otherwise) and what to do with deadlift = 4, and I'll adjust the draft, re-run the dry run, and adopt on your yes.",
+  "seconds": 59.6,
+  "cost_usd": 1.198048,
+  "input_tokens": 50978,
+  "output_tokens": 4278
+ },
+ "first_hits": {
+  "verb": [
+   "coach query",
+   "plan draft"
+  ],
+  "flag": [
+   "dose_off_band",
+   "lift_dose_under_target",
+   "routine_drift",
+   "scheme_off_emphasis",
+   "session_drop_suggested",
+   "start_load_missing"
+  ],
+  "view": [
+   "query flags"
+  ],
+  "fixed": [
+   "acknowledgement",
+   "dry run",
+   "flag",
+   "flags",
+   "the engine"
+  ],
+  "path": [
+   ".coach/drafts/2026-11-02-program.toml"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-1",
+   "pv-2",
+   "wp-2026-11-02"
+  ],
+  "hash": [
+   "ce81b206"
+  ],
+  "code": [
+   "`.coach/drafts/2026-11-02-program.toml`",
+   "`[dose.lift] pull_up = { sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`",
+   "`b-2026-11-01`",
+   "`because`",
+   "`coach query flags --draft ... --code session_drop_suggested`",
+   "`cond-swings`",
+   "`count: 0`",
+   "`dose_off_band@version:pv-2`",
+   "`dose_off_band`",
+   "`emom_density`",
+   "`hold`",
+   "`kb_swing`",
+   "`kind = \"amend\"`",
+   "`kind = \"conditioning\"`",
+   "`lift_dose_under_target`",
+   "`minutes = 12`",
+   "`minutes_cap = 16`",
+   "`minutes_step = 2`",
+   "`minutes`",
+   "`mon = [\"mon-ohp\", \"cond-swings\"]`",
+   "`mon-ohp`",
+   "`no_op: false`",
+   "`plan draft`",
+   "`publish`",
+   "`quality_stack`",
+   "`reps = { kb_swing = 12 }`",
+   "`reps_cap = { kb_swing = 15 }`",
+   "`routine_drift@routine:ce81b206\u2026`",
+   "`rpe_target = 6`",
+   "`rpe_target = 7`",
+   "`scheme_off_emphasis@line:fri-squat/pull_up`",
+   "`session_drop_suggested`",
+   "`sets`",
+   "`start_load = 40`",
+   "`start_load_missing`",
+   "`tier = \"optional\"`",
+   "`wp-2026-11-02`"
+  ]
+ }
+}

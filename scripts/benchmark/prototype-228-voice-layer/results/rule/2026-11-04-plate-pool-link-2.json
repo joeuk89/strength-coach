@@ -1,0 +1,22 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 2,
+ "uuid": "0a04cbdc-c140-4a9c-aa98-952ecabed976",
+ "mechanism": "rule",
+ "system_tokens": 413,
+ "first": {
+  "text": "Your plate-pool lives at https://joeuk89.github.io/plate-pool/\n\nYour home kit is saved there under kit `d33b57cc`, so a link like https://joeuk89.github.io/plate-pool/?kit=d33b57cc opens it with your plates already in place. Each of your routines also links straight to the exact bar or dumbbell load for that day, and there's a longer one-off link that sets up the whole home inventory from scratch if you ever need it on a new device \u2014 say the word and I'll pull that out for you.",
+  "seconds": 8.0,
+  "cost_usd": 0.14927,
+  "input_tokens": 6572,
+  "output_tokens": 357
+ },
+ "first_hits": {
+  "hash": [
+   "d33b57cc"
+  ],
+  "code": [
+   "`d33b57cc`"
+  ]
+ }
+}

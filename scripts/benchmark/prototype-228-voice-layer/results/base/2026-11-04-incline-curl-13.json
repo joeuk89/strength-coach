@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 13,
+ "uuid": "ead6c046-d8de-484e-9dbb-6f8d1d83503a",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Yes. The hinge is covered well, and it was put in on purpose because it is the pattern that gets dropped first.\n\n**Hinge work a week, from the program as adopted**\n\n| Session | Exercise | Hard sets |\n| --- | --- | --- |\n| Fri | Romanian Deadlift (Barbell) | 3 |\n| Sun | Deadlift (Barbell) | 4 (top set + 3 back-offs) |\n| Sun | Hip Thrust (Barbell) | 3 |\n| **Core lifting total** | | **10** |\n| Mon (optional) | Kettlebell swing EMOM | 12 minutes of swings at RPE 7 |\n| Tue (PT, legs week) | Deadlift, sometimes | PT's call |\n\nSo the deadlift target of 4 is only the barbell deadlift's share. The pattern itself gets 10 hard sets across two sessions two days apart, with a heavy pull on Sunday and a lighter stretch-loaded pull on Friday, plus swings on Monday if you do the EMOM. That is a sound dose for a hypertrophy block and plenty for the deadlift to keep climbing towards 2\u00d7BW.\n\n**The muscle to watch is the hamstrings, not the hinge.** The engine counts muscles, not patterns. Hamstrings are primary in only the deadlift and RDL, 7 sets, with hip thrust and split squats adding secondary load. Glutes and lower back are well over the 10-set-per-muscle target once squats, split squats and rows are counted. Hamstrings sit right at the edge, and there is no knee-flexion exercise anywhere, which is the one hamstring job a hinge does not do. That is a kit limit: no leg curl machine at home.\n\nI wouldn't change anything now. The block opened on 1 November, so the progress report has no completed weeks of dose yet. If it shows hamstrings behind target once a few weeks are in, the fix is small: a fourth RDL set on Friday, or a home knee-flexion lift such as a Nordic curl lowered off the bench or a sliding leg curl, 2 to 3 sets on Friday after the RDL. Either goes in as an amend. Until the report says so, the hinge is fine as it stands.",
+  "seconds": 24.1,
+  "cost_usd": 0.7232379999999999,
+  "input_tokens": 34235,
+  "output_tokens": 1479
+ },
+ "first_hits": {}
+}

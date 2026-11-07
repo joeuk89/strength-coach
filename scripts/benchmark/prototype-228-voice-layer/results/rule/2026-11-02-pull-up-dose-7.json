@@ -1,0 +1,19 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 7,
+ "uuid": "3e400435-7cc4-4c30-9820-cad598d560b7",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "Honestly, nothing in the sessions themselves. Wednesday's negatives and band pull-ups, Sunday's band pull-ups and Friday's strict single are set for set the same as before. Nobody adds a rep or changes a band because of this.\n\nWhat changes is how your week is judged afterwards:\n\n- **The pull-up work is finally watched.** Until now the only thing counted toward the pull-up was the one strict single, so a week where you skipped Wednesday entirely still looked like a full pull-up week. From now the negatives and band sets count toward a target of 10 a week. Do the week as written and you land at 11; lose Wednesday and you land at 4, and the check-in will say the pull-up fell short, not that it was fine.\n- **Three short weeks in a row gets a response.** If the pull-up comes in under 10 in three of four weeks, the weekly plan flags it and I owe you a fix: usually putting the missed sets somewhere else, not just noting it.\n- **A disrupted week has an easier floor.** When illness or travel cuts the week down, each main lift still has to keep a couple of hard sets. Band pull-ups now satisfy that for the pull-up, so a cut-down week can keep the band work and skip the strict single rather than the other way round.\n- **One less thing I have to explain every version.** The old \"target of 1\" needed a written justification each time; a real target doesn't.\n\nSo: same training, truer scorecard. The thing to feel is that a missed Wednesday now shows up as a pull-up gap, which is exactly what it is.\n\nReady to adopt on your yes.",
+  "seconds": 16.9,
+  "cost_usd": 1.084103,
+  "input_tokens": 53729,
+  "output_tokens": 954
+ },
+ "first_hits": {
+  "fixed": [
+   "flags"
+  ]
+ }
+}

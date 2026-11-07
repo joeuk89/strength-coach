@@ -1,0 +1,22 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 2,
+ "uuid": "0a04cbdc-c140-4a9c-aa98-952ecabed976",
+ "mechanism": "rule_skill",
+ "system_tokens": 413,
+ "first": {
+  "text": "Your plate-pool lives at **https://joeuk89.github.io/plate-pool/**\n\nYour training pages link into it two ways:\n\n- **Loading a specific lift** \u2014 e.g. https://joeuk89.github.io/plate-pool/?barbell=140.5lb&barbell.hardware=collar-clamp&kit=d33b57cc \u2014 swap the implement and weight, and the kit code `d33b57cc` keeps it pointed at your home equipment.\n- **Setting up the home kit from scratch** \u2014 each routine page carries a long \"Set up the home kit in plate-pool\" link that carries your full plate inventory with it. It's too long to paste cleanly here, but it's on every routine page (Monday press, Friday squat, Saturday bench, Sunday deadlift, the daily hang and the conditioning circuit).\n\nWant me to pull the exact loading link for a particular lift?",
+  "seconds": 9.1,
+  "cost_usd": 0.0244125,
+  "input_tokens": 6572,
+  "output_tokens": 455
+ },
+ "first_hits": {
+  "hash": [
+   "d33b57cc"
+  ],
+  "code": [
+   "`d33b57cc`"
+  ]
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 15,
+ "uuid": "8553a369-c9f9-43a2-830f-22ff98614a3b",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "The two sessions have different footprints, so they want different days.\n\n**Kettlebell swings: Monday, after the OHP session.** This is where it already sits. Monday is your shortest lifting day, about 53 minutes of its 75, so 12 minutes of swings fits with room to spare. It is an upper-body day, so the swings don't compete with anything you've just lifted, and your next heavy hinge is Friday's Romanian deadlift, four days away. Sunday's deadlift is the day before, but swings at RPE 7 are a light hinge and your lower back and hamstrings handle that fine after a night's sleep. The only thing to watch is grip: the rows come before the swings, so hold the bell loosely on the backswing and let the hips do the work.\n\n**Strength circuit: Saturday, after bench.** Saturday has the most room of any day, about 65 minutes of its 90 before the circuit. The ring push-ups land on the day you've already pressed, which keeps all your pushing in one place rather than spreading chest fatigue onto a fresh day. The goblet squats are a day after Friday's squat, light enough to be fine. And the swings in the circuit are the day before Sunday's deadlift, again light enough not to matter. The run that day is easy, so it doesn't change the picture.\n\n**Where not to put the circuit**\n\n- Friday: already 65 of 75 minutes, and goblet squats on top of squat, RDL and split squats is too much leg work.\n- Wednesday: there's time, but it lands the morning after the PT session, so the push-ups follow a chest night in one week and the goblet squats follow a legs night in the other. It also sits before the lunchtime run.\n- Thursday: it would fit, but it is your one full rest day, and with sleep as the limiter I'd rather keep it clear.\n\nIf a Saturday session gets too long, Wednesday is the fallback for the circuit. And if a week goes sideways, the conditioning is the first thing to drop, never the lifting.\n\nOne practical note: the swings are already on Monday in the program. The circuit is a standing session you do when it suits, so Saturday is a habit you adopt rather than a change to record. If you'd rather have it pinned to Saturday in the plan, say so and I'll draft that as a small revision.",
+  "seconds": 50.3,
+  "cost_usd": 0.830633,
+  "input_tokens": 35653,
+  "output_tokens": 3115
+ },
+ "first_hits": {}
+}

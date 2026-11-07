@@ -1,0 +1,19 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 13,
+ "uuid": "ead6c046-d8de-484e-9dbb-6f8d1d83503a",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "Yes. The deadlift target being 4 doesn't mean the hinge is thin; it means the deadlift is one of three hinge movements rather than the only one.\n\n**Hinge work across the week**\n\n| Day | Exercise | Hard sets | What it mainly trains |\n| --- | --- | --- | --- |\n| Friday | Romanian deadlift | 3 | hamstrings, glutes, lower back |\n| Sunday | Deadlift | 4 | glutes, hamstrings, lower back |\n| Sunday | Hip thrust | 3 | glutes |\n| Monday (optional) | Kettlebell swing EMOM | 12 light sets | glutes, hamstrings, as power and conditioning |\n\nThat's 10 hard hinge sets on your core lifting days, spread over two days with a day's gap between them, which is the frequency you want. The swings on Monday add a lot of low-effort hinge reps on top, and the PT sometimes puts deadlifts in on Tuesday. For an intermediate lifter with a hypertrophy emphasis, that is a solid dose, and the deadlift itself is the heavy, low-rep anchor rather than the volume driver.\n\nGlutes are well covered beyond this: back squat, split squats on Friday, Bulgarian split squats on Sunday and the PT leg day all hit them hard.\n\nThe one muscle to keep an eye on is the hamstrings. They are the main mover in only the RDL and the deadlift, 7 hard sets, with the hip thrust and split squats helping as secondary work. That's adequate, not generous. There's no leg-curl type exercise at home to fill it, so if the progress report at the block boundary shows hamstrings behind the rest of the lower body, the move would be a fourth RDL set on Friday, or a sliding leg curl or Nordic-style curl, both of which work with the kit you have. I wouldn't add anything now; see how the block runs first.\n\nShort version: the hinge is in twice a week with real weight, the deadlift is where it should be as a heavy anchor, and the acknowledgement is about the counting, not a gap in the training.",
+  "seconds": 22.3,
+  "cost_usd": 0.719173,
+  "input_tokens": 34375,
+  "output_tokens": 1397
+ },
+ "first_hits": {
+  "fixed": [
+   "acknowledgement"
+  ]
+ }
+}

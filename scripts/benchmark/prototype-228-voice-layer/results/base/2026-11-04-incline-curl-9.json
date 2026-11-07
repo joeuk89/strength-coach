@@ -1,0 +1,37 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 9,
+ "uuid": "0a8215f0-98eb-4d49-a0ff-512b6aa28235",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Draft's written at `.coach/drafts/2026-11-04-program-2.toml`, a copy of pv-3. I'll make two edits before the dry run:\n\n1. Add a fifth line to `mon-ohp`: Incline Curl (Dumbbell), 3 sets of 8 to 12 at RPE 8, double progression, 60 s rest, after the rear delt flys. I'll leave the lateral raise and rear delt fly superset as it is and keep the curl on its own, so you're not supersetting a biceps lift into a shoulder pair you already run tight.\n2. Rewrite `because`, since the current text explains pv-3's engine change, not this one. It'll say: direct biceps work was six sets on one day; an incline curl on Monday takes it to nine sets over two days, at long muscle length, with the curl last so the biceps get the full gap since Sunday.\n\nKind stays `amend`: same split, same emphasis, one session changed.\n\nThen I run `coach program adopt --dry-run` and come back with what it shows: the diff against pv-3, the incline curl's start load from your Hevy history with its kg, Monday's time estimate against the 75-minute cap, and any warnings. Nothing is recorded until you say yes to those numbers.",
+  "seconds": 18.2,
+  "cost_usd": 0.5824879999999999,
+  "input_tokens": 28385,
+  "output_tokens": 1004
+ },
+ "first_hits": {
+  "verb": [
+   "coach program adopt"
+  ],
+  "fixed": [
+   "Draft",
+   "dry run",
+   "dry-run"
+  ],
+  "path": [
+   ".coach/drafts/2026-11-04-program-2.toml"
+  ],
+  "store_id": [
+   "pv-3"
+  ],
+  "code": [
+   "`.coach/drafts/2026-11-04-program-2.toml`",
+   "`amend`",
+   "`because`",
+   "`coach program adopt --dry-run`",
+   "`mon-ohp`"
+  ]
+ }
+}

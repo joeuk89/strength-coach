@@ -1,0 +1,19 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 4,
+ "uuid": "895ef7a0-1acb-4df2-bc6a-b8cd66f36c3f",
+ "mechanism": "rule",
+ "system_tokens": 413,
+ "first": {
+  "text": "Yes, that's exactly what the \"Set up the home kit in plate-pool\" link is. It carries your whole home inventory: bar, plates, dumbbells, kettlebells, the leg attachment and the vest. Tap it once on your phone and plate-pool saves the kit; after that, the \"Load it in plate-pool\" links beside each exercise will show you the right plates for that set.\n\nRight now it only appears at the top of each routine page (the Monday press page, the Friday squat page and so on), not on your athlete page or the front page of the repo. On your phone, open the training repo on GitHub, go into the routines folder, open any day, and the link is the first line under the title.\n\nIf you'd rather have it somewhere easier to find, like the front page, say so and I'll report it as something to add.",
+  "seconds": 11.1,
+  "cost_usd": 0.28104,
+  "input_tokens": 12593,
+  "output_tokens": 584
+ },
+ "first_hits": {
+  "fixed": [
+   "the repo"
+  ]
+ }
+}

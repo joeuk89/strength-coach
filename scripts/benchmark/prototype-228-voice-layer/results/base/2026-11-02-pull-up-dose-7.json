@@ -1,0 +1,34 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 7,
+ "uuid": "3e400435-7cc4-4c30-9820-cad598d560b7",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Nothing in the sessions themselves. Wednesday's negatives and band pull-ups, Sunday's band pull-ups and Friday's strict single are the same lines with the same sets, reps and RPE; the Hevy routines don't move. The change is in what the engine does with what you log.\n\nWhat changes practically:\n\n- **The weekly dose check becomes real.** Under pv-1 the pull-up target was 1, which the Friday single always met, so the card said \"done\" whatever happened on Wednesday. Under pv-2 the check-in card shows hard sets delivered against 10, counting every negative and band pull-up set you log at RPE 6 or above. A week where Wednesday falls to a late night shows 4 of 10, not 1 of 1.\n- **A short pattern gets flagged.** `plan draft` raises `lift_dose_under_target` when you land under 10 in three of the trailing four ordinary weeks. That is the prompt to add a set or ask what's going on. Under pv-1 it could never fire.\n- **A cut-down week keeps pull-up work.** The disrupted-week floor counts negatives and band pull-ups toward the two hard sets a priority lift keeps in a minimum week, so a trimmed week keeps them rather than the engine flagging the pull-up as dropped.\n- **One acknowledgement gone** that we had to re-justify each version.\n\nWhat it does not do: it doesn't change how each line progresses week to week (negatives and band pull-ups still move on their own double progression), the variants never stand in for the strict single on Friday, and nothing is tested but the single.\n\nSo the honest summary: your workouts stay exactly as they are, and the engine stops being blind to whether the pull-up work actually happened. Yes to adopt when you're ready.",
+  "seconds": 18.1,
+  "cost_usd": 1.087718,
+  "input_tokens": 53589,
+  "output_tokens": 1027
+ },
+ "first_hits": {
+  "verb": [
+   "plan draft"
+  ],
+  "flag": [
+   "lift_dose_under_target"
+  ],
+  "fixed": [
+   "acknowledgement",
+   "the engine"
+  ],
+  "store_id": [
+   "pv-1",
+   "pv-2"
+  ],
+  "code": [
+   "`lift_dose_under_target`",
+   "`plan draft`"
+  ]
+ }
+}

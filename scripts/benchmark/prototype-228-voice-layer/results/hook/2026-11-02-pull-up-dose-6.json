@@ -1,0 +1,27 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 6,
+ "uuid": "6a703667-9af6-48b4-8635-7d7d3f6fc398",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "The dry run is clean and nothing is recorded yet. Here is what adopting records:\n\n**Pull-up dose.** Negatives and band pull-ups now count toward the strict pull-up, with a weekly target of 10 hard sets. The planned week delivers 11, so a full week clears it and a lost Wednesday shows as behind. The old note explaining the target of 1 is gone, and the pull-up raises nothing.\n\n**Swing session.** The kettlebell swings leave Monday's pressing session and become their own optional conditioning session beside it: one set at the top of each minute, 12 minutes to start and stepping up to 16, 12 reps a minute rising to 15, effort around a 7, bell at 40 lb (18.1 kg). Monday's lifting estimate drops from 58 to 47 minutes against its 75, so there is room if you ever want the swings straight after. Swings done in this session count for no muscle's hard sets; that confirms itself on live numbers once the first week with it closes. Last Monday's logged workout is untouched.\n\n**Deadlift.** The target stays at 4 hard sets with the note we agreed: that is what Sunday plans (top set plus three back-offs), Friday's Romanian deadlift carries the hinge, and the PT sometimes adds deadlifts on Tuesday.\n\n**Circuit.** Unchanged, and it no longer needs a weekly note about sitting on a lifting day.\n\nEverything else is as it was: same split, same rotation, same block continuing, every other load and set count unchanged. The one remaining item is the Monday routine in your Hevy app being slightly out of step with this week's plan; that resolves itself on the next weekly push and has nothing to do with this change. Publishing stays off until your kit tables are done.\n\nShall I adopt it?",
+  "seconds": 15.8,
+  "cost_usd": 0.0572765,
+  "input_tokens": 53428,
+  "output_tokens": 878
+ },
+ "first_hits": {
+  "fixed": [
+   "dry run"
+  ]
+ },
+ "second": {
+  "text": "Everything checks out and nothing is recorded yet. Here is what you'd be agreeing to:\n\n**Pull-up dose.** Negatives and band pull-ups now count toward the strict pull-up, with a weekly target of 10 hard sets. The planned week delivers 11, so a full week clears it and a lost Wednesday shows as behind. The old explanation for the target of 1 is gone, and the pull-up raises nothing.\n\n**Swing session.** The kettlebell swings leave Monday's pressing session and become their own optional conditioning session beside it: one set at the top of each minute, 12 minutes to start and stepping up to 16, 12 reps a minute rising to 15, effort around a 7, bell at 40 lb (18.1 kg). Monday's lifting estimate drops from 58 to 47 minutes against its 75, so there is room if you ever want the swings straight after. Swings done in this session count for no muscle's hard sets; that confirms itself on live numbers once the first week with it closes. Last Monday's logged workout is untouched.\n\n**Deadlift.** The target stays at 4 hard sets with the reasoning we agreed: that is what Sunday plans (top set plus three back-offs), Friday's Romanian deadlift carries the hinge, and the PT sometimes adds deadlifts on Tuesday.\n\n**Circuit.** Unchanged, and it no longer needs a weekly explanation for sitting on a lifting day.\n\nEverything else is as it was: same split, same rotation, same block continuing, every other load and set count unchanged. The one remaining item is that Monday's routine in Hevy is slightly out of step with this week's plan; that resolves itself when next week's plan goes out and has nothing to do with this change. Publishing stays off until your kit tables are done.\n\nShall I adopt it?",
+  "seconds": 10.6,
+  "cost_usd": 1.082817,
+  "input_tokens": 54103,
+  "output_tokens": 785
+ },
+ "second_hits": {}
+}

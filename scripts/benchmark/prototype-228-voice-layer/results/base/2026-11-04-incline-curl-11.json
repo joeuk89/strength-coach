@@ -1,0 +1,35 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 11,
+ "uuid": "e807399a-6e89-4a88-b8d3-71c163507053",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "pv-4 is \"program version 4\": the id the engine gives the next adopted version of your program.\n\nEach time a program Draft is adopted, the engine records it as a new version and numbers them in order. The versions so far in this instance:\n\n- **pv-1**, adopted 1 Nov: the fresh program when you moved to this engine.\n- **pv-2**, adopted 2 Nov: added the kettlebell swing EMOM as its own session.\n- **pv-3**, adopted 4 Nov: the current version in force, with the pull-up dose counted through its variants.\n- **pv-4**: what this incline curl change would become once you approve it.\n\nThe old versions stay in the store, so the history of every change and its `because` is kept, and `coach program show` always tells you which one is in force. It's separate from the Block (b-2026-11-01), which tracks the weeks of training and does not reset for an amend like this one.\n\nDo you want me to adopt it?",
+  "seconds": 7.7,
+  "cost_usd": 0.631488,
+  "input_tokens": 32590,
+  "output_tokens": 302
+ },
+ "first_hits": {
+  "verb": [
+   "coach program show"
+  ],
+  "fixed": [
+   "Draft",
+   "the engine",
+   "the store"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-1",
+   "pv-2",
+   "pv-3",
+   "pv-4"
+  ],
+  "code": [
+   "`because`",
+   "`coach program show`"
+  ]
+ }
+}

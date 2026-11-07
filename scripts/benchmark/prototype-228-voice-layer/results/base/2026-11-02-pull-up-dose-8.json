@@ -1,0 +1,46 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 8,
+ "uuid": "e92f8572-17d9-43e9-9499-34668bf94dfc",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Adopted. The engine recorded **pv-2** as an amend of pv-1, continuing block b-2026-11-01 with rotation position A, 0 hard weeks against the ceiling of 6. `coach status` now shows pv-2 in force, adopted 2026-11-02.\n\nWhat it froze on the version:\n\n- **Dose.** `pull_up = { sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`; bench, OHP and squat at 5, deadlift at 4.\n- **Schedule.** Monday is `[\"mon-ohp\", \"cond-swings\"]` in both rotation weeks. mon-ohp lost the kb_swing line and estimates at 47 minutes against its 75. cond-swings runs emom_density, 12 minutes stepping by 2 to 16, 12 reps a minute to 15, RPE target 7, 40 lb (18.1 kg).\n- **Acknowledgements.** Two: `dose_off_band` on bb_deadlift at 4, with the sun-deadlift and RDL reasoning, and `scheme_off_emphasis` on Friday's strict single, carried over from pv-1. The pull-up acknowledgement is gone.\n\nFlags left standing after adopt: just `routine_drift` on the Monday Hevy routine, which the next plan apply clears.\n\nTwo things I could not confirm on live data yet:\n\n- **Swings as hard sets.** `coach progress` shows an empty dose view (no block boundary, no closed week yet), so there is nothing to read. The engine rule is firm: a workout matched to a conditioning session yields an Activity and no lifting exposures. I'll check the dose line on the first check-in card after a cond-swings workout is logged and matched.\n- **Today's logged workout** is unchanged. It was matched to mon-ohp under the plan in force and its swings stay where they were logged.\n\n`coach status` reports the export behind the store, which is expected: publish has not run and stays off until plate-pool#52 ships. The next `plan draft` will pick up pv-2 and plan cond-swings beside Monday.",
+  "seconds": 16.2,
+  "cost_usd": 1.116918,
+  "input_tokens": 55074,
+  "output_tokens": 1017
+ },
+ "first_hits": {
+  "verb": [
+   "coach progress",
+   "coach status",
+   "plan apply",
+   "plan draft"
+  ],
+  "flag": [
+   "dose_off_band",
+   "routine_drift",
+   "scheme_off_emphasis"
+  ],
+  "fixed": [
+   "acknowledgement",
+   "the store"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-1",
+   "pv-2"
+  ],
+  "code": [
+   "`[\"mon-ohp\", \"cond-swings\"]`",
+   "`coach progress`",
+   "`coach status`",
+   "`dose_off_band`",
+   "`plan draft`",
+   "`pull_up = { sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`",
+   "`routine_drift`",
+   "`scheme_off_emphasis`"
+  ]
+ }
+}

@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 7,
+ "uuid": "3e400435-7cc4-4c30-9820-cad598d560b7",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Nothing in the sessions themselves. Every set, rep, load and rest on Wednesday, Friday and Sunday stays exactly as it is: the scapular pulls, the negatives, the band pull-ups, the flexed-arm hang, the strict single on Friday. Each line still progresses the way it did (reps up inside its range, then a lighter band or a longer lower). You won't do anything different this week or next because of it.\n\nWhat changes is how the week is judged afterwards, and that has three practical effects:\n\n1. **Your pull-up work finally counts.** Until now the only pull-up work that counted toward the lift's weekly target was the one strict single, so the ten sets of negatives and band pull-ups you do each week were invisible to the weekly dose check. Now they count. A full week shows 11 hard sets against a target of 10.\n\n2. **A lost Wednesday gets noticed.** If a late night takes out Wednesday, the week shows 4 sets against 10. If that happens three weeks out of four, the check-in will tell us the pull-up is behind, and I'll propose where the missing sets go back (a band set added to Sunday, or Wednesday's work shifted to Thursday). Before this, a missed Wednesday looked exactly like a full week.\n\n3. **A cut-down week keeps pull-up work.** When a week is disrupted and we plan the bare minimum, each priority lift must keep at least two hard sets. Negatives and band pull-ups now satisfy that for the pull-up, so a minimum week can carry two sets of negatives instead of forcing strict attempts you can't yet make.\n\nTwo things it doesn't change: the Friday strict single is still the only test of the lift, and negatives or band pull-ups never stand in for it. And the pull-up target still plays no part in your other lifts.\n\nThe draft is ready as described; say yes and I'll adopt it.",
+  "seconds": 26.4,
+  "cost_usd": 0.09135575,
+  "input_tokens": 53745,
+  "output_tokens": 1558
+ },
+ "first_hits": {}
+}

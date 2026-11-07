@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 8,
+ "uuid": "e92f8572-17d9-43e9-9499-34668bf94dfc",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Done. Your program is updated and the block carries on where it was: nothing resets, this week's rotation stays as planned, and the Monday session you already logged is untouched.\n\nWhat's different from here:\n\n- **Monday** is now two parts. The lift (press, rows, delts) runs on its own at about 47 of its 75 minutes. The swings sit beside it as their own short conditioning piece: 12 minutes, 12 swings at the top of each minute, 40 lb, effort around 7 out of 10. When it feels comfortable the clock grows two minutes at a time to 16, then reps climb to 15. It's optional, so skipping it on a tired night costs you nothing in your attendance record, and the swings no longer count as lifting sets for any muscle.\n- **Pull-ups** now have a real weekly target of 10 hard sets, met by your negatives and band pull-ups together with the Friday single. Nothing in the sessions changes; the difference is that a half-done pull-up week will now show up rather than hide.\n- **Deadlift** stays at four hard sets a week as written, with the reason on record: Friday's Romanian deadlift carries the hinge, and the PT sometimes adds pulls on Tuesday.\n- **The circuit** is unchanged and no longer needs a weekly explanation for sitting on a lifting day.\n\nTwo things still to come. Nothing has gone to your phone yet: your Hevy routines still show the old Monday with the swings on the end, and I'll push the new shape once you tell me the kit tables are done. Separately, your Monday routine in Hevy has drifted from the plan (some rep targets and the row loads); that resolves itself on that same push.",
+  "seconds": 21.0,
+  "cost_usd": 0.072527,
+  "input_tokens": 55230,
+  "output_tokens": 1174
+ },
+ "first_hits": {}
+}

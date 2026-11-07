@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 14,
+ "uuid": "6e938624-58a2-4808-a955-4e8cdd4c39cc",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "Published. Your training pages are up to date: this week's page now shows Monday with the incline curl as its last line, and the program history records the change with the reason behind it.\n\nNothing else moves until the next week's plan is drafted and pushed, which is when Monday's routine in Hevy picks up the new line. Until then, if Monday comes round first, add 3 sets of 8 to 12 incline curls by hand at the end and I'll account for it when the plan goes out.",
+  "seconds": 6.2,
+  "cost_usd": 0.6817230000000001,
+  "input_tokens": 35495,
+  "output_tokens": 200
+ },
+ "first_hits": {}
+}

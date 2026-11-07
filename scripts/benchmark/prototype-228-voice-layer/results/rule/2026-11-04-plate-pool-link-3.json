@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 3,
+ "uuid": "c3986158-f184-4d07-96c5-0a57f04070f2",
+ "mechanism": "rule",
+ "system_tokens": 413,
+ "first": {
+  "text": "My mistake \u2014 it's not on your athlete page. It's at the top of every routine page instead: open any one of them (Monday press, Wednesday pull-ups, Friday squat, Saturday bench, Sunday deadlift, the conditioning circuit or the daily hang) and the first link, labelled \"Set up the home kit in plate-pool\", is the one you want. Tap it once on your phone and the app opens with your full home kit loaded and saved.\n\nAfter that, the \"Load it in plate-pool\" links next to each lift on those same pages will open straight to the right weight on your bar or dumbbells.",
+  "seconds": 8.5,
+  "cost_usd": 0.20834000000000003,
+  "input_tokens": 9343,
+  "output_tokens": 430
+ },
+ "first_hits": {}
+}

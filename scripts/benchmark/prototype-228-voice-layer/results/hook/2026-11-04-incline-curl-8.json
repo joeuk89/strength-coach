@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 8,
+ "uuid": "8206d7f7-eb68-45cf-9e52-af12f3e75f29",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Drafting it now. The change is Monday only: incline curl goes in last, after the rear delt flys, three sets of 8 to 12 at an 8, adding weight once every set hits 12. Everything else in the week stays as it is, and the block carries on uninterrupted.\n\nI'll take the starting weight from your last incline curl sets in your history and check the whole Monday session still fits inside your 75 minutes. Then I'll show you exactly what gets recorded before anything is saved.\n\nOne question before I do: is there anything else you want folded into this same revision, or is it just the curls?",
+  "seconds": 17.7,
+  "cost_usd": 0.051046749999999995,
+  "input_tokens": 24309,
+  "output_tokens": 899
+ },
+ "first_hits": {}
+}

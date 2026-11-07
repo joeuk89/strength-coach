@@ -1,0 +1,40 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 4,
+ "uuid": "895ef7a0-1acb-4df2-bc6a-b8cd66f36c3f",
+ "mechanism": "base",
+ "system_tokens": 293,
+ "first": {
+  "text": "Yes. That is exactly what the long \"Set up the home kit in plate-pool\" link is: the `#inventory=\u2026` fragment is your whole home kit (every plate, bar, dumbbell, kettlebell, leg attachment and vest from `kit/home.achievable.json`) encoded into the URL itself. Open it once and plate-pool stores the kit locally under the id `d33b57cc`; after that the short per-exercise \"Load it in plate-pool\" links find it.\n\nWhere it lives: `coach publish` writes that link only at the top of each routine page (line 7). It is not on `pages/athlete.md` or in the README, and `coach --help` shows no verb that prints it on its own, so there is no shorter standalone URL in the repo.\n\nEasiest route on your phone is to open one routine page on GitHub and tap the link:\n\n```\nhttps://github.com/joeuk89/training/blob/main/pages/routines/mon-ohp.md\n```\n\nIf you'd rather have it on the athlete page or in the README too, that would be a publish-template change in the engine, not something in this directory.",
+  "seconds": 10.7,
+  "cost_usd": 0.27939,
+  "input_tokens": 12453,
+  "output_tokens": 607
+ },
+ "first_hits": {
+  "verb": [
+   "coach publish"
+  ],
+  "fixed": [
+   "the engine",
+   "the repo",
+   "verb"
+  ],
+  "path": [
+   "pages/athlete.md",
+   "pages/routines/mon-ohp.md"
+  ],
+  "hash": [
+   "d33b57cc"
+  ],
+  "code": [
+   "`#inventory=\u2026`",
+   "```",
+   "`coach --help`",
+   "`coach publish`",
+   "`d33b57cc`",
+   "`kit/home.achievable.json`",
+   "`pages/athlete.md`"
+  ]
+ }
+}

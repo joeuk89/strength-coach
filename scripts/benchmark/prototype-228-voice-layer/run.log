@@ -1,0 +1,95 @@
+base: 17 runs
+  2026-11-04-plate-pool-link # 3 LEAK ['code', 'hash', 'path']
+  2026-11-04-plate-pool-link # 4 LEAK ['code', 'fixed', 'hash', 'path', 'verb']
+  2026-11-04-incline-curl # 8 LEAK ['code', 'fixed', 'store_id']
+  2026-11-04-incline-curl # 9 LEAK ['code', 'fixed', 'path', 'store_id', 'verb']
+  2026-11-04-incline-curl #10 LEAK ['code', 'fixed', 'flag', 'store_id', 'verb']
+  2026-11-04-incline-curl #11 LEAK ['code', 'fixed', 'store_id', 'verb']
+  2026-11-04-incline-curl # 3 LEAK ['code', 'store_id']
+  2026-11-04-incline-curl #14 LEAK ['code', 'fixed', 'path', 'store_id', 'verb']
+  2026-11-04-incline-curl #12 LEAK ['code', 'fixed', 'flag', 'store_id', 'verb']
+  2026-11-04-incline-curl #13 clean
+  2026-11-04-incline-curl #15 LEAK ['verb']
+  2026-11-02-pull-up-dose # 5 LEAK ['code', 'fixed', 'flag']
+  2026-11-02-pull-up-dose # 6 LEAK ['code', 'fixed', 'flag', 'path', 'store_id', 'verb']
+  2026-11-02-pull-up-dose # 7 LEAK ['code', 'fixed', 'flag', 'store_id', 'verb']
+  2026-11-02-pull-up-dose # 3 LEAK ['code', 'fixed', 'flag', 'hash', 'path', 'store_id', 'verb']
+  2026-11-02-pull-up-dose # 8 LEAK ['code', 'fixed', 'flag', 'store_id', 'verb']
+  2026-11-02-pull-up-dose # 4 LEAK ['code', 'fixed', 'flag', 'hash', 'path', 'store_id', 'verb', 'view']
+rule: 18 runs
+  2026-11-04-plate-pool-link # 2 LEAK ['code', 'hash']
+  2026-11-04-plate-pool-link # 3 clean
+  2026-11-04-plate-pool-link # 4 LEAK ['fixed']
+  2026-11-04-incline-curl #10 clean
+  2026-11-04-incline-curl # 9 clean
+  2026-11-04-incline-curl # 3 clean
+  2026-11-04-incline-curl # 8 clean
+  2026-11-04-incline-curl #11 clean
+  2026-11-04-incline-curl #14 clean
+  2026-11-04-incline-curl #12 LEAK ['fixed']
+  2026-11-04-incline-curl #13 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 5 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 3 clean
+  2026-11-04-incline-curl #15 clean
+  2026-11-02-pull-up-dose # 6 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 7 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 8 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 4 LEAK ['fixed']
+rule_skill: 18 runs
+  2026-11-04-plate-pool-link # 2 LEAK ['code', 'hash']
+  2026-11-04-plate-pool-link # 3 clean
+  2026-11-04-plate-pool-link # 4 LEAK ['fixed']
+  2026-11-04-incline-curl # 3 clean
+  2026-11-04-incline-curl #10 clean
+  2026-11-04-incline-curl # 8 clean
+  2026-11-04-incline-curl #11 clean
+  2026-11-04-incline-curl # 9 clean
+  2026-11-04-incline-curl #14 clean
+  2026-11-04-incline-curl #12 LEAK ['fixed']
+  2026-11-04-incline-curl #13 clean
+  2026-11-04-incline-curl #15 clean
+  2026-11-02-pull-up-dose # 5 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 6 clean
+  2026-11-02-pull-up-dose # 7 clean
+  2026-11-02-pull-up-dose # 8 clean
+  2026-11-02-pull-up-dose # 4 LEAK ['fixed']
+  2026-11-02-pull-up-dose # 3 LEAK ['fixed']
+hook: 18 runs
+  2026-11-04-plate-pool-link # 3 clean
+  2026-11-04-plate-pool-link # 2 clean
+  2026-11-04-plate-pool-link # 4 clean
+  2026-11-04-incline-curl # 8 clean
+  2026-11-04-incline-curl # 9 clean
+  2026-11-04-incline-curl #11 clean
+  2026-11-04-incline-curl # 3 clean
+  2026-11-04-incline-curl #10 clean
+  2026-11-04-incline-curl #14 clean
+  2026-11-04-incline-curl #13 clean
+  2026-11-04-incline-curl #12 clean
+  2026-11-04-incline-curl #15 clean
+  2026-11-02-pull-up-dose # 5 clean
+  2026-11-02-pull-up-dose # 6 clean
+  2026-11-02-pull-up-dose # 3 clean
+  2026-11-02-pull-up-dose # 7 clean
+  2026-11-02-pull-up-dose # 8 clean
+  2026-11-02-pull-up-dose # 4 clean
+split: 18 runs
+  2026-11-04-plate-pool-link # 3 clean
+  2026-11-04-plate-pool-link # 2 clean
+  2026-11-04-plate-pool-link # 4 clean
+  2026-11-04-incline-curl # 3 clean
+  2026-11-04-incline-curl # 8 clean
+  2026-11-04-incline-curl # 9 clean
+  2026-11-04-incline-curl #10 clean
+  2026-11-04-incline-curl #11 clean
+  2026-11-04-incline-curl #12 clean
+  2026-11-04-incline-curl #13 clean
+  2026-11-04-incline-curl #15 clean
+  2026-11-04-incline-curl #14 clean
+  2026-11-02-pull-up-dose # 3 clean
+  2026-11-02-pull-up-dose # 4 clean
+  2026-11-02-pull-up-dose # 6 clean
+  2026-11-02-pull-up-dose # 5 clean
+  2026-11-02-pull-up-dose # 7 clean
+  2026-11-02-pull-up-dose # 8 LEAK ['fixed']
+DONE

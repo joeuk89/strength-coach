@@ -1,0 +1,19 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 15,
+ "uuid": "8553a369-c9f9-43a2-830f-22ff98614a3b",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Swings on Monday, the circuit on Wednesday. Both after the lifting, and nothing on Thursday.\n\n**Why Monday for the swings.** It is already where the program puts them. Monday is the lightest lifting day (53 of its 75 minutes with the incline curl), so the 12 to 16 minute EMOM fits inside the cap. The swings are a light hinge at RPE 7, and the next heavy hinge is the Romanian deadlift on Friday, four days later. The only wrinkle is week B, where Tuesday's PT session is legs and core; swings at RPE 7 the evening before won't dent a squat, so I'd leave it.\n\n**Why Wednesday for the circuit.** The circuit is full body: goblet squat, ring push-up, swing, mountain climber, about 16 minutes at RPE 8. Wednesday is the place where that does the least damage and the most good:\n\n- The pull-up session is the shortest in the week at 39 minutes, so lift plus circuit is about 55, well inside 75.\n- Wednesday's lifting is all pull and core, so the circuit's goblet squats and push-ups round the day out rather than piling onto a muscle you just hammered.\n- The quads and swings are 48 hours before Friday's squat, and the push-ups are 72 hours before Saturday's bench. Thursday's rest sits between.\n- Nothing heavy on the legs the day before Sunday's deadlift, which is the week's most fatiguing lift.\n\nThe one thing to watch is that Wednesday already has the lunchtime run. The circuit before an easy run is fine, since Runna's easy pace is meant to be easy, but if the run suffers, move the circuit to the evening or treat it as the first thing to drop that day.\n\n**The slots I'd avoid.** Thursday is your one rest day and sleep is the limiter, so it stays empty. Friday and Sunday are already at 65 minutes with heavy lower work. Saturday adds goblet squats and swings the day before the deadlift, plus a run.\n\nBoth conditioning sessions are optional tier, so on a bad week they go first and the five lifting days stay.\n\nAt the moment the swings are pinned to Monday in the rotation and the circuit is \"standing\", meaning do it whenever. If you want Wednesday written in so the plan draft puts it on the routine, that's a small amend to the schedule. Say so and I'll draft it; otherwise nothing changes.",
+  "seconds": 35.8,
+  "cost_usd": 0.790248,
+  "input_tokens": 35513,
+  "output_tokens": 2308
+ },
+ "first_hits": {
+  "verb": [
+   "plan draft"
+  ]
+ }
+}

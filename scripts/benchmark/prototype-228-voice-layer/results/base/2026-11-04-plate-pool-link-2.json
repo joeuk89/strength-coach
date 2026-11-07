@@ -1,0 +1,30 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 2,
+ "uuid": "0a04cbdc-c140-4a9c-aa98-952ecabed976",
+ "mechanism": "base",
+ "system_tokens": 293,
+ "first": {
+  "text": "Your plate-pool lives at **https://joeuk89.github.io/plate-pool/** \u2014 your home kit is registered there as `kit=d33b57cc`.\n\nTwo kinds of link show up in your files:\n\n- **Load a lift**: `https://joeuk89.github.io/plate-pool/?barbell=140.5lb&barbell.hardware=collar-clamp&kit=d33b57cc` (each routine page has one of these per lift)\n- **Set up the home kit**: `https://joeuk89.github.io/plate-pool/#inventory=\u2026` \u2014 a long encoded link that rebuilds your inventory on a fresh device. The full version is in `profile.md` and `pages/athlete.md`; it was too long to print here cleanly, so open one of those files if you need to copy it.",
+  "seconds": 7.6,
+  "cost_usd": 0.14797,
+  "input_tokens": 6432,
+  "output_tokens": 387
+ },
+ "first_hits": {
+  "path": [
+   "pages/athlete.md",
+   "profile.md"
+  ],
+  "hash": [
+   "d33b57cc"
+  ],
+  "code": [
+   "`https://joeuk89.github.io/plate-pool/#inventory=\u2026`",
+   "`https://joeuk89.github.io/plate-pool/?barbell=140.5lb&barbell.hardware=collar-clamp&kit=d33b57cc`",
+   "`kit=d33b57cc`",
+   "`pages/athlete.md`",
+   "`profile.md`"
+  ]
+ }
+}

@@ -1,0 +1,30 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 5,
+ "uuid": "f06f0466-55ea-4a5d-8758-4581123a9907",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "**10.** Here is the case in one line each.\n\n- 11 is the planned week exactly. One lost set anywhere, including the strict single on a Friday you move to the gym for squats, and `lift_dose_under_target` fires on three of four weeks. A target that only holds when everything lands tells you nothing.\n- 8, the engine default, is met with Wednesday gone entirely (3 Sunday band sets plus the single is 4, so not quite, but one Wednesday line missed and it still passes). That hides exactly the week we want to see.\n- 10 is the plan minus one set. It survives a single skipped or cut-short set and fails on anything bigger. The 1 Nov log already shows why that slack matters: the fourth band set went 4 reps at RPE 10, so a Wednesday where you stop at three sets is realistic, and 10 still reads it as met.\n\nMaintenance keeps the dose rather than trims it, and the pull-up is the lift furthest from its milestone (2 reps to go on 5, max still 1), so I would not open lower than the plan can deliver.\n\nOn the deadlift, agreed: acknowledge `dose_off_band` at 4, text to the effect that sun-deadlift plans a top set and three back-offs, Friday's RDL carries the rest of the hinge pattern, and a fifth set at this stage buys fatigue more than progress.\n\nIf 10 is your yes, I'll set it, add the deadlift acknowledgement with the dry run's params hash, re-run the dry run, show you the flags again, and adopt on your word. Publish stays off until plate-pool#52.",
+  "seconds": 18.8,
+  "cost_usd": 1.062528,
+  "input_tokens": 52377,
+  "output_tokens": 1008
+ },
+ "first_hits": {
+  "flag": [
+   "dose_off_band",
+   "lift_dose_under_target"
+  ],
+  "fixed": [
+   "acknowledgement",
+   "dry run",
+   "flags",
+   "the engine"
+  ],
+  "code": [
+   "`dose_off_band`",
+   "`lift_dose_under_target`"
+  ]
+ }
+}

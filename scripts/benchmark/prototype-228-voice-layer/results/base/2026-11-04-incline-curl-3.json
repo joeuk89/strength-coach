@@ -1,0 +1,22 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 3,
+ "uuid": "0e651373-6af2-4633-8dbd-0a62d1bfd2fc",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Here's the diff. Old routine = the Week A / Week B rotation in `~/personal/workout/routine/` plus its two conditioning sessions; current = pv-3 (adopted 2026-11-04) in this instance.\n\n## In the old routine, not in the current one\n\n**Replaced by a close relative (probably nothing lost)**\n| Old | Nearest thing in pv-3 |\n| --- | --- |\n| Assisted Dip (Machine) | Dip Negatives (sat-bench) |\n| Assisted Pull Up (Machine) | Pull Up (Band) (wed-pull-up, sun-deadlift) |\n| Single Arm Row (Dumbbell) | Chest Supported Row (Dumbbell) (mon-ohp) |\n| Lunge (Dumbbell) | Split Squat (Dumbbell) (fri-squat) + Bulgarian Split Squat (sun-deadlift) |\n| Single Leg Romanian Deadlift (Dumbbell) | Romanian Deadlift (Barbell) (fri-squat), bilateral |\n| Hanging Leg Raise | Lying Leg Raise (wed-pull-up) |\n| Incline Curl (Dumbbell) | Bicep Curl (Dumbbell) (sun-deadlift) |\n| Push Up (flat, circuit) | Ring Push Up (cond-circuit) |\n\n**Dropped with no direct stand-in**\n- **Chest Fly (Dumbbell)** \u2014 chest isolation. Only direct chest work now is bench, incline DB and dip negatives, plus whatever the PT does on chest/back Tuesday.\n- **Straight Arm Lat Pulldown (Band)** \u2014 lat isolation, was in three of the old sessions.\n- **Inverted Row** \u2014 horizontal pull at bodyweight.\n- **Hollow Hold** and **Arch Hold** \u2014 the gymnastics-style trunk positions (old supersets with the ab wheel).\n- **Side Plank** \u2014 lateral core; Suitcase Carry (wed-pull-up) is the closest in intent but it's a loaded carry, not a hold.\n- **Seated Calf Raise (Machine)** \u2014 the soleus-biased calf work; current calves are all single-leg standing.\n- **Step Up (Dumbbell)** \u2014 was the first station of the old circuit; replaced by the kettlebell swing.\n\n## New in pv-3 that wasn't in the old routine\nChest Supported Row (DB), Split Squat (DB), Lying Leg Raise, Suitcase Carry, Farmers Walk (DB).\n\n## Two things to keep in mind while deciding\n- The PT Tuesday sessions carry no lines (estimated sets only: chest 6 / lats 6 / biceps 3, quads 6 / glutes 4 / abs 4), so if the PT regularly gives you flyes, hanging leg raises or machine dips, those aren't actually gone from your week \u2014 they're just not in your own sessions.\n- The old plan was a two-week A/B rotation; several of these (Chest Fly, Straight Arm Pulldown, Inverted Row, Seated Calf) only appeared in one week of the pair, so you were doing them fortnightly at most.\n\nTell me which ones you want back and I'll work out where they'd fit (and what they'd displace, given the 75/90-minute session budgets) before drafting any change \u2014 nothing is recorded until you say yes.",
+  "seconds": 31.3,
+  "cost_usd": 0.47883,
+  "input_tokens": 17315,
+  "output_tokens": 2651
+ },
+ "first_hits": {
+  "store_id": [
+   "pv-3"
+  ],
+  "code": [
+   "`~/personal/workout/routine/`"
+  ]
+ }
+}

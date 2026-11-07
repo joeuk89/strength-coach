@@ -1,0 +1,69 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 3,
+ "uuid": "7fe26710-6f7e-47fa-baaa-9dfa8d1f9f8d",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Draft rewritten at `.coach/drafts/2026-11-02-program.toml` and dry-run as pv-2 (`amend`, block b-2026-11-01 continues, position A, no filled defaults). Nothing is recorded yet. Here is what it does and what the dry run says.\n\n**1. Pull-up dose (#174).** `pull_up` is now `{ sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }` and the `dose_off_band@version:pv-2` acknowledgement on it is gone; the dry run no longer raises it for pull_up. Why 10: it is the middle of the 5\u201315 band, and it is close to what the week already prescribes (the old acknowledgement counted 3 negatives, 7 band sets and the single, 11), so `lift_dose_under_target` only speaks when the Wednesday session is actually missed, which is the real failure mode. Against that, delivered has been well under it: 5 hard sets on 26 Oct, 5 on 1 Nov, and the 1 Nov band sets ran to RPE 10 on set 4 (`rep_range_missed` already sits on that line). If you would rather the flag stay quiet while adherence settles, 8 is the engine default and still inside the band. Your call; the draft says 10.\n\n**2. Swing finisher (#175).** The `kb_swing` line leaves `mon-ohp` (estimate 58 \u2192 47 of 75 min). New session `cond-swings`: `kind = conditioning`, `tier = optional`, `scheme = emom_density` with minutes 12 \u2192 cap 16 (step 2), reps 12 \u2192 cap 15, rpe_target 7; one `hold` line at start_load 40 lb (18.14 kg per the dry run), scheduled `mon = [\"mon-ohp\", \"cond-swings\"]` in both rotation weeks. The diff shows exactly that: session added `cond-swings`, `mon-ohp` loses one line, nothing else touched. Two things to know:\n- Hard sets: a workout matched to a conditioning session yields an Activity, not Exposures (week spec, ADR 0010), so swings logged under `cond-swings` will not reach the dose count. Today's 2 Nov swings are matched to `mon-ohp` and stay as they are; I can only confirm the new behaviour on the first `cond-swings` log, and will.\n- `session_drop_suggested`: at RPE 7 the EMOM is a quality bout, and the rule fires for a planned quality conditioning session on the same day as any lifting session with under 6 hours between. Beside Monday's lift it may draw that flag at the next `plan draft`. If you lift morning and swing evening it won't; if they stack, we acknowledge it or drop `rpe_target` to 6.\n\n**3. cond-circuit (#176).** Untouched. The spec now says a `standing` session is outside `session_drop_suggested` on either side. The one on wp-2026-11-02 is on the plan already approved and stays; the next `plan draft` is the proof, not this adopt.\n\n**Every flag the dry run left:**\n- `dose_off_band@version:pv-2` on **bb_deadlift = 4**, outside 5\u201315, not acknowledged. This is new in the dry run; the previous run reported only the pull-up, so I can't say whether it was masked or newly surfaced. Either way it blocks nothing but needs a decision: raise the deadlift target to 5 (sun-deadlift has room, estimate 65 of 90), or acknowledge 4 with a reason. I'd raise it; tell me which and I'll edit before adopting.\n- `scheme_off_emphasis@line:fri-squat/pull_up` (`hold`), acknowledgement left, unchanged.\n- `routine_drift` on routine ce81b206 against wp-2026-11-02: unrelated to this draft, the next push resolves it.\n\nOther sessions unchanged: wed-pull-up 39/75, fri-squat 65/75, sat-bench 65/90, sun-deadlift 65/90. No violations, no publish.\n\nSay yes to adopt, with your pull-up target (10 or 8) and your deadlift call (5 or acknowledge 4).",
+  "seconds": 59.4,
+  "cost_usd": 1.167448,
+  "input_tokens": 50453,
+  "output_tokens": 3876
+ },
+ "first_hits": {
+  "verb": [
+   "plan draft"
+  ],
+  "flag": [
+   "dose_off_band",
+   "lift_dose_under_target",
+   "rep_range_missed",
+   "routine_drift",
+   "scheme_off_emphasis",
+   "session_drop_suggested"
+  ],
+  "fixed": [
+   "Draft",
+   "acknowledgement",
+   "dry run",
+   "dry-run",
+   "flag",
+   "the engine"
+  ],
+  "path": [
+   ".coach/drafts/2026-11-02-program.toml"
+  ],
+  "store_id": [
+   "b-2026-11-01",
+   "pv-2",
+   "wp-2026-11-02"
+  ],
+  "hash": [
+   "ce81b206"
+  ],
+  "code": [
+   "`.coach/drafts/2026-11-02-program.toml`",
+   "`amend`",
+   "`cond-swings`",
+   "`dose_off_band@version:pv-2`",
+   "`hold`",
+   "`kb_swing`",
+   "`kind = conditioning`",
+   "`lift_dose_under_target`",
+   "`mon = [\"mon-ohp\", \"cond-swings\"]`",
+   "`mon-ohp`",
+   "`plan draft`",
+   "`pull_up`",
+   "`rep_range_missed`",
+   "`routine_drift`",
+   "`rpe_target`",
+   "`scheme = emom_density`",
+   "`scheme_off_emphasis@line:fri-squat/pull_up`",
+   "`session_drop_suggested`",
+   "`standing`",
+   "`tier = optional`",
+   "`{ sets = 10, counts = [\"negative_pull_up\", \"band_pull_up\"] }`"
+  ]
+ }
+}

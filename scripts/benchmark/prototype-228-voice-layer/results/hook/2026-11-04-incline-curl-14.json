@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 14,
+ "uuid": "6e938624-58a2-4808-a955-4e8cdd4c39cc",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Published. The program with Monday's incline curl is now the version on record, and this week's page reflects it.\n\nYour Hevy routine for Monday doesn't change until the next weekly plan goes out, so if you want the curls in this coming Monday's session rather than the one after, tell me and I'll draft the week early.",
+  "seconds": 6.0,
+  "cost_usd": 0.01644725,
+  "input_tokens": 35511,
+  "output_tokens": 151
+ },
+ "first_hits": {}
+}

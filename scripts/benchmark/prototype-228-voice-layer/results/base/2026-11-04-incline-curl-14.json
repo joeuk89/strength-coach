@@ -1,0 +1,35 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 14,
+ "uuid": "6e938624-58a2-4808-a955-4e8cdd4c39cc",
+ "mechanism": "base",
+ "system_tokens": 1282,
+ "first": {
+  "text": "Published. Commit `6937415` writes pv-4 to the export (program version, sessions, lines and the two carried acknowledgements) and refreshes `pages/week.md`. The tree is clean.\n\nNothing has gone to Hevy yet: Monday's routine there still shows the four-line version until the next `plan draft` and `plan apply`.",
+  "seconds": 5.1,
+  "cost_usd": 0.677388,
+  "input_tokens": 35355,
+  "output_tokens": 114
+ },
+ "first_hits": {
+  "verb": [
+   "plan apply",
+   "plan draft"
+  ],
+  "fixed": [
+   "acknowledgements"
+  ],
+  "path": [
+   "pages/week.md"
+  ],
+  "store_id": [
+   "pv-4"
+  ],
+  "code": [
+   "`6937415`",
+   "`pages/week.md`",
+   "`plan apply`",
+   "`plan draft`"
+  ]
+ }
+}

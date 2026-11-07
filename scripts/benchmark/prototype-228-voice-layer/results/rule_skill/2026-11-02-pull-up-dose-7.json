@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 7,
+ "uuid": "3e400435-7cc4-4c30-9820-cad598d560b7",
+ "mechanism": "rule_skill",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Practically, nothing in your sessions changes. Wednesday is still 3 sets of negatives and 4 sets of band pull-ups, Sunday still adds 3 band sets, Friday still opens with the one strict test rep. Same loads, same bands, same cues.\n\nWhat changes is how the week is judged afterwards:\n\n- **The pull-up gets a real score.** Until now the weekly read on the pull-up was \"1 of 1\" because only the strict single counted, which told us nothing. From now on the negatives and band sets count toward a target of 10 hard sets a week. A full week lands at 11; lose Wednesday and it reads 4, and that shows up as the pull-up falling behind instead of disappearing.\n- **A short pattern gets caught.** If the pull-up work comes in under 10 in three weeks out of four, I'm prompted to act: add a set, move a set to another day, or ask what's getting in the way. Before this change that signal couldn't fire.\n- **A disrupted week protects it.** When illness or travel cuts a week down to the minimum, each of the five lifts keeps at least two hard sets. For the pull-up, negatives or band sets now satisfy that, so a trimmed week won't try to fill the slot with extra strict singles you can't do yet.\n\nWhat it does not do: the negatives and band work don't replace the strict rep, they don't get tested, and they don't have to come first in a session. The Friday single stays the measure, and strict sets become real work once that rep passes about five, as before.\n\nSo the day-to-day is identical; the difference is that the weekly report will finally tell us the truth about your pull-up volume. Still ready to record it on your yes.",
+  "seconds": 20.9,
+  "cost_usd": 1.094057,
+  "input_tokens": 53745,
+  "output_tokens": 1153
+ },
+ "first_hits": {}
+}

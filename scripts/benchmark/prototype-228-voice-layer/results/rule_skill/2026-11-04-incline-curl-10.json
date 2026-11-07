@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 10,
+ "uuid": "2faea2ef-8093-4843-8f2d-2be188c1495e",
+ "mechanism": "rule_skill",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Here's what adopting this change does to your program.\n\n**What changes**\n\nMonday gets one new exercise at the end: Incline Curl (Dumbbell), 3 sets of 8 to 12 at RPE 8, 75 seconds rest, on double progression. Add weight once every set reaches 12. Cues: bench about 45\u00b0, arms hanging straight down behind the torso, elbows stay back for a full stretch at the bottom, no shoulder swing.\n\nMonday then runs OHP, chest supported row, lateral raise and rear delt fly supersetted, then the incline curl. It is estimated at 53 minutes against your 75-minute cap, so there is plenty of room.\n\nNothing else moves. The reason recorded against this version: direct biceps work was six sets in one session; an incline curl on Monday makes it nine over two days, at long muscle length, and keeps the lightest lifting day inside its cap.\n\n**What stays the same**\n\n- Your current block carries on; this is a small edit, not a restart.\n- Every other session is unchanged. Fridays estimate at 65 of 75 minutes, Saturday and Sunday at 65 of 90, Wednesday at 39 of 75.\n- Loads that are already set stay as they are: farmers walk at 50 lb, kettlebell swings at 40 lb.\n- Your starting weight for the incline curl comes with next week's loads, taken from what you've handled on it before.\n\nTwo things from the check already acknowledged in the current program carry over unchanged: deadlift at four hard sets on Sunday (the RDL and the PT's occasional deadlifts make up the hinge work), and the single strict pull-up on Friday counted as a test, not a working set.\n\nSeparately, a few of the routines in Hevy have drifted from this week's plan: some reps and weights were edited there. That is not caused by this change and doesn't block it; next week's plan will bring them back in line.\n\nShall I record it?",
+  "seconds": 17.1,
+  "cost_usd": 0.655227,
+  "input_tokens": 32266,
+  "output_tokens": 968
+ },
+ "first_hits": {}
+}

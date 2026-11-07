@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-04-plate-pool-link",
+ "message": 3,
+ "uuid": "c3986158-f184-4d07-96c5-0a57f04070f2",
+ "mechanism": "hook",
+ "system_tokens": 413,
+ "first": {
+  "text": "My mistake \u2014 it's not on your athlete page. The athlete page only mentions plate-pool in passing.\n\nThe link lives at the top of each of your routine pages. Open any of them \u2014 Monday's press, Saturday's bench, Sunday's deadlift, the hang, the circuit \u2014 and a few lines down you'll see **\"Set up the home kit in plate-pool\"**. Tap that once on your phone and your home kit is saved in the app; after that, the **\"Load it in plate-pool\"** links next to each lift will drop the right loading straight in.\n\nIf the routine pages aren't handy, the app itself is at https://joeuk89.github.io/plate-pool/ \u2014 but the kit setup link is the one you want first, so start from a routine page.",
+  "seconds": 10.0,
+  "cost_usd": 0.025555249999999998,
+  "input_tokens": 9343,
+  "output_tokens": 464
+ },
+ "first_hits": {}
+}

@@ -1,0 +1,20 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 4,
+ "uuid": "92ccb7b7-3692-4cf3-8d6e-29d63623f2a9",
+ "mechanism": "rule",
+ "system_tokens": 1401,
+ "first": {
+  "text": "Here's what the revised version does, what the preview shows, and the two calls I need from you before I record anything.\n\n**1. Pull-up dose**\n\nThe pull-up now has one weekly target that negatives and band pull-ups count toward, so the acknowledgement that excused a target of one is gone and the pull-up no longer shows as outside its band.\n\nI've proposed **10 hard sets a week**. Reasoning: that's what the program already puts on the bar in a normal week \u2014 3 negatives and 7 band sets across Wednesday and Sunday \u2014 so the target describes the work rather than inventing a number. It sits in the middle of the 5\u201315 band with room to raise as you move to lighter bands and the sets get harder, and it's high enough that a missed Wednesday will show up as under target rather than disappear. The alternative is the engine's own default of 8, which would read the same plan as comfortably over target and tell you less. The strict Friday single stays the measure, not the volume, and the explanation for keeping it a single test rep carries over unchanged. Your call: 10, 8, or something else.\n\n**2. Swing finisher \u2192 its own session**\n\nThe swings leave Monday's lifting and become a separate conditioning session on Monday in both rotation weeks: 12 minutes, one set of 12 at the top of each minute, at effort 7 with the 40 lb bell (18.1 kg in Hevy). When a session comes in at or under effort 7 it grows 2 minutes at a time to 16, then 12 reps toward 15. Optional tier, so a skipped week never counts against you. Monday's lifting drops from 58 to 47 of its 75 minutes.\n\nOn the dose: once this is in force, a logged swing session is read as conditioning, not lifting, so its sets count toward no muscle's weekly hard sets. I can't show you that on real data until the first Monday is logged \u2014 I'll confirm it then. Monday the 2nd stays exactly as logged, swings inside the lifting session, and Hevy history isn't touched.\n\nOne thing to watch, not a blocker: a hard conditioning session on the same day as lifting draws a suggestion to drop it if the two are under six hours apart. Done straight after the press session it may be asked about; done in the evening, or slid to Thursday, it won't. Tell me which you'd rather and I'll shape the week around it.\n\n**3. Circuit**\n\nChecked against last week's plan: the standing circuit raises nothing now. Standing sessions sit outside the stacking rule, so the weekly acknowledgement is no longer needed and the circuit is unchanged.\n\n**What else the preview raised**\n\n- **Deadlift target now shows as outside the band.** Its weekly target is 4 hard sets against a 5\u201315 band. That was true before too; the pull-up's one problem was hiding it, and clearing the pull-up uncovered it. Options: (a) acknowledge it \u2014 one deadlift day a week, 4 heavy sets at home under the bar cap, with the PT's leg day sometimes adding more, is a deliberate dose for a lift that recovers slowly; (b) count Friday's Romanian deadlift toward it and set the target at 6, which matches what the week actually delivers; (c) add a back-off set on Sunday and set 5. I lean (a) for this amend and (b) at the next proper revision, but it's your call.\n- **The strict pull-up single** keeps its existing acknowledgement (a weekly test rep, not a progression line). Unchanged.\n- **One routine in Hevy has drifted** from this week's plan \u2014 reps on three sets of one exercise and weights on three sets of another were edited by hand. Nothing to do with this change; the next weekly plan or push realigns it.\n\nNothing filled by default, no load rounded, this continues the current block at week A as an amend, and I have not adopted or published anything. Give me the pull-up target and the deadlift call and I'll record it on your yes.",
+  "seconds": 69.9,
+  "cost_usd": 1.198683,
+  "input_tokens": 51118,
+  "output_tokens": 4290
+ },
+ "first_hits": {
+  "fixed": [
+   "acknowledgement",
+   "the engine"
+  ]
+ }
+}

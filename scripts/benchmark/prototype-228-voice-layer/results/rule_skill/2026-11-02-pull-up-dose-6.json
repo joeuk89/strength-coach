@@ -1,0 +1,15 @@
+{
+ "session": "2026-11-02-pull-up-dose",
+ "message": 6,
+ "uuid": "6a703667-9af6-48b4-8635-7d7d3f6fc398",
+ "mechanism": "rule_skill",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Dry run is clean and the deadlift answer is in. Here is exactly what I'll record on your yes; nothing is recorded yet.\n\n**What changes**\n\n- **Pull-up target: 10 hard sets a week**, counting the strict single, the negatives and the band pull-ups together. The old workaround that treated the lone single as the whole target is gone. Your planned week delivers 11, so a full week clears it and a lost Wednesday shows up as behind.\n- **Swings move out of Monday's lifting.** They become their own optional kettlebell-swing session on Monday evening, alongside the press session in both weeks of the rotation. One set at the top of each minute: 12 minutes of 12 swings at 40 lb (18.1 kg) at an effort of about 7. When that feels easy the session grows by two minutes at a time up to 16, then the reps climb to 15. Monday's lifting now estimates at 47 of its 75 minutes. Swings done in that session count as conditioning, not as hard sets for any muscle.\n- **Deadlift stays at four hard sets a week** with the reason written down: that is what Sunday plans (top set plus three back-offs), Friday's Romanian deadlift carries the hinge, and a target of five would read as a miss every week the session is done as written.\n- **The circuit is untouched.** Under the new engine a standing session no longer gets the weekly \"too close to a lifting day\" nudge; the one on this week's plan was from before the upgrade and expires with the week.\n\n**Unchanged and carried forward**\n\n- The strict pull-up single keeps its standing reason: it is the weekly measure, not the progression, until the max passes about five.\n- This is an amendment, so the current block continues and the rotation position stays where it is.\n\n**One thing to know**\n\nYour Monday routine in Hevy currently differs slightly from this week's plan (set counts on the press, loads on the row). It is unrelated to this change and resolves on the next weekly push.\n\nToday's logged workout stays as logged, and publishing stays off until the plate-pool work ships.\n\nSay yes and I'll adopt it.",
+  "seconds": 19.1,
+  "cost_usd": 1.0858670000000001,
+  "input_tokens": 53428,
+  "output_tokens": 1116
+ },
+ "first_hits": {}
+}

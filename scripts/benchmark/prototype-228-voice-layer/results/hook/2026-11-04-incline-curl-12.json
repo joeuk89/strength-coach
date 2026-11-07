@@ -1,0 +1,27 @@
+{
+ "session": "2026-11-04-incline-curl",
+ "message": 12,
+ "uuid": "3b43f293-f8b6-421f-ac74-528c1226420a",
+ "mechanism": "hook",
+ "system_tokens": 1418,
+ "first": {
+  "text": "Done. The incline curl is now the last line of Monday's session, 3 sets of 8 to 12 at RPE 8, and the program is on its fourth version. Your Hevy routine for Monday picks it up when the next week is planned and pushed, so this coming Monday's routine is as it was until then.\n\n**The deadlift dose acknowledgement**\n\nEvery priority lift in your program carries a weekly target of hard sets, and the deadlift's is 4. For a maintenance phase the usual range is 5 to 15, so a target of 4 sits below it, and the program has to carry a written reason for why that's deliberate rather than a mistake. The reason on record is:\n\n> Four hard sets is what Sunday's deadlift session plans: the top set and three back-offs. Friday's Romanian deadlift carries the hinge pattern, and the PT sometimes adds deadlifts on Tuesday. A target of 5 would show the deadlift as under-target every week the session is done as written.\n\nIn plain terms: Sunday is built to give you exactly four working deadlift sets, and the rest of the hinge work in your week comes from the RDL and whatever your trainer does. Setting the target at 5 would have meant a nagging \"behind on deadlift\" note every week even when you'd done the session perfectly, which would make the number useless.\n\nIt was written when the program was first adopted and carries over unchanged. If the deadlift stalls, or you want it to pull more weight in the week, raising Sunday to four back-offs and the target to 5 would be the move. Nothing in the record suggests that yet.",
+  "seconds": 15.9,
+  "cost_usd": 0.054421,
+  "input_tokens": 33406,
+  "output_tokens": 921
+ },
+ "first_hits": {
+  "fixed": [
+   "acknowledgement"
+  ]
+ },
+ "second": {
+  "text": "Done. The incline curl is now the last line of Monday's session, 3 sets of 8 to 12 at RPE 8, and the program is on its fourth version. Your Hevy routine for Monday picks it up when the next week is planned and pushed, so this coming Monday's routine is as it was until then.\n\n**The deadlift target you asked about**\n\nEvery priority lift in your program has a weekly target of hard sets, and the deadlift's is 4. For a maintenance phase the usual range is 5 to 15, so 4 sits below it. When a target sits outside the usual range, the program carries a written reason for why that's deliberate rather than a mistake. The reason on record is:\n\n> Four hard sets is what Sunday's deadlift session plans: the top set and three back-offs. Friday's Romanian deadlift carries the hinge pattern, and the PT sometimes adds deadlifts on Tuesday. A target of 5 would show the deadlift as under-target every week the session is done as written.\n\nIn plain terms: Sunday is built to give you exactly four working deadlift sets, and the rest of the hinge work in your week comes from the RDL and whatever your trainer does. Setting the target at 5 would have meant you looked behind on deadlift every week even when you'd done the session perfectly, which would make the number useless.\n\nThat reason was written when the program was first adopted and carries over unchanged. If the deadlift stalls, or you want it to pull more weight in the week, raising Sunday to four back-offs and the target to 5 would be the move. Nothing in the record suggests that yet.",
+  "seconds": 14.6,
+  "cost_usd": 0.674007,
+  "input_tokens": 34005,
+  "output_tokens": 648
+ },
+ "second_hits": {}
+}
