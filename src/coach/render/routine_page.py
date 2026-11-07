@@ -47,8 +47,10 @@ def _criterion(criterion: Mapping[str, object]) -> str:
     if criterion.get("manual"):
         return "the athlete's word"
     reps, duration, rpe = (criterion.get(k) for k in ("reps", "duration_s", "rpe_at_most"))
-    parts = [f"{reps} reps" if reps is not None else f"{duration} s"]
+    head = [f"{reps} reps"] if reps is not None else []
+    if duration is not None:
+        head.append(f"{duration} s")
     if isinstance(rpe, int | float):
-        parts[0] += f" at RPE {number(rpe)} or under"
-    parts.append(f"{criterion.get('exposures')} exposures running")
-    return ", ".join(parts)
+        head.append(f"RPE {number(rpe)} or under")
+    exposures = f"{criterion.get('exposures')} exposures running"
+    return f"{' at '.join(head)}, {exposures}" if head else exposures

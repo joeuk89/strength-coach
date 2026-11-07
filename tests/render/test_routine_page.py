@@ -207,3 +207,26 @@ def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked(
         "Climb on 30 s at RPE 5 or under, 2 exposures running.\n"
         "2. Balance board: one foot, eyes closed: 4×8 @7. Climb on the athlete's word."
     ) in text
+
+
+def test_a_rung_criterion_with_neither_reps_nor_duration_names_only_what_it_holds() -> None:
+    rung = PageRung(
+        rung=1,
+        name="Push-up",
+        cues=None,
+        set_groups=({"count": 3, "reps": "8+", "rpe": 8},),
+        criterion={"rpe_at_most": 8, "exposures": 2},
+        standing=True,
+    )
+    line = PageLine(
+        exercise_id="push_up",
+        name="Push-up",
+        equipment_kind="bodyweight",
+        set_groups=({"type": "working", "count": 3, "reps": "8+", "rpe": 8},),
+        ladder=(rung,),
+    )
+
+    text = routine_page(RoutinePage("s", "S", None, None, (line,)), units="lb")
+
+    assert "None" not in text
+    assert "Climb on RPE 8 or under, 2 exposures running." in text

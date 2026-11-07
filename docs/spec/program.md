@@ -253,7 +253,7 @@ grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 | `sets` | yes | Exactly one working group with `reps` or `duration_s` and `rpe`; otherwise `set_groups_off_scheme` or `rpe_missing` |
 | `advance` | no | The rung's criterion: restates or overrides the scheme-level `advance` key by key; `manual = true` stands alone |
 
-The criterion keys, at scheme level and on a rung: `reps` (a reps rung only), `duration_s` (a duration rung only), `rpe_at_most`, `exposures` and `manual` (`true`, with no other key: the athlete's word, for the rare rung the logs cannot tell). A key off its rung is `advance_criterion_off_rung`. With nothing said the criterion is every working set at the rung's reps or duration at or under its RPE on 2 consecutive exposures; a rep range reads its top. A ladder needs at least two rungs (`ladder_too_short`). The worked example below shows one in full.
+The criterion keys, at scheme level and on a rung: `reps` (a reps rung only), `duration_s` (a duration rung only), `rpe_at_most`, `exposures` and `manual` (`true`, with no other key: the athlete's word, for the rare rung the logs cannot tell). A key off its rung is `advance_criterion_off_rung`. With nothing said the criterion is every working set at the rung's reps or duration at or under its RPE on 2 consecutive exposures; a rep range reads its top and an open top `"8+"` its number. A ladder needs at least two rungs (`ladder_too_short`). The worked example below shows one in full.
 
 `wave_531` is the slow strength cadence: the scheme the `program` skill names when `cadence_slow`
 fires on a `top_backoff` lift (`goals.md`, **Response to a cadence signal**). Adopt never fills

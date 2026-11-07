@@ -27,3 +27,9 @@ def test_with_nothing_said_the_run_is_two_exposures() -> None:
     ladder = ExerciseLadder((Rung("plank", (SetGroup(2, duration_s=30, rpe=6),)),))
 
     assert full_criterion(ladder, 1) == Advance(duration_s=30, rpe_at_most=6, exposures=2)
+
+
+def test_an_open_top_rep_out_reads_its_number() -> None:
+    ladder = ExerciseLadder((Rung("push_up", (SetGroup(3, reps="8+", rpe=8),)),))
+
+    assert full_criterion(ladder, 1) == Advance(reps=8, rpe_at_most=8, exposures=2)

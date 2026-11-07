@@ -18,8 +18,10 @@ def full_criterion(ladder: ExerciseLadder, index: int) -> Advance:
         return criterion
     [group] = [g for g in ladder.rungs[index - 1].sets if g.working]
     top = group.reps[1] if isinstance(group.reps, tuple) else group.reps
+    if isinstance(top, str):
+        top = int(top.rstrip("+"))
     filled = Advance(
-        reps=top if isinstance(top, int) and group.duration_s is None else None,
+        reps=top if group.duration_s is None else None,
         duration_s=group.duration_s,
         rpe_at_most=group.rpe,
         exposures=DEFAULT_EXPOSURES,
