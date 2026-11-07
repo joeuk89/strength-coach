@@ -32,7 +32,9 @@ show. One message; follow up only for a gap that blocks the design.
   session's estimate against its `minutes` in the dry run; cut accessories first where it runs
   close. Superset small lifts to buy time, never the compounds.
 - **Scheme, RPE and rest per line.** A top set and back-offs on a load-bearing priority lift,
-  double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
+  double progression elsewhere, a ladder while a lift is assisted. A line with no load to add
+  whose next step is a different exercise or stance gets an exercise ladder, never a ladder in
+  `cues`; a stance the logs cannot tell apart is its own custom exercise. A coarse rack, a new lift or
   a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
   with the reason or change the line.
 - **Dose.** The filled targets open a block, they do not cap it. Raise a muscle the report shows
