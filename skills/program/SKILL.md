@@ -35,6 +35,13 @@ show. One message; follow up only for a gap that blocks the design.
   double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
   a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
   with the reason or change the line.
+- **New exercises.** An exercise the library lacks is declared in the Draft as
+  `[exercise.<id>]` with `name`, `load_mode`, `equipment_kind`, `pattern` and `muscles`.
+  Without a Hevy template id it also needs `hevy_title`, `hevy_exercise_type`,
+  `hevy_equipment` and `hevy_muscle_group`; `plan apply` creates the template. Adopt checks
+  each value against its registry (`coach schema --registry <name>`): `load-modes`,
+  `equipment-kinds`, `patterns`, `muscles`, `hevy-exercise-types`, `hevy-equipment` and
+  `hevy-muscle-groups`. Check the library first with `coach query exercises`.
 - **Dose.** The filled targets open a block, they do not cap it. Raise a muscle the report shows
   behind and under target; leave what is growing alone. A deficit keeps the dose, a surplus can
   carry more; `dose_off_band` names the departure. An older athlete, or one who recovers slowly,
