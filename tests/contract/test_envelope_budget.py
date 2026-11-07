@@ -124,6 +124,7 @@ OVER_BUDGET: dict[tuple[str, ...], str] = {
     ("report", ".coach/drafts/2026-11-07-report.toml", "--dry-run"): (
         "the whole issue body is what the athlete approves, so it is never cut"
     ),
+    ("schema",): "every verb and every registry name, the agent's one call to see them all",
 }
 
 

@@ -80,23 +80,25 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 
 
-def test_schema_without_a_verb_lists_the_declarations_as_rows_under_the_budget() -> None:
+def test_schema_without_a_verb_gives_every_declaration_uncut_over_the_budget() -> None:
     run = run_coach("schema")
 
     result = run.envelope["result"]
-    names = [d.name for d in declarations()]
     assert run.code == 0
-    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
-    assert [row["name"] for row in result["rows"]] == names[: len(result["rows"])]
-    assert (result["count"], result["truncated"]) == (17, True)
-
-
-def test_schema_full_gives_every_declaration() -> None:
-    run = run_coach("schema", "--full")
-
-    result = run.envelope["result"]
+    assert len(run.stdout.encode("utf-8")) > BUDGET_BYTES
     assert [row["name"] for row in result["rows"]] == [d.name for d in declarations()]
+    assert result["rows"][0] == declarations()[0].describe()
     assert (result["count"], result["truncated"]) == (17, False)
+
+
+def test_schema_without_a_verb_ignores_last() -> None:
+    result = run_coach("schema", "--last", "2").envelope["result"]
+
+    assert (len(result["rows"]), result["count"], result["truncated"]) == (17, 17, False)
+
+
+def test_schema_full_gives_the_same_as_schema() -> None:
+    assert run_coach("schema", "--full").stdout == run_coach("schema").stdout
 
 
 def test_schema_of_the_schema_verb_declares_its_optional_verb_argument() -> None:
@@ -105,6 +107,17 @@ def test_schema_of_the_schema_verb_declares_its_optional_verb_argument() -> None
     properties = run.envelope["result"]["input"]["properties"]
     assert properties["verb"]["type"] == "string"
     assert run.envelope["result"]["input"]["required"] == []
+
+
+def test_schema_of_the_schema_verb_declares_the_registry_names_it_lists() -> None:
+    output = run_coach("schema", "schema").envelope["result"]["output"]
+
+    assert output["properties"]["registries"] == {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": output["properties"]["registries"]["description"],
+    }
+    assert output["properties"]["registries"]["description"]
 
 
 def test_schema_of_an_unknown_verb_is_invalid() -> None:

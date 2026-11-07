@@ -127,6 +127,10 @@ def on_dry_run(args: Mapping[str, ArgValue]) -> bool:
     return args.get("dry_run") is True
 
 
+def without_verb_or_registry(args: Mapping[str, ArgValue]) -> bool:
+    return "verb" not in args and "registry" not in args
+
+
 @dataclass(frozen=True)
 class Declaration:
     name: str
