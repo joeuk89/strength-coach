@@ -49,20 +49,20 @@ its reason. A load the engine derived is never retyped.
   until date, or leave it with an Acknowledgement and meet it again next week. Promote what the
   athlete will keep doing; extend what has an end in sight.
 - **Rack.** `frozen_load_off_rack`: a load in the plan in force is gone from the location's
-  rack. Say which planned loads move and to what, quoting the Draft.
-- **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Keep the change as an
-  override with the athlete's reason, or let this week's push replace it; ask which when the
-  reason is not plain.
+  rack. Say which planned loads move and to what, each load from the Draft.
+- **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Keep the change with the
+  athlete's reason, or let this week's plan replace it; ask them which, in those words, when
+  the reason is not plain.
 
 ## Explain
 What the week is for in one sentence, then each session as the athlete will live it. Explain a
 changed line by its emphasis: under hypertrophy, last week's reps at the authored RPE from the
 steps; on a priority lift, the e1RM and what the scheme makes of it; under maintenance, held.
-Quote every load and change from the Draft or the dry run; never retype one. Name each override
-and Decision and its reason in plain words. Lines with no flag and no override are shown, not
-explained.
+Every load and change comes from the Draft or the dry run; never retype one. Say each change
+and its reason in plain words. Lines with no flag and no override are shown, not explained.
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach plan draft`, `coach plan apply`, `coach query`, `coach record`
