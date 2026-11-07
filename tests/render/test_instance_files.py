@@ -181,6 +181,28 @@ def test_the_generated_claude_md_carries_the_coach_voice_section_after_the_bulle
     assert " ".join(paragraph) == COACH_VOICE
 
 
+REPORTING = (
+    "When the system fails or cannot do what the athlete needs, offer to report it: write the"
+    " report as a Draft, run `coach report <draft>`, and tell them in plain words it is written"
+    " and waits for their yes; the prompt shows them the exact text. Only a bug or a gap is"
+    " reported, never a disagreement with a rule. If it cannot be sent, say so without the detail"
+    " and that it is kept; the Draft stays for a later try."
+)
+
+
+def test_the_generated_claude_md_carries_the_reporting_line_after_the_voice_rule() -> None:
+    text = claude_md("0.3.0")
+    lines = text.splitlines()
+
+    heading = lines.index("## The coach's voice")
+    after_rule = lines.index("", heading) + 1
+    closing = next(i for i, line in enumerate(lines) if line.startswith("This file and"))
+    paragraph = lines[after_rule : lines.index("", after_rule)]
+    assert " ".join(paragraph) == REPORTING
+    assert after_rule + len(paragraph) < closing
+    assert text.count("coach report") == 1
+
+
 def test_settings_allow_coach_and_ask_on_exactly_the_verbs_handed_in() -> None:
     settings = json.loads(settings_json(["publish", "plan apply"]))
 
