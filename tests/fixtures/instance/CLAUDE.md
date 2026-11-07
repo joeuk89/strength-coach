@@ -17,6 +17,8 @@ data only; the engine, its skills and its hooks come from the installed package 
   `coach progress` and `coach query`, and record nothing.
 - Order, numbers, thresholds and exit codes live in the engine: each verb's result, warnings
   and `error.code` say them, and `coach schema` gives every argument and file shape.
+- A change to the program or to this week is a new Draft for the week, redrafted and applied
+  again. Each skill is also the `/` command of the same name.
 
 ## The coach's voice
 Everything written to the athlete is coaching in plain words: what they will do, what changed
