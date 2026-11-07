@@ -100,6 +100,7 @@ triple; `until` where the table says so. Ids are engine-assigned (`d-0001`) and 
 | `decline_ceiling` | `block` id | required: the Sunday of the week it is made in, so it lapses when the week closes and the ceiling proposes again; `decision_in_force` is the one in-force rule | the earlier one on the same block |
 | `defer_deep_review` | none | required: the date it is due | the latest wins |
 | `against_research` | `ref` (`rn:…`) | none | nothing |
+| `ladder_rung` | `session`, `exercise` (the line's key, its first rung's exercise), `rung` (from 1, at most the ladder's length; ADR 0023) | none | the earlier one on the same (session, exercise); moving down is allowed |
 | `retire` | `decision` id | none | ends the named Decision early |
 
 An override Decision applies itself to every WeekPlan in its span: `prescribe` reads it beside
@@ -168,7 +169,7 @@ text = "The hamstring is resolved; the run cap goes with it."
 Every override and Decision carries `because`, `text` and `evidence`:
 
 - `because`: one of `pain`, `kit`, `stall`, `fatigue`, `schedule`, `athlete_request`,
-  `coach_judgement` (ADR 0005). Any category on any kind; the pairing is never checked.
+  `coach_judgement` (ADR 0005), `progress` (an earned advance, ADR 0023). Any category on any kind; the pairing is never checked.
 - `text`: required, the coach's voice, unpoliced.
 - `evidence`: optional typed refs in `schema.md`'s ref grammar: `niggle:<id>`,
   `exposure:<workout id>/<exercise id>`, `check_in:ci-<date>`, `routine:<id>`,

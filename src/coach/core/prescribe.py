@@ -11,9 +11,17 @@ from coach.core.anchor import StartLoad, anchor, anchor_load_unusable
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
 from coach.core.carried_e1rm import E1rmRead, carried_e1rm, e1rm_read
 from coach.core.conditioning import conditioning_dose
-from coach.core.cut import close_rep_outs
+from coach.core.cut import close_rep_outs, return_band
+from coach.core.days_off import line_days_off
 from coach.core.e1rm import e1rm
 from coach.core.e1rm_checks import over_rep_cap, top_set_above_e1rm
+from coach.core.exercise_ladder import (
+    OPENING_RUNG,
+    StandingRung,
+    climb_offer,
+    rung_line,
+    standing_rung,
+)
 from coach.core.exposure import Exposure, lifting_reads
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.load import Load, LoadMode
@@ -32,6 +40,7 @@ from coach.core.prescription import (
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
     RACK_MODES,
+    ExerciseLadder,
     Line,
     Number,
     Reps,
@@ -72,6 +81,7 @@ class _Derivation:
     line: Line
     steps: list[Step] = field(default_factory=list[Step])
     flags: list[Flag] = field(default_factory=list[Flag])
+    standing: StandingRung | None = None
 
     @property
     def scope(self) -> Scope:
@@ -83,13 +93,19 @@ class _Derivation:
             exercise_id=self.line.exercise,
         )
 
+    @property
+    def rungs(self) -> tuple[str, ...]:
+        ladder = self.line.scheme.ladder
+        return () if ladder is None else tuple(rung.exercise for rung in ladder.rungs)
+
     def derive(self) -> LinePrescription | None:
         overrides = self._overrides()
         if "drop_line" in overrides:
             return None
-        authored = self.line
+        ladder = self.line.scheme.ladder
+        authored = self.line if ladder is None else self._week_rung(ladder)
         if "swap_exercise" in overrides:
-            authored = self._swap(*overrides["swap_exercise"])
+            authored = self._swap(authored, *overrides["swap_exercise"])
         exercise = self.request.version.exercises.get(authored.exercise)
         if exercise is None:
             self._raise(
@@ -128,7 +144,16 @@ class _Derivation:
         line = replace(authored, sets=sets)
         read = self._e1rm_read(authored)
         schemes = SchemeMoves(
-            SchemeInput(self.request, authored, sets, mode, rack, self.scope, read),
+            SchemeInput(
+                self.request,
+                authored,
+                sets,
+                mode,
+                rack,
+                self.scope,
+                read,
+                since=None if self.standing is None else self.standing.since,
+            ),
             self.steps,
             self.flags,
         )
@@ -138,7 +163,14 @@ class _Derivation:
             move = Move(None, "hold", line.sets) if pinned_only else schemes.opening(found)
             line = replace(line, sets=move.sets)
             context = LineContext(
-                self.request, line, exercise, mode, rack, self.scope, e1rm=read.best
+                self.request,
+                line,
+                exercise,
+                mode,
+                rack,
+                self.scope,
+                e1rm=read.best,
+                rung_exercises=self.rungs,
             )
             opening = _first(move.proposal)
             loaded = mode in LOAD_BEARING_MODES
@@ -168,6 +200,7 @@ class _Derivation:
             scheme_load=moved,
             pin=pinned,
             e1rm=read.best,
+            rung_exercises=self.rungs,
         )
         if pinned is not None:
             bounded = bound(context, _pinned(move.proposal, pinned), "hold", self.steps, self.flags)
@@ -263,14 +296,47 @@ class _Derivation:
                 found[override.kind] = ("override", override)
         return found
 
-    def _swap(self, step: str, swap: PlanOverride) -> Line:
+    def _week_rung(self, ladder: ExerciseLadder) -> Line:
+        """The standing rung, or in a return band the rung the band steps back to; the climb
+        offer reads the standing rung either way."""
+        request, planned = self.request, self.request.planned
+        standing = standing_rung(
+            request.decisions,
+            ladder,
+            session_id=planned.session_id,
+            line_key=self.line.exercise,
+            adopted=request.adopted,
+        )
+        self.standing = standing
+        standing_exercise = self.rungs[standing.index - 1]
+        days = line_days_off(
+            request.exposures,
+            request.trained,
+            exercise_id=standing_exercise,
+            session_id=planned.session_id,
+            on=planned.date,
+            rungs=self.rungs,
+        )
+        week = standing.index
+        band = return_band(days.days)
+        if band is not None:
+            week = max(OPENING_RUNG, standing.index - band.rungs_back)
+            if week != standing.index:
+                cause = f"return {band.label}, {days.days} days off"
+                self.steps.append(Step("cut", standing_exercise, self.rungs[week - 1], cause))
+        self._keep(
+            climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
+        )
+        return rung_line(self.line, ladder, week)
+
+    def _swap(self, authored: Line, step: str, swap: PlanOverride) -> Line:
         """The other exercise under the line's scheme and sets, with the swap's own start load
         and load mode: nothing of the swapped-out exercise carries."""
         to = str(swap.params["to"])
-        self.steps.append(Step(step, self.line.exercise, to, "swap_exercise"))
+        self.steps.append(Step(step, authored.exercise, to, "swap_exercise"))
         start = cast(float | None, swap.params.get("start_load"))
         return replace(
-            self.line,
+            authored,
             exercise=to,
             load_mode=cast(str | None, swap.params.get("load_mode")),
             start_load=start,

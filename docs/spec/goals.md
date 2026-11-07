@@ -245,11 +245,11 @@ Every row requires adherence at or above the floor (`week.md`) over the blocks i
 | Code | Line's scheme | Condition over the closed block and the one before |
 | --- | --- | --- |
 | `cadence_slow` | `linear` | two resets on the line under the scheme within the two blocks |
-| `cadence_slow` | `double_progression`, `assistance_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them) |
+| `cadence_slow` | `double_progression`, `assistance_ladder`, `exercise_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them); an `exercise_ladder` reads its standing rung's exercise and the signal keeps the line's key |
 | `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks |
 | `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
 | `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
-| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
+| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay
@@ -279,6 +279,7 @@ reset; the boundary is where the scheme may change.
 | `cadence_slow` | `top_backoff` | move the lift to `wave_531`, the training max set by the test set or a `training_max` Decision; or change back-off volume and add a variation first | drop to a hypertrophy scheme to escape a strength stall |
 | `cadence_slow` | `wave_531` | lower the training max about 10 % by Decision and stay a cycle; the scheme stands | raise the training max to chase the miss |
 | `cadence_slow` | `assistance_ladder` | hold the rung; at zero assistance move to `double_progression` on reps | skip rungs |
+| `cadence_slow` | `exercise_ladder` | hold the rung, or add an easier rung by amend; at the top, move the line to `double_progression` or a loaded scheme (`linear`, `top_backoff`) by amend | skip rungs |
 | `cadence_fast` | `double_progression`, `top_backoff` | propose `linear` on that lift while the rack has a next row; the signal is the evidence, no stored level is needed | fill `linear` without a Decision |
 
 `adopt` holds the rule with one warning, `scheme_change_off_signal` (scope line): a line whose

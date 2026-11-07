@@ -215,7 +215,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | --- | --- | --- | --- |
 | niggle | `[[niggle]]` | a Niggle status event, with its load constraint and rehab session link (ADR 0010) | |
 | follow_up | `[[follow_up]]` | a Follow-up event: deferred, kept, resolved, dropped | |
-| decision | `[[decision]]` | a Decision of any of the ten kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`), or a `retire` of one | |
+| decision | `[[decision]]` | a Decision of any of the eleven kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`, `ladder_rung`), or a `retire` of one | |
 | annotation | `[[annotation]]` | an Annotation, or the withdrawal of one | |
 | note | `[[note]]` | an Athlete note with its optional `about` ref | |
 | workout | `[[workout]]` | a workout Hevy never saw: Hevy off (ADR 0006, `instance.md`), or a session the athlete reports and did not log (`cutover.md`); never sent to Hevy | |

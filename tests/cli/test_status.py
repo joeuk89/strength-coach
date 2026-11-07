@@ -10,6 +10,7 @@ from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
 
 from coach.cli import app
+from coach.store.chain import ENGINE as CHAIN
 
 DEV_ENGINE = "0.3.0.dev0"
 RELEASE_ENGINE = "0.3.0"
@@ -44,14 +45,14 @@ def test_status_with_a_matching_pin_reports_engine_and_store_schema_version(
 
     assert run.code == 0
     assert run.envelope == {
-        "schema_version": 1,
+        "schema_version": CHAIN.version,
         "ok": True,
         "verb": "status",
         "result": {
             "engine": {"version": RELEASE_ENGINE, "pin": RELEASE_ENGINE},
             "hevy": {"on": False, "last_import": None, "last_import_age_days": None},
             "workouts": {"hevy": 0, "manual": 0},
-            "store_schema_version": 1,
+            "store_schema_version": CHAIN.version,
             "kit": [],
             "export": {"behind_store": True, "store_behind_export": False},
             "plan": None,

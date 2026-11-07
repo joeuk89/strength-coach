@@ -41,7 +41,8 @@ from coach.core.wave_531 import (
 
 @dataclass(frozen=True)
 class SchemeInput:
-    """`line` is the version's, which the hit test reads; `sets` are the week's."""
+    """`line` is the version's, which the hit test reads; `sets` are the week's. `since` is a
+    ladder's standing rung's start: no exposure before it counts toward a stall."""
 
     request: PrescribeRequest
     line: Line
@@ -50,6 +51,7 @@ class SchemeInput:
     rack: Rack | None
     scope: Scope
     e1rm: E1rmRead
+    since: datetime.date | None = None
 
     @property
     def loaded(self) -> bool:
@@ -122,6 +124,8 @@ class SchemeMoves:
             ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on)),
             self.given.request.redesigned,
         )
+        since = self.given.since
+        history = tuple(e for e in history if since is None or since <= e.date)
         streak = stall_streak(self.line, history)
         if streak:
             self._raise(

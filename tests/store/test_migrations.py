@@ -127,3 +127,28 @@ def test_an_export_at_version_n_rebuilds_through_the_frozen_ddl_and_migrates_wit
         n: t for n, t in files.items() if n != "manifest.json"
     }
     assert '"schema_version": 2' in again["manifest.json"]
+
+
+V1_DECISION = (
+    "INSERT INTO decision (id, kind, params, because, text, draft_hash, recorded_at) "
+    "VALUES (?, ?, '{}', ?, 'agreed', 'sha256:x', '2026-10-30T12:00:00Z')"
+)
+
+
+def test_m0001_keeps_every_decision_and_takes_ladder_rung_and_the_reason_progress() -> None:
+    conn = at_version(ENGINE, 1)
+    with conn:
+        conn.execute(V1_DECISION, ("d-0001", "against_research", "coach_judgement"))
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(V1_DECISION, ("d-0002", "ladder_rung", "progress"))
+
+    migrate(conn)
+
+    with conn:
+        conn.execute(V1_DECISION, ("d-0002", "ladder_rung", "progress"))
+    assert conn.execute(
+        "SELECT id, kind, because FROM decision_in_force ORDER BY id"
+    ).fetchall() == [
+        ("d-0001", "against_research", "coach_judgement"),
+        ("d-0002", "ladder_rung", "progress"),
+    ]

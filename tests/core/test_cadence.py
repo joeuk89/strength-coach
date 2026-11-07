@@ -1,11 +1,13 @@
 import datetime
+from typing import cast
 
 from support.exposures import an_exposure
 from support.prescribe import a_line, working
 
 from coach.core.cadence import BlockSpan, CadenceRead, cadence_signal
-from coach.core.exposure import Exposure
-from coach.core.program.form import Line
+from coach.core.exercise_ladder import rung_line
+from coach.core.exposure import Exposure, ExposureSet
+from coach.core.program.form import ExerciseLadder, Line, Rung, SchemeRef, SetGroup
 
 BEFORE = BlockSpan("b-2026-09-07", datetime.date(2026, 9, 7), datetime.date(2026, 10, 4))
 CLOSED = BlockSpan("b-2026-10-05", datetime.date(2026, 10, 5), datetime.date(2026, 11, 1))
@@ -206,3 +208,55 @@ def test_the_one_row_cap_bound_on_every_top_backoff_prescription_raises_cadence_
     assert (flag.code, flag.params["metric"]) == ("cadence_fast", {"capped": 4})
     uncapped = CadenceRead(TOP_BACKOFF, (BEFORE, CLOSED), exposures, 0.9, (True, False))
     assert cadence_signal(uncapped) is None
+
+
+BOARD_LADDER = Line(
+    exercise="board_stand",
+    sets=(SetGroup(2, duration_s=30, rpe=6),),
+    rest_s=60,
+    scheme=SchemeRef(
+        "exercise_ladder",
+        {},
+        ExerciseLadder(
+            (
+                Rung("board_stand", (SetGroup(2, duration_s=30, rpe=6),)),
+                Rung("board_tilt", (SetGroup(2, duration_s=60, rpe=6),)),
+            )
+        ),
+    ),
+)
+
+
+def tilts(*days: str) -> tuple[Exposure, ...]:
+    return tuple(
+        Exposure(
+            f"w-{on}",
+            "board_tilt",
+            datetime.date.fromisoformat(on),
+            (
+                ExposureSet(0, "working", None, None, 6, duration_s=45),
+                ExposureSet(1, "working", None, None, 6, duration_s=40),
+            ),
+        )
+        for on in days
+    )
+
+
+def test_a_ladder_stalled_on_its_standing_rung_at_both_block_ends_raises_cadence_slow() -> None:
+    standing = rung_line(BOARD_LADDER, cast(ExerciseLadder, BOARD_LADDER.scheme.ladder), 2)
+    read = CadenceRead(BOARD_LADDER, (BEFORE, CLOSED), tilts(*WEEKS), 0.9, standing=standing)
+
+    flag = cadence_signal(read)
+
+    assert flag is not None
+    assert (flag.code, flag.scope.exercise_id) == ("cadence_slow", "board_stand")
+    assert flag.params["metric"] == {"stall_streak": 3}
+    assert flag.params["never"] == "skip rungs"
+    assert flag.params["may_schemes"] == ["double_progression", "linear", "top_backoff"]
+    assert flag.rn == "rn:training-level §2"
+
+
+def test_exposures_of_another_rung_leave_a_ladder_unsignalled() -> None:
+    read = CadenceRead(BOARD_LADDER, (BEFORE, CLOSED), tilts(*WEEKS), 0.9)
+
+    assert cadence_signal(read) is None

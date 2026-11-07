@@ -5,6 +5,7 @@ import pytest
 from support.scenarios import a_history, a_session
 
 from coach.core.errors import Setup
+from coach.store.chain import ENGINE as CHAIN
 from coach.store.connection import open_store
 from coach.store.export import export
 from coach.store.rebuild import Rebuilt, rebuild_missing
@@ -33,7 +34,7 @@ def test_a_missing_database_is_rebuilt_from_the_export_byte_for_byte(tmp_path: P
 
     rebuilt = rebuild_missing(database, export_dir)
 
-    assert rebuilt == Rebuilt(schema_version=1)
+    assert rebuilt == Rebuilt(schema_version=CHAIN.version)
     conn = open_store(database)
     assert export(conn, ENGINE).files == files
 
@@ -77,7 +78,7 @@ def test_a_manifest_newer_than_the_engine_stops_with_export_newer_than_engine(
 ) -> None:
     export_dir, files = exported_history(tmp_path)
     manifest = json.loads(files["manifest.json"])
-    manifest["schema_version"] = 2
+    manifest["schema_version"] = CHAIN.version + 1
     (export_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     database = tmp_path / "coach.db"
 

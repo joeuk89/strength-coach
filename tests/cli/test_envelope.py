@@ -25,6 +25,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.envelope import BUDGET_BYTES
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
+from coach.store.chain import ENGINE as CHAIN
 
 
 class Terminal(io.StringIO):
@@ -62,7 +63,10 @@ def test_fields_projects_dotted_paths_of_the_result(instance: Path) -> None:
     run = run_coach("status", "--fields", "engine.version,store_schema_version")
 
     assert run.code == 0
-    assert run.envelope["result"] == {"engine": {"version": "0.3.0"}, "store_schema_version": 1}
+    assert run.envelope["result"] == {
+        "engine": {"version": "0.3.0"},
+        "store_schema_version": CHAIN.version,
+    }
 
 
 def test_fields_naming_a_path_the_result_lacks_is_invalid(instance: Path) -> None:

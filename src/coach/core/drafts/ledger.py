@@ -83,6 +83,14 @@ because = "schedule"
 text = "back on"
 
 [[decision]]
+kind = "ladder_rung"
+session = "core"
+exercise = "dead_bug"
+rung = 2
+because = "progress"
+text = "two clean holds; the athlete said yes"
+
+[[decision]]
 kind = "leave_warning"
 flag = "offgrid_anchor_ignored@line:lower/bb_back_squat"
 params_hash = "sha256:0f"
