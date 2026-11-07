@@ -4,7 +4,7 @@ import re
 import zlib
 
 from coach.core.config import ImplementChoice
-from coach.core.pages import PageLine, PlatePoolKit, RoutinePage
+from coach.core.pages import PageLine, PageRung, PlatePoolKit, RoutinePage
 from coach.core.rack import ListedRack, RackRow
 from coach.render.routine_page import routine_page
 
@@ -170,3 +170,40 @@ def test_a_routine_page_states_loads_in_athlete_units_and_is_headed_by_its_routi
     assert "4×6–8 @8 at 175 lb" in text
     assert "79.38" not in text
     assert "hand edits are overwritten" in text.splitlines()[0]
+
+
+def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked() -> None:
+    board = PageLine(
+        exercise_id="custom_balance_board_stand",
+        name="Balance board: two feet, still",
+        equipment_kind="bodyweight",
+        set_groups=({"type": "working", "count": 2, "duration_s": 30, "rpe": 5},),
+        ladder=(
+            PageRung(
+                rung=1,
+                name="Balance board: two feet, still",
+                cues="near a wall",
+                set_groups=({"count": 2, "duration_s": 30, "rpe": 5},),
+                criterion={"duration_s": 30, "rpe_at_most": 5, "exposures": 2},
+                standing=True,
+            ),
+            PageRung(
+                rung=2,
+                name="Balance board: one foot, eyes closed",
+                cues=None,
+                set_groups=({"count": 4, "reps": 8, "rpe": 7},),
+                criterion={"manual": True},
+                standing=False,
+            ),
+        ),
+    )
+    page = RoutinePage("daily-balance", "Balance", None, None, (board,))
+
+    text = routine_page(page, units="lb")
+
+    assert (
+        "Ladder:\n\n"
+        "1. **Balance board: two feet, still** (standing): 2×30 s @5. near a wall. "
+        "Climb on 30 s at RPE 5 or under, 2 exposures running.\n"
+        "2. Balance board: one foot, eyes closed: 4×8 @7. Climb on the athlete's word."
+    ) in text

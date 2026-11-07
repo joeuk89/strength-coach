@@ -72,7 +72,7 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 88
+    assert len(rows) == run.envelope["result"]["count"] == 91
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -115,7 +115,7 @@ def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
-    assert result["count"] == 88
+    assert result["count"] == 91
 
 
 def test_last_keeps_that_many_rows() -> None:

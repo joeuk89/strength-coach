@@ -13,7 +13,7 @@ from support.plans import (
     a_squat_program,
     an_approved_plan,
 )
-from support.program_drafts import a_session
+from support.program_drafts import a_ladder_line, a_rung, a_session
 from support.programs import a_config
 
 from coach.core.config import Config, ImplementChoice, PlatePoolLocation
@@ -331,3 +331,24 @@ def test_the_week_page_heads_a_daily_session_on_each_day() -> None:
             ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), range(2, 9), strict=True
         )
     ]
+
+
+def test_a_routine_page_prints_a_ladder_line_rung_by_rung_from_the_version() -> None:
+    ladder = a_ladder_line("plank", a_rung(cues="near a wall"), a_rung("side_plank", cues=None))
+    conn = a_squat_program(a_session("lower", SQUAT_LINE, ladder))
+    plan_id = a_planned_squat_week(conn, monday(1))
+    plank = {"type": "working", "count": 2, "duration_s": 30, "rpe": 6}
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(1), "plank", set_groups=[plank], change="held"
+    )
+    a_routine_written(conn, "lower", plan_id)
+
+    page = the_pages(conn, kits=(kit_files(),))["pages/routines/lower.md"]
+
+    assert (
+        "Ladder:\n\n"
+        "1. **Plank** (standing): 2×30 s @6. near a wall. "
+        "Climb on 30 s at RPE 6 or under, 2 exposures running.\n"
+        "2. Side Plank: 2×30 s @6. Climb on 30 s at RPE 6 or under, 2 exposures running."
+    ) in page
+    assert page.count("Ladder:") == 1

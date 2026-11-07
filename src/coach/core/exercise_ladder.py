@@ -6,6 +6,9 @@ from dataclasses import replace
 from coach.core.program.form import Advance, ExerciseLadder
 from coach.core.registries.schemes import DEFAULT_EXPOSURES
 
+# The scheme's opening position; the line stands here until a rung is a recorded choice.
+OPENING_RUNG = 1
+
 
 def full_criterion(ladder: ExerciseLadder, index: int) -> Advance:
     """Rung `index` (from 1)'s criterion with every unsaid key filled: the working group's reps
