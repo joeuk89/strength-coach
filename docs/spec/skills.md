@@ -134,11 +134,14 @@ A token budget with no sub-files leaves nowhere to grow sideways.
 
 ## Contract tests
 
-Two, and nothing on wording:
+Three, and nothing on wording:
 
 1. **Verbs exist.** Every `coach <word>` token in a skill file, and every entry in its Verbs list,
    is a declared verb (the declarations also generate `--help` and `schema`, ADR 0002).
 2. **Size.** Each skill is within its budget.
+3. **Frontmatter.** A strict YAML parser reads each skill's frontmatter as a mapping whose `name`
+   and `description` are non-empty strings, and `name` is the skill's directory. This is a check
+   on structure, not wording: a frontmatter that fails to parse drops the skill silently at load.
 
 No test reads a sentence, including no lint for digits in prose. A threshold that creeps back in
 is caught at review against the never-list, not by a test. The old suite's 178 call sites that

@@ -1,8 +1,8 @@
 ---
 name: plan-week
 description: The week's prescription. Use when a check-in has closed a week, when a light or
-  constrained week is agreed, or when a midweek change is needed: a session moved, dropped or
-  added, a line swapped, a place away from home. Also /plan-week.
+  constrained week is agreed, or when a midweek change is needed, such as a session moved,
+  dropped or added, a line swapped, a place away from home. Also /plan-week.
 ---
 
 ## Read first
