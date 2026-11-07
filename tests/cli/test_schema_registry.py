@@ -209,6 +209,13 @@ def test_the_flags_registry_names_the_params_rung_mets_hash_covers() -> None:
     }
 
 
+def test_the_flags_registry_cites_the_one_rung_step_for_ladder_top() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["ladder_top"]["rn"] == "rn:bodyweight-skill-progression.3"
+
+
 def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     run = run_coach("schema", "--registry", "flags")
 

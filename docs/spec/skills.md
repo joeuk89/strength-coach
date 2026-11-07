@@ -21,6 +21,11 @@ Five skills, all in the plugin (ADR 0007), none in the instance:
 | `kit` | A location or its equipment changes | After `coach init` when `coach.toml` has no location; the athlete reports equipment bought or lost, or a new place to train. Edits the inventory or the grid table, runs `npx plate-pool achievable`, explains the rack change and commits through `publish` on the athlete's yes; the athlete never runs a command (ADR 0021) |
 | `onboard` | The first conversation | After `coach init`, or when no profile exists. Writes the profile (ADR 0009 sections), the first Goal and the Phase (`goal adopt`) on the athlete's yes, and designs no program: `program`'s own When covers the first version (decided on ticket [Worked program and onboard skills](https://github.com/joeuk89/strength-coach/issues/36), 2026-10-31) |
 
+A ladder's rung moves only by a `ladder_rung` Decision on the athlete's yes (ADR 0023):
+`check-in` asks at the card's Ladders field, `plan-week` answers `rung_met` and `ladder_top` on
+the plan Draft, and `program` answers `ladder_top` at a block boundary with an `amend` giving
+the line a new scheme. No skill puts a ladder in `cues`.
+
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
 0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
 why in the profile prose, ADR 0014; what the check-in asks per emphasis is the card's, what

@@ -117,7 +117,7 @@ cut.
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
 Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
-`assistance_ladder` and `exercise_ladder` rn:bodyweight-skill-progression.3 (`ladder_top` .2); `top_backoff` rn:progression-training-age.6
+`assistance_ladder` and `exercise_ladder` rn:bodyweight-skill-progression.3; `top_backoff` rn:progression-training-age.6
 and .8, rn:autoregulation.1; `wave_531` rn:progression-training-age.9. The one-row cap, the
 "RPE 2 over" test and `load_for` rounding down are this framework's (opinion). The catalogue
 behind the registry is rn:progression-methods §1 and §2.
