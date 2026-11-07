@@ -7,13 +7,22 @@ from typing import Any
 import pytest
 from support.cli import run_coach
 from support.clock import FixedClock
+from support.fake_hevy import FakeHevy
 from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
 from support.plans import a_plan_override, an_approved_plan
-from support.program_drafts import CUSTOM_EXERCISES, WORKED_DRAFT_COMPLETE, a_draft, toml
+from support.program_drafts import (
+    CUSTOM_EXERCISES,
+    WORKED_DRAFT_COMPLETE,
+    a_draft,
+    a_line,
+    a_session,
+    toml,
+)
 from support.programs import GYM, HOME
 
 from coach.cli import app
+from coach.core.clock import Clock
 from coach.core.config import WEEKDAYS
 from coach.core.goal import Goal
 from coach.store import exercises, goals
@@ -170,6 +179,52 @@ def test_a_draft_with_a_violation_is_exit_1_with_its_code_and_every_flag(instanc
     error = run.envelope["error"]
     assert error["code"] == "location_unknown"
     assert [flag["key"] for flag in error["violations"]] == ["location_unknown@version:pv-1"]
+
+
+def test_with_hevy_on_a_template_value_hevy_rejects_is_exit_1_and_nothing_adopts(
+    instance: Path,
+) -> None:
+    with (instance / "coach.toml").open("a", encoding="utf-8") as config:
+        config.write("\n[hevy]\n")
+    ring_row = {
+        "name": "Ring row",
+        "load_mode": "bodyweight",
+        "equipment_kind": "bodyweight",
+        "pattern": "horizontal_pull",
+        "muscles": {"primary": ["lats"], "secondary": []},
+        "hevy_title": "Ring Row",
+        "hevy_exercise_type": "reps_only",
+        "hevy_equipment": "bands",
+        "hevy_muscle_group": "lats",
+    }
+    line = a_line(
+        "custom_ring_row", sets=[{"count": 3, "reps": [10, 15], "rpe": 8}], start_load=None
+    )
+    draft = a_draft(a_session("push", a_line(), line), exercise={"custom_ring_row": ring_row})
+    hevy = FakeHevy(CLOCK)
+
+    def serving(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
+        return hevy
+
+    run = run_coach(
+        "program",
+        "adopt",
+        a_draft_file(instance, toml(draft)),
+        env={"HEVY_API_KEY": "a-key"},
+        clock=CLOCK,
+        make_client=serving,
+    )
+
+    assert run.code == 1, run.stdout
+    error = run.envelope["error"]
+    assert error["code"] == "hevy_template_value_unknown"
+    [flag] = error["violations"]
+    assert flag["params"] == {
+        "exercise_id": "custom_ring_row",
+        "column": "hevy_equipment",
+        "value": "bands",
+    }
+    assert coach("program", "show").code != 0
 
 
 def test_a_stale_kit_at_the_draft_location_is_exit_5_kit_tables_stale(instance: Path) -> None:
