@@ -146,9 +146,8 @@ def voice_leaks(text, patterns):
     """{class: set of matched terms} for one athlete-facing message; URLs are never leaks."""
     text = URL.sub("", text)
     hits = {}
-    code = [held.strip() for held in FENCE.findall(text)]
-    code += [held.strip() for held in SPAN.findall(FENCE.sub("", text))]
-    for held in code:
+    for held in FENCE.findall(text) + SPAN.findall(FENCE.sub("", text)):
+        held = held.strip()
         if held:
             hits.setdefault("code", set()).add(held.splitlines()[0][:60])
     for cls, term, pattern in patterns:
