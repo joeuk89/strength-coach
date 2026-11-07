@@ -232,6 +232,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `unknown_exercise` | line | exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id | `null` |
 | `unknown_scheme` | line, session | scheme name, param | a registry scheme and its params | `null` |
 | `unknown_load_mode` | line | load mode | a glossary load mode | `null` |
+| `unknown_pattern` | exercise | pattern | a `patterns` registry name on the exercise, in the Draft or an `[[exercise]]` record | `null` |
+| `unknown_muscle` | exercise, session | muscle | a `muscles` registry name on the exercise or in `estimated_sets` | `null` |
 | `duplicate_id` | version | session id or (session, exercise) | unique ids; merging the duplicate lines | `null` |
 | `schedule_session_missing` | version | week, weekday, session id | a session with that id, or removing the slot | `null` |
 | `session_unscheduled` | session | session id | a slot in a rotation week, or a `cadence` | `null` |

@@ -193,6 +193,14 @@ hevy_muscle_group = "chest"
 A declared exercise that already exists is updated field by field; `hevy_template_id` is never
 set here (it is written by `plan apply` after a verified create, ADR 0011).
 
+`pattern` names an entry of the `patterns` registry and every name in `muscles` an entry of the
+`muscles` registry (ADR 0024); `coach schema --registry patterns` and `--registry muscles` list
+them. A pattern row carries `heavy` and `compound`, a muscle row `dosed`, and the heavy-pattern,
+compound and dosed lists the rules read are those flags. Empty `primary` and `secondary` lists
+are legal. Adopt checks every exercise a line or a `counts` entry references and every one the
+Draft declares, so a library row outside a registry fails at the next adopt that references it
+and is fixed through the normal path.
+
 ### Acknowledgements
 
 The same shape as the plan Draft's (`validation.md`, "Leaving a warning"). Adopt freezes them on
@@ -327,6 +335,8 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `unknown_exercise` | line | `exercise` is not in the library and not declared in the Draft |
 | `unknown_scheme` | line or session | the scheme name or a param is not in the registry |
 | `unknown_load_mode` | line | `load_mode` is not one of the glossary's |
+| `unknown_pattern` | exercise | an exercise the Draft references or declares has a `pattern` outside the `patterns` registry |
+| `unknown_muscle` | exercise or session | a name in an exercise's `primary` or `secondary` list, or a key of a coach-led session's `estimated_sets`, is outside the `muscles` registry |
 | `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session (a rung exercise of an `exercise_ladder` counts as one of its session's), or one session appears twice on a weekday |
 | `schedule_session_missing` | version | the schedule names a session the version lacks |
 | `session_unscheduled` | session | a session in no rotation week with no `cadence` |

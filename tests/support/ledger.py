@@ -19,7 +19,7 @@ def an_exercise(conn: Connection, id_: str, **columns: Any) -> str:
         "name": id_.replace("_", " "),
         "load_mode": "total",
         "equipment_kind": "barbell",
-        "pattern": "push",
+        "pattern": "horizontal_push",
         "muscles": {"primary": ["chest"], "secondary": []},
         "hevy_title": None,
         "hevy_exercise_type": None,

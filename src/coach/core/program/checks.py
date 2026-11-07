@@ -1,7 +1,7 @@
 """The violations `program adopt` raises on a form (docs/spec/program.md, "Violations")."""
 
 import itertools
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -10,6 +10,7 @@ from coach.core.config import WEEKDAYS, Weekday
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, FlagKey, Scope, raise_flag
 from coach.core.goal import Goal
+from coach.core.muscles import read_muscles
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
     RACK_MODES,
@@ -24,7 +25,7 @@ from coach.core.program.form import (
 )
 from coach.core.rack import Rack, on_rack, rows_beside
 from coach.core.registries.flags import FLAGS
-from coach.core.registries.program import LOAD_MODES
+from coach.core.registries.program import LOAD_MODES, MUSCLES, PATTERNS
 from coach.core.registries.schemes import SCHEMES, Param, ParamType, Scheme
 
 TEMPLATE_COLUMNS = ("hevy_title", "hevy_exercise_type", "hevy_equipment", "hevy_muscle_group")
@@ -71,6 +72,7 @@ def violations(
 ) -> tuple[Flag, ...]:
     check = _Checks(form, context, list(unknown_keys))
     check.version()
+    check.exercises()
     for session in form.sessions:
         check.session(session)
     check.unknown_keys()
@@ -121,6 +123,40 @@ class _Checks:
                 self.version_scope,
                 {"emphasis": form.emphasis},
                 "a strength version needs a Goal with priority lifts",
+            )
+
+    def exercises(self) -> None:
+        referenced = [line.exercise for session in self.form.sessions for line in session.lines]
+        counts = self.form.dose.counted().values() if self.form.dose else ()
+        counted = [variant for variants in counts for variant in variants]
+        for id_ in dict.fromkeys([*referenced, *counted, *self.form.exercises]):
+            exercise = self._exercise(id_)
+            if exercise is not None:
+                self._exercise_names(id_, exercise)
+
+    def _exercise_names(self, id_: str, exercise: Mapping[str, object]) -> None:
+        scope = Scope("exercise", exercise_id=id_)
+        pattern = exercise.get("pattern")
+        if pattern is not None and pattern not in PATTERNS:
+            self.raise_(
+                "unknown_pattern",
+                scope,
+                {"pattern": pattern},
+                f"{id_} has pattern {pattern!r}, which is no pattern; coach schema --registry "
+                "patterns",
+            )
+        muscles = read_muscles(exercise.get("muscles"))
+        named = [*muscles["primary"], *muscles["secondary"]] if muscles else []
+        self._muscles(named, scope, f"{id_} names")
+
+    def _muscles(self, names: Iterable[str], scope: Scope, where: str) -> None:
+        unknown = next((name for name in names if name not in MUSCLES), None)
+        if unknown is not None:
+            self.raise_(
+                "unknown_muscle",
+                scope,
+                {"muscle": unknown},
+                f"{where} {unknown!r}, which is no muscle; coach schema --registry muscles",
             )
 
     def _duplicate_ids(self) -> None:
@@ -201,6 +237,7 @@ class _Checks:
                 params,
                 "a coach-led session carries estimated_sets and no lines; others the reverse",
             )
+        self._muscles(session.estimated_sets or (), scope, "estimated_sets names")
         self._cadence(session, scope)
         if session.location is not None and session.location not in self.context.racks:
             self.raise_(

@@ -72,7 +72,7 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 92
+    assert len(rows) == run.envelope["result"]["count"] == 94
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -129,7 +129,7 @@ def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
-    assert result["count"] == 92
+    assert result["count"] == 94
 
 
 def test_last_keeps_that_many_rows() -> None:
@@ -204,3 +204,24 @@ def test_the_errors_registry_gives_each_code_its_class_exit_and_summary() -> Non
     assert set(rows["hevy_unreachable"]) == {"code", "class", "exit", "summary"}
     assert {code: (rows[code]["class"], rows[code]["exit"]) for code in expected} == expected
     assert all(row["summary"] for row in rows.values())
+
+
+def test_the_patterns_registry_flags_heavy_and_compound_on_each_row() -> None:
+    run = run_coach("schema", "--registry", "patterns", "--full")
+
+    rows = {row["name"]: row for row in run.envelope["result"]["rows"]}
+    assert run.envelope["result"]["count"] == 19
+    assert rows["squat"] == {"name": "squat", "heavy": True, "compound": True}
+    assert rows["lunge"] == {"name": "lunge", "heavy": False, "compound": True}
+    assert rows["balance"] == {"name": "balance", "heavy": False, "compound": False}
+
+
+def test_the_muscles_registry_flags_dosed_on_each_row() -> None:
+    run = run_coach("schema", "--registry", "muscles", "--full")
+
+    rows = {row["name"]: row for row in run.envelope["result"]["rows"]}
+    assert run.envelope["result"]["count"] == 18
+    assert rows["quadriceps"] == {"name": "quadriceps", "dosed": True}
+    assert rows["traps"] == {"name": "traps", "dosed": False}
+    assert "cardio" not in rows
+    assert "full_body" not in rows

@@ -693,6 +693,8 @@ source, or `sleep_night` for one night and source; cleared by withdrawing one of
   one test that reads a spec document, `testing.md`).
 - Every CHECK list over a `kind`, `status`, `because` or `source` column equals the matching
   code registry; this is the guard that keeps the hand-written lists honest.
+- Every catalogue row's `pattern` is in the `patterns` registry and every name in its `muscles`
+  lists is in the `muscles` registry (ADR 0024); neither column has a CHECK.
 - `PRAGMA foreign_keys` is on from the connection factory (ADR 0001).
 - Export of a fixture store, delete the database, rebuild, re-export: byte-identical files.
 - The partial unique indexes hold: two approved plans for one week, two current goals, an open

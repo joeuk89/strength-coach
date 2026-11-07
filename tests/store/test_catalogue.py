@@ -82,7 +82,16 @@ def test_muscles_hold_a_primary_and_a_secondary_list() -> None:
     for row in seeded():
         muscles = json.loads(row["muscles"])
         assert list(muscles) == ["primary", "secondary"], row["id"]
-        assert muscles["primary"], row["id"]
+        assert muscles["primary"] or row["pattern"] == "conditioning", row["id"]
+
+
+def test_conditioning_names_no_muscle_it_does_not_train() -> None:
+    rows = {row["id"]: json.loads(row["muscles"]) for row in seeded()}
+
+    assert rows["running"] == {"primary": [], "secondary": []}
+    assert rows["burpee"] == {"primary": [], "secondary": []}
+    assert rows["jump_rope"] == {"primary": [], "secondary": ["calves"]}
+    assert rows["sled_push"]["primary"] == ["quadriceps", "glutes"]
 
 
 def test_known_lifts_carry_their_load_mode_equipment_kind_and_pattern() -> None:
