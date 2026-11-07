@@ -30,6 +30,7 @@ from coach.core.stall import stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
+from coach.services.ladders import ladder_reads
 from coach.store import annotations, check_ins, goals, phases, programs, readings
 from coach.store.connection import Connection
 
@@ -44,6 +45,7 @@ def progress(
     units: Units,
     bodyweight_units: Units,
     full: bool = False,
+    zone: datetime.tzinfo = datetime.UTC,
 ) -> Progress:
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
@@ -81,6 +83,7 @@ def progress(
             milestone_read(m, exposures, weigh_ins, units)
             for m in (stored.goal.milestones if stored else ())
         ),
+        ladders=ladder_reads(conn, units=units, on=on, zone=zone),
         dose=_dose(dosed),
         dose_target=_dose_target(dosed),
         adherence=_adherence(conn, closed, block),

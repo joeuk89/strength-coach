@@ -12,6 +12,7 @@ TITLES = {
     "adherence": "Adherence",
     "dose": "Dose",
     "lifts": "Lifts",
+    "ladders": "Ladders",
     "sleep": "Sleep",
     "weight_phase": "Weight and Phase",
     "activities": "Activities",

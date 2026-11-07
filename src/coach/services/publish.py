@@ -1,3 +1,4 @@
+import datetime
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
@@ -24,8 +25,9 @@ def publish(
     config: Config,
     kits: Sequence[KitFiles] = (),
     profile: str | None = None,
+    zone: datetime.tzinfo = datetime.UTC,
 ) -> Publication:
     """What `publish` writes from the store: the export (schema.md, "Export") and the pages
     (ADR 0012)."""
-    facts = page_facts(conn, config=config, kits=kits, profile=profile)
+    facts = page_facts(conn, config=config, kits=kits, profile=profile, zone=zone)
     return Publication(export(conn, engine_version), render_pages(facts))

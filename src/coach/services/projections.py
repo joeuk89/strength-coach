@@ -52,17 +52,17 @@ def projection(
     ]
     first = min(str(r["date"]) for r in rows)
     folders = {f.role: f.hevy_id for f in mirrors.folders(conn)}
+    library = exercises.every(conn)
     session = SessionRoutine(
         title=facts.session.title,
         folder_id=folders[folder_role(facts)],
         week_line=f"Week of {plan['week']}, rotation week {plan['position']}",
         authored=facts.session.lines,
         lines=[_frozen(r) for r in rows if r["date"] == first],
+        names={str(row["id"]): str(row["name"]) for row in library},
     )
     templates = {
-        str(row["id"]): str(row["hevy_template_id"])
-        for row in exercises.every(conn)
-        if row["hevy_template_id"]
+        str(row["id"]): str(row["hevy_template_id"]) for row in library if row["hevy_template_id"]
     }
     return project_routine(session, templates, units)
 
