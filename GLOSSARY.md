@@ -535,7 +535,7 @@ _Avoid_: sleep trigger, poor sleep
 ### Kit and loads
 
 **Exercise**:
-A library entry a line references: name, load mode, equipment kind, movement pattern, muscles,
+A library entry a line references: name, load mode, equipment kind, pattern, muscles,
 the Hevy template columns and where the row came from (catalogue, Draft or record).
 _Avoid_: movement, lift (fine in prose, not as the noun)
 
@@ -606,6 +606,16 @@ _Avoid_: run cap (fine in prose), cardio limit
 How an exercise's load is counted: total, per hand doubled, single implement, bodyweight, assisted,
 band, duration or distance.
 _Avoid_: weight type, load type
+
+**Pattern**:
+The kind of movement an exercise is: squat, hinge, horizontal push, balance, conditioning and
+the rest of a closed set. Some patterns are heavy and some compound, and the rules key on that.
+_Avoid_: movement pattern, movement, category
+
+**Muscle**:
+A name an exercise's hard sets are counted toward, primary or secondary, from a closed set. Some
+muscles are dosed, asked for by name in a version's dose; the rest are trained indirectly.
+_Avoid_: muscle group (which is Hevy's own column), body part
 
 **Load**:
 A weight in athlete units together with its load mode. The one place unit conversion and
