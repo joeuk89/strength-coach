@@ -21,6 +21,7 @@ from coach.services.check_in_warnings import check_in_warnings
 from coach.services.closed_weeks import ClosedWeeks, WeekLog
 from coach.services.fatigue import Fatigue
 from coach.services.hevy_import import standing_warnings
+from coach.services.plan_behind import plan_behind
 from coach.services.previous_plans import frozen_loads_off_rack
 from coach.services.racks import current_racks
 from coach.services.rotation import default_week, rotation_position
@@ -178,6 +179,7 @@ def status(
                 bodyweight_units=bodyweight_units or units,
             ),
             *cadence_signals(conn, closed, units=units, on=today),
+            *plan_behind(conn, today),
         ),
         plan=_plan_in_force(conn, monday),
         rotation=_rotation(conn, monday),

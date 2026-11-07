@@ -450,6 +450,7 @@ OUTSIDE_WARNINGS = (
     ),
     outside_warning("training_max_unused", ("exercise",), ("scheme", "decision_id")),
     outside_warning("exercise_unmapped", ("workout",), ("hevy_template_id", "title")),
+    outside_warning("plan_behind_program", ("week",), ("plan_id", "approved_under", "version_id")),
 )
 
 FLAGS = Registry("flags", VIOLATIONS + PLAN_WARNINGS + ADOPT_WARNINGS + OUTSIDE_WARNINGS)

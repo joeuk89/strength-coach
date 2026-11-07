@@ -72,7 +72,7 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 91
+    assert len(rows) == run.envelope["result"]["count"] == 92
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -108,6 +108,20 @@ def test_the_flags_registry_names_what_may_leave_each_code() -> None:
     assert "acknowledgeable" not in rows["stall_streak"]
 
 
+def test_the_flags_registry_shows_the_plan_behind_the_program_as_a_week_warning() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["plan_behind_program"] == {
+        "code": "plan_behind_program",
+        "severity": "warning",
+        "left_by": [],
+        "scope": ["week"],
+        "params": ["plan_id", "approved_under", "version_id"],
+        "rn": None,
+    }
+
+
 def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     run = run_coach("schema", "--registry", "flags")
 
@@ -115,7 +129,7 @@ def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
-    assert result["count"] == 91
+    assert result["count"] == 92
 
 
 def test_last_keeps_that_many_rows() -> None:

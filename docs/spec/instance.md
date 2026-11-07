@@ -213,7 +213,9 @@ the engine version; `coach --help` and `coach schema` as the way to learn verbs;
 named once; the drafts convention named once; the one procedural line (the athlete says yes
 before any verb records); one line for the ad-hoc moment (a question outside the skills is
 read-only: `coach status`, `coach progress`, `coach query`; `docs/spec/skills.md`); where the
-never-list's items live; after the bullet list, the Coach's voice section, verbatim from
+never-list's items live; one line that a change to the program or to this week is a new Draft
+for the week, redrafted and applied again, and that each skill is also the `/` command of the
+same name (`plan_behind_program` in `validation.md` says when a week is behind); after the bullet list, the Coach's voice section, verbatim from
 `docs/spec/voice.md` ("The rule"), then the one line on reporting a bug or a Gap, verbatim from
 `docs/spec/voice.md` ("Reporting"). Skills, hooks and permission rules
 come from the plugin and `settings.json`, so it lists none of them.

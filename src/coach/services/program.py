@@ -27,6 +27,7 @@ from coach.render.program_draft import program_draft
 from coach.services.cadence import cadence_signals
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
+from coach.services.plan_behind import plan_behind
 from coach.services.racks import racks_by_location
 from coach.store import exercises, goals, phases, programs, routine_map, week_plans
 from coach.store.connection import Connection
@@ -145,7 +146,7 @@ def adopt(
             dry_run=dry_run,
         )
         if dry_run:
-            return result
+            return _with_plan_behind(conn, result, clock)
         for id_, fields in draft.form.exercises.items():
             exercises.upsert_declared(conn, id_, fields)
         programs.insert_version(
@@ -161,7 +162,12 @@ def adopt(
             ),
         )
         programs.freeze_acknowledgements(conn, version_id, frozen)
-    return result
+    return _with_plan_behind(conn, result, clock)
+
+
+def _with_plan_behind(conn: Connection, result: AdoptResult, clock: Clock) -> AdoptResult:
+    behind = plan_behind(conn, clock.today(), version_id=result.version_id)
+    return replace(result, warnings=(*result.warnings, *behind))
 
 
 def show(conn: Connection) -> ShowResult:
