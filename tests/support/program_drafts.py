@@ -296,3 +296,93 @@ tier = "core"
 """
     for id_, (exercise, title, start_load) in _ELIDED.items()
 )
+
+
+# The balance-board ladder of docs/spec/program.md ("Worked example: a balance-board
+# ladder"), under a minimal version header.
+BALANCE_BOARD_DRAFT = """\
+name = "Daily balance practice"
+kind = "redesign"
+because = "a balance board joined the daily practice"
+emphasis = "hypertrophy"
+location = "home"
+
+[schedule]
+rotation = ["A"]
+
+[[session]]
+id = "daily-balance"
+title = "Daily practice · Balance board"
+kind = "practice"
+tier = "optional"
+cadence = "daily"
+
+  [[session.line]]
+  exercise = "custom_balance_board_stand"
+  rest_s = 30
+
+    [session.line.scheme]
+    name = "exercise_ladder"
+    advance = { exposures = 2 }
+
+    [[session.line.scheme.rungs]]
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 30, rpe = 5 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_tilt"
+    cues = "slow tilts front to back, then side to side · rim off the floor"
+    sets = [{ count = 2, duration_s = 60, rpe = 6 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_eyes_closed"
+    cues = "eyes closed for the hold · slow quarter squats with eyes open between holds"
+    sets = [{ count = 2, duration_s = 45, rpe = 6 }]
+    advance = { exposures = 3 }
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_one_foot"
+    cues = "one foot centred, the other lifted · switch feet each set"
+    sets = [{ count = 4, duration_s = 20, rpe = 7 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_one_foot_eyes_closed"
+    cues = "one foot, eyes closed, a wall within reach"
+    sets = [{ count = 4, duration_s = 15, rpe = 7 }]
+
+# with Hevy on, each also carries the four template columns (New exercises, above)
+[exercise.custom_balance_board_stand]
+name = "Balance board: two feet, still"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_tilt]
+name = "Balance board: two feet, tilting"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_eyes_closed]
+name = "Balance board: eyes closed and squats"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_one_foot]
+name = "Balance board: one foot"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_one_foot_eyes_closed]
+name = "Balance board: one foot, eyes closed"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+"""

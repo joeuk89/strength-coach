@@ -8,7 +8,14 @@ from support.clock import FixedClock
 from support.history import a_logged_workout, an_annotation
 from support.kit_fixtures import kit_files
 from support.plans import a_mapped_routine
-from support.program_drafts import WORKED_DRAFT_COMPLETE, a_draft, a_line, a_session, toml
+from support.program_drafts import (
+    BALANCE_BOARD_DRAFT,
+    WORKED_DRAFT_COMPLETE,
+    a_draft,
+    a_line,
+    a_session,
+    toml,
+)
 from support.programs import a_config, a_goal, a_library_store, a_phase, the_worked_store
 
 from coach.core.errors import Invalid, Setup
@@ -803,3 +810,20 @@ def test_two_stale_acknowledgements_are_refused_as_one_violation_naming_both() -
     assert [(v["code"], v["params"]["flag_keys"]) for v in violations] == [
         ("acknowledgement_unmatched", list(keys))
     ]
+
+
+def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts_unchanged() -> (
+    None
+):
+    conn = the_worked_store()
+
+    adopted = run(conn, BALANCE_BOARD_DRAFT)
+    text = show_draft(conn).text
+    dry = run(conn, text, dry_run=True)
+
+    assert adopted.version_id == "pv-1"
+    assert exercises.get(conn, "custom_balance_board_one_foot_eyes_closed") is not None
+    [(session, line)] = show(conn).ladders
+    assert session == "daily-balance" and line.scheme.ladder is not None
+    assert len(line.scheme.ladder.rungs) == 5
+    assert dry.diff.empty

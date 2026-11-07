@@ -59,6 +59,7 @@ class ShowResult:
     adopted: str
     because: str
     sessions: tuple[tuple[str, int], ...]
+    ladders: tuple[tuple[str, Line], ...] = ()
 
 
 def adopt(
@@ -172,6 +173,12 @@ def show(conn: Connection) -> ShowResult:
         adopted=version.adopted,
         because=version.form.because,
         sessions=tuple(programs.line_counts(conn, version.id)),
+        ladders=tuple(
+            (session.id, line)
+            for session in version.form.sessions
+            for line in session.lines
+            if line.scheme.ladder is not None
+        ),
     )
 
 

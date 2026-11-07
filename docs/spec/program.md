@@ -528,6 +528,95 @@ ahead of the pull-up is activation only and carries no working group, so the pul
 every `start_load` checked against the home rack (`kit/home.achievable.json`, ADR 0021); no violations. The old `increment` params are gone: the
 squat steps by the home rack's next barbell row.
 
+## Worked example: a balance-board ladder
+
+A daily practice line climbing a five-rung balance-board ladder (issue #256, ADR 0023). Each
+stance is its own custom exercise, so the logs tell the rungs apart. The first rung is the
+line's `exercise` and states none; the line states no `sets`, since each rung carries its own.
+The ladder criterion is two exposures at the rung's duration at or under its RPE; the third rung
+asks for three.
+
+```toml
+[[session]]
+id = "daily-balance"
+title = "Daily practice · Balance board"
+kind = "practice"
+tier = "optional"
+cadence = "daily"
+
+  [[session.line]]
+  exercise = "custom_balance_board_stand"
+  rest_s = 30
+
+    [session.line.scheme]
+    name = "exercise_ladder"
+    advance = { exposures = 2 }
+
+    [[session.line.scheme.rungs]]
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 30, rpe = 5 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_tilt"
+    cues = "slow tilts front to back, then side to side · rim off the floor"
+    sets = [{ count = 2, duration_s = 60, rpe = 6 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_eyes_closed"
+    cues = "eyes closed for the hold · slow quarter squats with eyes open between holds"
+    sets = [{ count = 2, duration_s = 45, rpe = 6 }]
+    advance = { exposures = 3 }
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_one_foot"
+    cues = "one foot centred, the other lifted · switch feet each set"
+    sets = [{ count = 4, duration_s = 20, rpe = 7 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_one_foot_eyes_closed"
+    cues = "one foot, eyes closed, a wall within reach"
+    sets = [{ count = 4, duration_s = 15, rpe = 7 }]
+
+# with Hevy on, each also carries the four template columns (New exercises, above)
+[exercise.custom_balance_board_stand]
+name = "Balance board: two feet, still"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_tilt]
+name = "Balance board: two feet, tilting"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_eyes_closed]
+name = "Balance board: eyes closed and squats"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_one_foot]
+name = "Balance board: one foot"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+
+[exercise.custom_balance_board_one_foot_eyes_closed]
+name = "Balance board: one foot, eyes closed"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+```
+
+Adopt validates every rung and stores the ladder on the line; `program show` prints every rung
+with its exercise, cues, sets and criterion.
+
 ## Handed to other tickets
 
 - **Weekly prescription** (#26, settled in `prescription.md`): the prescribe request, the stall and reset rule per

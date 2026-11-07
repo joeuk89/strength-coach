@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from coach.core.program.form import (
     AcknowledgeEntry,
     ProgramForm,
+    group_document,
     line_document,
     scheme_document,
 )
@@ -95,7 +96,7 @@ def insert_version(conn: Connection, row: VersionRow) -> None:
                     line.exercise,
                     position,
                     line.load_mode,
-                    _json(written["sets"]),
+                    _json([group_document(group) for group in line.sets]),
                     line.rest_s,
                     line.cues,
                     _json(written["scheme"]),
