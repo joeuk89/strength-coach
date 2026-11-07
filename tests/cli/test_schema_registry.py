@@ -142,13 +142,13 @@ def test_the_errors_registry_gives_each_code_its_class_exit_and_summary() -> Non
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.code == 0
+    expected = {
+        "state_conflict": ("invalid", 1),
+        "expect_mismatch": ("refused", 3),
+        "hevy_unreachable": ("unreachable", 4),
+        "no_instance": ("setup", 5),
+        "internal_error": ("internal", 1),
+    }
     assert set(rows["hevy_unreachable"]) == {"code", "class", "exit", "summary"}
-    assert (rows["hevy_unreachable"]["class"], rows["hevy_unreachable"]["exit"]) == (
-        "unreachable",
-        4,
-    )
-    assert (rows["state_conflict"]["class"], rows["state_conflict"]["exit"]) == ("invalid", 1)
-    assert (rows["expect_mismatch"]["class"], rows["expect_mismatch"]["exit"]) == ("refused", 3)
-    assert (rows["no_instance"]["class"], rows["no_instance"]["exit"]) == ("setup", 5)
-    assert (rows["internal_error"]["class"], rows["internal_error"]["exit"]) == ("internal", 1)
+    assert {code: (rows[code]["class"], rows[code]["exit"]) for code in expected} == expected
     assert all(row["summary"] for row in rows.values())
