@@ -63,7 +63,7 @@ from coach.store import (
 from coach.store.connection import Connection
 
 # The Decision kinds prescribe reads (prescription.md, "What prescribe is handed").
-PRESCRIBING_DECISIONS = ("override", "safety_ceiling", "training_max")
+PRESCRIBING_DECISIONS = ("override", "safety_ceiling", "training_max", "ladder_rung")
 
 
 @dataclass(frozen=True)
@@ -127,11 +127,12 @@ def plan_draft(
                 planned=session,
                 trained=history.trained,
                 overrides=tuple(overrides),
-                decisions=_decisions(conn, session),
+                decisions=_decisions(conn, session, clock),
                 niggle_constraints=constraints,
                 status_spans=spans,
                 hard_week_count=hard_week_count,
                 redesigned=redesigned,
+                adopted=datetime.date.fromisoformat(version.adopted),
             )
         )
         for session in planned
@@ -198,7 +199,11 @@ def _exercise_facts(conn: Connection) -> Mapping[str, ExerciseFacts]:
     }
 
 
-def _decisions(conn: Connection, session: PlannedSession) -> tuple[DecisionInForce, ...]:
+def _decisions(
+    conn: Connection, session: PlannedSession, clock: Clock
+) -> tuple[DecisionInForce, ...]:
+    """Each with the date it was recorded on in the athlete's timezone."""
+    zone = clock.now().tzinfo
     return tuple(
         DecisionInForce(
             id=str(row["id"]),
@@ -206,6 +211,7 @@ def _decisions(conn: Connection, session: PlannedSession) -> tuple[DecisionInFor
             session_id=cast(str | None, row["session_id"]),
             exercise_id=cast(str | None, row["exercise_id"]),
             params=cast(Mapping[str, object], row["params"]),
+            on=parse_instant(str(row["recorded_at"])).astimezone(zone).date(),
         )
         for row in decisions.in_force(conn, session.date.isoformat())
         if row["kind"] in PRESCRIBING_DECISIONS

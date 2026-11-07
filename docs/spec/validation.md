@@ -277,6 +277,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `stall_streak` | line | streak length, exposure refs (all on or after the latest redesign's adoption date; `prescription.md`, **Stalls**) | rn:progression-methods §4 |
 | `rep_range_missed` | line | set index, reps, range, logged RPE, authored RPE | `null` |
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
+| `rung_met` | line | the standing rung (from 1), the next rung's exercise id, the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the params hash covers the rung and the next rung only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
+| `ladder_top` | line | the standing rung, the ladder's last; raised instead of `rung_met` when the last rung's criterion holds | rn:bodyweight-skill-progression.2 |
 | `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref | rn:autoregulation.6 |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
 | `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
