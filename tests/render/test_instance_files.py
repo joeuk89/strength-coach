@@ -1,4 +1,5 @@
 import json
+import re
 import tomllib
 
 import pytest
@@ -158,6 +159,21 @@ def test_the_generated_claude_md_names_the_profile_and_the_drafts_once() -> None
 
     assert text.count("profile.md") == 1
     assert text.count(".coach/drafts/") == 1
+
+
+def test_the_generated_claude_md_says_any_change_is_a_redrafted_and_reapplied_week() -> None:
+    lines = claude_md("0.3.0").splitlines()
+
+    start = next(i for i, line in enumerate(lines) if "a change to the program" in line.lower())
+    bullet = " ".join(line.strip() for line in lines[start : start + 2])
+    assert lines[start].startswith("- ")
+    assert start < lines.index("## The coach's voice")
+    assert "redrafted and applied again" in bullet
+    assert "`/` command" in bullet
+
+
+def test_the_generated_claude_md_names_no_slash_command() -> None:
+    assert re.findall(r"(?<![\w.])/[a-z][a-z-]*", claude_md("0.3.0")) == []
 
 
 def test_the_generated_claude_md_names_the_options_that_lift_the_default_cuts() -> None:
