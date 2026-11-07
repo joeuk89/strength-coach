@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-11-02 (the output budget doubles to 6 KB); 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's); 2026-10-31 by wayfinder #44 (`main` takes a client factory and a clock; the suite target is ADR 0019's, now thirty seconds)
+amended: 2026-11-07 by #250 (`coach schema` with no argument is exempt from the output budget: every verb and the registry names, never cut); 2026-11-02 (the output budget doubles to 6 KB); 2026-10-31 by wayfinder #43 (the declaration's `writes` field names four kinds; four asked verbs, each with a dry run; permission mode is the hook's concern, not the verb's); 2026-10-31 by wayfinder #44 (`main` takes a client factory and a clock; the suite target is ADR 0019's, now thirty seconds)
 ---
 
 # The agent drives the engine through a CLI over plain service functions

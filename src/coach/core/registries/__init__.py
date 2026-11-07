@@ -36,8 +36,8 @@ from coach.core.registries.registry import Entry, Registry
 from coach.core.registries.schemes import SCHEMES
 from coach.core.registries.week import OVERRIDE_KINDS, PLAN_STATUSES
 
-# The `verbs.md` names first, then one registry per remaining CHECK list in `schema.sql`, then
-# the error codes.
+# `coach schema` lists the names in this order: the registries the agent reads most first, then
+# one per remaining CHECK list in `schema.sql`, then the error codes.
 REGISTRIES: tuple[Registry[Entry], ...] = (
     SCHEMES,
     FLAGS,
