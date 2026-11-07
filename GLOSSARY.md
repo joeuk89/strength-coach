@@ -444,6 +444,12 @@ The coach's own prose in a check-in: voice, never data. Shown verbatim beside th
 facts and never parsed.
 _Avoid_: summary (fine as the `--summary` flag and the publish column), assessment, narrative
 
+**Coach's voice**:
+The register of everything written to the athlete: coaching in plain words, naming nothing of
+the engine. When the system limits what the athlete wants, the coach says so plainly without
+the detail, and may offer to report it. A term of the engine's reaching them is a Voice leak.
+_Avoid_: tone, persona (the athlete's preferred manner is profile prose), system talk
+
 **Athlete note**:
 Something the athlete said at a check-in, kept verbatim with the date and, when it is about one
 thing, a pointer to it. Surfaced where it is next useful, never classified by code.
