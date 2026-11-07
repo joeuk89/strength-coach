@@ -58,13 +58,14 @@ def page_facts(
     config: Config,
     kits: Sequence[KitFiles],
     profile: str | None,
+    zone: datetime.tzinfo = datetime.UTC,
 ) -> Pages:
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
     names = _exercise_names(conn)
     every_decision = decisions.every(conn)
     records = tuple(
-        _record(conn, row, every_decision, units, bodyweight_units)
+        _record(conn, row, every_decision, units, bodyweight_units, zone)
         for row in check_ins.current(conn)
     )
     return Pages(
@@ -77,6 +78,7 @@ def page_facts(
             on=newest_day(conn, units) or _ANY_DAY,
             units=units,
             bodyweight_units=bodyweight_units,
+            zone=zone,
         ),
         week=_week(conn, names),
         routines=_routines(conn, config, kits, names),
@@ -297,6 +299,7 @@ def _record(
     every_decision: Sequence[Row],
     units: Units,
     bodyweight_units: Units,
+    zone: datetime.tzinfo,
 ) -> CheckInRecord:
     return CheckInRecord(
         id=row.id,
@@ -305,7 +308,7 @@ def _record(
         window=row.window,
         readiness=row.readiness,
         read=check_ins.read_of(conn, row.id),
-        card=record_card(conn, row, units=units, bodyweight_units=bodyweight_units),
+        card=record_card(conn, row, units=units, bodyweight_units=bodyweight_units, zone=zone),
         decisions=tuple(_decision(d) for d in every_decision if d["check_in"] == row.id),
     )
 

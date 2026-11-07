@@ -425,3 +425,23 @@ def test_program_show_marks_the_rung_a_ladder_rung_decision_names(instance: Path
 
     assert recorded.code == 0, recorded.stdout
     assert [r["rung"] for r in ladder["rungs"] if r["standing"]] == [3]
+
+
+def test_progress_carries_each_ladder_line_on_its_standing_rung(instance: Path) -> None:
+    coach("program", "adopt", a_draft_file(instance, BALANCE_BOARD_DRAFT))
+
+    run = coach("progress")
+
+    assert run.envelope["result"]["ladders"] == [
+        {
+            "session": "daily-balance",
+            "line": "custom_balance_board_stand",
+            "rung": 1,
+            "exercise": "custom_balance_board_stand",
+            "rungs": 5,
+            "exposures": 0,
+            "needed": 2,
+            "met": False,
+            "next": "custom_balance_board_tilt",
+        }
+    ]

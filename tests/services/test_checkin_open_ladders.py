@@ -3,31 +3,15 @@ from typing import cast
 
 from support.check_in_cards import field_of, opened
 from support.clock import FixedClock, at
-from support.history import a_logged_workout
-from support.plans import SQUAT_LINE, a_squat_program
-from support.program_drafts import a_ladder_line, a_rung, a_session
+from support.ladders import a_ladder_program, ladder_rung_decision, logged
+from support.plans import a_squat_program
+from support.program_drafts import a_ladder_line, a_rung
 
 from coach.core.check_in_card import Ask
 from coach.services.checkin_record import checkin_record
 from coach.store.connection import Connection
 
 FIRST_SUNDAY = datetime.date(2026, 11, 8)
-TEMPLATES = {"dead_bug": "D8911FC4", "ab_wheel": "99D5F10E"}
-CORE_LADDER = a_ladder_line(
-    "dead_bug",
-    a_rung(sets=[{"count": 3, "reps": 10, "rpe": 8}]),
-    a_rung("ab_wheel", sets=[{"count": 3, "reps": 8, "rpe": 8}]),
-    a_rung("hanging_leg_raise", sets=[{"count": 3, "reps": 6, "rpe": 8}]),
-)
-
-
-def a_ladder_program(ladder: dict[str, object] = CORE_LADDER) -> Connection:
-    """Adopted on 30 Oct 2026, the opening rung's start."""
-    return a_squat_program(a_session("lower", SQUAT_LINE, ladder))
-
-
-def logged(conn: Connection, exercise: str, on: str, reps: int) -> None:
-    a_logged_workout(conn, f"h-{exercise}-{on}", on, (TEMPLATES[exercise], ((None, reps, 8),) * 3))
 
 
 type Row = dict[str, object]
@@ -108,10 +92,8 @@ def test_a_ladder_rung_in_the_check_in_draft_moves_the_next_card_to_the_new_rung
     conn = a_ladder_program()
     logged(conn, "dead_bug", "2026-11-02", 10)
     logged(conn, "dead_bug", "2026-11-05", 10)
-    draft = (
-        'date = 2026-11-08\ntier = "light"\nread = "Two clean weeks."\n'
-        '[[decision]]\nkind = "ladder_rung"\nsession = "lower"\nexercise = "dead_bug"\n'
-        'rung = 2\nbecause = "progress"\ntext = "Rung 1 met; the athlete said yes."\n'
+    draft = 'date = 2026-11-08\ntier = "light"\nread = "Two clean weeks."\n' + (
+        ladder_rung_decision(2)
     )
     checkin_record(conn, draft.encode(), file="c.toml", clock=FixedClock(at(FIRST_SUNDAY)))
 

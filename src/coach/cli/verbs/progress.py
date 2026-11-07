@@ -1,6 +1,9 @@
+import datetime
+
 from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.instance import open_instance_store
 from coach.cli.pull import PULL_SCHEMA
+from coach.core.check_in_card import ladder_row
 from coach.core.progress import (
     AdherenceRead,
     BestSet,
@@ -22,6 +25,7 @@ def run(call: InstanceCall) -> Outcome:
             units=call.instance.units,
             bodyweight_units=call.instance.bodyweight_units,
             full=call.full,
+            zone=call.clock.now().tzinfo or datetime.UTC,
         )
     block = found.block
     result: Json = {
@@ -30,6 +34,7 @@ def run(call: InstanceCall) -> Outcome:
         else {"id": block.id, "start": block.start.isoformat(), "end": block.end.isoformat()},
         "priority_lifts": [_lift(lift) for lift in found.lifts],
         "milestones": [_milestone(m) for m in found.milestones],
+        "ladders": [ladder_row(r) for r in found.ladders],
         "dose": {"target": dict(found.dose_target), "weeks": [_week(w) for w in found.dose]},
         "adherence": _adherence(found.adherence),
         "phase": _phase(found.phase),
@@ -126,7 +131,8 @@ DECLARATION = Declaration(
         "The block-boundary report: per priority lift the e1RM now and at the end of each of "
         "the last three closed Blocks, its change over the closed Block and over those three, "
         "the best set, the stall streak and resets under the current scheme and any cadence "
-        "signal; each milestone's reached date or what is to go; hard sets by muscle and "
+        "signal; each milestone's reached date or what is to go; each ladder line's standing "
+        "rung, its exposures toward the criterion and whether it is met; hard sets by muscle and "
         "priority lift for each week of the closed Block against target; core adherence and "
         "misses by tag; the Phase and its 14-day bodyweight trend; the Goal with its `why` "
         "verbatim. --full adds each line's history since the closed Block opened. Open cadence "
@@ -186,6 +192,29 @@ DECLARATION = Declaration(
                             "description": "load, reps or multiple to go; null once reached",
                             "type": ["object", "string", "null"],
                         },
+                    },
+                },
+            },
+            "ladders": {
+                "type": "array",
+                "description": (
+                    "every exercise_ladder line on its standing rung, as the check-in card shows it"
+                ),
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "session": {"type": "string"},
+                        "line": {"type": "string"},
+                        "rung": {"type": "integer"},
+                        "exercise": {"type": "string"},
+                        "rungs": {"type": "integer"},
+                        "exposures": {"type": "integer"},
+                        "needed": {
+                            "description": "null on a manual rung: the athlete's word",
+                            "type": ["integer", "null"],
+                        },
+                        "met": {"type": "boolean"},
+                        "next": {"type": ["string", "null"]},
                     },
                 },
             },
