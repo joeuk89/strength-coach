@@ -17,19 +17,14 @@ def skill_files(root: Path) -> list[Path]:
     return sorted(root.glob("*/SKILL.md"))
 
 
-def frontmatter(text: str) -> object:
-    """The parsed block between the opening `---` and the next; raises yaml.YAMLError if invalid."""
-    block = FRONTMATTER.match(text)
-    if block is None:
-        raise ValueError("no frontmatter")
-    return yaml.safe_load(block.group(1))
-
-
 def frontmatter_problems(text: str, directory: str) -> list[str]:
     """What stops the plugin loading the skill: a parse error, or a missing or wrong field."""
+    block = FRONTMATTER.match(text)
+    if block is None:
+        return ["no frontmatter"]
     try:
-        parsed = frontmatter(text)
-    except (ValueError, yaml.YAMLError) as error:
+        parsed: object = yaml.safe_load(block.group(1))
+    except yaml.YAMLError as error:
         return [str(error).splitlines()[0]]
     if not isinstance(parsed, dict):
         return ["frontmatter is not a mapping"]
