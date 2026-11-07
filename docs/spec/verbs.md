@@ -65,6 +65,14 @@ A Draft verb's dry run runs the real write inside its transaction and rolls back
 committing, so the ids it reports are the ones the next real run assigns, barring another write
 in between. A Writing verb's dry run opens no transaction.
 
+A Draft verb's declaration names the Draft it reads, so `coach <verb> --help` and `coach schema
+<verb>` give the file's shape as well as the arguments: its `draft` holds the kind, a JSON
+Schema recorded from the verb's own parser over a minimal example and coverage Drafts (so it
+cannot drift from what the parser reads), and the example. A scheme's params come from the
+`schemes` registry and the record tables from `record-kinds`, `check_in_only` kinds in the
+check-in file's schema alone. The schema states shape, not the cross-field rules the checks and
+the dry run report.
+
 **The pull.** A verb whose result derives from workouts pulls Hevy first, through the same
 service function `import` runs, when `[hevy]` is on: `checkin open`, `plan draft`, `progress`,
 `program adopt` (its dry run included, since the warnings read the last exposures) and `init`,
@@ -109,7 +117,8 @@ Three rules every leaf obeys:
   output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
   0006's approval prompt), `program adopt --dry-run` (every adopt warning), `report
   --dry-run` (the whole issue body the athlete approves) and `schema` with no argument (every
-  verb's declaration and every registry name, the agent's one call to see them all). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
+  verb's declaration and every registry name, the agent's one call to see them all) or naming a
+  Draft verb (the whole Draft schema the agent writes the file against). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
   paths into `result` only, allowed on every verb, and excludes `--full`; the envelope's own
   fields stay, `warnings[]` always present, and a path naming one is refused saying so. One generated size test per
   declaration.
@@ -153,7 +162,7 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | Leaf | Default `result` |
 | --- | --- |
 | `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified`); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`), `plan_behind_program` among them while this week's plan in force was approved under an older version; whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
-| `schema` | the declaration(s), or the registry rows |
+| `schema` | the declaration(s), or the registry rows. A Draft verb's declaration carries `draft`: the Draft `kind` (`program`, `plan`, `ledger`, `check-in`, `goal`, `report`), a JSON Schema 2020-12 `schema` of the TOML file recorded from the verb's own parser, and one minimal `example` the parser accepts. The verb-less listing leaves `draft` out of each row |
 | `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
 | `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
