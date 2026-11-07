@@ -42,7 +42,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
 | `goal adopt <draft> [--dry-run]` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
 | `progress` | store write (the pull) | the progress view (`goals.md`) |
-| `query <view> [params]` | read | one of the six read views below |
+| `query <view> [params]` | read | one of the seven read views below |
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
 | `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`), then the full pull when Hevy is on and a key is set |
@@ -223,16 +223,17 @@ opened or closed inside a check-in file or a `goal adopt` Draft (`goals.md`), so
 
 ## Read views
 
-Six parametrised reads under `query`, each within the cap, each a row list:
+Seven parametrised reads under `query`, each within the cap, each a row list:
 
 | View | Params | Rows |
 | --- | --- | --- |
-| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, e1RM, annotations applied |
+| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | exercise, date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, e1RM, annotations applied |
 | `readings` | `--kind weigh_in\|sleep_night\|activity`, `--last <n>` | the record's fields with source |
 | `flags` | `--code`, `--severity`, `--scope`, `--summary`, `--draft <path>` | flags frozen on the plan in force, or, with `--draft`, on that plan Draft re-validated now (the same validation `plan apply --dry-run` runs, read-only). With no filter, one row per flag code: `code`, `severity`, `count`, `keys[]` (each key with its params hash, in the Draft's order); the message is the registry's (`schema --registry flags`). A filter (`--code`, `--severity`, `--scope`) or `--full` gives one row per flag with its message; `--summary` gives counts by (code, severity) |
 | `lines` | `--exercise`, `--session`, `--date`, `--changed`, `--draft <path>` | lines of the plan in force, or of the named Draft: date, session, exercise, prescription, change from last week, flags |
 | `routines` | none | the Routine map joined to folders: session, routine id, folder, status, last verified |
 | `ledger` | `--kind <record kind>`, `--id <id>`, `--open` | the record's fields and its event history |
+| `exercises` | `--match <text>`, `--pattern <pattern>` (repeatable), `--muscle <muscle>` (repeatable), `--last <n>` | the library by id: id, name, load mode, equipment kind, pattern, muscles (primary and secondary), Hevy template id, source. `--match` is a case-insensitive substring of the id or name; a repeated `--pattern` or `--muscle` keeps any of them, a muscle counting in primary or secondary; the filters combine, and one that matches nothing gives no rows |
 
 Field projection is `--fields`, never a view. No verb knows a "current" Draft: a Draft is read by
 nothing after its verb consumes it (`instance.md`), so a read either names the file by path or

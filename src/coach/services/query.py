@@ -10,6 +10,7 @@ from coach.core.errors import Invalid
 from coach.core.exposure import Exposure
 from coach.core.flag import grouped
 from coach.core.frozen_prescription import dose, frozen_groups
+from coach.core.muscles import read_muscles
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import week_monday
 from coach.core.registries.agent import RECORD_KINDS
@@ -79,6 +80,47 @@ def exposures(
     return _newest([_exposure(e) for e in found], last)
 
 
+EXERCISE_FIELDS = (
+    "id",
+    "name",
+    "load_mode",
+    "equipment_kind",
+    "pattern",
+    "muscles",
+    "hevy_template_id",
+    "source",
+)
+
+
+def exercises(
+    conn: Connection,
+    *,
+    match: str | None,
+    patterns: tuple[str, ...],
+    muscles: tuple[str, ...],
+    last: int | None,
+) -> QueryResult:
+    """`query exercises`: the library by id, each filter given narrowing it further."""
+    rows = [
+        {field: row[field] for field in EXERCISE_FIELDS}
+        for row in library.every(conn)
+        if (match is None or _matches(row, match))
+        and (not patterns or row["pattern"] in patterns)
+        and (not muscles or not _named_muscles(row).isdisjoint(muscles))
+    ]
+    return _newest(rows, last)
+
+
+def _matches(exercise: Row, text: str) -> bool:
+    needle = text.casefold()
+    return needle in str(exercise["id"]).casefold() or needle in str(exercise["name"]).casefold()
+
+
+def _named_muscles(exercise: Row) -> set[str]:
+    named = read_muscles(exercise["muscles"]) or {}
+    return {name for names in named.values() for name in names}
+
+
 def _exposure(exposure: Exposure) -> Row:
     top = exposure.top_load
     best = max(
@@ -88,6 +130,7 @@ def _exposure(exposure: Exposure) -> Row:
     )
     return {
         "exposure": exposure.ref,
+        "exercise": exposure.exercise_id,
         "date": exposure.date.isoformat(),
         "session": exposure.session_id,
         "load": None if top is None else top.amount,

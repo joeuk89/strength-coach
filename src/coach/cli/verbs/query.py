@@ -19,6 +19,7 @@ from coach.core.registries.agent import VIEWS
 from coach.services.plan_apply import validate
 from coach.services.query import (
     QueryResult,
+    exercises,
     exposures,
     flags,
     ledger,
@@ -79,6 +80,14 @@ def run(call: InstanceCall) -> Outcome:
                 changed=call.args.get("changed") is True,
                 last=last,
             )
+        elif view == "exercises":
+            result = exercises(
+                conn,
+                match=_text(call, "match"),
+                patterns=_texts(call, "pattern"),
+                muscles=_texts(call, "muscle"),
+                last=last,
+            )
         else:
             result = routines(conn, last=last)
     return Outcome(_rows(result))
@@ -131,8 +140,9 @@ DECLARATION = Declaration(
     "annotations applied and its e1RM), readings (Weigh-ins, Sleep nights, Activities), "
     "flags and lines (of the plan in force, or of a plan Draft validated now with --draft; "
     "flags gives one row per code with its keys, and a filter or --full gives one row per flag), "
-    "routines (the Routine map with each routine's folder, status and last verify) or "
-    "ledger (one record kind with its withdrawals or event history, or one record by id).",
+    "routines (the Routine map with each routine's folder, status and last verify), "
+    "ledger (one record kind with its withdrawals or event history, or one record by id) or "
+    "exercises (the exercise library by id, filtered by text, pattern or muscle).",
     writes="none",
     arguments=(
         Argument("view", f"one of {', '.join(VIEWS.names())}", required=True),
@@ -153,6 +163,15 @@ DECLARATION = Declaration(
         Argument("--kind", "readings: weigh_in, sleep_night or activity; ledger: a record kind"),
         Argument("--id", "ledger: one record by id"),
         Argument("--open", "ledger: live rows only", takes_value=False),
+        Argument("--match", "exercises: text in the id or name, any case"),
+        Argument(
+            "--pattern", "exercises: one movement pattern; repeat for any of", repeatable=True
+        ),
+        Argument(
+            "--muscle",
+            "exercises: one muscle, primary or secondary; repeat for any of",
+            repeatable=True,
+        ),
     ),
     output={
         "type": "object",
@@ -180,5 +199,9 @@ DECLARATION = Declaration(
             "Every flag of the plan in force, one row each with its message.",
         ),
         Example(("query", "lines", "--changed"), "The plan in force's lines that moved."),
+        Example(
+            ("query", "exercises", "--pattern", "hinge"),
+            "The library's hinge exercises, to check before declaring a new one.",
+        ),
     ),
 )

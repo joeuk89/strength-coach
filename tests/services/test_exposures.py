@@ -46,6 +46,7 @@ def test_the_view_shows_each_exposure_newest_first_with_its_e1rm() -> None:
     assert result.rows == [
         {
             "exposure": "exposure:h-2/bb_bench_press",
+            "exercise": "bb_bench_press",
             "date": "2026-10-26",
             "session": None,
             "load": 102.5,
@@ -58,6 +59,7 @@ def test_the_view_shows_each_exposure_newest_first_with_its_e1rm() -> None:
         },
         {
             "exposure": "exposure:h-1/bb_bench_press",
+            "exercise": "bb_bench_press",
             "date": "2026-10-19",
             "session": None,
             "load": 100,
@@ -70,6 +72,18 @@ def test_the_view_shows_each_exposure_newest_first_with_its_e1rm() -> None:
         },
     ]
     assert (result.count, result.truncated) == (2, False)
+
+
+def test_each_row_names_its_exercise_beside_the_exposure() -> None:
+    conn = a_library()
+    a_logged_workout(conn, "h-1", "2026-10-26", (BENCH, ((100, 5, 8),)), (SQUAT, ((140, 5, 8),)))
+
+    result = exposures(conn, exercises=(), since=None, last=10, units="kg")
+
+    assert [(row["exposure"], row["exercise"]) for row in result.rows] == [
+        ("exposure:h-1/bb_back_squat", "bb_back_squat"),
+        ("exposure:h-1/bb_bench_press", "bb_bench_press"),
+    ]
 
 
 def test_the_view_keeps_the_last_n_and_says_more_exist() -> None:
