@@ -1,7 +1,7 @@
 """The violations `program adopt` raises on a form (docs/spec/program.md, "Violations")."""
 
 import itertools
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -146,7 +146,7 @@ class _Checks:
         named = [*muscles["primary"], *muscles["secondary"]] if muscles else []
         self._muscles(named, scope, f"{id_} names")
 
-    def _muscles(self, names: Sequence[str], scope: Scope, where: str) -> None:
+    def _muscles(self, names: Iterable[str], scope: Scope, where: str) -> None:
         unknown = next((name for name in names if name not in MUSCLES), None)
         if unknown is not None:
             self.raise_(
@@ -234,8 +234,7 @@ class _Checks:
                 params,
                 "a coach-led session carries estimated_sets and no lines; others the reverse",
             )
-        if session.estimated_sets:
-            self._muscles(list(session.estimated_sets), scope, "estimated_sets names")
+        self._muscles(session.estimated_sets or (), scope, "estimated_sets names")
         self._cadence(session, scope)
         if session.location is not None and session.location not in self.context.racks:
             self.raise_(
