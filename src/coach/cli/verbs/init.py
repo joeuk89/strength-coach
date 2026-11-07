@@ -14,11 +14,12 @@ from coach.cli.declaration import (
     Outcome,
 )
 from coach.cli.generated import generated_files
-from coach.cli.hevy_key import find_key
+from coach.cli.keys import find_secret
 from coach.cli.pull import PULL_SCHEMA, Pulled, pull, with_pull
 from coach.core.config import Config, Engine, Hevy
 from coach.core.engine_pin import is_release
 from coach.core.errors import Invalid, Setup, Unreachable
+from coach.hevy.client import KEY_NAME
 from coach.render.instance_files import GITIGNORE, coach_toml
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
@@ -65,7 +66,7 @@ def run(call: Call) -> Outcome:
         return Outcome({"dry_run": True, **summary, "git_init": git_init})
     git.check_can_commit(root)
     if call.terminal.interactive:
-        keyed = hevy.key or find_key(call.env, root / ".env")
+        keyed = hevy.key or find_secret(KEY_NAME, call.env, root / ".env")
         pulls = " and then pull the Hevy history" if hevy.on and keyed else ""
         call.terminal.say(f"coach init will write{pulls}:\n" + "\n".join(f"  {f}" for f in files))
         if not call.terminal.confirm("Write these files and commit them?"):
@@ -89,7 +90,9 @@ def run(call: Call) -> Outcome:
 def _first_pull(call: Call, instance: Instance) -> Pulled | None:
     """The full pull of the Hevy history, run after the commit so a failed one leaves the
     instance written for the next pulling verb to complete. With no key yet, that verb pulls."""
-    if instance.config.hevy is None or find_key(call.env, instance.root / ".env") is None:
+    if instance.config.hevy is None:
+        return None
+    if find_secret(KEY_NAME, call.env, instance.root / ".env") is None:
         return None
     clock = call.make_clock(instance.config.athlete.timezone)
     try:
