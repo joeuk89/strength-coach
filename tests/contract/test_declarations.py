@@ -10,7 +10,7 @@ from coach.cli import app
 from coach.cli.declaration import Declaration, Example
 from coach.cli.registry import declarations
 
-LEAVES = 16
+LEAVES = 17
 
 EXAMPLES = [
     pytest.param(declaration, example, id=" ".join(example.argv))
@@ -19,7 +19,7 @@ EXAMPLES = [
 ]
 
 
-def test_there_are_exactly_sixteen_leaves() -> None:
+def test_there_are_exactly_seventeen_leaves() -> None:
     assert len(declarations()) == LEAVES
 
 

@@ -8,11 +8,12 @@ ALLOWED = {
     "core": {"core"},
     "store": {"core", "store"},
     "hevy": {"core", "hevy"},
+    "github": {"core", "github"},
     "render": {"core", "render"},
-    "services": {"core", "store", "hevy", "render", "services"},
-    "cli": {"core", "store", "hevy", "render", "services", "cli"},
+    "services": {"core", "store", "hevy", "github", "render", "services"},
+    "cli": {"core", "store", "hevy", "github", "render", "services", "cli"},
 }
-IO_LAYERS = {"store", "hevy", "cli"}
+IO_LAYERS = {"store", "hevy", "github", "cli"}
 IO_MODULES = {"sqlite3", "os", "pathlib", "urllib", "subprocess", "time"}
 CLOCK_CALLS = {"now", "today", "utcnow"}
 CLOCK_OWNERS = {"datetime", "date"}

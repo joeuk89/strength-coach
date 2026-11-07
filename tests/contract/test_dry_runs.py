@@ -17,7 +17,7 @@ def takes_a_draft(declaration: Declaration) -> bool:
     return any(a.key == "draft" and a.positional for a in declaration.arguments)
 
 
-DRY_RUNS = [d for d in declarations() if d.writes in ("hevy", "git") or takes_a_draft(d)]
+DRY_RUNS = [d for d in declarations() if d.writes in ("hevy", "git", "github") or takes_a_draft(d)]
 
 
 def a_plan_draft(root: Path) -> str:
@@ -48,6 +48,7 @@ DRAFTS: dict[str, Callable[[Path], str]] = {
     "checkin record": written(
         "checkin.toml", f'date = {TODAY}\ntier = "light"\nread = "a steady week"\n'
     ),
+    "report": written("report.toml", 'kind = "gap"\ntitle = "No swims"\nbody = "Swims."\n'),
 }
 
 

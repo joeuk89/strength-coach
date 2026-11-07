@@ -682,7 +682,7 @@ _Avoid_: response, output, payload
 
 **Result class**:
 The kind of outcome a verb had, carried by its exit code: ok, data or check failed, a guard
-refused a write, Hevy unreachable, or setup stops it. The specific reason lives in the envelope.
+refused a write, a remote (Hevy or GitHub) unreachable, or setup stops it. The specific reason lives in the envelope.
 _Avoid_: status, error level
 
 **Writing verb**:

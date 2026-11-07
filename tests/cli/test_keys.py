@@ -1,0 +1,66 @@
+from pathlib import Path
+
+import pytest
+
+from coach.cli.keys import find_secret, github_token, hevy_key
+from coach.core.errors import Setup
+
+
+def test_the_environment_wins_over_dotenv(tmp_path: Path) -> None:
+    (tmp_path / ".env").write_text("HEVY_API_KEY=from-file\n", encoding="utf-8")
+
+    assert hevy_key({"HEVY_API_KEY": "from-env"}, tmp_path / ".env") == "from-env"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "HEVY_API_KEY=from-file\n",
+        'HEVY_API_KEY="from-file"\n',
+        "# a comment\nexport HEVY_API_KEY='from-file'\n",
+        "OTHER=x\n  HEVY_API_KEY = from-file  \n",
+    ],
+)
+def test_dotenv_supplies_the_key_when_the_environment_has_none(tmp_path: Path, text: str) -> None:
+    (tmp_path / ".env").write_text(text, encoding="utf-8")
+
+    assert hevy_key({"HEVY_API_KEY": "  "}, tmp_path / ".env") == "from-file"
+
+
+@pytest.mark.parametrize("dotenv", [None, "OTHER=x\n", "HEVY_API_KEY=\n"])
+def test_no_key_anywhere_is_hevy_key_missing(tmp_path: Path, dotenv: str | None) -> None:
+    if dotenv is not None:
+        (tmp_path / ".env").write_text(dotenv, encoding="utf-8")
+
+    with pytest.raises(Setup) as raised:
+        hevy_key({}, tmp_path / ".env")
+
+    assert raised.value.code == "hevy_key_missing"
+
+
+def test_each_secret_is_read_by_its_own_name_from_one_dotenv(tmp_path: Path) -> None:
+    (tmp_path / ".env").write_text(
+        "HEVY_API_KEY=hevy-key\nCOACH_GITHUB_TOKEN=github-token\n", encoding="utf-8"
+    )
+
+    assert find_secret("HEVY_API_KEY", {}, tmp_path / ".env") == "hevy-key"
+    assert find_secret("COACH_GITHUB_TOKEN", {}, tmp_path / ".env") == "github-token"
+    assert find_secret("OTHER", {}, tmp_path / ".env") is None
+
+
+def test_the_github_token_comes_from_the_environment_then_dotenv(tmp_path: Path) -> None:
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("COACH_GITHUB_TOKEN=from-file\n", encoding="utf-8")
+
+    assert github_token({"COACH_GITHUB_TOKEN": "from-env"}, dotenv) == "from-env"
+    assert github_token({}, dotenv) == "from-file"
+
+
+def test_no_github_token_anywhere_is_github_token_missing(tmp_path: Path) -> None:
+    (tmp_path / ".env").write_text("HEVY_API_KEY=hevy-key\n", encoding="utf-8")
+
+    with pytest.raises(Setup) as raised:
+        github_token({"HEVY_API_KEY": "x"}, tmp_path / ".env")
+
+    assert raised.value.code == "github_token_missing"
+    assert "COACH_GITHUB_TOKEN" in raised.value.message

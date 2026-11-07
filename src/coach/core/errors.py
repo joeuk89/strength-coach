@@ -32,7 +32,7 @@ class Refused(CoachError):
 
 
 class Unreachable(CoachError):
-    """Hevy could not be reached."""
+    """A remote, Hevy or GitHub, could not be reached or gave an answer the client cannot use."""
 
 
 class Setup(CoachError):

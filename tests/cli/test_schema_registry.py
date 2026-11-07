@@ -134,4 +134,35 @@ def test_the_follow_up_record_kind_is_spelled_as_its_table() -> None:
     run = run_coach("schema", "--registry", "record-kinds")
 
     rows = run.envelope["result"]["rows"]
-    assert {"name": "follow_up", "table": "[[follow_up]]", "check_in_only": False} in rows
+    assert {
+        "name": "follow_up",
+        "table": "[[follow_up]]",
+        "id_prefix": "f-",
+        "check_in_only": False,
+    } in rows
+
+
+def test_the_record_kinds_registry_gives_each_kind_its_id_prefix() -> None:
+    run = run_coach("schema", "--registry", "record-kinds", "--full")
+
+    prefixes = {row["name"]: row["id_prefix"] for row in run.envelope["result"]["rows"]}
+    assert prefixes["niggle"] == "n-"
+    assert prefixes["note"] == "an-"
+    assert prefixes["exercise"] is None
+
+
+def test_the_errors_registry_gives_each_code_its_class_exit_and_summary() -> None:
+    run = run_coach("schema", "--registry", "errors", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert run.code == 0
+    expected = {
+        "state_conflict": ("invalid", 1),
+        "expect_mismatch": ("refused", 3),
+        "hevy_unreachable": ("unreachable", 4),
+        "no_instance": ("setup", 5),
+        "internal_error": ("internal", 1),
+    }
+    assert set(rows["hevy_unreachable"]) == {"code", "class", "exit", "summary"}
+    assert {code: (rows[code]["class"], rows[code]["exit"]) for code in expected} == expected
+    assert all(row["summary"] for row in rows.values())

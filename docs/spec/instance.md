@@ -11,7 +11,7 @@ Ownership tiers and where numbers live are ADR 0013; this page is the tables.
 <instance>/
 ├── coach.toml                 athlete-authored; [engine] section engine-owned
 ├── profile.md                 athlete prose, written by onboard on the athlete's yes (ADR 0009)
-├── .env                       HEVY_API_KEY=…  gitignored
+├── .env                       HEVY_API_KEY=…, COACH_GITHUB_TOKEN=…  gitignored
 ├── .gitignore                 written once by init; the athlete may extend it
 ├── CLAUDE.md                  generated, engine-owned
 ├── README.md                  written by publish (ADR 0012)
@@ -56,8 +56,11 @@ run, not the file (ADR 0006), so the directory need not be visible.
 
 ## Secrets and the Hevy switch
 
-`.env` at the instance root holds exactly `HEVY_API_KEY`, gitignored, written by `init` when a
-key is given; the environment variable overrides it (ADR 0011). Whether Hevy is used is the
+`.env` at the instance root holds exactly two keys, gitignored, each written by `init` when it
+is given and each overridden by the environment variable of the same name: `HEVY_API_KEY`
+(`--hevy-key`, ADR 0011) and `COACH_GITHUB_TOKEN` (`--github-token`), the fine-grained
+Issues-write token `report` files with (`voice.md`, "Reporting"); a `report` with no token stops
+with exit 5, `github_token_missing`. Whether Hevy is used is the
 presence of the `[hevy]` table in `coach.toml`, which is committed: a table with no key stops
 `import`, `plan apply` and every verb that pulls first with exit 5, `error.code = hevy_key_missing` (`verbs.md`), so a second
 machine that clones without `.env` fails loudly instead of planning without Hevy. No `enabled`
@@ -210,5 +213,7 @@ the engine version; `coach --help` and `coach schema` as the way to learn verbs;
 named once; the drafts convention named once; the one procedural line (the athlete says yes
 before any verb records); one line for the ad-hoc moment (a question outside the skills is
 read-only: `coach status`, `coach progress`, `coach query`; `docs/spec/skills.md`); where the
-never-list's items live. Skills, hooks and permission rules
+never-list's items live; after the bullet list, the Coach's voice section, verbatim from
+`docs/spec/voice.md` ("The rule"), then the one line on reporting a bug or a Gap, verbatim from
+`docs/spec/voice.md` ("Reporting"). Skills, hooks and permission rules
 come from the plugin and `settings.json`, so it lists none of them.

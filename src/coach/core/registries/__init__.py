@@ -1,4 +1,5 @@
 from coach.core.registries.agent import RECORD_KINDS, VIEWS
+from coach.core.registries.errors import ERRORS
 from coach.core.registries.flags import FLAGS
 from coach.core.registries.hevy import ROUTINE_STATUSES
 from coach.core.registries.ledger import (
@@ -35,7 +36,8 @@ from coach.core.registries.registry import Entry, Registry
 from coach.core.registries.schemes import SCHEMES
 from coach.core.registries.week import OVERRIDE_KINDS, PLAN_STATUSES
 
-# The `verbs.md` names first, then one registry per remaining CHECK list in `schema.sql`.
+# The `verbs.md` names first, then one registry per remaining CHECK list in `schema.sql`, then
+# the error codes.
 REGISTRIES: tuple[Registry[Entry], ...] = (
     SCHEMES,
     FLAGS,
@@ -68,6 +70,7 @@ REGISTRIES: tuple[Registry[Entry], ...] = (
     GOAL_KINDS,
     GOAL_STATUSES,
     ROUTINE_STATUSES,
+    ERRORS,
 )
 
 

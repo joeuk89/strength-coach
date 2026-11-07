@@ -32,7 +32,7 @@ rather than carrying them.
   present a smaller schedule with the same weekly hard sets per muscle. The rotation position is
   confirmed, not asked.
 - **Patterns.** Raise an Observation when something has held across check-ins; retire one that
-  stopped holding. Cite the exposures or notes it rests on (`coach query`).
+  stopped holding. In the record, cite the exposures or notes it rests on (`coach query`).
 
 ## Explain
 The read is one or two sentences on the week, then what the tables cannot say. Lead with a win
@@ -40,7 +40,8 @@ when there is one. Quote every number from the card or the rendered record; neve
 Name each decision and its reason in plain words. Say what next week will feel like, not what
 it will contain; the plan does that.
 
-Run the verb's dry run, quote what it shows, and the athlete says yes before the verb records it.
+Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
+nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
 `coach status`, `coach checkin open`, `coach checkin record`, `coach query`
