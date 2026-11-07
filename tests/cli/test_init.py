@@ -286,6 +286,50 @@ def test_a_hevy_key_beside_an_existing_env_stops_before_a_file_is_written(
     assert (empty_directory / ".env").read_text() == "OTHER=1\n"
 
 
+def test_a_github_token_lands_in_the_gitignored_env_and_leaves_hevy_off(
+    empty_directory: Path, release: None
+) -> None:
+    run = run_coach("init", "--defaults", "--github-token", "test-token-not-real")
+
+    assert run.code == 0, run.stdout
+    assert "hevy" not in coach_toml(empty_directory)
+    assert (empty_directory / ".env").read_text() == "COACH_GITHUB_TOKEN=test-token-not-real\n"
+    assert ".env" not in run.envelope["result"]["committed"]
+    assert "test-token-not-real" not in run.stdout
+
+
+def test_a_github_token_is_written_beside_the_hevy_key(
+    empty_directory: Path, release: None
+) -> None:
+    hevy = serving(FakeHevy(FixedClock()))
+
+    run = run_coach(
+        "init",
+        "--defaults",
+        "--hevy-key",
+        "test-key-not-real",
+        "--github-token",
+        "test-token-not-real",
+        make_client=hevy,
+    )
+
+    assert run.code == 0, run.stdout
+    assert (empty_directory / ".env").read_text() == (
+        "HEVY_API_KEY=test-key-not-real\nCOACH_GITHUB_TOKEN=test-token-not-real\n"
+    )
+
+
+def test_a_github_token_beside_an_existing_env_stops_before_a_file_is_written(
+    empty_directory: Path, release: None
+) -> None:
+    (empty_directory / ".env").write_text("OTHER=1\n")
+
+    run = run_coach("init", "--defaults", "--github-token", "test-token-not-real")
+
+    assert (run.code, run.envelope["error"]["code"]) == (5, "env_file_exists")
+    assert (empty_directory / ".env").read_text() == "OTHER=1\n"
+
+
 def test_hevy_without_a_key_writes_the_table_and_no_env(
     empty_directory: Path, release: None
 ) -> None:

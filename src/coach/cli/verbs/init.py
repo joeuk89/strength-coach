@@ -19,6 +19,7 @@ from coach.cli.pull import PULL_SCHEMA, Pulled, pull, with_pull
 from coach.core.config import Config, Engine, Hevy
 from coach.core.engine_pin import is_release
 from coach.core.errors import Invalid, Setup, Unreachable
+from coach.github.client import TOKEN_NAME
 from coach.hevy.client import KEY_NAME
 from coach.render.instance_files import GITIGNORE, coach_toml
 from coach.store.catalogue import seed_catalogue
@@ -58,7 +59,8 @@ def run(call: Call) -> Outcome:
     athlete = init_answers.athlete(args, defaults=defaults, terminal=call.terminal, env=call.env)
     hevy = init_answers.hevy(args, defaults=defaults, terminal=call.terminal)
     config = Config(engine=Engine(pin), athlete=athlete, hevy=Hevy() if hevy.on else None)
-    texts = _texts(root, config, pin, hevy.key)
+    token = args.get("github_token")
+    texts = _texts(root, config, pin, hevy.key, token if isinstance(token, str) else None)
     files = [*texts, *DIRECTORIES, STORE]
     summary: Json = {"pin": pin, "hevy": {"on": hevy.on}, "files": files}
     git_init = not git.is_repo(root)
@@ -135,16 +137,22 @@ def _pin(running: str, requested: ArgValue | None) -> str:
     return running
 
 
-def _texts(root: Path, config: Config, pin: str, key: str | None) -> dict[str, str]:
+def _texts(
+    root: Path, config: Config, pin: str, key: str | None, token: str | None
+) -> dict[str, str]:
     texts = {
         ".gitignore": _gitignore(root / ".gitignore"),
         **generated_files(pin),
         "coach.toml": coach_toml(config),
     }
-    if key is not None:
+    secrets = [(name, value) for name, value in ((KEY_NAME, key), (TOKEN_NAME, token)) if value]
+    if secrets:
         if (root / ".env").exists():
-            raise Setup("env_file_exists", f"{root / '.env'} exists; drop --hevy-key or it")
-        texts[".env"] = f"HEVY_API_KEY={key}\n"
+            raise Setup(
+                "env_file_exists",
+                f"{root / '.env'} exists; drop --hevy-key and --github-token, or the file",
+            )
+        texts[".env"] = "".join(f"{name}={value}\n" for name, value in secrets)
     return texts
 
 
@@ -190,6 +198,11 @@ DECLARATION = Declaration(
         Argument("--hevy", "yes or no: whether workouts are logged in Hevy"),
         Argument(
             "--hevy-key", "the Hevy API key, written to the gitignored .env; implies --hevy yes"
+        ),
+        Argument(
+            "--github-token",
+            "the token report files issues with, written to the gitignored .env beside the Hevy "
+            "key",
         ),
     ),
     output={
