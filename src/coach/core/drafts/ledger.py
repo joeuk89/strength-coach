@@ -396,7 +396,8 @@ because = "lean out"
 )
 
 
-def _with_record_tables(recording: Recording, schema: Json, *, check_in: bool) -> Json:
+def _with_record_tables(recording: Recording, *, check_in: bool) -> Json:
+    schema = recording.schema()
     tables: Json = {
         kind.name: {"type": "array", "items": recording.schema((kind.name, ITEMS))}
         for kind in RECORD_KINDS.entries
@@ -410,7 +411,7 @@ RECORD = DraftKind(
     lambda data: parse_ledger_draft(data, verb="record", file="draft"),
     RECORD_EXAMPLE,
     RECORD_COVERAGE,
-    lambda recording: _with_record_tables(recording, recording.schema(), check_in=False),
+    lambda recording: _with_record_tables(recording, check_in=False),
 )
 
 CHECK_IN = DraftKind(
@@ -418,5 +419,5 @@ CHECK_IN = DraftKind(
     lambda data: parse_check_in_file(data, file="draft"),
     CHECK_IN_EXAMPLE,
     CHECK_IN_COVERAGE,
-    lambda recording: _with_record_tables(recording, recording.schema(), check_in=True),
+    lambda recording: _with_record_tables(recording, check_in=True),
 )

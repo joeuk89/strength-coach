@@ -12,6 +12,7 @@ from coach.core.draft_schema import (
     BOOLEAN,
     TABLE,
     TEXT,
+    TEXTS,
     Json,
     Location,
     Named,
@@ -53,7 +54,6 @@ from coach.core.registries.program import (
 
 type Table = Mapping[str, object]
 
-NAMES: Json = {"type": "array", "items": TEXT}
 SESSION_IDS: Json = {"anyOf": [TEXT, {"type": "array", "minItems": 1, "items": TEXT}]}
 COUNT: Json = {"type": "integer", "minimum": 1}
 WHOLE: Json = {"type": "integer", "minimum": 0}
@@ -415,7 +415,7 @@ class _Reader:
         return self._text(key)
 
     def texts(self, key: str) -> list[str]:
-        self._note(key, NAMES, required=True)
+        self._note(key, TEXTS, required=True)
         value = self.raw(key)
         if not _is_list(value) or not all(isinstance(v, str) and v for v in _items(value)):
             raise self.wrong(key, "a list of names")

@@ -149,9 +149,10 @@ class Recording:
         self, at: Path = (), replace: Mapping[Path, Callable[[Json], Json]] | None = None
     ) -> Json:
         """The table at `at` as JSON Schema; `replace` rewrites the recorded shape of a table."""
+        replace = replace or {}
         node = self._nodes.get(at, _Node())
         properties: Json = {
-            key: self._property(at, key, entry, replace or {}) for key, entry in node.keys.items()
+            key: self._property(at, key, entry, replace) for key, entry in node.keys.items()
         }
         required = [
             key
@@ -160,14 +161,14 @@ class Recording:
         ]
         named: object = False
         if node.named is not None:
-            named = self._property(at, ANY_KEY, node.named, replace or {})
+            named = self._property(at, ANY_KEY, node.named, replace)
         shape: Json = {
             "type": "object",
             "properties": properties,
             "required": required,
             "additionalProperties": named,
         }
-        rewrite = (replace or {}).get(at)
+        rewrite = replace.get(at)
         return rewrite(shape) if rewrite else shape
 
     def _property(
@@ -230,7 +231,6 @@ def current() -> Recording | None:
 
 
 def record(read: Callable[[bytes], object], documents: Iterable[str]) -> Recording:
-    """Run `read` over each document under one recording."""
     found = Recording()
     token = _CURRENT.set(found)
     try:
@@ -240,10 +240,6 @@ def record(read: Callable[[bytes], object], documents: Iterable[str]) -> Recordi
     finally:
         _CURRENT.reset(token)
     return found
-
-
-def as_recorded(recording: Recording) -> Json:
-    return recording.schema()
 
 
 @dataclass(frozen=True)
@@ -256,7 +252,7 @@ class DraftKind:
     read: Callable[[bytes], object]
     example: str
     coverage: tuple[str, ...]
-    shaped: Callable[[Recording], Json] = as_recorded
+    shaped: Callable[[Recording], Json] = Recording.schema
 
     def recording(self) -> Recording:
         return record(self.read, (self.example, *self.coverage))
