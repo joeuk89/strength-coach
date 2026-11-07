@@ -214,5 +214,6 @@ named once; the drafts convention named once; the one procedural line (the athle
 before any verb records); one line for the ad-hoc moment (a question outside the skills is
 read-only: `coach status`, `coach progress`, `coach query`; `docs/spec/skills.md`); where the
 never-list's items live; after the bullet list, the Coach's voice section, verbatim from
-`docs/spec/voice.md` ("The rule"). Skills, hooks and permission rules
+`docs/spec/voice.md` ("The rule"), then the one line on reporting a bug or a Gap, verbatim from
+`docs/spec/voice.md` ("Reporting"). Skills, hooks and permission rules
 come from the plugin and `settings.json`, so it lists none of them.

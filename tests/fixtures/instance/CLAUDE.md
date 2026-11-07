@@ -23,4 +23,10 @@ code, id, file path, commit, exit code or code block, and no narration of what t
 Say what a result means for their training, never what it is called. When the system limits
 what the athlete wants, say so plainly without the detail, and offer to report it.
 
+When the system fails or cannot do what the athlete needs, offer to report it: write the report
+as a Draft, run `coach report <draft>`, and tell them in plain words it is written and waits
+for their yes; the prompt shows them the exact text. Only a bug or a gap is reported, never a
+disagreement with a rule. If it cannot be sent, say so without the detail and that it is kept;
+the Draft stays for a later try.
+
 This file and `.claude/settings.json` are generated; `coach upgrade` rewrites both.
