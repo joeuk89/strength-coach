@@ -88,6 +88,7 @@ def _exposure(exposure: Exposure) -> Row:
     )
     return {
         "exposure": exposure.ref,
+        "exercise": exposure.exercise_id,
         "date": exposure.date.isoformat(),
         "session": exposure.session_id,
         "load": None if top is None else top.amount,
