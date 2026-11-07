@@ -8,6 +8,7 @@ import pytest
 from support.cli import run_coach
 from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
+from support.fixture_instances import serving
 from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
 from support.plans import a_plan_override, an_approved_plan
@@ -22,7 +23,6 @@ from support.program_drafts import (
 from support.programs import GYM, HOME
 
 from coach.cli import app
-from coach.core.clock import Clock
 from coach.core.config import WEEKDAYS
 from coach.core.goal import Goal
 from coach.store import exercises, goals
@@ -201,10 +201,6 @@ def test_with_hevy_on_a_template_value_hevy_rejects_is_exit_1_and_nothing_adopts
         "custom_ring_row", sets=[{"count": 3, "reps": [10, 15], "rpe": 8}], start_load=None
     )
     draft = a_draft(a_session("push", a_line(), line), exercise={"custom_ring_row": ring_row})
-    hevy = FakeHevy(CLOCK)
-
-    def serving(key: str, audit_path: Path, clock: Clock) -> FakeHevy:
-        return hevy
 
     run = run_coach(
         "program",
@@ -212,7 +208,7 @@ def test_with_hevy_on_a_template_value_hevy_rejects_is_exit_1_and_nothing_adopts
         a_draft_file(instance, toml(draft)),
         env={"HEVY_API_KEY": "a-key"},
         clock=CLOCK,
-        make_client=serving,
+        make_client=serving(FakeHevy(CLOCK)),
     )
 
     assert run.code == 1, run.stdout
