@@ -32,18 +32,22 @@ show. One message; follow up only for a gap that blocks the design.
   session's estimate against its `minutes` in the dry run; cut accessories first where it runs
   close. Superset small lifts to buy time, never the compounds.
 - **Scheme, RPE and rest per line.** A top set and back-offs on a load-bearing priority lift,
-  double progression elsewhere, a ladder while a lift is assisted. A line with no load to add
-  whose next step is a different exercise or stance gets an exercise ladder, never a ladder in
-  `cues`; a stance the logs cannot tell apart is its own custom exercise. A coarse rack, a new lift or
+  double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
   a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
   with the reason or change the line.
+- **Ladders.** A line with no load to add whose next step is a different exercise or stance
+  gets an `exercise_ladder`; a loaded lift moves through its scheme and the cadence signals.
+  Every rung is an exercise; a stance the logs cannot tell apart is its own custom exercise,
+  never a ladder in `cues`. The line opens on rung 1, and the rung it stands on is a
+  `ladder_rung` Decision, never an edit to the version. Answer `ladder_top` at a block boundary
+  with an `amend` giving the line a new scheme.
 - **New exercises.** An exercise the library lacks is declared in the Draft as
   `[exercise.<id>]` with `name`, `load_mode`, `equipment_kind`, `pattern` and `muscles`.
   Without a Hevy template id it also needs `hevy_title`, `hevy_exercise_type`,
   `hevy_equipment` and `hevy_muscle_group`; `plan apply` creates the template. Adopt checks
   each value against its registry (`coach schema --registry <name>`): `load-modes`,
   `equipment-kinds`, `patterns`, `muscles`, `hevy-exercise-types`, `hevy-equipment` and
-  `hevy-muscle-groups`. Check the library first with `coach query exercises`.
+  `hevy-muscle-groups`.
 - **Dose.** The filled targets open a block, they do not cap it. Raise a muscle the report shows
   behind and under target; leave what is growing alone. A deficit keeps the dose, a surplus can
   carry more; `dose_off_band` names the departure. An older athlete, or one who recovers slowly,
