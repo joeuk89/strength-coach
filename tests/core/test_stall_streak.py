@@ -18,9 +18,12 @@ def squat_on(on: str, *sets: tuple[float, int, float], **match: Any) -> Exposure
 
 
 def derive(
-    *exposures: Exposure, line: Any = None, redesigned: datetime.date | None = None
+    *exposures: Exposure,
+    line: Any = None,
+    redesigned: datetime.date | None = None,
+    kind: str = "lifting",
 ) -> LinePrescription:
-    request = a_request(line or a_line(), exposures=exposures, redesigned=redesigned)
+    request = a_request(line or a_line(), exposures=exposures, redesigned=redesigned, kind=kind)
     return prescribe(request).lines[0]
 
 
@@ -41,9 +44,9 @@ def test_three_ordinary_exposures_with_no_gain_raise_stall_streak_with_their_ref
 
 
 def test_a_practice_line_on_double_progression_raises_no_stall_streak() -> None:
-    exposures = (squat_on("2026-10-12"), squat_on("2026-10-19"), squat_on("2026-10-26"))
-
-    line = prescribe(a_request(a_line(), exposures=exposures, kind="practice")).lines[0]
+    line = derive(
+        squat_on("2026-10-12"), squat_on("2026-10-19"), squat_on("2026-10-26"), kind="practice"
+    )
 
     assert stalls(line) == []
 

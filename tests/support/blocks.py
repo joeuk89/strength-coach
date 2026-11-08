@@ -31,8 +31,6 @@ PULL_UP_LINE = a_line("pull_up", sets=[{"count": 3, "reps": [5, 8], "rpe": 8}], 
 LIGHT_WEEKS = (2, 5)
 WEEKS = 6
 FLAT_BENCH = (100.0,) * WEEKS
-_TWO_DAYS = datetime.timedelta(days=2)
-_THREE_DAYS = datetime.timedelta(days=3)
 
 
 WHY = "Look athletic in a t-shirt, and bench my bodyweight before I'm 40."
@@ -114,19 +112,27 @@ def two_closed_blocks(
         bench_sets = (BENCH_TEMPLATE, tuple((_kg(lb), reps, rpe) for lb, reps, rpe in bench))
         if practice_pull_ups:
             a_logged_workout(conn, f"h-push-{week}", monday(week), bench_sets)
-            wednesday = (datetime.date.fromisoformat(monday(week)) + _TWO_DAYS).isoformat()
             a_logged_workout(
-                conn, f"h-drill-{week}", wednesday, (PULL_UP_TEMPLATE, pull_ups), session_id="drill"
+                conn,
+                f"h-drill-{week}",
+                _days_after_monday(week, 2),
+                (PULL_UP_TEMPLATE, pull_ups),
+                session_id="drill",
             )
         else:
             a_logged_workout(
                 conn, f"h-push-{week}", monday(week), bench_sets, (PULL_UP_TEMPLATE, pull_ups)
             )
         if thursday_pull_ups and week not in LIGHT_WEEKS:
-            thursday = (datetime.date.fromisoformat(monday(week)) + _THREE_DAYS).isoformat()
-            a_logged_workout(conn, f"h-pull-{week}", thursday, (PULL_UP_TEMPLATE, pull_ups))
+            a_logged_workout(
+                conn, f"h-pull-{week}", _days_after_monday(week, 3), (PULL_UP_TEMPLATE, pull_ups)
+            )
     closed_through(conn, WEEKS)
     return conn
+
+
+def _days_after_monday(week: int, days: int) -> str:
+    return (datetime.date.fromisoformat(monday(week)) + datetime.timedelta(days=days)).isoformat()
 
 
 BOUNDARY = datetime.date(2026, 12, 14)
