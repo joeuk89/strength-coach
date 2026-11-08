@@ -9,6 +9,7 @@ from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.prescription import SessionPrescription, StatusSpan
 from coach.core.program.form import Reps
+from coach.core.registries.program import HEAVY_PATTERNS
 
 # rn:running-load.5: quality activities, runs and conditioning together, capped at 2 a week.
 QUALITY_CAP = 2
@@ -19,9 +20,8 @@ SPIKE_LOOKBACK_DAYS = 30
 SPIKE_HISTORY_DAYS = 14
 RUN = "run"
 STANDING = "standing"
-# rn:concurrent-training.5: a heavy squat or hinge session has a working set at RPE 7 or above,
-# or of 6 reps or fewer when no RPE is set.
-HEAVY_PATTERNS = ("squat", "hinge")
+# rn:concurrent-training.5: a heavy-pattern session has a working set at RPE 7 or above, or of
+# 6 reps or fewer when no RPE is set.
 HEAVY_RPE = 7
 HEAVY_REPS = 6
 # The statuses a session is suggested off; a whole-week `no_training` span plans nothing.

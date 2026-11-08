@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import pytest
 from support.clock import FixedClock
@@ -6,7 +7,7 @@ from support.ledger import a_store, a_weigh_in, an_exercise
 
 from coach.core.errors import Invalid
 from coach.services.checkin_record import checkin_record
-from coach.services.query import ledger, readings
+from coach.services.query import exercises, ledger, readings
 from coach.services.record import record
 from coach.store.connection import Connection
 
@@ -205,3 +206,102 @@ def test_ledger_names_an_unknown_record_kind() -> None:
         ledger(a_store(), kind="nigle", id_=None, open_=False, today=TODAY, last=10)
 
     assert "nigle" in raised.value.message
+
+
+def a_library() -> Connection:
+    conn = a_store()
+    an_exercise(
+        conn,
+        "rdl",
+        name="Romanian Deadlift",
+        pattern="hinge",
+        muscles={"primary": ["hamstrings", "glutes"], "secondary": ["lower_back"]},
+        hevy_template_id="2B4B7310",
+    )
+    an_exercise(conn, "bb_bench_press", name="Bench Press (Barbell)")
+    an_exercise(
+        conn,
+        "db_bench_press",
+        name="Bench Press (Dumbbell)",
+        load_mode="per_hand_x2",
+        equipment_kind="dumbbell",
+        source="draft",
+    )
+    an_exercise(
+        conn,
+        "bb_back_squat",
+        name="Squat (Barbell)",
+        pattern="squat",
+        muscles={"primary": ["quads", "glutes"], "secondary": ["hamstrings"]},
+    )
+    return conn
+
+
+def library_ids(**filters: Any) -> list[str]:
+    arguments: dict[str, Any] = {"match": None, "patterns": (), "muscles": (), "last": 10}
+    result = exercises(a_library(), **{**arguments, **filters})
+    return [str(row["id"]) for row in result.rows]
+
+
+def test_exercises_lists_every_library_row_by_id_with_its_eight_fields() -> None:
+    result = exercises(a_library(), match=None, patterns=(), muscles=(), last=10)
+
+    assert [row["id"] for row in result.rows] == [
+        "bb_back_squat",
+        "bb_bench_press",
+        "db_bench_press",
+        "rdl",
+    ]
+    assert result.rows[3] == {
+        "id": "rdl",
+        "name": "Romanian Deadlift",
+        "load_mode": "total",
+        "equipment_kind": "barbell",
+        "pattern": "hinge",
+        "muscles": {"primary": ["hamstrings", "glutes"], "secondary": ["lower_back"]},
+        "hevy_template_id": "2B4B7310",
+        "source": "catalogue",
+    }
+    assert (result.count, result.truncated) == (4, False)
+
+
+def test_exercises_match_is_a_case_insensitive_substring_of_the_id_or_name() -> None:
+    assert library_ids(match="BENCH") == ["bb_bench_press", "db_bench_press"]
+    assert library_ids(match="romanian") == ["rdl"]
+
+
+def test_exercises_with_two_patterns_keep_either() -> None:
+    assert library_ids(patterns=("hinge", "squat")) == ["bb_back_squat", "rdl"]
+
+
+def test_exercises_with_a_muscle_keep_rows_naming_it_primary_or_secondary() -> None:
+    assert library_ids(muscles=("hamstrings",)) == ["bb_back_squat", "rdl"]
+    assert library_ids(muscles=("lower_back", "chest")) == [
+        "bb_bench_press",
+        "db_bench_press",
+        "rdl",
+    ]
+
+
+def test_exercises_filters_combine_as_and() -> None:
+    assert library_ids(match="bb", muscles=("hamstrings",)) == ["bb_back_squat"]
+    assert library_ids(match="bench", patterns=("hinge",)) == []
+
+
+def test_exercises_with_an_unknown_pattern_or_muscle_return_no_rows_not_an_error() -> None:
+    conn = a_library()
+
+    by_pattern = exercises(conn, match=None, patterns=("balance",), muscles=(), last=10)
+    by_muscle = exercises(conn, match=None, patterns=(), muscles=("tibialis",), last=10)
+
+    assert (by_pattern.rows, by_pattern.count, by_pattern.truncated) == ([], 0, False)
+    assert (by_muscle.rows, by_muscle.count) == ([], 0)
+
+
+def test_exercises_keep_the_first_n_by_id_and_say_more_exist() -> None:
+    capped = exercises(a_library(), match=None, patterns=(), muscles=(), last=2)
+    full = exercises(a_library(), match=None, patterns=(), muscles=(), last=None)
+
+    assert [row["id"] for row in capped.rows] == ["bb_back_squat", "bb_bench_press"]
+    assert (capped.count, capped.truncated) == (4, True)
+    assert (len(full.rows), full.truncated) == (4, False)

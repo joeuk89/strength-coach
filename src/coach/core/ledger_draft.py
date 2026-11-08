@@ -194,7 +194,8 @@ def ledger_draft_of(
                 "invalid_argument", f"{file}: write {name} as an array of tables, [[{name}]]"
             )
         for index, table in enumerate(cast(list[Table], value), start=1):
-            records.append(parser(Fields(table, f"{file}: [[{name}]] #{index}")))
+            fields = Fields(table, f"{file}: [[{name}]] #{index}", at=(name, index))
+            records.append(parser(fields))
     draft = LedgerDraft(hash, file, tuple(records))
     _check_keys(draft)
     return draft

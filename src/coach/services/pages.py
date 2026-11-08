@@ -2,10 +2,12 @@
 
 import datetime
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import cast
 
 from coach.core.closed_week.match import PlannedRef
 from coach.core.config import Config, PlatePoolLocation, Units
+from coach.core.exercise_ladder import OPENING_RUNG, full_criterion
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
     AthletePage,
@@ -14,16 +16,18 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
+    PageRung,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
     RoutinePage,
     WeekPage,
 )
-from coach.core.program.form import Session
+from coach.core.program.form import Session, group_document
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
+from coach.services.ladders import rung_decisions, standing_rungs
 from coach.services.progress import newest_day, progress
 from coach.store import (
     check_ins,
@@ -54,13 +58,14 @@ def page_facts(
     config: Config,
     kits: Sequence[KitFiles],
     profile: str | None,
+    zone: datetime.tzinfo = datetime.UTC,
 ) -> Pages:
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
     names = _exercise_names(conn)
     every_decision = decisions.every(conn)
     records = tuple(
-        _record(conn, row, every_decision, units, bodyweight_units)
+        _record(conn, row, every_decision, units, bodyweight_units, zone)
         for row in check_ins.current(conn)
     )
     return Pages(
@@ -73,6 +78,7 @@ def page_facts(
             on=newest_day(conn, units) or _ANY_DAY,
             units=units,
             bodyweight_units=bodyweight_units,
+            zone=zone,
         ),
         week=_week(conn, names),
         routines=_routines(conn, config, kits, names),
@@ -135,7 +141,7 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
         _session_page(
             session_id, day, _kind(authored, session_id), rows, authored, names, derived=False
         )
-        for (day, session_id), rows in sorted(frozen.items())
+        for (day, session_id), rows in frozen.items()
         if (day, session_id) not in planned
     )
     return WeekPage(
@@ -217,14 +223,47 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
+    standing = standing_rungs(version.form, rung_decisions(conn)) if version else {}
+    ladders = _ladders(session, names, standing) if session else {}
     return RoutinePage(
         session_id=live.session_id,
         title=_title(sessions, live.session_id),
         week=str(plan["week"]) if plan else None,
         location=location,
-        lines=tuple(_line(r, names) for r in rows if r["date"] == first),
+        lines=tuple(
+            replace(line, ladder=ladders.get(line.exercise_id, ()))
+            for line in (_line(r, names) for r in rows if r["date"] == first)
+        ),
         kit=_kit(config, kits, location),
     )
+
+
+def _ladders(
+    session: Session,
+    names: Mapping[str, tuple[str, str | None]],
+    standing: Mapping[tuple[str, str], int],
+) -> dict[str, tuple[PageRung, ...]]:
+    """Each `exercise_ladder` line's rungs, keyed on every rung's exercise, since the frozen
+    row names the rung the week prescribed."""
+    found: dict[str, tuple[PageRung, ...]] = {}
+    for line in session.lines:
+        ladder = line.scheme.ladder
+        if ladder is None:
+            continue
+        stands_on = standing.get((session.id, line.exercise), OPENING_RUNG)
+        rungs = tuple(
+            PageRung(
+                rung=index,
+                name=names.get(rung.exercise, (rung.exercise, None))[0],
+                cues=rung.cues,
+                set_groups=tuple(group_document(g) for g in rung.sets),
+                criterion=full_criterion(ladder, index).stated(),
+                standing=index == stands_on,
+            )
+            for index, rung in enumerate(ladder.rungs, start=1)
+        )
+        found |= {rung.exercise: rungs for rung in ladder.rungs}
+    return found
 
 
 def _kit(config: Config, kits: Sequence[KitFiles], location: str | None) -> PlatePoolKit | None:
@@ -260,6 +299,7 @@ def _record(
     every_decision: Sequence[Row],
     units: Units,
     bodyweight_units: Units,
+    zone: datetime.tzinfo,
 ) -> CheckInRecord:
     return CheckInRecord(
         id=row.id,
@@ -268,7 +308,7 @@ def _record(
         window=row.window,
         readiness=row.readiness,
         read=check_ins.read_of(conn, row.id),
-        card=record_card(conn, row, units=units, bodyweight_units=bodyweight_units),
+        card=record_card(conn, row, units=units, bodyweight_units=bodyweight_units, zone=zone),
         decisions=tuple(_decision(d) for d in every_decision if d["check_in"] == row.id),
     )
 

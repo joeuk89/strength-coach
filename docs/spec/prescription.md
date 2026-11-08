@@ -28,12 +28,13 @@ a glossary noun.
 | the Program version (the form with its filled `[dose]`, `[deload]` and session `minutes`) | every step; the scheme's hit test reads the authored groups |
 | the Exposures | the anchor, e1RM, days off, stalls |
 | the plan's typed overrides | step 2, the week override before any line derives |
-| the Decisions in force on the planned date: `override`, `safety_ceiling`, `training_max` | steps 3, 7 and the `wave_531` scheme |
+| the Decisions in force on the planned date: `override`, `safety_ceiling`, `training_max`, `ladder_rung`, each with the date it was recorded on | steps 3, 7, the `wave_531` scheme and the `exercise_ladder` standing rung |
 | the open Niggles' constraint rows | step 5 |
 | the status spans (`no_training`, `ill`) | which sessions derive; days off; the illness cap |
 | the rack snapshot per location (ADR 0008) | steps 7 and 8, every load step |
 | the Block's hard-week count | the `wave_531` wave |
 | the latest redesign's adoption date | stalls (none before it count) |
+| the version's own adoption date | an `exercise_ladder`'s first rung's start |
 | the last matched Activity per conditioning session | the session schemes |
 | the planned date | everything dated |
 
@@ -111,11 +112,12 @@ cut.
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
 | `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
+| `exercise_ladder` | the standing rung (below), its exercise's ordinary exposures from the rung's start | the rung's advance criterion (`program.md`) on its run of the newest exposures | never moves: warn `rung_met` naming the next rung, or `ladder_top` on the last; a `manual` rung raises neither | hold the rung | hold the rung |
 | `top_backoff` | the exercise's best e1RM in the window, or the carried e1RM while it binds (**The carried e1RM**, below) | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included; while the carried e1RM binds, the pre-layoff heaviest top × the band factor too)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window and no carried e1RM: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
 Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
-`assistance_ladder` rn:bodyweight-skill-progression.3; `top_backoff` rn:progression-training-age.6
+`assistance_ladder` and `exercise_ladder` rn:bodyweight-skill-progression.3; `top_backoff` rn:progression-training-age.6
 and .8, rn:autoregulation.1; `wave_531` rn:progression-training-age.9. The one-row cap, the
 "RPE 2 over" test and `load_for` rounding down are this framework's (opinion). The catalogue
 behind the registry is rn:progression-methods §1 and §2.
@@ -141,13 +143,22 @@ Notes:
   `emom_density` at or under `rpe_target` → `minutes + minutes_step` up to `minutes_cap`, then
   one rep per exercise up to `reps_cap`; over target → hold. `circuit_rounds` → one round up to
   `rounds_cap`, then reps. No Activity → the params as authored. Their lines run `hold`.
+- An `exercise_ladder` line stands on the rung its `ladder_rung` Decision names (`overrides.md`),
+  or the first with none, and prescribes that rung's exercise, cues and working group (ADR 0023).
+  The rung's start is the Decision's date, or the version's adoption for the first rung; the
+  criterion and `stall_streak` read only exposures of the standing rung's exercise from it, and
+  exposures on another rung's exercise count for nothing. The line's key stays its first rung's
+  exercise for every flag and override; the prescription and history matching carry the
+  standing rung's. A light week holds the rung with its sets cut. The climb is the agent's: a
+  `ladder_rung` Decision after the athlete's yes.
 
 ## Stalls
 
 One definition: three consecutive ordinary exposures of the line (light-week and return-week
 exposures skipped) with no gain on the scheme's metric raise `stall_streak` with the three
 exposure refs. Three is opinion: the sources say read the trend, not one session, and name no
-count (rn:progression-methods §4).
+count (rn:progression-methods §4). A line in a `practice` session raises none, and the progress
+view shows its streak as 0.
 
 The streak reads exposures on or after the latest redesign's adoption date and none before it: a
 redesign starts every line with a clean streak, because a stall under the old design says
@@ -160,6 +171,7 @@ and `cadence_slow` relies on it surviving the Block boundary (`goals.md`). The m
 | `double_progression` | total reps at or under the authored RPE at the anchor load | none: hold. Sets, a deload or a swap are the agent's (`goals.md`, the cadence table at the boundary) |
 | `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`, Starting Strength's "the 2nd time in a row", rn:training-level §2) sets the load to `reset_factor` × the anchor load, rounded **down** to the rack. Both are `linear` params (`program.md`); the registry default `reset_factor = 0.9` is the over-40 reset (5 % under 40, 10 % over 40, rn:training-level §2), so a coach names `reset_factor = 0.95` on the line for a younger athlete. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
 | `assistance_ladder` | the rung | hold the rung |
+| `exercise_ladder` | total reps, or seconds on a duration rung, at or under the authored RPE on the standing rung, reading only exposures since the rung's start | hold the rung |
 | `top_backoff` | e1RM | none: the model holds the top set |
 | `wave_531` | the rep-out's e1RM (counts fall wave to wave by design) | none: `training_max_due` or `rep_range_missed` says what happened |
 
@@ -244,7 +256,9 @@ The bands are rn:detraining-return.3, load factors as targets before rounding:
 | 43+ | ×0.85 | −1 | ≤ 7 |
 
 Per scheme: `assistance_ladder` steps back 0/1/2/3 rungs by band instead of a load cut, and
-assistance is never cut; `wave_531` multiplies the training max by the band factor for the
+assistance is never cut; `exercise_ladder` steps back the same count of rungs (never below the
+first) and prescribes the earlier rung's exercise and sets for the return weeks with the band's
+set delta and RPE cap, no Decision written, its days off read across every rung's exercise; `wave_531` multiplies the training max by the band factor for the
 return week only, with no rep-out set. A return line whose band, load, set delta and RPE cap do
 not all derive together (an override fought the band) is `return_band_disagrees`.
 

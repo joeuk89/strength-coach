@@ -1,4 +1,5 @@
 import json
+import re
 import tomllib
 
 import pytest
@@ -146,11 +147,50 @@ def test_the_generated_claude_md_is_under_forty_lines_and_names_the_engine_versi
     assert "coach schema" in text
 
 
+def test_the_generated_claude_md_names_how_to_read_a_registry() -> None:
+    text = claude_md("0.3.0")
+
+    assert "coach schema --registry <name>" in text
+    assert "registry names" in text
+
+
 def test_the_generated_claude_md_names_the_profile_and_the_drafts_once() -> None:
     text = claude_md("0.3.0")
 
     assert text.count("profile.md") == 1
     assert text.count(".coach/drafts/") == 1
+
+
+def test_the_generated_claude_md_says_any_change_is_a_redrafted_and_reapplied_week() -> None:
+    lines = claude_md("0.3.0").splitlines()
+
+    start, bullet = _change_bullet(lines)
+    assert lines[start].startswith("- ")
+    assert start < lines.index("## The coach's voice")
+    assert "redrafted and applied again" in bullet
+    assert "`/` command" in bullet
+
+
+def test_the_generated_claude_md_says_a_rung_moves_only_on_the_athletes_yes() -> None:
+    _, bullet = _change_bullet(claude_md("0.3.0").splitlines())
+    for step in (
+        "the check-in card or a plan flag",
+        "athlete's yes",
+        "`ladder_rung` Decision",
+        "`coach checkin record` or `coach record`",
+        "next `coach plan draft`",
+    ):
+        assert step in bullet
+
+
+def _change_bullet(lines: list[str]) -> tuple[int, str]:
+    start = next(i for i, line in enumerate(lines) if "a change to the program" in line.lower())
+    end = next(i for i in range(start + 1, len(lines)) if not lines[i].startswith("  "))
+    return start, " ".join(line.strip() for line in lines[start:end])
+
+
+def test_the_generated_claude_md_names_no_slash_command() -> None:
+    assert re.findall(r"(?<![\w.])/[a-z][a-z-]*", claude_md("0.3.0")) == []
 
 
 def test_the_generated_claude_md_names_the_options_that_lift_the_default_cuts() -> None:

@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
-amended: 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
+amended: 2026-11-08 by the review of PR #271 (pyyaml joins the dev group, added by #249), 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
 ---
 
 # The engine is seven packages on one import DAG, with four injected seams; the suite is pytest, dev-only, under thirty seconds
@@ -19,7 +19,7 @@ and `cli`. Exactly four things are injected into a service: a bare `sqlite3.Conn
 `HevyClient` protocol, a `GitHubClient` protocol and a `Clock` protocol. The Hevy write audit is
 the client's own work behind that protocol, so it adds no seam. Hooks reach the engine through a second console
 entry point, `coach-hook <event>`, not a leaf of `coach`. The runtime stays stdlib-only; pytest,
-ruff and pyright are a `uv` dev dependency group. The spec is `docs/spec/testing.md`.
+pytest-xdist, pyyaml, ruff and pyright are a `uv` dev dependency group. The spec is `docs/spec/testing.md`.
 
 ## Context
 
@@ -56,7 +56,7 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
 - **Layout.** `src/coach/` with `__main__.py` so `python3 -m coach` works, `tests/` beside it,
   plugin files (`.claude-plugin/`, `skills/`, `hooks/`) at the repo root. `pyproject.toml`
   declares two scripts, `coach` and `coach-hook`, zero runtime dependencies, Python 3.12 floor,
-  and `[dependency-groups] dev` with pytest, pytest-xdist, ruff and pyright. Two installs, each for one job:
+  and `[dependency-groups] dev` with pytest, pytest-xdist, pyyaml, ruff and pyright. Two installs, each for one job:
   `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for the instances on the
   machine, and `uv sync` in the checkout creates the dev environment that `uv run pytest`, ruff
   and pyright use. The suite never depends on the first: its one subprocess smoke test runs

@@ -129,7 +129,7 @@ or opinion there.
 | Reps and intensity | 6–15 reps at a target RIR; load follows reps | 1–6 reps at 80 % 1RM or above | the Goal's scheme, unchanged | §1, evidence |
 | RIR | stimulus dial: the line's authored RPE stands every week (default 8, 2 RIR); the walk toward failure happens as double progression adds reps at a held load, not as a coded rule (`prescription.md`) | fatigue cap: top set RPE 8–9 (1–2 RIR), back-offs RPE 5–6 | the Goal's RIR | §2, evidence on direction, opinion on numbers |
 | Weekly dose | 10–20 hard sets per muscle; the version stores one target, default 10 rising toward 20 as blocks accumulate | 5–15 hard sets per lift, floor 2–6; default 8 (opinion). A lift's counted variants add their hard sets to its figure (`program.md`, "Dose and deload") | one third of the Goal's target, floor one hard set per exercise per week; intensity held | §3, evidence |
-| Scheme the skill proposes (`scheme_off_emphasis` band) | `double_progression`; `assistance_ladder` on an assisted bodyweight lift | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods §3` |
+| Scheme the skill proposes (`scheme_off_emphasis` band) | `double_progression`; `assistance_ladder` on an assisted bodyweight lift; `exercise_ladder` on work with no load to add | `top_backoff` on a load-bearing lift; on a bodyweight lift `assistance_ladder`, then `double_progression` in a 3–6 range once unassisted; `exercise_ladder` on work with no load to add | the Goal's scheme, dose cut | §4, opinion resting on Helms 2018, Hickmott 2022; `rn:progression-methods §3` |
 | Stall signal (per line, `prescription.md`; several stalled lines read as one muscle behind is the `program` skill's judgement from `coach progress`) | reps at the authored RPE flat on the line | e1RM flat or falling over the exposures the Weekly prescription ticket defines | strength on the kept lifts falls over a block | §5, opinion |
 | Deload | `set_cut_pct` 40, `load_cut_pct` 0, `rpe_cap` 8: cut sets, hold load | `set_cut_pct` 30, `load_cut_pct` 0, `rpe_cap` 8; `test_priority_lifts` prescribes a **test** single on each priority lift in the light week, whose result may become the next block's training max | no planned deload | §6 and rn:deloads.8 to .10, evidence that intensity is held; the percentages are this framework's defaults (opinion) |
 | Order | free; chosen for fatigue and preference | priority lift first in its session | as the Goal | §7, evidence |
@@ -182,7 +182,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `goal_missing` | violation | version | none | `goal adopt` |
 | `priority_lifts_required` | violation | version | emphasis | a Goal with priority lifts, or a different emphasis |
 | `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
-| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, or `double_progression` with a rep range inside 3–6 |
+| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `exercise_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, `exercise_ladder`, or `double_progression` with a rep range inside 3–6 |
 | `priority_lift_absent` | warning | priority_lift | exercise id | Acknowledgement, or a line for it |
 | `priority_lift_not_first` | warning | session | exercise id, position among the session's lines that carry a working group (an activation-only or warm-up line never counts) | Acknowledgement, or reordering |
 | `dose_off_band` | warning | dose | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
@@ -228,6 +228,7 @@ Compact summary by default; `--full` adds per-line history.
 | --- | --- |
 | Priority lifts | per lift: e1RM now, change over the closed block and over the last three, best load for reps, stall streak and resets under the current scheme, cadence signal if any |
 | Milestones | per milestone: distance (load, reps or ×BW to go) or the date reached |
+| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion since the rung's start and whether it is met; the same rows as the check-in card's Ladders field |
 | Dose | per muscle and per priority lift: hard sets achieved against target, by week of the block |
 | Adherence | core sessions by tier, misses by tag |
 | Phase | kind, target rate, 14-day bodyweight trend against it, the `until` condition and whether it is met |
@@ -244,12 +245,12 @@ Every row requires adherence at or above the floor (`week.md`) over the blocks i
 
 | Code | Line's scheme | Condition over the closed block and the one before |
 | --- | --- | --- |
-| `cadence_slow` | `linear` | two resets on the line under the scheme within the two blocks |
-| `cadence_slow` | `double_progression`, `assistance_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them) |
-| `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks |
+| `cadence_slow` | `linear` | two resets on the line under the scheme within the two blocks; never in a `practice` session |
+| `cadence_slow` | `double_progression`, `assistance_ladder`, `exercise_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them); an `exercise_ladder` reads its standing rung's exercise and the signal keeps the line's key; never in a `practice` session |
+| `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks; never in a `practice` session |
 | `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
 | `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
-| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
+| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay
@@ -279,6 +280,7 @@ reset; the boundary is where the scheme may change.
 | `cadence_slow` | `top_backoff` | move the lift to `wave_531`, the training max set by the test set or a `training_max` Decision; or change back-off volume and add a variation first | drop to a hypertrophy scheme to escape a strength stall |
 | `cadence_slow` | `wave_531` | lower the training max about 10 % by Decision and stay a cycle; the scheme stands | raise the training max to chase the miss |
 | `cadence_slow` | `assistance_ladder` | hold the rung; at zero assistance move to `double_progression` on reps | skip rungs |
+| `cadence_slow` | `exercise_ladder` | hold the rung, or add an easier rung by amend; at the top, move the line to `double_progression` or a loaded scheme (`linear`, `top_backoff`) by amend | skip rungs |
 | `cadence_fast` | `double_progression`, `top_backoff` | propose `linear` on that lift while the rack has a next row; the signal is the evidence, no stored level is needed | fill `linear` without a Decision |
 
 `adopt` holds the rule with one warning, `scheme_change_off_signal` (scope line): a line whose

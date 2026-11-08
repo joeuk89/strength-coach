@@ -42,7 +42,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
 | `goal adopt <draft> [--dry-run]` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
 | `progress` | store write (the pull) | the progress view (`goals.md`) |
-| `query <view> [params]` | read | one of the six read views below |
+| `query <view> [params]` | read | one of the seven read views below |
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
 | `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`), then the full pull when Hevy is on and a key is set |
@@ -64,6 +64,14 @@ issue body. A Writing verb's dry run touches no file.
 A Draft verb's dry run runs the real write inside its transaction and rolls back instead of
 committing, so the ids it reports are the ones the next real run assigns, barring another write
 in between. A Writing verb's dry run opens no transaction.
+
+A Draft verb's declaration names the Draft it reads, so `coach <verb> --help` and `coach schema
+<verb>` give the file's shape as well as the arguments: its `draft` holds the kind, a JSON
+Schema recorded from the verb's own parser over a minimal example and coverage Drafts (so it
+cannot drift from what the parser reads), and the example. A scheme's params come from the
+`schemes` registry and the record tables from `record-kinds`, `check_in_only` kinds in the
+check-in file's schema alone. The schema states shape, not the cross-field rules the checks and
+the dry run report.
 
 **The pull.** A verb whose result derives from workouts pulls Hevy first, through the same
 service function `import` runs, when `[hevy]` is on: `checkin open`, `plan draft`, `progress`,
@@ -105,10 +113,12 @@ Three rules every leaf obeys:
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
 - **6 KB default on every envelope.** Reads, write results, dry runs (the permission prompt shows
-  one) and errors all fit it. Four verbs are allowed over it, because their whole default
+  one) and errors all fit it. Five verbs are allowed over it, because their whole default
   output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
-  0006's approval prompt), `program adopt --dry-run` (every adopt warning) and `report
-  --dry-run` (the whole issue body the athlete approves). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
+  0006's approval prompt), `program adopt --dry-run` (every adopt warning), `report
+  --dry-run` (the whole issue body the athlete approves) and `schema` with no argument (every
+  verb's declaration and every registry name, the agent's one call to see them all) or naming a
+  Draft verb (the whole Draft schema the agent writes the file against). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
   paths into `result` only, allowed on every verb, and excludes `--full`; the envelope's own
   fields stay, `warnings[]` always present, and a path naming one is refused saying so. One generated size test per
   declaration.
@@ -151,8 +161,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 
 | Leaf | Default `result` |
 | --- | --- |
-| `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified`); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`); whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
-| `schema` | the declaration(s), or the registry rows |
+| `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified`); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`), `plan_behind_program` among them while this week's plan in force was approved under an older version; whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
+| `schema` | the declaration(s), or the registry rows. A Draft verb's declaration carries `draft`: the Draft `kind` (`program`, `plan`, `ledger`, `check-in`, `goal`, `report`), a JSON Schema 2020-12 `schema` of the TOML file recorded from the verb's own parser, and one minimal `example` the parser accepts. The verb-less listing leaves `draft` out of each row |
 | `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
 | `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
@@ -163,8 +173,8 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, every flag in validation order as `{key, code, severity, params_hash, left}` (`left` the acknowledgement that leaves it, or null; `--full` gives each flag whole) with `flag_count`, the hash |
 | `plan apply` | WeekPlan id, hash, per-routine outcome (written, verified, unverified), audit lines appended |
 | `program show` | version number, kind, emphasis, adopted date, `because`, sessions with line counts; with `--draft`: path and hash |
-| `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`), `pull` |
-| `program adopt` | version number, kind, Block reset or kept, acknowledgements frozen, `pull` |
+| `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`), `pull`; `plan_behind_program` in `warnings[]` when the version would leave this week's plan in force behind |
+| `program adopt` | version number, kind, Block reset or kept, acknowledgements frozen, `pull`; `plan_behind_program` in `warnings[]` when the version leaves this week's plan in force behind, so the week is redrafted and applied again |
 | `goal adopt` | goal id, kind, priority lifts, phase opened or closed |
 | `goal adopt --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `progress` | `goals.md`'s view: per priority lift e1RM trend and cadence signal, milestones, Phase status, Block, `pull` |
@@ -186,11 +196,9 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
   Draft (`program.md`; the kinds and what each folds to are `overrides.md`'s).
 - **`schema --registry`** takes the name of any registry a `schema.md` CHECK list or a Draft
-  parser is tested against: `schemes`, `flags`, `record-kinds`, `views`, `decision-kinds`,
-  `override-kinds`, `reasons` (the seven `because` values), `annotation-kinds`,
-  `constraint-kinds`, `set-types`, `load-modes`, `equipment-kinds`, `errors` (every `error.code`
-  with its exit class). It is the one source every
-  contract test reads a registry from. `flags` carries each code's `rn` citation, the one place
+  parser is tested against, and `errors` (every `error.code` with its exit class).
+  `coach schema` with no argument lists every name it takes, in the code's order. It is the one
+  source every contract test reads a registry from. `flags` carries each code's `rn` citation, the one place
   a new agent sees every code with its evidence (ADR 0020).
 - **`init --pin`** is required on a `.dev` build of the engine: `init` refuses (exit 5,
   `engine_pin_required`) rather than write a `.dev` pin into `coach.toml`, since only `upgrade`
@@ -207,7 +215,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | --- | --- | --- | --- |
 | niggle | `[[niggle]]` | a Niggle status event, with its load constraint and rehab session link (ADR 0010) | |
 | follow_up | `[[follow_up]]` | a Follow-up event: deferred, kept, resolved, dropped | |
-| decision | `[[decision]]` | a Decision of any of the ten kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`), or a `retire` of one | |
+| decision | `[[decision]]` | a Decision of any of the eleven kinds in `overrides.md` (`override`, `park_session`, `resume_session`, `leave_warning`, `training_max`, `safety_ceiling`, `activity_cap`, `decline_ceiling`, `defer_deep_review`, `against_research`, `ladder_rung`), or a `retire` of one | |
 | annotation | `[[annotation]]` | an Annotation, or the withdrawal of one | |
 | note | `[[note]]` | an Athlete note with its optional `about` ref | |
 | workout | `[[workout]]` | a workout Hevy never saw: Hevy off (ADR 0006, `instance.md`), or a session the athlete reports and did not log (`cutover.md`); never sent to Hevy | |
@@ -224,16 +232,17 @@ opened or closed inside a check-in file or a `goal adopt` Draft (`goals.md`), so
 
 ## Read views
 
-Six parametrised reads under `query`, each within the cap, each a row list:
+Seven parametrised reads under `query`, each within the cap, each a row list:
 
 | View | Params | Rows |
 | --- | --- | --- |
-| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, e1RM, annotations applied |
+| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | exercise, date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, e1RM, annotations applied |
 | `readings` | `--kind weigh_in\|sleep_night\|activity`, `--last <n>` | the record's fields with source |
 | `flags` | `--code`, `--severity`, `--scope`, `--summary`, `--draft <path>` | flags frozen on the plan in force, or, with `--draft`, on that plan Draft re-validated now (the same validation `plan apply --dry-run` runs, read-only). With no filter, one row per flag code: `code`, `severity`, `count`, `keys[]` (each key with its params hash, in the Draft's order); the message is the registry's (`schema --registry flags`). A filter (`--code`, `--severity`, `--scope`) or `--full` gives one row per flag with its message; `--summary` gives counts by (code, severity) |
 | `lines` | `--exercise`, `--session`, `--date`, `--changed`, `--draft <path>` | lines of the plan in force, or of the named Draft: date, session, exercise, prescription, change from last week, flags |
 | `routines` | none | the Routine map joined to folders: session, routine id, folder, status, last verified |
 | `ledger` | `--kind <record kind>`, `--id <id>`, `--open` | the record's fields and its event history |
+| `exercises` | `--match <text>`, `--pattern <pattern>` (repeatable), `--muscle <muscle>` (repeatable), `--last <n>` | the library by id: id, name, load mode, equipment kind, pattern, muscles (primary and secondary), Hevy template id, source. `--match` is a case-insensitive substring of the id or name; a repeated `--pattern` or `--muscle` keeps any of them, a muscle counting in primary or secondary; the filters combine, and one that matches nothing gives no rows |
 
 Field projection is `--fields`, never a view. No verb knows a "current" Draft: a Draft is read by
 nothing after its verb consumes it (`instance.md`), so a read either names the file by path or
@@ -304,7 +313,7 @@ Generated from the declarations, none hand-written per verb:
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope but the four allowed over it is under 6 KB on the fixture instance,
+- Every default envelope but the five allowed over it is under 6 KB on the fixture instance,
   which overflows every list a default summary truncates (`testing.md`); this test lives in
   `tests/contract/` only.
 - Every verb declared `writes: hevy`, `git` or `github` declares `--dry-run`, and its dry run on the

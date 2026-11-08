@@ -63,5 +63,6 @@ VIEWS = Registry(
         View("lines", ("--exercise", "--session", "--date", "--changed", "--draft")),
         View("routines", ()),
         View("ledger", ("--kind", "--id", "--open")),
+        View("exercises", ("--match", "--pattern", "--muscle", "--last")),
     ),
 )

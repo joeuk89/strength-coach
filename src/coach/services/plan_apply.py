@@ -37,7 +37,7 @@ from coach.core.write_plan import (
 from coach.hevy.protocol import HevyClient
 from coach.services.leave_warning import leave_warning_decisions
 from coach.services.plan_draft import plan_draft
-from coach.services.projections import session_facts
+from coach.services.projections import next_rungs, session_facts
 from coach.services.routine_push import Push, RoutineOutcome, guard
 from coach.store import exercises, mirrors, niggles, programs, routine_map, week_plans
 from coach.store.connection import Connection
@@ -143,7 +143,7 @@ def dry_run(
         units=config.athlete.units,
     )
     return DryRun(
-        fresh_summary(checked, config.athlete.units),
+        fresh_summary(checked, config.athlete.units, next_rungs(conn, programs.latest(conn))),
         actions,
         digest,
         validated.acknowledgements,
@@ -164,6 +164,7 @@ def _resumed(conn: Connection, approved: Row, *, hevy: bool) -> DryRun:
         rows=rows,
         overrides=week_plans.stored_overrides(conn, plan_id),
         locations=_locations(conn, version),
+        next_rungs=next_rungs(conn, version),
     )
     actions = _frozen_actions(conn, approved, version, rows) if hevy else HevyActions()
     moved = moved_routines(
@@ -372,12 +373,17 @@ def _override_row(override: PlanOverride) -> dict[str, object]:
 
 
 def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, object]]:
-    """Each line frozen with its steps and every flag of the plan that bears on it."""
+    """Each line frozen with its place in the whole plan, its steps and every flag of the plan
+    that bears on it."""
+    lines = (
+        (prescribed, line) for prescribed in checked.draft.sessions for line in prescribed.lines
+    )
     return [
         {
             "session_id": prescribed.session.session_id,
             "date": prescribed.session.date.isoformat(),
             "exercise_id": line.exercise_id,
+            "position": position,
             "set_groups": _json(frozen_groups(line.groups, units)),
             "derived_from": line.derived_from or "start_load",
             "steps": _json([step.to_json() for step in line.steps]),
@@ -390,8 +396,7 @@ def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, obj
             ),
             "change": line.change,
         }
-        for prescribed in checked.draft.sessions
-        for line in prescribed.lines
+        for position, (prescribed, line) in enumerate(lines, start=1)
     ]
 
 

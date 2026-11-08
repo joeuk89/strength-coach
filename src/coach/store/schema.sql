@@ -85,7 +85,7 @@ CREATE TABLE acknowledgement (             -- frozen on a plan or a version, nev
   version_id  TEXT REFERENCES program_version(id),
   key         TEXT NOT NULL,               -- 'code@scope-ref'
   params_hash TEXT NOT NULL,
-  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),
   text        TEXT NOT NULL,
   evidence    TEXT,                        -- JSON [ref]
   CHECK ((plan_id IS NULL) <> (version_id IS NULL)),
@@ -114,7 +114,7 @@ CREATE TABLE override (
   exercise_id TEXT REFERENCES exercise(id),
   date        TEXT,                        -- add_session only: the date added; NULL on every other kind
   params      TEXT NOT NULL,               -- JSON, the kind's remaining params
-  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),
   text        TEXT NOT NULL,
   evidence    TEXT,                        -- JSON [ref]
   CHECK ((kind = 'add_session') = (date IS NOT NULL))
@@ -127,6 +127,7 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
+  position     INTEGER NOT NULL,           -- order within the plan
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
@@ -183,7 +184,7 @@ CREATE TABLE annotation (                  -- applied on read in id order; withd
   kind        TEXT NOT NULL CHECK (kind IN ('discount','repair','load_mode','void','trained_unlogged','cancelled','miss_tag','match')),
   target      TEXT NOT NULL,               -- ref: workout[/exercise] or planned_session
   params      TEXT,                        -- JSON; match names the planned session here
-  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),  -- a miss_tag's because is the miss tag
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),  -- a miss_tag's because is the miss tag
   text        TEXT,
   withdraws   TEXT REFERENCES annotation(id),
   check_in    TEXT REFERENCES check_in(id),
@@ -257,12 +258,12 @@ CREATE TABLE athlete_note (
 
 CREATE TABLE decision (
   id            TEXT PRIMARY KEY,
-  kind          TEXT NOT NULL CHECK (kind IN ('override','park_session','resume_session','leave_warning','training_max','safety_ceiling','activity_cap','decline_ceiling','defer_deep_review','against_research','retire')),
+  kind          TEXT NOT NULL CHECK (kind IN ('override','park_session','resume_session','leave_warning','training_max','safety_ceiling','activity_cap','decline_ceiling','defer_deep_review','against_research','ladder_rung','retire')),
   session_id    TEXT REFERENCES session(id),      -- pulled out of params: the supersede rule keys on it
   exercise_id   TEXT REFERENCES exercise(id),     -- likewise
   params        TEXT NOT NULL,             -- JSON, the kind's remaining params
   until         TEXT,                      -- date, inclusive; decline_ceiling's is the Sunday of its week (overrides.md)
-  because       TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
+  because       TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),
   text          TEXT NOT NULL,
   evidence      TEXT,                      -- JSON [ref]
   superseded_by TEXT REFERENCES decision(id),     -- the supersede write

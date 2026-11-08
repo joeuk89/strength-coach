@@ -1,7 +1,7 @@
 import datetime
 from typing import Any
 
-from support.program_drafts import a_draft, a_line, a_session, toml
+from support.program_drafts import a_draft, a_ladder_line, a_line, a_rung, a_session, toml
 
 from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Flag, Scope, raise_flag
@@ -52,12 +52,13 @@ def test_a_maintenance_version_under_a_hypertrophy_goal_warns_emphasis_off_goal(
     assert the("emphasis_off_goal", warnings_of(a_draft())) == []
 
 
-HYPERTROPHY_BAND = ["double_progression", "assistance_ladder", "hold"]
+HYPERTROPHY_BAND = ["double_progression", "assistance_ladder", "exercise_ladder", "hold"]
 PRIORITY_BAND = [
     "top_backoff",
     "wave_531",
     "linear",
     "assistance_ladder",
+    "exercise_ladder",
     "double_progression in 3-6 reps",
 ]
 BENCH_PRIORITY = a_context(goal=a_goal(priority_lifts=("bb_bench_press",)))
@@ -95,6 +96,19 @@ def test_a_priority_lift_takes_the_priority_band_under_every_emphasis() -> None:
         "scheme_off_emphasis@line:push/bb_bench_press"
     ]
     assert [f.rn for f in held if f.code == "scheme_off_emphasis"] == ["rn:goal-programming §4"]
+
+
+def test_a_ladder_line_sits_inside_the_band_of_every_emphasis_and_as_a_priority_lift() -> None:
+    def ladder(emphasis: str) -> dict[str, Any]:
+        line = a_ladder_line("push_up", a_rung(), a_rung("diamond_push_up"))
+        return a_draft(a_session("push", line), emphasis=emphasis)
+
+    priority = a_context(goal=a_goal(priority_lifts=("push_up",)))
+
+    assert the("scheme_off_emphasis", warnings_of(ladder("hypertrophy"))) == []
+    assert the("scheme_off_emphasis", warnings_of(ladder("strength"))) == []
+    assert the("scheme_off_emphasis", warnings_of(ladder("hypertrophy"), priority)) == []
+    assert the("scheme_off_emphasis", warnings_of(ladder("strength"), priority)) == []
 
 
 def test_double_progression_on_a_priority_lift_fits_only_inside_three_to_six_reps() -> None:

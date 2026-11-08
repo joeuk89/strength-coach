@@ -115,6 +115,25 @@ def test_query_lines_reads_the_plan_in_force_and_filters_the_changed_lines() -> 
     assert lines_of(conn, exercises=("bb_back_squat",)).count == 1
 
 
+def test_query_lines_lists_same_day_sessions_in_the_order_the_plan_froze_them() -> None:
+    conn = a_squat_program()
+    plan_id = an_approved_plan(conn, "2026-10-26")
+    for session, exercise in (
+        ("lower", "bb_bench_press"),
+        ("lower", "bb_back_squat"),
+        ("arms", "db_curl"),
+    ):
+        a_frozen_prescription(
+            conn, plan_id, session, "2026-10-26", exercise, set_groups=[WORKING], change="held"
+        )
+
+    assert [(r["session"], r["exercise"]) for r in lines_of(conn).rows] == [
+        ("lower", "bb_bench_press"),
+        ("lower", "bb_back_squat"),
+        ("arms", "db_curl"),
+    ]
+
+
 def test_a_plan_for_another_week_is_not_in_force() -> None:
     conn = a_squat_program()
     an_approved_plan(conn, "2026-11-02")

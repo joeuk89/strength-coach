@@ -1,4 +1,4 @@
-"""The check-in card: fifteen fields in a fixed order, each prefilled from the store and asking
+"""The check-in card: sixteen fields in a fixed order, each prefilled from the store and asking
 only what the store cannot know; a field with nothing to say is dropped (docs/spec/check-in.md,
 "Views")."""
 
@@ -12,6 +12,7 @@ from coach.core.closed_week.dose import lift_trailing_mean, trailing_mean
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.closed_week.week import ClosedWeek
+from coach.core.exercise_ladder import LadderRead
 from coach.core.fatigue import Proposal
 from coach.core.flag import Flag
 
@@ -23,6 +24,7 @@ FIELDS = (
     "adherence",
     "dose",
     "lifts",
+    "ladders",
     "readiness",
     "sleep",
     "weight_phase",
@@ -288,6 +290,35 @@ def lifts(reads: Sequence[LiftRead], *, emphasis: str) -> CardField | None:
         for r in ordered
     ]
     return CardField("lifts", {"emphasis": emphasis, "rows": rows}, tuple(asks))
+
+
+def ladders(reads: Sequence[LadderRead]) -> CardField | None:
+    """Every `exercise_ladder` line on its standing rung; a `manual` rung with a rung above it
+    asks the athlete whether they are ready for it, since the logs cannot tell."""
+    if not reads:
+        return None
+    rows = [ladder_row(r) for r in reads]
+    asks = tuple(
+        Ask("ready_for_next_rung", f"line:{r.session_id}/{r.line_key}")
+        for r in reads
+        if r.needed is None and r.next is not None
+    )
+    return CardField("ladders", {"rows": rows}, asks)
+
+
+def ladder_row(read: LadderRead) -> Facts:
+    return {
+        "session": read.session_id,
+        "line": read.line_key,
+        "rung": read.rung,
+        "exercise": read.exercise,
+        "rungs": read.rungs,
+        "exposures": read.exposures,
+        "needed": read.needed,
+        "met": read.met,
+        "held": read.held,
+        "next": read.next,
+    }
 
 
 def readiness(previous: str | None) -> CardField:

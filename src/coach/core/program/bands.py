@@ -7,8 +7,8 @@ from coach.core.program.defaults import DELOADS, MAINTENANCE_SHARE
 from coach.core.program.form import Deload, Emphasis, Line, Reps
 from coach.core.registries.phase import PHASE
 
-HYPERTROPHY_SCHEMES = ("double_progression", "assistance_ladder", "hold")
-PRIORITY_SCHEMES = ("top_backoff", "wave_531", "linear", "assistance_ladder")
+HYPERTROPHY_SCHEMES = ("double_progression", "assistance_ladder", "exercise_ladder", "hold")
+PRIORITY_SCHEMES = ("top_backoff", "wave_531", "linear", "assistance_ladder", "exercise_ladder")
 PRIORITY_REPS = (3, 6)
 PRIORITY_DOUBLE_PROGRESSION = "double_progression in 3-6 reps"
 

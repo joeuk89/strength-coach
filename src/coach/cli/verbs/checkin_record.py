@@ -10,6 +10,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
+from coach.core.drafts.ledger import CHECK_IN
 from coach.services.checkin_record import checkin_record
 
 
@@ -93,6 +94,7 @@ DECLARATION = Declaration(
         ],
     },
     run=InInstance(run),
+    draft=lambda: CHECK_IN,
     examples=(
         Example(
             ("checkin", "record", ".coach/drafts/2026-11-01-checkin.toml"),

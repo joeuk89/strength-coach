@@ -21,22 +21,3 @@ def read_muscles(value: object) -> dict[str, list[str]] | None:
             return None
         muscles[part] = list(cast(list[str], names))
     return muscles
-
-
-# The muscles a version's per-muscle dose is judged on; the smaller ones (forearms, traps,
-# adductors, lower back) are trained indirectly and never asked for by name.
-DOSED_MUSCLES = (
-    "chest",
-    "lats",
-    "upper_back",
-    "front_delts",
-    "side_delts",
-    "rear_delts",
-    "biceps",
-    "triceps",
-    "quadriceps",
-    "hamstrings",
-    "glutes",
-    "calves",
-    "abdominals",
-)

@@ -1,8 +1,8 @@
 ---
 name: plan-week
 description: The week's prescription. Use when a check-in has closed a week, when a light or
-  constrained week is agreed, or when a midweek change is needed: a session moved, dropped or
-  added, a line swapped, a place away from home. Also /plan-week.
+  constrained week is agreed, or when a midweek change is needed, such as a session moved,
+  dropped or added, a line swapped, a place away from home. Also /plan-week.
 ---
 
 ## Read first
@@ -25,6 +25,11 @@ its reason. A load the engine derived is never retyped.
   emphasis. Under hypertrophy, read dose against target: a flat line early in a block wants sets,
   late it wants the deload. On a priority lift, read the e1RM trend, not the week; a flat block
   is normal, not a crisis, and a new scheme is the program version's question, not this week's.
+- **Rungs.** `rung_met`: the standing rung met its criterion and the next is offered. Ask the
+  athlete in training terms; on their yes record a `ladder_rung` Decision naming the next rung,
+  reason `progress`, or acknowledge the warning with the reason to hold. Never move a rung by
+  an override or in `cues`. `ladder_top`: the last rung is met; acknowledge it with the reason
+  and take the line's next step to the program version.
 - **Missed reps.** `rep_range_missed`: the sets fell short of the range or ran past the RPE.
   Hold the load and look again next week, or restate the sets when the athlete says the range is
   wrong for them now.

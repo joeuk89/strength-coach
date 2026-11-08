@@ -50,6 +50,13 @@ class FlagCode:
     params: tuple[str, ...]
     rn: Citation = ()
     cleared_by: tuple[str, ...] = ()
+    hashed: tuple[str, ...] | None = None
+
+    def hashed_params(self, params: Mapping[str, object]) -> Mapping[str, object]:
+        """The params the hash covers: every one unless the row names fewer."""
+        if self.hashed is None:
+            return params
+        return {name: value for name, value in params.items() if name in self.hashed}
 
     def refs_for(self, params: Mapping[str, object]) -> Refs:
         if isinstance(self.rn, ByCase):
@@ -67,6 +74,8 @@ class FlagCode:
         }
         if self.cleared_by:
             row["cleared_by"] = list(self.cleared_by)
+        if self.hashed is not None:
+            row["hashed"] = list(self.hashed)
         return row
 
 
@@ -98,8 +107,10 @@ def acknowledgeable_warning(
     params: tuple[str, ...],
     rn: Citation = (),
     left_by: tuple[AcknowledgementSource, ...] = ON_A_PLAN,
+    *,
+    hashed: tuple[str, ...] | None = None,
 ) -> FlagCode:
-    return FlagCode(name, "warning", left_by, scopes, params, rn)
+    return FlagCode(name, "warning", left_by, scopes, params, rn, hashed=hashed)
 
 
 def adopt_warning(
@@ -162,6 +173,12 @@ VIOLATIONS = (
         ("[[exercise]]", "program adopt"),
     ),
     violation(
+        "hevy_template_value_unknown",
+        ("line",),
+        ("exercise_id", "column", "value"),
+        ("[[exercise]]", "program adopt"),
+    ),
+    violation(
         "load_mode_mismatch",
         ("line",),
         ("exercise_load_mode", "line_load_mode"),
@@ -176,6 +193,10 @@ VIOLATIONS = (
     violation("unknown_exercise", ("line",), ("exercise_id",), ("program adopt",)),
     violation("unknown_scheme", ("line", "session"), ("scheme", "param"), ("program adopt",)),
     violation("unknown_load_mode", ("line",), ("load_mode",), ("program adopt",)),
+    violation("unknown_pattern", ("exercise",), ("pattern",), ("[[exercise]]", "program adopt")),
+    violation(
+        "unknown_muscle", ("exercise", "session"), ("muscle",), ("[[exercise]]", "program adopt")
+    ),
     violation("duplicate_id", ("version",), ("session_id", "exercise_id"), ("program adopt",)),
     violation(
         "schedule_session_missing",
@@ -203,6 +224,11 @@ VIOLATIONS = (
     violation("set_type_not_allowed", ("line",), ("set_type", "scheme"), ("program adopt",)),
     violation("set_groups_off_scheme", ("line",), ("scheme", "expected_shape"), ("program adopt",)),
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
+    violation("rung_exercise_unknown", ("version",), ("rung", "exercise_id"), ("program adopt",)),
+    violation("ladder_too_short", ("line",), ("rungs",), ("program adopt",)),
+    violation(
+        "advance_criterion_off_rung", ("line",), ("rung", "criterion_key"), ("program adopt",)
+    ),
     violation(
         "acknowledgement_unmatched", ("version",), ("flag_key", "flag_keys"), ("program adopt",)
     ),
@@ -279,6 +305,16 @@ PLAN_WARNINGS = (
         ("line",),
         ("training_max", "source", "rep_outs"),
         ("rn:progression-training-age.9",),
+    ),
+    acknowledgeable_warning(
+        "rung_met",
+        ("line",),
+        ("rung", "next", "exposures"),
+        ("rn:bodyweight-skill-progression.3",),
+        hashed=("rung", "next"),
+    ),
+    acknowledgeable_warning(
+        "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.3",)
     ),
     acknowledgeable_warning(
         "rpe_ceiling_unchecked",
@@ -445,6 +481,7 @@ OUTSIDE_WARNINGS = (
     ),
     outside_warning("training_max_unused", ("exercise",), ("scheme", "decision_id")),
     outside_warning("exercise_unmapped", ("workout",), ("hevy_template_id", "title")),
+    outside_warning("plan_behind_program", ("week",), ("plan_id", "approved_under", "version_id")),
 )
 
 FLAGS = Registry("flags", VIOLATIONS + PLAN_WARNINGS + ADOPT_WARNINGS + OUTSIDE_WARNINGS)

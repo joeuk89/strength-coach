@@ -1,6 +1,8 @@
+from collections.abc import Mapping
+
 from coach.core.config import Units
-from coach.core.pages import PageLine, RoutinePage
-from coach.render.markdown import bullets, group_text, page, section
+from coach.core.pages import PageLine, PageRung, RoutinePage
+from coach.render.markdown import bullets, group_text, number, page, section
 from coach.render.plate_pool import line_link, set_up_link
 
 
@@ -29,4 +31,26 @@ def _line(line: PageLine, routine: RoutinePage, units: Units) -> str:
     link = line_link(line, routine.kit, units) if routine.kit else None
     if link is not None:
         body += f"\n\n[Load it in plate-pool]({link})"
+    if line.ladder:
+        body += "\n\nLadder:\n\n" + "\n".join(_rung(rung, units) for rung in line.ladder)
     return section(line.name, body)
+
+
+def _rung(rung: PageRung, units: Units) -> str:
+    name = f"**{rung.name}** (standing)" if rung.standing else rung.name
+    groups = ", ".join(group_text(g, units) for g in rung.set_groups)
+    cues = f" {rung.cues}." if rung.cues else ""
+    return f"{rung.rung}. {name}: {groups}.{cues} Climb on {_criterion(rung.criterion)}."
+
+
+def _criterion(criterion: Mapping[str, object]) -> str:
+    if criterion.get("manual"):
+        return "the athlete's word"
+    reps, duration, rpe = (criterion.get(k) for k in ("reps", "duration_s", "rpe_at_most"))
+    head = [f"{reps} reps"] if reps is not None else []
+    if duration is not None:
+        head.append(f"{duration} s")
+    if isinstance(rpe, int | float):
+        head.append(f"RPE {number(rpe)} or under")
+    exposures = f"{criterion.get('exposures')} exposures running"
+    return f"{' at '.join(head)}, {exposures}" if head else exposures

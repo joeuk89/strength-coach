@@ -6,7 +6,20 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
+from coach.core import draft_schema
 from coach.core.draft_fields import draft_hash
+from coach.core.draft_schema import (
+    BOOLEAN,
+    TABLE,
+    TEXT,
+    TEXTS,
+    Json,
+    Location,
+    Named,
+    Step,
+    enum,
+    tables,
+)
 from coach.core.errors import Invalid
 from coach.core.muscles import MUSCLES_WANTED, read_muscles
 from coach.core.program.form import (
@@ -15,14 +28,17 @@ from coach.core.program.form import (
     TIERS,
     WEEKDAYS,
     AcknowledgeEntry,
+    Advance,
     Deload,
     Dose,
     Emphasis,
+    ExerciseLadder,
     LiftDose,
     Line,
     Number,
     ProgramForm,
     Reps,
+    Rung,
     Schedule,
     SchemeRef,
     Session,
@@ -37,6 +53,29 @@ from coach.core.registries.program import (
 )
 
 type Table = Mapping[str, object]
+
+SESSION_IDS: Json = {"anyOf": [TEXT, {"type": "array", "minItems": 1, "items": TEXT}]}
+COUNT: Json = {"type": "integer", "minimum": 1}
+WHOLE: Json = {"type": "integer", "minimum": 0}
+PERCENT: Json = {"type": "number", "minimum": 0, "maximum": 100}
+RPE: Json = {"type": "number", "exclusiveMinimum": 0, "maximum": 10}
+LOAD: Json = {"type": "number", "minimum": 0}
+REPS: Json = {
+    "anyOf": [
+        COUNT,
+        {"type": "array", "prefixItems": [COUNT, COUNT], "minItems": 2, "maxItems": 2},
+        {"type": "string", "pattern": "^[0-9]+\\+$"},
+    ]
+}
+MUSCLES: Json = {
+    "type": "object",
+    "properties": {
+        "primary": {"type": "array", "items": {"type": "string"}},
+        "secondary": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["primary", "secondary"],
+    "additionalProperties": False,
+}
 
 LINED_KINDS = ("lifting", "conditioning", "practice")
 
@@ -183,13 +222,19 @@ def parse_set_groups(groups: Sequence[Table], *, file: str, where: str) -> tuple
 def _line(reader: "_Reader") -> Line:
     exercise = reader.text("exercise")
     reader.name_as((*reader.path[:-1], exercise))
-    scheme = _scheme(reader.optional_table("scheme"))
+    scheme = _scheme(reader.optional_table("scheme"), line_exercise=exercise)
     if scheme is None:
         raise reader.missing("scheme")
+    # A ladder's rungs carry the sets; the line stands on the first until a rung is chosen.
+    sets = (
+        scheme.ladder.rungs[0].sets
+        if scheme.ladder
+        else tuple(_group(r) for r in reader.tables("sets", required=True))
+    )
     line = Line(
         exercise=exercise,
         load_mode=reader.optional_text("load_mode"),
-        sets=tuple(_group(r) for r in reader.tables("sets", required=True)),
+        sets=sets,
         rest_s=reader.whole("rest_s"),
         cues=reader.optional_text("cues"),
         scheme=scheme,
@@ -212,11 +257,57 @@ def _group(reader: "_Reader") -> SetGroup:
     return group
 
 
-def _scheme(reader: "_Reader | None") -> SchemeRef | None:
+def _scheme(reader: "_Reader | None", *, line_exercise: str | None = None) -> SchemeRef | None:
     if reader is None:
         return None
     name = reader.text("name")
-    return SchemeRef(name, {key: reader.raw(key) for key in reader.names() if key != "name"})
+    ladder = (
+        _ladder(reader, line_exercise)
+        if name == "exercise_ladder" and line_exercise is not None
+        else None
+    )
+    params = {key: reader.raw(key) for key in reader.names() if key != "name"}
+    return SchemeRef(name, params, ladder)
+
+
+def _ladder(reader: "_Reader", line_exercise: str) -> ExerciseLadder:
+    rungs = tuple(
+        _rung(r, line_exercise if index == 0 else None)
+        for index, r in enumerate(reader.tables("rungs", required=True))
+    )
+    return ExerciseLadder(rungs, _advance(reader.optional_table("advance")))
+
+
+def _rung(reader: "_Reader", line_exercise: str | None) -> Rung:
+    """The first rung is the line's exercise, so it may leave `exercise` unsaid."""
+    if line_exercise is None:
+        exercise = reader.text("exercise")
+    else:
+        exercise = reader.optional_text("exercise") or line_exercise
+        if exercise != line_exercise:
+            raise reader.wrong("exercise", f"the line's exercise {line_exercise!r}, or unsaid")
+    rung = Rung(
+        exercise=exercise,
+        sets=tuple(_group(r) for r in reader.tables("sets", required=True)),
+        cues=reader.optional_text("cues"),
+        advance=_advance(reader.optional_table("advance")),
+    )
+    reader.finish()
+    return rung
+
+
+def _advance(reader: "_Reader | None") -> Advance:
+    if reader is None:
+        return Advance()
+    advance = Advance(
+        reps=reader.optional_count("reps"),
+        duration_s=reader.optional_count("duration_s"),
+        rpe_at_most=reader.optional_rpe("rpe_at_most"),
+        exposures=reader.optional_count("exposures"),
+        manual=reader.optional_boolean("manual"),
+    )
+    reader.finish()
+    return advance
 
 
 def _exercises(reader: "_Reader | None") -> dict[str, Mapping[str, object]]:
@@ -257,28 +348,55 @@ def _acknowledge(reader: "_Reader") -> AcknowledgeEntry:
 
 
 class _Reader:
-    """One table's values read by type; `finish` records every key nobody read."""
+    """One table's values read by type; `finish` records every key nobody read. Under a
+    recording (`draft_schema`) each read also notes its key's shape; a key the document chose,
+    from `names` or a list of names, notes the table's `additionalProperties`."""
 
-    def __init__(self, table: Table, path: tuple[str, ...], file: str, unknown: list[str]) -> None:
+    def __init__(
+        self,
+        table: Table,
+        path: tuple[str, ...],
+        file: str,
+        unknown: list[str],
+        *,
+        at: Location | None = None,
+    ) -> None:
         self.values = table
         self.path = path
         self.file = file
         self.unknown = unknown
         self.read: set[str] = set()
+        self.chosen: set[str] = set()
+        self.recording = draft_schema.current()
+        self.at = self.recording.visit(table, at) if self.recording else at or ()
 
     def name_as(self, path: tuple[str, ...]) -> None:
         self.path = path
 
     def names(self) -> list[str]:
         self.read.update(self.values)
+        self.chosen.update(self.values)
         return list(self.values)
 
     def has(self, key: str) -> bool:
+        if self.recording:
+            self.recording.note(self.at, self._step(key), None, presence=True)
         return key in self.values
 
     def raw(self, key: str) -> object:
         self.read.add(key)
-        return self.values.get(key)
+        value = self.values.get(key)
+        if self.recording:
+            self.recording.note(self.at, self._step(key), None)
+            self.recording.place(value, (*self.at, self._step(key)))
+        return value
+
+    def _step(self, key: str) -> Step:
+        return Named(key) if key in self.chosen else key
+
+    def _note(self, key: str, shape: Json, required: bool = False, value: object = None) -> None:
+        if self.recording:
+            self.recording.note(self.at, self._step(key), shape, required=required, value=value)
 
     def finish(self) -> None:
         self.unknown.extend(
@@ -286,24 +404,27 @@ class _Reader:
         )
 
     def text(self, key: str) -> str:
+        self._note(key, TEXT, required=True)
         value = self.optional_text(key)
         if value is None:
             raise self.missing(key)
         return value
 
     def optional_text(self, key: str) -> str | None:
-        value = self.raw(key)
-        if value is None or (isinstance(value, str) and value):
-            return value
-        raise self.wrong(key, "a non-empty string")
+        self._note(key, TEXT)
+        return self._text(key)
 
     def texts(self, key: str) -> list[str]:
+        self._note(key, TEXTS, required=True)
         value = self.raw(key)
         if not _is_list(value) or not all(isinstance(v, str) and v for v in _items(value)):
             raise self.wrong(key, "a list of names")
-        return [cast(str, v) for v in _items(value)]
+        names = [cast(str, v) for v in _items(value)]
+        self.chosen.update(names)
+        return names
 
     def session_ids(self, key: str) -> tuple[str, ...]:
+        self._note(key, SESSION_IDS, required=True)
         value = self.raw(key)
         ids = [value] if isinstance(value, str) else _items(value) if _is_list(value) else []
         if ids and all(isinstance(v, str) and v for v in ids):
@@ -311,30 +432,35 @@ class _Reader:
         raise self.wrong(key, "a session id or a non-empty list of session ids")
 
     def choice(self, key: str, choices: Sequence[str]) -> str:
+        self._note(key, enum(choices), required=True)
         value = self.optional_choice(key, choices)
         if value is None:
             raise self.missing(key)
         return value
 
     def optional_choice(self, key: str, choices: Sequence[str]) -> str | None:
-        value = self.optional_text(key)
+        self._note(key, enum(choices), value=self.values.get(key))
+        value = self._text(key)
         if value is None or value in choices:
             return value
         raise self.wrong(key, f"one of {', '.join(choices)}")
 
     def count(self, key: str) -> int:
+        self._note(key, COUNT, required=True)
         value = self.optional_count(key)
         if value is None:
             raise self.missing(key)
         return value
 
     def optional_count(self, key: str) -> int | None:
+        self._note(key, COUNT)
         value = self.raw(key)
         if value is None or (_is_int(value) and cast(int, value) > 0):
             return cast(int | None, value)
         raise self.wrong(key, "a whole number above 0")
 
     def whole(self, key: str) -> int:
+        self._note(key, WHOLE, required=True)
         value = self.raw(key)
         if value is None:
             raise self.missing(key)
@@ -343,42 +469,56 @@ class _Reader:
         raise self.wrong(key, "a whole number of at least 0")
 
     def percent(self, key: str) -> Number:
+        self._note(key, PERCENT, required=True)
         value = self.raw(key)
         if _is_number(value) and 0 <= cast(float, value) <= 100:
             return cast(Number, value)
         raise self.wrong(key, "a percentage from 0 to 100")
 
     def rpe(self, key: str) -> Number:
+        self._note(key, RPE, required=True)
         value = self.optional_rpe(key)
         if value is None:
             raise self.missing(key)
         return value
 
     def optional_rpe(self, key: str) -> Number | None:
+        self._note(key, RPE)
         value = self.raw(key)
         if value is None or (_is_number(value) and 0 < cast(float, value) <= 10):
             return cast(Number | None, value)
         raise self.wrong(key, "an RPE above 0 and at most 10")
 
     def optional_load(self, key: str) -> Number | None:
+        self._note(key, LOAD)
         value = self.raw(key)
         if value is None or (_is_number(value) and cast(float, value) >= 0):
             return cast(Number | None, value)
         raise self.wrong(key, "a load of at least 0 in athlete units")
 
     def muscles(self, key: str) -> dict[str, list[str]]:
+        self._note(key, MUSCLES, required=True)
         muscles = read_muscles(self.raw(key))
         if muscles is None:
             raise self.wrong(key, MUSCLES_WANTED)
         return muscles
 
     def boolean(self, key: str) -> bool:
+        self._note(key, BOOLEAN, required=True)
+        value = self.optional_boolean(key)
+        if value is None:
+            raise self.wrong(key, "true or false")
+        return value
+
+    def optional_boolean(self, key: str) -> bool | None:
+        self._note(key, BOOLEAN)
         value = self.raw(key)
-        if isinstance(value, bool):
+        if value is None or isinstance(value, bool):
             return value
         raise self.wrong(key, "true or false")
 
     def optional_reps(self, key: str) -> Reps | None:
+        self._note(key, REPS)
         value = self.raw(key)
         if value is None:
             return None
@@ -395,20 +535,29 @@ class _Reader:
         raise self.wrong(key, 'a rep count, a range [6, 8] or an open top "8+"')
 
     def table(self, key: str) -> "_Reader":
+        self._note(key, TABLE, required=True)
         reader = self.optional_table(key)
         if reader is None:
             raise self.missing(key)
         return reader
 
     def optional_table(self, key: str) -> "_Reader | None":
+        self._note(key, TABLE)
         value = self.raw(key)
         if value is None:
             return None
         if not isinstance(value, Mapping):
             raise self.wrong(key, "a table")
-        return _Reader(cast(Table, value), (*self.path, key), self.file, self.unknown)
+        return _Reader(
+            cast(Table, value),
+            (*self.path, key),
+            self.file,
+            self.unknown,
+            at=(*self.at, self._step(key)),
+        )
 
     def tables(self, key: str, *, required: bool = False) -> list["_Reader"]:
+        self._note(key, tables(at_least_one=True), required=required)
         value = self.raw(key)
         if value is None and not required:
             return []
@@ -418,9 +567,21 @@ class _Reader:
         if not all(isinstance(item, Mapping) for item in items):
             raise self.wrong(key, "an array of tables")
         return [
-            _Reader(cast(Table, item), (*self.path, key, str(i)), self.file, self.unknown)
+            _Reader(
+                cast(Table, item),
+                (*self.path, key, str(i)),
+                self.file,
+                self.unknown,
+                at=(*self.at, self._step(key), i),
+            )
             for i, item in enumerate(items, start=1)
         ]
+
+    def _text(self, key: str) -> str | None:
+        value = self.raw(key)
+        if value is None or (isinstance(value, str) and value):
+            return value
+        raise self.wrong(key, "a non-empty string")
 
     def missing(self, key: str) -> Invalid:
         return Invalid("invalid_argument", f"{self._where(key)} is required")

@@ -12,9 +12,19 @@ from coach.core.coaching_records import (
 )
 from coach.core.draft_fields import required
 from coach.core.errors import Invalid
+from coach.core.exercise_ladder import ladder_of
 from coach.core.ref import Ref
 from coach.core.withdrawal import withdrawable
-from coach.store import annotations, decisions, exercises, follow_ups, niggles, refs, sessions
+from coach.store import (
+    annotations,
+    decisions,
+    exercises,
+    follow_ups,
+    niggles,
+    programs,
+    refs,
+    sessions,
+)
 from coach.store.connection import Connection
 from coach.store.ids import next_ids
 
@@ -179,6 +189,8 @@ def write_decision(w: Writing, record: DecisionRecord, decision_id: str) -> None
         )
     if record.exercise:
         _library_exercise(w.conn, record.exercise, "[[decision]]")
+    if record.kind == "ladder_rung":
+        _check_rung(w.conn, record)
     evidence = [str(w.stored_ref(ref, "[[decision]] evidence")) for ref in record.evidence]
     until = _until(w.today, record)
     target = _retired_target(w.conn, record) if record.kind == "retire" else None
@@ -213,6 +225,27 @@ def write_decision(w: Writing, record: DecisionRecord, decision_id: str) -> None
             == subject
         ]
         decisions.supersede(w.conn, superseded, decision_id)
+
+
+def _check_rung(conn: Connection, record: DecisionRecord) -> None:
+    """A `ladder_rung` names a rung of an `exercise_ladder` line of the version in force, the
+    line by its key: the first rung's exercise."""
+    version = programs.latest(conn)
+    session, exercise = required(record.session), required(record.exercise)
+    ladder = None if version is None else ladder_of(version.form, session, exercise)
+    if ladder is None:
+        raise Invalid(
+            "state_conflict",
+            f"[[decision]] ladder_rung names {session}/{exercise}, which is no exercise_ladder "
+            "line of the version in force; a ladder line is named by its first rung's exercise",
+        )
+    rung = cast(int, record.params["rung"])
+    if rung > len(ladder.rungs):
+        raise Invalid(
+            "state_conflict",
+            f"[[decision]] ladder_rung names rung {rung} of {session}/{exercise}, whose ladder "
+            f"has {len(ladder.rungs)} rungs",
+        )
 
 
 def _until(today: datetime.date, record: DecisionRecord) -> datetime.date | None:

@@ -63,6 +63,23 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
             ),
         ),
         section(
+            "Ladders",
+            table(
+                ["line", "standing rung", "exposures toward the criterion", "met"],
+                [
+                    [
+                        f"{r.session_id}/{r.line_key}",
+                        f"{r.rung} of {r.rungs}, {r.exercise}",
+                        "the athlete's word"
+                        if r.needed is None
+                        else f"{r.exposures} of {r.needed}",
+                        r.met,
+                    ]
+                    for r in report.ladders
+                ],
+            ),
+        ),
+        section(
             "Dose",
             "\n\n".join(
                 part

@@ -4,6 +4,7 @@ import pytest
 from support.cli import run_coach
 
 from coach.cli.envelope import BUDGET_BYTES
+from coach.core.registries import REGISTRIES
 
 
 @pytest.fixture(autouse=True)
@@ -25,13 +26,37 @@ def test_a_registry_prints_as_rows() -> None:
         "schedule",
         "athlete_request",
         "coach_judgement",
+        "progress",
     ]
-    assert result["count"] == 7
+    assert result["count"] == 8
     assert result["truncated"] is False
 
 
-def test_an_unknown_registry_is_exit_1() -> None:
+def test_schema_without_a_verb_names_every_registry_in_the_registries_order() -> None:
+    names = run_coach("schema").envelope["result"]["registries"]
+
+    assert names[:4] == ["schemes", "flags", "record-kinds", "views"]
+    assert names[-1] == "errors"
+    assert names == [r.name for r in REGISTRIES]
+
+
+def test_every_listed_registry_prints() -> None:
+    names = run_coach("schema").envelope["result"]["registries"]
+
+    failed = [n for n in names if run_coach("schema", "--registry", n).code != 0]
+    assert failed == []
+
+
+def test_an_unknown_registry_is_exit_1_and_names_the_registries() -> None:
     run = run_coach("schema", "--registry", "colours")
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == "invalid_argument"
+    assert "schemes, flags, record-kinds" in run.envelope["error"]["message"]
+
+
+def test_registry_without_a_name_is_refused() -> None:
+    run = run_coach("schema", "--registry")
 
     assert run.code == 1
     assert run.envelope["error"]["code"] == "invalid_argument"
@@ -43,12 +68,68 @@ def test_a_verb_and_a_registry_together_are_invalid() -> None:
     assert run.code == 1
 
 
+HEVY_TEMPLATE_ENUMS = {
+    "hevy-exercise-types": [
+        "weight_reps",
+        "reps_only",
+        "bodyweight_reps",
+        "bodyweight_assisted_reps",
+        "duration",
+        "weight_duration",
+        "distance_duration",
+        "short_distance_weight",
+    ],
+    "hevy-equipment": [
+        "none",
+        "barbell",
+        "dumbbell",
+        "kettlebell",
+        "machine",
+        "plate",
+        "resistance_band",
+        "suspension",
+        "other",
+    ],
+    "hevy-muscle-groups": [
+        "abdominals",
+        "shoulders",
+        "biceps",
+        "triceps",
+        "forearms",
+        "quadriceps",
+        "hamstrings",
+        "calves",
+        "glutes",
+        "abductors",
+        "adductors",
+        "lats",
+        "upper_back",
+        "traps",
+        "lower_back",
+        "chest",
+        "cardio",
+        "neck",
+        "full_body",
+        "other",
+    ],
+}
+
+
+@pytest.mark.parametrize("registry", HEVY_TEMPLATE_ENUMS)
+def test_each_hevy_template_registry_prints_the_values_hevy_accepts(registry: str) -> None:
+    run = run_coach("schema", "--registry", registry, "--full")
+
+    assert run.code == 0
+    rows = run.envelope["result"]["rows"]
+    assert [row["name"] for row in rows] == HEVY_TEMPLATE_ENUMS[registry]
+
+
 def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None:
     run = run_coach("schema", "--registry", "flags", "--full")
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 88
+    assert len(rows) == run.envelope["result"]["count"] == 97
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -84,6 +165,57 @@ def test_the_flags_registry_names_what_may_leave_each_code() -> None:
     assert "acknowledgeable" not in rows["stall_streak"]
 
 
+def test_the_flags_registry_shows_the_plan_behind_the_program_as_a_week_warning() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["plan_behind_program"] == {
+        "code": "plan_behind_program",
+        "severity": "warning",
+        "left_by": [],
+        "scope": ["week"],
+        "params": ["plan_id", "approved_under", "version_id"],
+        "rn": None,
+    }
+
+
+def test_the_flags_registry_lists_an_unknown_hevy_template_value_as_a_line_violation() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["hevy_template_value_unknown"] == {
+        "code": "hevy_template_value_unknown",
+        "severity": "violation",
+        "cleared_by": ["[[exercise]]", "program adopt"],
+        "left_by": [],
+        "scope": ["line"],
+        "params": ["exercise_id", "column", "value"],
+        "rn": None,
+    }
+
+
+def test_the_flags_registry_names_the_params_rung_mets_hash_covers() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["rung_met"] == {
+        "code": "rung_met",
+        "severity": "warning",
+        "left_by": ["weekplan", "decision"],
+        "scope": ["line"],
+        "params": ["rung", "next", "exposures"],
+        "rn": "rn:bodyweight-skill-progression.3",
+        "hashed": ["rung", "next"],
+    }
+
+
+def test_the_flags_registry_cites_the_one_rung_step_for_ladder_top() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["ladder_top"]["rn"] == "rn:bodyweight-skill-progression.3"
+
+
 def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     run = run_coach("schema", "--registry", "flags")
 
@@ -91,7 +223,7 @@ def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
     assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
     assert result["truncated"] is True
     assert len(result["rows"]) == 10
-    assert result["count"] == 88
+    assert result["count"] == 97
 
 
 def test_last_keeps_that_many_rows() -> None:
@@ -166,3 +298,24 @@ def test_the_errors_registry_gives_each_code_its_class_exit_and_summary() -> Non
     assert set(rows["hevy_unreachable"]) == {"code", "class", "exit", "summary"}
     assert {code: (rows[code]["class"], rows[code]["exit"]) for code in expected} == expected
     assert all(row["summary"] for row in rows.values())
+
+
+def test_the_patterns_registry_flags_heavy_and_compound_on_each_row() -> None:
+    run = run_coach("schema", "--registry", "patterns", "--full")
+
+    rows = {row["name"]: row for row in run.envelope["result"]["rows"]}
+    assert run.envelope["result"]["count"] == 19
+    assert rows["squat"] == {"name": "squat", "heavy": True, "compound": True}
+    assert rows["lunge"] == {"name": "lunge", "heavy": False, "compound": True}
+    assert rows["balance"] == {"name": "balance", "heavy": False, "compound": False}
+
+
+def test_the_muscles_registry_flags_dosed_on_each_row() -> None:
+    run = run_coach("schema", "--registry", "muscles", "--full")
+
+    rows = {row["name"]: row for row in run.envelope["result"]["rows"]}
+    assert run.envelope["result"]["count"] == 18
+    assert rows["quadriceps"] == {"name": "quadriceps", "dosed": True}
+    assert rows["traps"] == {"name": "traps", "dosed": False}
+    assert "cardio" not in rows
+    assert "full_body" not in rows

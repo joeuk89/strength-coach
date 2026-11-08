@@ -69,8 +69,8 @@ REFERENCES check_in(id)`, NULL when the row came through `record` or `import`: `
 `niggle_event`, `follow_up_event`. `observation` has it NOT NULL (check-in file only). No other
 table has it; `niggle` and `follow_up` are reached through their first event.
 
-The seven-value reason registry (`pain`, `kit`, `stall`, `fatigue`, `schedule`,
-`athlete_request`, `coach_judgement`; ADR 0005) is the `because` CHECK on `override`,
+The eight-value reason registry (`pain`, `kit`, `stall`, `fatigue`, `schedule`,
+`athlete_request`, `coach_judgement`, ADR 0005; `progress`, an earned advance, ADR 0023) is the `because` CHECK on `override`,
 `decision`, `acknowledgement` and `annotation`; a miss tag is the `because` of a `miss_tag`
 annotation.
 
@@ -164,7 +164,7 @@ CREATE TABLE acknowledgement (             -- frozen on a plan or a version, nev
   version_id  TEXT REFERENCES program_version(id),
   key         TEXT NOT NULL,               -- 'code@scope-ref'
   params_hash TEXT NOT NULL,
-  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),
   text        TEXT NOT NULL,
   evidence    TEXT,                        -- JSON [ref]
   CHECK ((plan_id IS NULL) <> (version_id IS NULL)),
@@ -197,7 +197,7 @@ CREATE TABLE override (
   exercise_id TEXT REFERENCES exercise(id),
   date        TEXT,                        -- add_session only: the date added; NULL on every other kind
   params      TEXT NOT NULL,               -- JSON, the kind's remaining params
-  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),
   text        TEXT NOT NULL,
   evidence    TEXT,                        -- JSON [ref]
   CHECK ((kind = 'add_session') = (date IS NOT NULL))
@@ -210,6 +210,7 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
+  position     INTEGER NOT NULL,           -- order within the plan
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
@@ -218,6 +219,10 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   PRIMARY KEY (plan_id, session_id, date, exercise_id)
 );
 ```
+
+`plan apply` freezes each line's `position`, its order within the plan, counting from 1 through
+the Draft's sessions. A plan's rows read back by date and position, which is the Draft's order
+because its sessions are always in date order.
 
 A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
 in force on that date; a past plan's sessions are read from its `prescription` rows.
@@ -273,7 +278,7 @@ CREATE TABLE annotation (                  -- applied on read in id order; withd
   kind        TEXT NOT NULL CHECK (kind IN ('discount','repair','load_mode','void','trained_unlogged','cancelled','miss_tag','match')),
   target      TEXT NOT NULL,               -- ref: workout[/exercise] or planned_session
   params      TEXT,                        -- JSON; match names the planned session here
-  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),  -- a miss_tag's because is the miss tag
+  because     TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),  -- a miss_tag's because is the miss tag
   text        TEXT,
   withdraws   TEXT REFERENCES annotation(id),
   check_in    TEXT REFERENCES check_in(id),
@@ -351,12 +356,12 @@ CREATE TABLE athlete_note (
 
 CREATE TABLE decision (
   id            TEXT PRIMARY KEY,
-  kind          TEXT NOT NULL CHECK (kind IN ('override','park_session','resume_session','leave_warning','training_max','safety_ceiling','activity_cap','decline_ceiling','defer_deep_review','against_research','retire')),
+  kind          TEXT NOT NULL CHECK (kind IN ('override','park_session','resume_session','leave_warning','training_max','safety_ceiling','activity_cap','decline_ceiling','defer_deep_review','against_research','ladder_rung','retire')),
   session_id    TEXT REFERENCES session(id),      -- pulled out of params: the supersede rule keys on it
   exercise_id   TEXT REFERENCES exercise(id),     -- likewise
   params        TEXT NOT NULL,             -- JSON, the kind's remaining params
   until         TEXT,                      -- date, inclusive; decline_ceiling's is the Sunday of its week (overrides.md)
-  because       TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement')),
+  because       TEXT NOT NULL CHECK (because IN ('pain','kit','stall','fatigue','schedule','athlete_request','coach_judgement','progress')),
   text          TEXT NOT NULL,
   evidence      TEXT,                      -- JSON [ref]
   superseded_by TEXT REFERENCES decision(id),     -- the supersede write
@@ -673,8 +678,7 @@ manifest's row count for any table exceeds the store's (`store_behind_export`, r
   a migration that needs a UNIQUE or CHECK change rebuilds the table (ADR 0001).
 - `upgrade` is the only verb that moves `user_version` on a live store; the rebuild moves it
   only on the fresh database it is building.
-- Before cutover a schema change is "drop the database and re-import" and there are no
-  migrations; `schema_history/` is empty and the chain starts at 1 on cutover day.
+- Every schema change is a migration: stores and exports at a past version move up the chain.
 
 ## Flag codes
 
@@ -693,6 +697,8 @@ source, or `sleep_night` for one night and source; cleared by withdrawing one of
   one test that reads a spec document, `testing.md`).
 - Every CHECK list over a `kind`, `status`, `because` or `source` column equals the matching
   code registry; this is the guard that keeps the hand-written lists honest.
+- Every catalogue row's `pattern` is in the `patterns` registry and every name in its `muscles`
+  lists is in the `muscles` registry (ADR 0024); neither column has a CHECK.
 - `PRAGMA foreign_keys` is on from the connection factory (ADR 0001).
 - Export of a fixture store, delete the database, rebuild, re-export: byte-identical files.
 - The partial unique indexes hold: two approved plans for one week, two current goals, an open

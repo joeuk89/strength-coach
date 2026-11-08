@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from coach.core.cadence import BlockSpan
 from coach.core.config import Units
 from coach.core.e1rm import point
+from coach.core.exercise_ladder import LadderRead
 from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Flag
 from coach.core.goal import Milestone
@@ -206,6 +207,7 @@ class Progress:
     block: BlockSpan | None
     lifts: tuple[LiftProgress, ...] = ()
     milestones: tuple[MilestoneRead, ...] = ()
+    ladders: tuple[LadderRead, ...] = ()
     dose: tuple[DoseWeek, ...] = ()
     dose_target: Mapping[str, int] = field(default_factory=dict[str, int])
     adherence: AdherenceRead | None = None

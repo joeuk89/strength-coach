@@ -24,7 +24,7 @@ from coach.core.prescription import PrescribeRequest, Step
 from coach.core.program.form import LOAD_BEARING_MODES, Line, SetGroup
 from coach.core.progression import Verdict, judge
 from coach.core.rack import Rack, Rounding, next_row_up
-from coach.core.stall import stall_streak
+from coach.core.stall import judged, stall_streak
 from coach.core.top_backoff import top_set
 from coach.core.wave_531 import (
     REP_OUTS,
@@ -41,7 +41,8 @@ from coach.core.wave_531 import (
 
 @dataclass(frozen=True)
 class SchemeInput:
-    """`line` is the version's, which the hit test reads; `sets` are the week's."""
+    """`line` is the version's, which the hit test reads; `sets` are the week's. `since` is a
+    ladder's standing rung's start: no exposure before it counts toward a stall."""
 
     request: PrescribeRequest
     line: Line
@@ -50,6 +51,7 @@ class SchemeInput:
     rack: Rack | None
     scope: Scope
     e1rm: E1rmRead
+    since: datetime.date | None = None
 
     @property
     def loaded(self) -> bool:
@@ -108,8 +110,8 @@ class SchemeMoves:
 
     def opening(self, found: StartLoad) -> Move:
         """No exposure anywhere: the start load at the scheme's opening position."""
-        ladder = rungs(self.line)
-        if self.line.scheme.name == "assistance_ladder" and ladder:
+        ladder = rungs(self.line) if self.line.scheme.name == "assistance_ladder" else ()
+        if ladder:
             first = Load(ladder[0], "assisted")
             self.steps.append(Step("scheme", None, first.amount, "first_rung"))
             return self._held(first)
@@ -118,10 +120,14 @@ class SchemeMoves:
         return self._held(self._start_load(found))
 
     def stall(self, exposure: Exposure) -> None:
+        if not judged(self.given.request.planned.kind):
+            return
         history = since_redesign(
             ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on)),
             self.given.request.redesigned,
         )
+        since = self.given.since
+        history = tuple(e for e in history if since is None or since <= e.date)
         streak = stall_streak(self.line, history)
         if streak:
             self._raise(

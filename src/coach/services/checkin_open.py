@@ -18,11 +18,13 @@ from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
 from coach.core.phase_trend import fourteen_day_average, observed_rate
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
+from coach.core.registries.program import COMPOUND_PATTERNS
 from coach.core.units import from_kg
 from coach.services.cadence import cadence_signals
 from coach.services.check_in_warnings import activities, check_in_warnings, weigh_ins
 from coach.services.closed_weeks import WeekLog
-from coach.services.fatigue import COMPOUND_PATTERNS, Fatigue
+from coach.services.fatigue import Fatigue
+from coach.services.ladders import ladder_reads
 from coach.services.status import check_in_due_on
 from coach.store import (
     annotations,
@@ -79,11 +81,17 @@ def checkin_open(
         chosen,
         units=units,
         bodyweight_units=bodyweight_units,
+        zone=clock.now().tzinfo or datetime.UTC,
     )
 
 
 def record_card(
-    conn: Connection, row: check_ins.StoredCheckIn, *, units: Units, bodyweight_units: Units
+    conn: Connection,
+    row: check_ins.StoredCheckIn,
+    *,
+    units: Units,
+    bodyweight_units: Units,
+    zone: datetime.tzinfo = datetime.UTC,
 ) -> Card:
     """The card over a recorded Check-in's own window and tier, from the store as it stands now:
     what its rendered record shows (check-in.md, "Views")."""
@@ -96,6 +104,7 @@ def record_card(
         lambda _: row.tier,
         units=units,
         bodyweight_units=bodyweight_units,
+        zone=zone,
     )
 
 
@@ -109,6 +118,7 @@ def _card(
     *,
     units: Units,
     bodyweight_units: Units,
+    zone: datetime.tzinfo,
 ) -> Card:
     log = WeekLog(conn, units)
     fatigue = Fatigue(conn, log)
@@ -142,6 +152,7 @@ def _card(
             _lift_reads(conn, log, window),
             emphasis=version.form.emphasis if version else "hypertrophy",
         ),
+        card.ladders(ladder_reads(conn, units=units, on=on, zone=zone)),
         card.readiness(previous.readiness if previous else None),
         card.sleep(
             {d: h for d, h in fatigue.nights.items() if window.start <= d <= window.end},

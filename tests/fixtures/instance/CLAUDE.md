@@ -5,6 +5,8 @@ data only; the engine, its skills and its hooks come from the installed package 
 
 - `coach status` opens a session: where things stand and what needs attention.
 - `coach --help` lists the verbs; `coach schema <verb>` gives one verb's arguments and output.
+  `coach schema` alone gives every verb and the registry names, and
+  `coach schema --registry <name>` reads one registry.
 - A list stops at 10 rows and a result at the size budget, and each says when it was cut:
   `--last <n>` keeps n rows, `--full` keeps everything.
 - The athlete's own account of themselves is the profile, `profile.md`.
@@ -15,6 +17,10 @@ data only; the engine, its skills and its hooks come from the installed package 
   `coach progress` and `coach query`, and record nothing.
 - Order, numbers, thresholds and exit codes live in the engine: each verb's result, warnings
   and `error.code` say them, and `coach schema` gives every argument and file shape.
+- A change to the program or to this week is a new Draft for the week, redrafted and applied
+  again. Each skill is also the `/` command of the same name. A rung climbs only on the
+  athlete's yes to the check-in card or a plan flag: a `ladder_rung` Decision through
+  `coach checkin record` or `coach record`, then the next `coach plan draft` prescribes it.
 
 ## The coach's voice
 Everything written to the athlete is coaching in plain words: what they will do, what changed

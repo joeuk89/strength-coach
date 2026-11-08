@@ -7,7 +7,8 @@ description: Where the athlete trains and with what. Use after `coach init` when
 
 ## Read first
 `coach status`, for the locations recorded and whether any kit tables are stale. For a change,
-the location's `kit/<name>.json` as it stands.
+the location's `kit/<name>.json` as it stands. The equipment kinds the exercises use are in
+the library, `coach query exercises`.
 
 ## Ask
 Where they train, and for each place: do they load their own bar and dumbbells from a pile of
@@ -50,4 +51,4 @@ Run the verb's dry run and tell the athlete what it will record, every load quot
 nothing of the system named; they say yes before the verb records it.
 
 ## Verbs
-`coach status`, `coach publish`
+`coach status`, `coach query`, `coach publish`

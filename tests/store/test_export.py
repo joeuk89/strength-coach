@@ -2,6 +2,7 @@ import json
 
 from support.scenarios import a_session, a_workout, an_exercise
 
+from coach.store.chain import ENGINE as CHAIN
 from coach.store.connection import open_store
 from coach.store.export import Manifest, export, tables_behind
 
@@ -56,7 +57,7 @@ def test_the_manifest_names_the_versions_and_every_table_count_sorted_by_name() 
 
     manifest = json.loads(files["manifest.json"])
     assert list(manifest) == ["schema_version", "engine_version", "tables"]
-    assert manifest["schema_version"] == 1
+    assert manifest["schema_version"] == CHAIN.version
     assert manifest["engine_version"] == "0.3.0"
     assert manifest["tables"]["session"] == 2
     assert manifest["tables"]["workout"] == 0

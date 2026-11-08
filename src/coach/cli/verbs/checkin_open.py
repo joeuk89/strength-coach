@@ -87,8 +87,10 @@ DECLARATION = Declaration(
     name="checkin open",
     summary=(
         "The check-in card at a date: header, sessions, week kind, Block with the fatigue "
-        "triggers and the light-week proposal, adherence, dose, lifts, readiness, sleep, weight "
-        "and Phase, activities, niggles, follow-ups, notes and the deep tier, in that order, each "
+        "triggers and the light-week proposal, adherence, dose, lifts, ladders (each "
+        "exercise_ladder line's standing rung, its exposures toward the criterion, met, held and "
+        "the manual-rung question), readiness, sleep, weight and Phase, activities, niggles, "
+        "follow-ups, notes and the deep tier, in that order, each "
         "prefilled from the store with `asks` for what only the athlete knows; a field with "
         "nothing to say is left out. The outside-plan codes it owns come in warnings[]."
     ),

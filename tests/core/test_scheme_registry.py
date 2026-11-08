@@ -78,3 +78,33 @@ def test_every_row_describes_its_reads_and_opening_position() -> None:
         {"name": "pct_of_top", "type": "percent", "required": True}
     ]
     assert all(row["reads"] for row in rows.values())
+
+
+def test_the_exercise_ladder_names_its_rung_table_and_the_five_criterion_keys() -> None:
+    ladder = SCHEMES.get("exercise_ladder")
+
+    assert ladder.describe() == {
+        "name": "exercise_ladder",
+        "level": "line",
+        "params": [
+            {
+                "name": "rungs",
+                "type": "rungs",
+                "required": True,
+                "keys": ["exercise", "cues", "sets", "advance"],
+            },
+            {
+                "name": "advance",
+                "type": "criterion",
+                "default": {"exposures": 2},
+                "keys": ["reps", "duration_s", "rpe_at_most", "exposures", "manual"],
+            },
+        ],
+        "set_types": ["working"],
+        "set_groups": "one_working",
+        "rpe_on": "every_working",
+        "opening": "the first rung",
+        "reads": "reps or duration at RPE on the standing rung",
+        "reads_training_max": False,
+        "cadence_signals": ["cadence_slow"],
+    }

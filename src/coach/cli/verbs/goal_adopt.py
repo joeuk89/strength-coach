@@ -10,6 +10,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
+from coach.core.drafts.goal import GOAL
 from coach.services.goal_adopt import goal_adopt
 
 ID_OR_NULL = {"type": ["string", "null"]}
@@ -80,6 +81,7 @@ DECLARATION = Declaration(
         ],
     },
     run=InInstance(run),
+    draft=lambda: GOAL,
     examples=(
         Example(("goal", "adopt", ".coach/drafts/2026-10-30-goal.toml"), "Adopt a goal Draft."),
         Example(

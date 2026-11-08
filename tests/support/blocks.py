@@ -31,7 +31,6 @@ PULL_UP_LINE = a_line("pull_up", sets=[{"count": 3, "reps": [5, 8], "rpe": 8}], 
 LIGHT_WEEKS = (2, 5)
 WEEKS = 6
 FLAT_BENCH = (100.0,) * WEEKS
-_THREE_DAYS = datetime.timedelta(days=3)
 
 
 WHY = "Look athletic in a t-shirt, and bench my bodyweight before I'm 40."
@@ -41,15 +40,29 @@ MILESTONES = (
 )
 
 
-def a_push_program(bench_line: dict[str, object] = BENCH_LINE) -> Connection:
+def a_drill(*lines: dict[str, object]) -> dict[str, object]:
+    """A practice session scheduled like any other."""
+    return a_session("drill", *lines, kind="practice", tier="optional")
+
+
+def a_push_program(
+    bench_line: dict[str, object] = BENCH_LINE,
+    pull_up_line: dict[str, object] = PULL_UP_LINE,
+    practice_pull_ups: bool = False,
+) -> Connection:
     """The worked Goal with a `why` and two bench milestones, the maintenance Phase, and `push`
-    adopted on 30 Oct 2026."""
+    adopted on 30 Oct 2026. With `practice_pull_ups` the pull-up line stands alone in `drill`."""
     conn = a_library_store()
     a_goal(conn, why=WHY, milestones=MILESTONES)
     a_phase(conn, "maintenance")
+    sessions = (
+        (a_session("push", bench_line), a_drill(pull_up_line))
+        if practice_pull_ups
+        else (a_session("push", bench_line, pull_up_line),)
+    )
     adopt(
         conn,
-        toml(a_draft(a_session("push", bench_line, PULL_UP_LINE))),
+        toml(a_draft(*sessions)),
         file="d.toml",
         config=a_config(),
         kits=(kit_files(),),
@@ -68,13 +81,17 @@ def two_closed_blocks(
     steps: Sequence[dict[str, object]] = (),
     bench_line: dict[str, object] = BENCH_LINE,
     thursday_pull_ups: bool = False,
+    pull_up_line: dict[str, object] = PULL_UP_LINE,
+    practice_pull_ups: bool = False,
 ) -> Connection:
     """Six weeks of `push` on each Monday, weeks 3 and 6 light, all closed by one Check-in:
     Blocks b-2026-10-30 and b-2026-11-23 closed, b-2026-12-14 open. Bench logs a top set of
     `bench_tops[week]` × 5 at RPE 8 and three back-offs at 85 %, in lb. With
     `thursday_pull_ups` each ordinary week also logs the week's pull-ups in an unplanned
-    Thursday workout, so each Block holds three ordinary pull-up exposures."""
-    conn = a_push_program(bench_line)
+    Thursday workout, so each Block holds three ordinary pull-up exposures. With
+    `practice_pull_ups` the pull-up line stands alone in the practice session `drill` and its
+    Monday log moves to Wednesday, matched to `drill`."""
+    conn = a_push_program(bench_line, pull_up_line, practice_pull_ups)
     for week in range(WEEKS):
         plan_id = an_approved_plan(conn, monday(week))
         a_frozen_prescription(
@@ -92,18 +109,30 @@ def two_closed_blocks(
         top = bench_tops[week]
         bench: tuple[Logged, ...] = ((top, 5, 8), *[(top * 0.85, 5, 7)] * 3)
         pull_ups: tuple[Logged, ...] = tuple((None, pull_up_reps[week], 8) for _ in range(3))
-        a_logged_workout(
-            conn,
-            f"h-push-{week}",
-            monday(week),
-            (BENCH_TEMPLATE, tuple((_kg(lb), reps, rpe) for lb, reps, rpe in bench)),
-            (PULL_UP_TEMPLATE, pull_ups),
-        )
+        bench_sets = (BENCH_TEMPLATE, tuple((_kg(lb), reps, rpe) for lb, reps, rpe in bench))
+        if practice_pull_ups:
+            a_logged_workout(conn, f"h-push-{week}", monday(week), bench_sets)
+            a_logged_workout(
+                conn,
+                f"h-drill-{week}",
+                _days_after_monday(week, 2),
+                (PULL_UP_TEMPLATE, pull_ups),
+                session_id="drill",
+            )
+        else:
+            a_logged_workout(
+                conn, f"h-push-{week}", monday(week), bench_sets, (PULL_UP_TEMPLATE, pull_ups)
+            )
         if thursday_pull_ups and week not in LIGHT_WEEKS:
-            thursday = (datetime.date.fromisoformat(monday(week)) + _THREE_DAYS).isoformat()
-            a_logged_workout(conn, f"h-pull-{week}", thursday, (PULL_UP_TEMPLATE, pull_ups))
+            a_logged_workout(
+                conn, f"h-pull-{week}", _days_after_monday(week, 3), (PULL_UP_TEMPLATE, pull_ups)
+            )
     closed_through(conn, WEEKS)
     return conn
+
+
+def _days_after_monday(week: int, days: int) -> str:
+    return (datetime.date.fromisoformat(monday(week)) + datetime.timedelta(days=days)).isoformat()
 
 
 BOUNDARY = datetime.date(2026, 12, 14)

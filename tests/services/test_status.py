@@ -31,6 +31,7 @@ from coach.services.status import (
     status,
 )
 from coach.store.catalogue import seed_catalogue
+from coach.store.chain import ENGINE as CHAIN
 from coach.store.connection import Connection, open_store
 from coach.store.phases import OpenPhase
 
@@ -70,7 +71,7 @@ def test_status_reports_the_engine_against_its_pin_and_the_store_schema_version(
         engine_version=ENGINE,
         pin=ENGINE,
         hevy_on=True,
-        store_schema_version=1,
+        store_schema_version=CHAIN.version,
         last_import=None,
         last_import_age_days=None,
         workouts={"hevy": 0, "manual": 0},

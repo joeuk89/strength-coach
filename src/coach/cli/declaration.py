@@ -6,6 +6,7 @@ from typing import Literal
 from coach.cli.terminal import Terminal
 from coach.core.clock import Clock
 from coach.core.config import Config, Units
+from coach.core.draft_schema import DraftKind
 from coach.core.flag import Flag
 from coach.core.message import Message
 from coach.github.protocol import GitHubClient
@@ -142,6 +143,8 @@ class Declaration:
     pulls_first: bool = False
     # Output the agent must act on in full may run over the budget (verbs.md).
     over_budget: OverBudget = never
+    # The Draft the verb reads, whose schema and example `coach schema <verb>` shows.
+    draft: Callable[[], DraftKind] | None = None
 
     def input_schema(self) -> Json:
         properties: Json = {
@@ -156,14 +159,18 @@ class Declaration:
             "additionalProperties": False,
         }
 
-    def describe(self) -> Json:
-        return {
+    def describe(self, *, with_draft: bool = True) -> Json:
+        described: Json = {
             "name": self.name,
             "summary": self.summary,
             "writes": self.writes,
             "usage": self.usage(),
             "input": self.input_schema(),
             "output": self.output,
+        }
+        if with_draft and self.draft is not None:
+            described["draft"] = self.draft().describe()
+        return described | {
             "examples": [
                 {"argv": ["coach", *example.argv], "description": example.description}
                 for example in self.examples

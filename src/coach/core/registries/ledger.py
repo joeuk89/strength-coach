@@ -4,7 +4,7 @@ from typing import Literal, get_args
 from coach.core.registries.registry import Registry, Row, terms
 
 type Reason = Literal[
-    "pain", "kit", "stall", "fatigue", "schedule", "athlete_request", "coach_judgement"
+    "pain", "kit", "stall", "fatigue", "schedule", "athlete_request", "coach_judgement", "progress"
 ]
 
 REASONS = terms("reasons", *get_args(Reason.__value__))
@@ -44,6 +44,7 @@ DECISION_KINDS = Registry(
         DecisionKind("decline_ceiling", ("block",), "required"),
         DecisionKind("defer_deep_review", (), "required"),
         DecisionKind("against_research", ("ref",), "none"),
+        DecisionKind("ladder_rung", ("session", "exercise", "rung"), "none"),
         DecisionKind("retire", ("decision",), "none"),
     ),
 )

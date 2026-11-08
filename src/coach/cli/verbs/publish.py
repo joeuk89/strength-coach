@@ -1,3 +1,4 @@
+import datetime
 from pathlib import Path
 
 from coach.cli import export_dir as exported
@@ -34,6 +35,7 @@ def run(call: InstanceCall) -> Outcome:
             config=call.instance.config,
             kits=read_kit_files(call.instance),
             profile=profile.read_text(encoding="utf-8") if profile.is_file() else None,
+            zone=call.clock.now().tzinfo or datetime.UTC,
         )
     export_dir = call.instance.export_path
     to_make = exported.changes(export_dir, publication.export.files)

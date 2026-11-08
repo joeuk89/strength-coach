@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #46 (the Approval record is `approved_at` and `write_plan_hash` on the `week_plan` row, no route); 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011); 2026-11-07 by wayfinder #230 (the gate also covers `writes: github`, the `report` verb; its prompt shows the full issue body the athlete approves and is exempt from the 40-line budget, `docs/spec/voice.md`)
+amended: 2026-10-31 by wayfinder #46 (the Approval record is `approved_at` and `write_plan_hash` on the `week_plan` row, no route); 2026-10-31 by wayfinder #43 (the hook gates every verb declared `writes: hevy` or `git` through its dry run; the Hevy deny is every method on `/v1/workouts*`, ADR 0011); 2026-11-07 by wayfinder #230 (the gate also covers `writes: github`, the `report` verb; its prompt shows the full issue body the athlete approves and is exempt from the 40-line budget, `docs/spec/voice.md`); 2026-11-08 by wayfinder #277 (a ladder line below the top rung ends with the next rung's exercise name, in the Hevy note's wording)
 ---
 
 # Approval is the human's yes to the one gated write, bound by a Write plan hash
@@ -55,9 +55,10 @@ approved inside the `plan apply` transaction.
 
 - **The prompt** is a fixed layout budgeted to about 40 lines, held by a test: span and rotation
   position; per session, each line as exercise, sets × reps at load, with the delta against the
-  last exposure; every override with its kind and reason; warnings; the Hevy actions (folder
-  create, routine update, create and retire, template create); then the hash. More is behind
-  `--dry-run --full`.
+  last exposure, and a ladder line below its top rung ending `· Next: <exercise name>`, the name
+  the Hevy note's `Next:` line prints, on the same line so it adds none; every override with its
+  kind and reason; warnings; the Hevy actions (folder create, routine update, create and retire,
+  template create); then the hash. More is behind `--dry-run --full`.
 - **The Approval record** is the WeekPlan row itself: `approved_at` and `write_plan_hash` on
   `week_plan` (`docs/spec/schema.md`), no separate table and no route column (the prompt and the
   TTY are the same yes). Not the summary text: it is reproducible from the frozen row. Nothing

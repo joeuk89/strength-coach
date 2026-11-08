@@ -195,6 +195,7 @@ def a_frozen_prescription(
                 "session_id": session,
                 "date": on,
                 "exercise_id": exercise,
+                "position": _next_position(conn, plan_id),
                 "set_groups": json.dumps(list(set_groups)),
                 "derived_from": derived_from,
                 "steps": json.dumps(list(steps)),
@@ -202,3 +203,10 @@ def a_frozen_prescription(
                 "change": change,
             },
         )
+
+
+def _next_position(conn: Connection, plan_id: str) -> int:
+    (count,) = conn.execute(
+        "SELECT count(*) FROM prescription WHERE plan_id = ?", (plan_id,)
+    ).fetchone()
+    return count + 1

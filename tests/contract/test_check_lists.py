@@ -29,6 +29,7 @@ def test_the_check_lists_are_found() -> None:
         "schedule",
         "athlete_request",
         "coach_judgement",
+        "progress",
     )
     assert lists[("tombstone", "source")] == ("event", "full")
     assert set(COLUMN_REGISTRIES) <= set(lists)

@@ -3,8 +3,11 @@ import datetime
 import re
 
 from support.blocks import two_closed_blocks
+from support.check_in_cards import field_of, opened
+from support.clock import FixedClock
 from support.closed_weeks import a_check_in, a_planned_squat_week, closed_through, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
+from support.ladders import a_ladder_program, logged
 from support.pages import the_pages
 from support.plans import (
     SQUAT_LINE,
@@ -13,15 +16,17 @@ from support.plans import (
     a_squat_program,
     an_approved_plan,
 )
-from support.program_drafts import a_session
+from support.program_drafts import a_ladder_line, a_rung, a_session
 from support.programs import a_config
 
 from coach.core.config import Config, ImplementChoice, PlatePoolLocation
 from coach.core.hevy_actions import MapStatus
 from coach.core.mirror import MirroredRoutine
+from coach.render.facts import facts_text
 from coach.render.pages import render_pages
 from coach.services.closed_weeks import closed_weeks
 from coach.services.pages import page_facts
+from coach.services.record import record
 from coach.store import mirrors, routine_map
 from coach.store.connection import Connection
 
@@ -303,6 +308,23 @@ def test_the_week_page_keeps_a_frozen_row_the_derivation_no_longer_plans_after_t
     assert page.count(NOT_DERIVED) == 1
 
 
+def test_the_week_page_lists_frozen_rows_the_derivation_no_longer_plans_in_their_frozen_order() -> (
+    None
+):
+    conn = a_squat_program()
+    plan_id = a_planned_squat_week(conn, monday(0))
+    for session in ("shoulders", "arms"):
+        a_frozen_prescription(
+            conn, plan_id, session, "2026-11-03", "db_curl", set_groups=[AT_175], change="held"
+        )
+
+    assert headings(the_pages(conn)["pages/week.md"]) == [
+        "## Mon 2026-11-02: Lower",
+        "## Tue 2026-11-03: shoulders",
+        "## Tue 2026-11-03: arms",
+    ]
+
+
 def test_the_week_page_renders_the_frozen_rows_of_a_plan_with_no_version_in_force() -> None:
     conn = a_squat_program()
     plan_id = an_approved_plan(conn, monday(0), approved_at="2026-10-01T08:00:00+00:00")
@@ -331,3 +353,62 @@ def test_the_week_page_heads_a_daily_session_on_each_day() -> None:
             ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"), range(2, 9), strict=True
         )
     ]
+
+
+def test_a_routine_page_prints_a_ladder_line_rung_by_rung_from_the_version() -> None:
+    ladder = a_ladder_line("plank", a_rung(cues="near a wall"), a_rung("side_plank", cues=None))
+    conn = a_squat_program(a_session("lower", SQUAT_LINE, ladder))
+    plan_id = a_planned_squat_week(conn, monday(1))
+    plank = {"type": "working", "count": 2, "duration_s": 30, "rpe": 6}
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(1), "plank", set_groups=[plank], change="held"
+    )
+    a_routine_written(conn, "lower", plan_id)
+
+    page = the_pages(conn, kits=(kit_files(),))["pages/routines/lower.md"]
+
+    assert (
+        "Ladder:\n\n"
+        "1. **Plank** (standing): 2×30 s @6. near a wall. "
+        "Climb on 30 s at RPE 6 or under, 2 exposures running.\n"
+        "2. Side Plank: 2×30 s @6. Climb on 30 s at RPE 6 or under, 2 exposures running."
+    ) in page
+    assert page.count("Ladder:") == 1
+
+
+def test_a_routine_page_marks_the_rung_a_ladder_rung_decision_names() -> None:
+    ladder = a_ladder_line("plank", a_rung(cues=None), a_rung("side_plank", cues=None))
+    conn = a_squat_program(a_session("lower", SQUAT_LINE, ladder))
+    record(
+        conn,
+        (
+            b'[[decision]]\nkind = "ladder_rung"\nsession = "lower"\nexercise = "plank"\n'
+            b'rung = 2\nbecause = "progress"\ntext = "Two clean holds."\n'
+        ),
+        file="d.toml",
+        clock=FixedClock(),
+    )
+    plan_id = a_planned_squat_week(conn, monday(1))
+    side = {"type": "working", "count": 2, "duration_s": 30, "rpe": 6}
+    a_frozen_prescription(
+        conn, plan_id, "lower", monday(1), "side_plank", set_groups=[side], change="held"
+    )
+    a_routine_written(conn, "lower", plan_id)
+
+    page = the_pages(conn, kits=(kit_files(),))["pages/routines/lower.md"]
+
+    assert "1. Plank: 2×30 s @6." in page
+    assert "2. **Side Plank** (standing): 2×30 s @6." in page
+    assert page.count("Ladder:") == 1
+
+
+def test_a_check_in_record_shows_the_cards_ladders_field() -> None:
+    conn = a_ladder_program()
+    logged(conn, "dead_bug", "2026-11-05", 10)
+    a_check_in(conn, monday(0), "2026-11-08")
+    ladders = facts_text(field_of(opened(conn), "ladders").facts)
+
+    page = the_pages(conn)["pages/check-ins/2026-11-08.md"]
+
+    assert f"## Ladders\n\n{ladders}\n" in page
+    assert "| dead_bug |" in ladders

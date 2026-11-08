@@ -41,7 +41,9 @@ class CadenceRead:
     """`blocks` are the Block before and the closed one. `exposures` are the exercise's, every
     one. `adherence` is trained over planned core sessions across both Blocks' ordinary weeks.
     `capped` is, per Prescription frozen in the closed Block, whether the one-row cap bound.
-    `session_id` is the line's session: per-line reads skip Exposures matched to another."""
+    `session_id` is the line's session: per-line reads skip Exposures matched to another.
+    `standing` is an `exercise_ladder` line's standing rung, whose exercise and sets the metric
+    reads; the signal stays on the line's key."""
 
     line: Line
     blocks: tuple[BlockSpan, BlockSpan]
@@ -49,6 +51,11 @@ class CadenceRead:
     adherence: float | None
     capped: Sequence[bool] = ()
     session_id: str | None = None
+    standing: Line | None = None
+
+    @property
+    def measured(self) -> Line:
+        return self.line if self.standing is None else self.standing
 
 
 def cadence_signal(read: CadenceRead) -> Flag | None:
@@ -77,11 +84,12 @@ def _two_resets(read: CadenceRead) -> Metric | None:
 
 def _stalled_at_both_ends(read: CadenceRead) -> Metric | None:
     before = read.blocks[0]
-    first, last = (stall_streak(read.line, _inside(read, before.start, b.end)) for b in read.blocks)
+    line = read.measured
+    first, last = (stall_streak(line, _inside(read, before.start, b.end)) for b in read.blocks)
     if not first or not last:
         return None
     # Oldest of the first stall against the newest two of the last: no gain across both.
-    across = stall_streak(read.line, (last[-1], last[-2], first[0]))
+    across = stall_streak(line, (last[-1], last[-2], first[0]))
     return {"stall_streak": len(last)} if across else None
 
 
@@ -125,6 +133,7 @@ _SLOW: dict[str, Callable[[CadenceRead], Metric | None]] = {
     "linear": _two_resets,
     "double_progression": _stalled_at_both_ends,
     "assistance_ladder": _stalled_at_both_ends,
+    "exercise_ladder": _stalled_at_both_ends,
     "top_backoff": _flat_e1rm,
     "wave_531": _flat_e1rm,
 }
@@ -135,7 +144,7 @@ _FAST: dict[str, Callable[[CadenceRead], Metric | None]] = {
 
 
 def _inside(read: CadenceRead, start: datetime.date, end: datetime.date) -> tuple[Exposure, ...]:
-    exercise = read.line.exercise
+    exercise = read.measured.exercise
     return ordinary(
         newest_first(
             e
