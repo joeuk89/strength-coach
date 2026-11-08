@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from support.cli import run_coach
 from support.clock import FixedClock
+from support.fake_hevy import FakeHevy
+from support.fixture_instances import serving
 from support.git import isolate_git
 from support.ladders import a_ladder_program, ladder_rung_decision, logged
 
@@ -34,7 +36,9 @@ def initialised(tmp_path_factory: pytest.TempPathFactory) -> Path:
         isolate_git(patch, home)
         patch.setattr(app, "engine_version", lambda: ENGINE)
         patch.chdir(root)
-        assert run_coach("init", "--defaults").code == 0
+        assert (
+            run_coach("init", "--defaults", make_client=serving(FakeHevy(FixedClock()))).code == 0
+        )
     built = a_ladder_program()
     record(built, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock(LATE_MONDAY))
     logged(built, "ab_wheel", "2026-11-02", 8)
@@ -58,7 +62,7 @@ def instance(initialised: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 def test_progress_dates_the_rung_in_the_clocks_zone(
     instance: Path, zone: datetime.tzinfo, exposures: int
 ) -> None:
-    run = run_coach("progress", clock=on_sunday(zone))
+    run = run_coach("progress", clock=on_sunday(zone), make_client=serving(FakeHevy(FixedClock())))
 
     assert run.code == 0, run.stdout
     [row] = run.envelope["result"]["ladders"]
@@ -69,7 +73,7 @@ def test_progress_dates_the_rung_in_the_clocks_zone(
 def test_publish_dates_the_rung_in_the_clocks_zone(
     instance: Path, zone: datetime.tzinfo, exposures: int
 ) -> None:
-    run = run_coach("publish", clock=on_sunday(zone))
+    run = run_coach("publish", clock=on_sunday(zone), make_client=serving(FakeHevy(FixedClock())))
 
     assert run.code == 0, run.stdout
     page = (instance / "pages" / "progress.md").read_text(encoding="utf-8")
