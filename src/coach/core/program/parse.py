@@ -394,9 +394,7 @@ class _Reader(Reader):
     @overload
     def count(self, key: str, *, required: bool = False) -> int | None: ...
     def count(self, key: str, *, required: bool = False) -> int | None:
-        value = self._typed(key, COUNT, required=required)
-        if value is None and required:
-            raise self.missing(key)
+        value = self._present(key, COUNT, required=required)
         if value is None or (is_int(value) and cast(int, value) > 0):
             return cast(int | None, value)
         raise self.wrong(key, "a whole number above 0")
@@ -412,9 +410,7 @@ class _Reader(Reader):
     @overload
     def rpe(self, key: str, *, required: bool = False) -> Number | None: ...
     def rpe(self, key: str, *, required: bool = False) -> Number | None:
-        value = self._typed(key, RPE, required=required)
-        if value is None and required:
-            raise self.missing(key)
+        value = self._present(key, RPE, required=required)
         if value is None or (_is_number(value) and 0 < cast(float, value) <= 10):
             return cast(Number | None, value)
         raise self.wrong(key, "an RPE above 0 and at most 10")

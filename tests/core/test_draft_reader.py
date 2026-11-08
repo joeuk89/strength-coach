@@ -10,9 +10,6 @@ from coach.core.errors import Invalid
 
 
 class Sheet(Reader):
-    """A parser's reader: where a table sits is all the base needs told, plus any accessor of
-    its own, which reads through `_typed`."""
-
     def _where(self, key: str) -> str:
         return f"sheet: {key}"
 

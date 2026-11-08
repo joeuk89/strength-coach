@@ -202,7 +202,6 @@ def _exercise_facts(conn: Connection) -> Mapping[str, ExerciseFacts]:
 def _decisions(
     conn: Connection, session: PlannedSession, clock: Clock
 ) -> tuple[DecisionInForce, ...]:
-    """Each with the date it was recorded on in the athlete's timezone."""
     return decisions.in_force_dated(conn, session.date, PRESCRIBING_DECISIONS, clock.now().tzinfo)
 
 
