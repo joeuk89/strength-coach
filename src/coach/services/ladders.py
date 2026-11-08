@@ -65,10 +65,8 @@ def ladder_reads(
     exposures = read_history(conn, units).lifting
     plan = week_plans.latest_through(conn, week_monday(on).isoformat())
     monday = None if plan is None else datetime.date.fromisoformat(str(plan["week"]))
-    acknowledgements = (
-        *(() if plan is None else plan_acknowledgements(conn, str(plan["id"]))),
-        *leave_warning_decisions(conn, on),
-    )
+    frozen = () if plan is None else plan_acknowledgements(conn, str(plan["id"]))
+    acknowledgements = (*frozen, *leave_warning_decisions(conn, on))
     return tuple(
         ladder_read(
             ladder,

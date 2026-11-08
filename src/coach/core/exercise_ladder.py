@@ -147,7 +147,7 @@ class LadderRead:
 def ladder_read(
     ladder: ExerciseLadder,
     standing: StandingRung,
-    exposures: Iterable[Exposure],
+    exposures: Sequence[Exposure],
     *,
     scope: Scope,
     before: datetime.date,
