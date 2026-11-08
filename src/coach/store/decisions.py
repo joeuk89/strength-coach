@@ -1,6 +1,10 @@
+import datetime
 import json
 from collections.abc import Mapping
+from typing import cast
 
+from coach.core.instant import parse_instant
+from coach.core.prescription import DecisionInForce
 from coach.store import rows
 from coach.store.connection import Connection
 from coach.store.rows import Row, insert, select
@@ -33,6 +37,27 @@ def in_force(conn: Connection, on: str | None = None) -> list[Row]:
             "SELECT * FROM decision_in_force WHERE until IS NULL OR until >= ? ORDER BY id",
             (on,),
         )
+    )
+
+
+def in_force_dated(
+    conn: Connection,
+    on: datetime.date | None,
+    kinds: tuple[str, ...],
+    zone: datetime.tzinfo | None,
+) -> tuple[DecisionInForce, ...]:
+    """The Decisions of `kinds` in force, each dated by the day it was recorded on in `zone`."""
+    return tuple(
+        DecisionInForce(
+            id=str(row["id"]),
+            kind=str(row["kind"]),
+            session_id=cast(str | None, row["session_id"]),
+            exercise_id=cast(str | None, row["exercise_id"]),
+            params=cast(Mapping[str, object], row["params"]),
+            on=parse_instant(str(row["recorded_at"])).astimezone(zone).date(),
+        )
+        for row in in_force(conn, None if on is None else on.isoformat())
+        if row["kind"] in kinds
     )
 
 

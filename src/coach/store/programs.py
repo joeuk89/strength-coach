@@ -1,5 +1,6 @@
 """Program versions as rows: the version, its sessions and its lines (schema.md, "Program")."""
 
+import datetime
 import json
 from dataclasses import dataclass
 
@@ -43,6 +44,10 @@ class VersionRow:
     form: ProgramForm
     draft_hash: str
     recorded_at: str
+
+    @property
+    def adopted_on(self) -> datetime.date:
+        return datetime.date.fromisoformat(self.adopted)
 
 
 def insert_version(conn: Connection, row: VersionRow) -> None:

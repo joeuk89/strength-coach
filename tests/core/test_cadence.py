@@ -260,3 +260,13 @@ def test_exposures_of_another_rung_leave_a_ladder_unsignalled() -> None:
     read = CadenceRead(BOARD_LADDER, (BEFORE, CLOSED), tilts(*WEEKS), 0.9)
 
     assert cadence_signal(read) is None
+
+
+def test_a_line_with_no_standing_rung_measures_itself() -> None:
+    assert CadenceRead.measuring(LINEAR, None) == LINEAR
+
+
+def test_a_line_on_a_standing_rung_measures_the_rung() -> None:
+    standing = a_line("pull_up", working(3, 5), scheme="exercise_ladder")
+
+    assert CadenceRead.measuring(LINEAR, standing) == standing

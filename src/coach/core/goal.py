@@ -109,7 +109,7 @@ def parse_goal_draft(data: bytes, *, file: str) -> GoalDraft:
         why=required(f.text("why", required=True)),
         milestones=tuple(_milestone(m) for m in f.tables("milestones")),
     )
-    open_, close = _phase(f.subtable("phase"))
+    open_, close = _phase(f.table("phase"))
     return f.done(GoalDraft(draft_hash(data), file, goal, open_, close))
 
 
@@ -126,7 +126,7 @@ def _priority_lifts(f: Fields) -> tuple[str, ...]:
 
 def _milestone(f: Fields) -> Milestone:
     exercise = required(f.text("exercise", required=True))
-    target = f.subtable("target")
+    target = f.table("target")
     if target is None:
         raise Invalid(
             "milestone_target_missing",
@@ -140,7 +140,7 @@ def _target(f: Fields) -> Target:
     kind = required(f.term("kind", MILESTONE_TARGET_KINDS, required=True))
     if kind == "load_x_reps":
         load = required(f.number("load", required=True))
-        reps = required(f.integer("reps", required=True))
+        reps = required(f.whole("reps", required=True))
         if reps < 1:
             raise f.wrong("reps", "a whole number of at least 1")
         return f.done(Target(kind, load=load, reps=reps))
@@ -153,8 +153,8 @@ def _target(f: Fields) -> Target:
 def _phase(f: Fields | None) -> tuple[PhaseOpen | None, PhaseClose | None]:
     if f is None:
         return None, None
-    open_ = f.subtable("open")
-    close = f.subtable("close")
+    open_ = f.table("open")
+    close = f.table("close")
     if open_ is None and close is None:
         raise Invalid("invalid_argument", f"{f.where}: [phase] carries open, close or both")
     return f.done(
@@ -168,7 +168,7 @@ def _phase(f: Fields | None) -> tuple[PhaseOpen | None, PhaseClose | None]:
 def parse_phase_open(f: Fields) -> PhaseOpen:
     kind = required(f.term("kind", PHASE, required=True))
     rate = f.number("rate_pct_bw_per_week", low=float("-inf"))
-    until = f.subtable("until")
+    until = f.table("until")
     if until is None:
         raise Invalid("invalid_argument", f"{f.where}: until is required")
     return f.done(

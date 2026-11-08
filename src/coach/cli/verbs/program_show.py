@@ -14,8 +14,8 @@ from coach.cli.declaration import (
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Invalid
-from coach.core.exercise_ladder import full_criterion
-from coach.core.program.form import ExerciseLadder, Line, group_document
+from coach.core.exercise_ladder import rung_shapes
+from coach.core.program.form import ExerciseLadder, Line
 from coach.services.program import ShowResult, show, show_draft
 
 
@@ -82,14 +82,14 @@ def _ladder(session_id: str, line: Line, standing: int) -> Json:
         "exercise": line.exercise,
         "rungs": [
             {
-                "rung": index,
+                "rung": rung.rung,
                 "exercise": rung.exercise,
                 "cues": rung.cues,
-                "sets": [group_document(group) for group in rung.sets],
-                "criterion": full_criterion(ladder, index).stated(),
-                "standing": index == standing,
+                "sets": list(rung.set_groups),
+                "criterion": rung.criterion,
+                "standing": rung.standing,
             }
-            for index, rung in enumerate(ladder.rungs, start=1)
+            for rung in rung_shapes(ladder, standing)
         ],
     }
 

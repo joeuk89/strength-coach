@@ -4,7 +4,8 @@ import re
 import zlib
 
 from coach.core.config import ImplementChoice
-from coach.core.pages import PageLine, PageRung, PlatePoolKit, RoutinePage
+from coach.core.exercise_ladder import RungShape
+from coach.core.pages import PageLine, PlatePoolKit, RoutinePage
 from coach.core.rack import ListedRack, RackRow
 from coach.render.routine_page import routine_page
 
@@ -179,16 +180,18 @@ def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked(
         equipment_kind="bodyweight",
         set_groups=({"type": "working", "count": 2, "duration_s": 30, "rpe": 5},),
         ladder=(
-            PageRung(
+            RungShape(
                 rung=1,
+                exercise="custom_balance_board_stand",
                 name="Balance board: two feet, still",
                 cues="near a wall",
                 set_groups=({"count": 2, "duration_s": 30, "rpe": 5},),
                 criterion={"duration_s": 30, "rpe_at_most": 5, "exposures": 2},
                 standing=True,
             ),
-            PageRung(
+            RungShape(
                 rung=2,
+                exercise="custom_balance_board_one_foot",
                 name="Balance board: one foot, eyes closed",
                 cues=None,
                 set_groups=({"count": 4, "reps": 8, "rpe": 7},),
@@ -210,8 +213,9 @@ def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked(
 
 
 def test_a_rung_criterion_with_neither_reps_nor_duration_names_only_what_it_holds() -> None:
-    rung = PageRung(
+    rung = RungShape(
         rung=1,
+        exercise="push_up",
         name="Push-up",
         cues=None,
         set_groups=({"count": 3, "reps": "8+", "rpe": 8},),

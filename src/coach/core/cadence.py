@@ -53,9 +53,14 @@ class CadenceRead:
     session_id: str | None = None
     standing: Line | None = None
 
+    @staticmethod
+    def measuring(line: Line, standing: Line | None) -> Line:
+        """The line whose exercise and sets the metric reads."""
+        return line if standing is None else standing
+
     @property
     def measured(self) -> Line:
-        return self.line if self.standing is None else self.standing
+        return self.measuring(self.line, self.standing)
 
 
 def cadence_signal(read: CadenceRead) -> Flag | None:

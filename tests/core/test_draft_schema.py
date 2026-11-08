@@ -13,7 +13,7 @@ def read_paint(data: bytes) -> object:
     colour = required(f.term("colour", COLOURS, required=True))
     shade = f.text("shade", required=colour == "red")
     coats = tuple(_coat(c) for c in f.tables("coats"))
-    brush = f.subtable("brush")
+    brush = f.table("brush")
     return f.done((colour, shade, coats, _brush(brush) if brush else None))
 
 
@@ -22,7 +22,7 @@ def _coat(f: Fields) -> object:
 
 
 def _brush(f: Fields) -> object:
-    return f.done(f.integer("width", required=True))
+    return f.done(f.whole("width", required=True))
 
 
 def test_a_required_read_is_a_required_property_of_its_type() -> None:
