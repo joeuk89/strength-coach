@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-26
-amended: 2026-10-31 by wayfinder #46 (`coach.toml`, no recipe cards or proposals); 2026-10-31 by wayfinder #42 (the rebuild from the export runs only when the database file is missing, never on an export "older than a commit"; each migration freezes the DDL it leaves behind, `docs/spec/schema.md`)
+amended: 2026-10-31 by wayfinder #46 (`coach.toml`, no recipe cards or proposals); 2026-10-31 by wayfinder #42 (the rebuild from the export runs only when the database file is missing, never on an export "older than a commit"; each migration freezes the DDL it leaves behind, `docs/spec/schema.md`); 2026-11-08 by the review of PR #271 (every schema change is a migration, cutover or not; the chain started with `m0001` during build v6)
 ---
 
 # SQLite is the source of truth; git sees only a text export
@@ -46,9 +46,8 @@ foreign keys replace about 7 checks, not 15; per-file atomic writes already exis
 - Stored data is never edited by hand. The exception is the program, which is authored: an
   `adopt` verb validates a text form and records it as a new program version.
 - Git sees one commit per `publish`; Drafts never reach git (`.coach/drafts/` is gitignored).
-- Before cutover, a schema change is "drop the database and re-import"; after it, one linear
-  `user_version` migration chain over one frozen DDL per schema version, so a rebuild can build
-  an export at any version it was written at. Adding a UNIQUE constraint or changing a CHECK
+- A schema change is one linear `user_version` migration over one frozen DDL per schema version,
+  so a rebuild can build an export at any version it was written at. Adding a UNIQUE constraint or changing a CHECK
   needs a table rebuild in SQLite.
 - A second machine clones the instance and runs the engine; the missing database is rebuilt
   from the export on the first verb. To take a newer export later, delete the database file.
