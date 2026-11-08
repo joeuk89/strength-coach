@@ -26,6 +26,14 @@ def latest_week(conn: Connection) -> Row | None:
     return found[0] if found else None
 
 
+def latest_through(conn: Connection, week: str) -> Row | None:
+    """The approved WeekPlan of the latest week up to and including Monday `week`."""
+    found = select(
+        conn, f"{READ} WHERE status = 'approved' AND week <= ? ORDER BY week DESC LIMIT 1", (week,)
+    )
+    return found[0] if found else None
+
+
 def approved_weeks(conn: Connection) -> frozenset[str]:
     found = conn.execute("SELECT week FROM week_plan WHERE status = 'approved'")
     return frozenset(week for (week,) in found)
@@ -148,6 +156,19 @@ def acknowledgements(conn: Connection, plan_id: str) -> list[tuple[str, str, str
         "SELECT key, params_hash, because FROM acknowledgement WHERE plan_id = ? ORDER BY id",
         (plan_id,),
     ).fetchall()
+
+
+def acknowledgement_rows(conn: Connection, plan_id: str) -> list[Row]:
+    """The plan's frozen acknowledgements in full, evidence decoded."""
+    found = select(
+        conn,
+        "SELECT key, params_hash, because, text, evidence FROM acknowledgement "
+        "WHERE plan_id = ? ORDER BY id",
+        (plan_id,),
+    )
+    for row in found:
+        row["evidence"] = json.loads(str(row["evidence"])) if row["evidence"] else []
+    return found
 
 
 def stored_overrides(conn: Connection, plan_id: str) -> tuple[PlanOverride, ...]:

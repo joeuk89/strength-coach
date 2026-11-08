@@ -28,6 +28,7 @@ def test_the_progress_view_carries_the_ladder_rows_the_check_in_card_shows() -> 
             "exposures": 2,
             "needed": 2,
             "met": True,
+            "held": False,
             "next": "ab_wheel",
         }
     ]

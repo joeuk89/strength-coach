@@ -214,6 +214,12 @@ DECLARATION = Declaration(
                             "type": ["integer", "null"],
                         },
                         "met": {"type": "boolean"},
+                        "held": {
+                            "description": (
+                                "an acknowledgement or leave_warning leaves rung_met or ladder_top"
+                            ),
+                            "type": "boolean",
+                        },
                         "next": {"type": ["string", "null"]},
                     },
                 },

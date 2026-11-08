@@ -28,7 +28,8 @@ rather than carrying them.
 - **Ladders.** The card's Ladders field is the week's ask: a `met` (`rung_met` standing) or a
   manual rung's question. On the athlete's yes, record a `ladder_rung` Decision naming the next
   rung in the check-in record, reason `progress`; without one the rung stands. A `met` on the
-  last rung (`ladder_top`) waits for the program at the block boundary.
+  last rung (`ladder_top`) waits for the program at the block boundary. Do not ask about a
+  `held` rung.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain
   changes gait, sleep or daily tasks; never diagnose.
 - **Block and tier.** When the card's Block line carries a proposal or the derived tier is deep,
