@@ -442,6 +442,7 @@ def test_progress_carries_each_ladder_line_on_its_standing_rung(instance: Path) 
             "exposures": 0,
             "needed": 2,
             "met": False,
+            "held": False,
             "next": "custom_balance_board_tilt",
         }
     ]

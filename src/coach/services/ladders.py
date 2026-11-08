@@ -7,11 +7,14 @@ from typing import cast
 
 from coach.core.config import Units
 from coach.core.exercise_ladder import LadderRead, ladder_read, standing_rung
+from coach.core.flag import Scope
 from coach.core.instant import parse_instant
+from coach.core.planned_week import week_monday
 from coach.core.prescription import DecisionInForce
 from coach.core.program.form import ProgramForm
 from coach.services.history import read_history
-from coach.store import decisions, programs
+from coach.services.leave_warning import leave_warning_decisions, plan_acknowledgements
+from coach.store import decisions, programs, week_plans
 from coach.store.connection import Connection
 
 _DAY = datetime.timedelta(days=1)
@@ -60,6 +63,10 @@ def ladder_reads(
     found = rung_decisions(conn, on, zone)
     adopted = datetime.date.fromisoformat(version.adopted[:10])
     exposures = read_history(conn, units).lifting
+    plan = week_plans.latest_through(conn, week_monday(on).isoformat())
+    monday = None if plan is None else datetime.date.fromisoformat(str(plan["week"]))
+    frozen = () if plan is None else plan_acknowledgements(conn, str(plan["id"]))
+    acknowledgements = (*frozen, *leave_warning_decisions(conn, on))
     return tuple(
         ladder_read(
             ladder,
@@ -67,9 +74,9 @@ def ladder_reads(
                 found, ladder, session_id=session.id, line_key=line.exercise, adopted=adopted
             ),
             exposures,
-            session_id=session.id,
-            line_key=line.exercise,
+            scope=Scope("line", monday, session_id=session.id, exercise_id=line.exercise),
             before=on + _DAY,
+            acknowledgements=acknowledgements,
         )
         for session in version.form.sessions
         for line in session.lines

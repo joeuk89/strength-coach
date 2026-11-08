@@ -8,7 +8,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 
 from coach.core.exposure import Exposure, ExposureSet
-from coach.core.flag import Flag, Scope, raise_flag
+from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
 from coach.core.line_history import newest_first, ordinary
 from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Advance, ExerciseLadder, Line, ProgramForm, SetGroup
@@ -129,8 +129,8 @@ def climb_offer(
 @dataclass(frozen=True)
 class LadderRead:
     """Where a line stands on its ladder: the standing rung, the newest run of exposures toward
-    its criterion out of the `needed` (none on a `manual` rung), and `met` where the climb is
-    offered as `rung_met` or `ladder_top`."""
+    its criterion out of the `needed` (none on a `manual` rung), `met` where the climb is offered
+    as `rung_met` or `ladder_top`, and `held` where an acknowledgement leaves that offer."""
 
     session_id: str
     line_key: str
@@ -141,35 +141,40 @@ class LadderRead:
     exposures: int
     needed: int | None
     met: bool
+    held: bool
 
 
 def ladder_read(
     ladder: ExerciseLadder,
     standing: StandingRung,
-    exposures: Iterable[Exposure],
+    exposures: Sequence[Exposure],
     *,
-    session_id: str,
-    line_key: str,
+    scope: Scope,
     before: datetime.date,
+    acknowledgements: Iterable[Acknowledgement],
 ) -> LadderRead:
-    """The line's ladder as the exposures logged before `before` leave it."""
+    """The line's ladder as the exposures logged before `before` leave it, on the line `scope`
+    names. The climb offer goes through `leave`, as every flag on the approval prompt does."""
+    session_id = str(scope.session_id)
     needed = _needed(ladder, standing.index)
     count = (
         0
         if needed is None
         else min(len(_qualifying_run(ladder, standing, exposures, session_id, before)), needed)
     )
+    offer = climb_offer(ladder, standing, exposures, scope=scope, on=before)
     top = standing.index == len(ladder.rungs)
     return LadderRead(
         session_id=session_id,
-        line_key=line_key,
+        line_key=str(scope.exercise_id),
         rung=standing.index,
         exercise=ladder.rungs[standing.index - 1].exercise,
         rungs=len(ladder.rungs),
         next=None if top else ladder.rungs[standing.index].exercise,
         exposures=count,
         needed=needed,
-        met=needed is not None and count >= needed,
+        met=offer is not None,
+        held=offer is not None and leave(offer, acknowledgements).left is not None,
     )
 
 
