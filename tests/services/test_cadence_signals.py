@@ -161,3 +161,9 @@ def test_a_ladder_standing_on_a_rung_with_no_exposures_raises_no_signal() -> Non
     )
 
     assert "pull_up" not in signals_at_check_in(conn)
+
+
+def test_a_practice_line_stalled_across_two_blocks_raises_no_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, practice_pull_ups=True)
+
+    assert "pull_up" not in signals_at_check_in(conn)

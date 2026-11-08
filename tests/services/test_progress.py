@@ -1,6 +1,6 @@
 import datetime
 
-from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, WHY, two_closed_blocks
+from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, WHY, a_drill, two_closed_blocks
 from support.clock import FixedClock, at
 from support.kit_fixtures import kit_files
 from support.ledger import a_weigh_in
@@ -162,3 +162,23 @@ def test_flat_pull_ups_that_predate_the_latest_redesign_show_no_stall_streak() -
     )
 
     assert pull_up_in(report(conn)).stall_streak == 0
+
+
+def test_a_practice_line_shows_a_stall_streak_of_zero_on_flat_pull_ups() -> None:
+    conn = two_closed_blocks(practice_pull_ups=True)
+
+    assert pull_up_in(report(conn)).stall_streak == 0
+
+
+def test_a_lift_on_a_practice_line_and_a_lifting_line_shows_the_lifting_lines_stall() -> None:
+    conn = two_closed_blocks()
+    adopt(
+        conn,
+        toml(a_draft(a_drill(PULL_UP_LINE), a_session("push", BENCH_LINE, PULL_UP_LINE))),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(),
+    )
+
+    assert pull_up_in(report(conn)).stall_streak == 3

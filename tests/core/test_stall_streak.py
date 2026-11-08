@@ -40,6 +40,14 @@ def test_three_ordinary_exposures_with_no_gain_raise_stall_streak_with_their_ref
     ]
 
 
+def test_a_practice_line_on_double_progression_raises_no_stall_streak() -> None:
+    exposures = (squat_on("2026-10-12"), squat_on("2026-10-19"), squat_on("2026-10-26"))
+
+    line = prescribe(a_request(a_line(), exposures=exposures, kind="practice")).lines[0]
+
+    assert stalls(line) == []
+
+
 def test_two_exposures_with_no_gain_are_not_a_stall() -> None:
     assert stalls(derive(squat_on("2026-10-19"), squat_on("2026-10-26"))) == []
 
