@@ -8,7 +8,7 @@ from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.kit_fixtures import kit_files
 from support.plan_drafts import a_plan_draft
-from support.plans import a_squat_program, squat_logged
+from support.plans import SQUAT_TEMPLATE, a_squat_program, squat_logged
 from support.program_drafts import a_draft, a_line, a_session, toml
 from support.programs import a_config
 
@@ -709,3 +709,39 @@ def test_a_flag_that_became_a_violation_after_approval_does_not_block_the_resume
 
     assert resumed.resumed
     assert [(o.session_id, o.outcome) for o in resumed.routines] == [("lower", "verified")]
+
+
+def bench_before_squat() -> Connection:
+    return a_squat_week(a_session("lower", a_line("bb_bench_press"), a_line("bb_back_squat")))
+
+
+def test_a_resumed_dry_run_lists_a_sessions_lines_in_the_order_the_athlete_approved() -> None:
+    conn = bench_before_squat()
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh = a_rerun_dry_run(conn, data)
+    push(conn, FakeHevy(FixedClock()), data, fresh.write_plan_hash)
+    resumed = a_rerun_dry_run(conn, data)
+
+    assert resumed.resumes == "wp-2026-11-02"
+    for found in (fresh, resumed):
+        assert [(s.session_id, s.date.isoformat()) for s in found.summary.sessions] == [
+            ("lower", "2026-11-02")
+        ]
+        assert [line.exercise_id for line in found.summary.sessions[0].lines] == [
+            "bb_bench_press",
+            "bb_back_squat",
+        ]
+
+
+def test_the_routine_follows_the_authored_order_and_a_resume_keeps_the_approved_hash() -> None:
+    conn = bench_before_squat()
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+    digest = the_hash(conn, data)
+
+    push(conn, hevy, data, digest)
+
+    routine = hevy.routine(lower_routine(conn))
+    assert [e.hevy_template_id for e in routine.exercises] == [BENCH_TEMPLATE, SQUAT_TEMPLATE]
+    assert a_rerun_dry_run(conn, data).write_plan_hash == digest

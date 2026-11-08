@@ -210,6 +210,7 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
+  position     INTEGER NOT NULL,           -- order within the session
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
@@ -218,6 +219,9 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   PRIMARY KEY (plan_id, session_id, date, exercise_id)
 );
 ```
+
+`plan apply` freezes each line's `position` from its order in the Draft's session, on the same
+base as `program_line.position`, and a plan's rows read back by date, session and position.
 
 A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
 in force on that date; a past plan's sessions are read from its `prescription` rows.
@@ -673,8 +677,7 @@ manifest's row count for any table exceeds the store's (`store_behind_export`, r
   a migration that needs a UNIQUE or CHECK change rebuilds the table (ADR 0001).
 - `upgrade` is the only verb that moves `user_version` on a live store; the rebuild moves it
   only on the fresh database it is building.
-- Before cutover a schema change is "drop the database and re-import" and there are no
-  migrations; `schema_history/` is empty and the chain starts at 1 on cutover day.
+- Every schema change is a migration: stores and exports at a past version move up the chain.
 
 ## Flag codes
 

@@ -155,18 +155,6 @@ Change: held. From `exposure:00000000-0000-4000-8000-005000000003/db_row`.
 
 ## Fri 2026-10-30: Arms
 
-### Triceps Pushdown (Cable)
-
-- 3×8–10 @8 at 40 lb
-
-Change: held. From `exposure:00000000-0000-4000-8000-005000000004/cable_triceps_pushdown`.
-
-| step | from | to | cause |
-| --- | --- | --- | --- |
-| rack | 40 | 40 | row |
-
-- warning `stall_streak`: 3 exposures in a row with no gain on the double_progression metric ([rn:progression-methods §4](https://github.com/joeuk89/strength-coach/blob/v1.0.0/docs/spec/progression-methods.md))
-
 ### Bicep Curl (EZ Bar)
 
 - 3×8–10 @8 at 55 lb
@@ -176,6 +164,18 @@ Change: held. From `exposure:00000000-0000-4000-8000-005000000004/ez_bar_curl`.
 | step | from | to | cause |
 | --- | --- | --- | --- |
 | rack | 55 | 55 | row |
+
+- warning `stall_streak`: 3 exposures in a row with no gain on the double_progression metric ([rn:progression-methods §4](https://github.com/joeuk89/strength-coach/blob/v1.0.0/docs/spec/progression-methods.md))
+
+### Triceps Pushdown (Cable)
+
+- 3×8–10 @8 at 40 lb
+
+Change: held. From `exposure:00000000-0000-4000-8000-005000000004/cable_triceps_pushdown`.
+
+| step | from | to | cause |
+| --- | --- | --- | --- |
+| rack | 40 | 40 | row |
 
 - warning `stall_streak`: 3 exposures in a row with no gain on the double_progression metric ([rn:progression-methods §4](https://github.com/joeuk89/strength-coach/blob/v1.0.0/docs/spec/progression-methods.md))
 

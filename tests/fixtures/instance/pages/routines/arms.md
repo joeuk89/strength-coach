@@ -4,10 +4,10 @@
 
 Session `arms` at gym as written for the week of 2026-10-26.
 
-## Triceps Pushdown (Cable)
-
-- 3×8–10 @8 at 40 lb
-
 ## Bicep Curl (EZ Bar)
 
 - 3×8–10 @8 at 55 lb
+
+## Triceps Pushdown (Cable)
+
+- 3×8–10 @8 at 40 lb

@@ -127,6 +127,7 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
+  position     INTEGER NOT NULL,           -- order within the session
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]

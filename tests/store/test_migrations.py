@@ -1,9 +1,12 @@
+import json
 import sqlite3
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
 from support.chains import TEMPORARY
 
+from coach.store import week_plans
 from coach.store.chain import ENGINE, Chain, Migrated, migrate
 from coach.store.connection import connect, schema_version
 from coach.store.export import export
@@ -21,6 +24,14 @@ def schema_of(conn: sqlite3.Connection) -> list[tuple[str, str, str]]:
     return conn.execute(
         "SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY name"
     ).fetchall()
+
+
+def an_export_dir(tmp_path: Path, files: Mapping[str, str]) -> Path:
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    for name, text in files.items():
+        (export_dir / name).write_text(text, encoding="utf-8")
+    return export_dir
 
 
 def a_v1_store_with_rows() -> sqlite3.Connection:
@@ -111,13 +122,9 @@ def test_an_export_at_version_n_rebuilds_through_the_frozen_ddl_and_migrates_wit
     tmp_path: Path,
 ) -> None:
     files = export(a_v1_store_with_rows(), "0.3.0").files
-    export_dir = tmp_path / "export"
-    export_dir.mkdir()
-    for name, text in files.items():
-        (export_dir / name).write_text(text, encoding="utf-8")
     database = tmp_path / "coach.db"
 
-    rebuilt = rebuild_missing(database, export_dir, TEMPORARY)
+    rebuilt = rebuild_missing(database, an_export_dir(tmp_path, files), TEMPORARY)
 
     assert rebuilt == Rebuilt(schema_version=1)
     conn = connect(database)
@@ -152,3 +159,99 @@ def test_m0001_keeps_every_decision_and_takes_ladder_rung_and_the_reason_progres
         ("d-0001", "against_research", "coach_judgement"),
         ("d-0002", "ladder_rung", "progress"),
     ]
+
+
+def with_unpositioned_prescriptions(conn: sqlite3.Connection) -> sqlite3.Connection:
+    """Rows as a store below version 3 holds them, written out of exercise order."""
+    with conn:
+        conn.execute("INSERT INTO session VALUES ('lower', 'pv-1'), ('upper', 'pv-1')")
+        for id_ in ("ab_wheel", "bb_back_squat", "bb_bench_press"):
+            conn.execute(
+                "INSERT INTO exercise (id, name, load_mode, equipment_kind, pattern, muscles, "
+                "source) VALUES (?, ?, 'total', 'barbell', 'squat', '{}', 'catalogue')",
+                (id_, id_),
+            )
+        for plan, status in (("wp-2026-11-02", "superseded"), ("wp-2026-11-02-2", "approved")):
+            conn.execute(
+                "INSERT INTO week_plan (id, week, position, status, approved_at, write_plan_hash, "
+                "draft_hash, recorded_at) VALUES (?, '2026-11-02', 'A', ?, "
+                "'2026-11-01T08:00:00Z', 'sha256:w', 'sha256:d', '2026-11-01T08:00:00Z')",
+                (plan, status),
+            )
+        for plan, session, day, exercise in (
+            ("wp-2026-11-02", "lower", "2026-11-02", "bb_bench_press"),
+            ("wp-2026-11-02", "lower", "2026-11-02", "ab_wheel"),
+            ("wp-2026-11-02", "lower", "2026-11-02", "bb_back_squat"),
+            ("wp-2026-11-02", "lower", "2026-11-05", "bb_bench_press"),
+            ("wp-2026-11-02", "upper", "2026-11-03", "bb_bench_press"),
+            ("wp-2026-11-02-2", "lower", "2026-11-02", "bb_bench_press"),
+        ):
+            conn.execute(
+                "INSERT INTO prescription (plan_id, session_id, date, exercise_id, set_groups, "
+                "derived_from, steps, flags, change) "
+                "VALUES (?, ?, ?, ?, '[]', 'start_load', '[]', '[]', 'held')",
+                (plan, session, day, exercise),
+            )
+    return conn
+
+
+def positions(
+    conn: sqlite3.Connection, plan_id: str = "wp-2026-11-02"
+) -> list[tuple[object, object, object, object]]:
+    return [
+        (r["session_id"], r["date"], r["exercise_id"], r["position"])
+        for r in week_plans.prescriptions(conn, plan_id)
+    ]
+
+
+NUMBERED_BY_EXERCISE = [
+    ("lower", "2026-11-02", "ab_wheel", 1),
+    ("lower", "2026-11-02", "bb_back_squat", 2),
+    ("lower", "2026-11-02", "bb_bench_press", 3),
+    ("upper", "2026-11-03", "bb_bench_press", 1),
+    ("lower", "2026-11-05", "bb_bench_press", 1),
+]
+
+
+def test_m0002_numbers_a_v2_stores_rows_in_the_order_every_reader_showed_them() -> None:
+    conn = with_unpositioned_prescriptions(at_version(ENGINE, 2))
+
+    migrated = migrate(conn)
+
+    assert migrated.steps == ("m0002",)
+    assert positions(conn) == NUMBERED_BY_EXERCISE
+    assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
+
+
+def test_a_v1_store_with_prescriptions_migrates_through_both_steps() -> None:
+    conn = with_unpositioned_prescriptions(at_version(ENGINE, 1))
+
+    migrated = migrate(conn)
+
+    assert migrated.steps == ("m0001", "m0002")
+    assert positions(conn) == NUMBERED_BY_EXERCISE
+
+
+def test_a_migrated_prescription_table_has_a_fresh_stores_definition() -> None:
+    conn = with_unpositioned_prescriptions(at_version(ENGINE, 2))
+    fresh = at_version(ENGINE, ENGINE.version)
+
+    migrate(conn)
+
+    definition = "SELECT sql FROM sqlite_master WHERE name = 'prescription'"
+    assert conn.execute(definition).fetchall() == fresh.execute(definition).fetchall()
+
+
+def test_an_export_written_at_v2_rebuilds_with_its_prescriptions_numbered(tmp_path: Path) -> None:
+    files = export(with_unpositioned_prescriptions(at_version(ENGINE, 2)), "0.6.0").files
+    assert "position" not in json.loads(files["prescription.jsonl"].splitlines()[0])
+    database = tmp_path / "coach.db"
+
+    rebuilt = rebuild_missing(database, an_export_dir(tmp_path, files))
+
+    assert rebuilt == Rebuilt(schema_version=2)
+    conn = connect(database)
+    assert schema_version(conn) == ENGINE.version
+    assert positions(conn) == NUMBERED_BY_EXERCISE
+    first = json.loads(export(conn, "0.6.0").files["prescription.jsonl"].splitlines()[0])
+    assert list(first)[:5] == ["plan_id", "session_id", "date", "exercise_id", "position"]
