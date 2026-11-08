@@ -93,16 +93,11 @@ class _Derivation:
             exercise_id=self.line.exercise,
         )
 
-    @property
-    def rungs(self) -> tuple[str, ...]:
-        ladder = self.line.scheme.ladder
-        return () if ladder is None else tuple(rung.exercise for rung in ladder.rungs)
-
     def derive(self) -> LinePrescription | None:
         overrides = self._overrides()
         if "drop_line" in overrides:
             return None
-        ladder = self.line.scheme.ladder
+        ladder = self.line.ladder
         authored = self.line if ladder is None else self._week_rung(ladder)
         if "swap_exercise" in overrides:
             authored = self._swap(authored, *overrides["swap_exercise"])
@@ -170,7 +165,7 @@ class _Derivation:
                 rack,
                 self.scope,
                 e1rm=read.best,
-                rung_exercises=self.rungs,
+                rung_exercises=self.line.rung_exercises,
             )
             opening = _first(move.proposal)
             loaded = mode in LOAD_BEARING_MODES
@@ -200,7 +195,7 @@ class _Derivation:
             scheme_load=moved,
             pin=pinned,
             e1rm=read.best,
-            rung_exercises=self.rungs,
+            rung_exercises=self.line.rung_exercises,
         )
         if pinned is not None:
             bounded = bound(context, _pinned(move.proposal, pinned), "hold", self.steps, self.flags)
@@ -308,14 +303,15 @@ class _Derivation:
             adopted=request.adopted,
         )
         self.standing = standing
-        standing_exercise = self.rungs[standing.index - 1]
+        rungs = self.line.rung_exercises
+        standing_exercise = rungs[standing.index - 1]
         days = line_days_off(
             request.exposures,
             request.trained,
             exercise_id=standing_exercise,
             session_id=planned.session_id,
             on=planned.date,
-            rungs=self.rungs,
+            rungs=rungs,
         )
         week = standing.index
         band = return_band(days.days)
@@ -323,7 +319,7 @@ class _Derivation:
             week = max(OPENING_RUNG, standing.index - band.rungs_back)
             if week != standing.index:
                 cause = f"return {band.label}, {days.days} days off"
-                self.steps.append(Step("cut", standing_exercise, self.rungs[week - 1], cause))
+                self.steps.append(Step("cut", standing_exercise, rungs[week - 1], cause))
         self._keep(
             climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
         )

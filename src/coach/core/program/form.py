@@ -86,6 +86,15 @@ class Line:
     start_load: Number | None = None
     superset: str | None = None
 
+    @property
+    def ladder(self) -> ExerciseLadder | None:
+        return self.scheme.ladder
+
+    @property
+    def rung_exercises(self) -> tuple[str, ...]:
+        """Each rung's exercise in rung order, none without a ladder."""
+        return () if self.ladder is None else tuple(rung.exercise for rung in self.ladder.rungs)
+
     def working_groups(self) -> tuple[SetGroup, ...]:
         return tuple(group for group in self.sets if group.working)
 
@@ -260,7 +269,7 @@ def line_document(line: Line) -> dict[str, object]:
     document: dict[str, object] = {"exercise": line.exercise}
     if line.load_mode is not None:
         document["load_mode"] = line.load_mode
-    if line.scheme.ladder is None:
+    if line.ladder is None:
         document["sets"] = [group_document(group) for group in line.sets]
     document["rest_s"] = line.rest_s
     optional: dict[str, object | None] = {

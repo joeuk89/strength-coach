@@ -187,7 +187,7 @@ def show(conn: Connection) -> ShowResult:
             (session.id, line, standing[(session.id, line.exercise)])
             for session in version.form.sessions
             for line in session.lines
-            if line.scheme.ladder is not None
+            if line.ladder is not None
         ),
     )
 

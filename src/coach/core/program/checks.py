@@ -354,10 +354,10 @@ class _Checks:
             )
             return
         scheme = self._scheme(line.scheme, "line", scope)
-        if line.scheme.ladder is None:
+        if line.ladder is None:
             self._set_groups(session, line, line.sets, scheme, scope)
         elif scheme is not None:
-            self._ladder(session, line, line.scheme.ladder, scheme, scope)
+            self._ladder(session, line, line.ladder, scheme, scope)
         self._start_load(session, line, exercise, scope)
         self._template(line.exercise, exercise, scope)
 
@@ -585,8 +585,7 @@ def _instead(text: str, replaced: Sequence[str]) -> str:
 
 def _exercises_of(line: Line) -> tuple[str, ...]:
     """The line's exercise and each later rung's: every exercise the line can put in a session."""
-    ladder = line.scheme.ladder
-    return (line.exercise, *(r.exercise for r in ladder.rungs[1:])) if ladder else (line.exercise,)
+    return (line.exercise, *line.rung_exercises[1:])
 
 
 def _off_rung_shape(group: SetGroup) -> str | None:

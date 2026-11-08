@@ -36,7 +36,7 @@ def standing_rungs(
         ).index
         for session in form.sessions
         for line in session.lines
-        if (ladder := line.scheme.ladder) is not None
+        if (ladder := line.ladder) is not None
     }
 
 
@@ -67,5 +67,5 @@ def ladder_reads(
         )
         for session in version.form.sessions
         for line in session.lines
-        if (ladder := line.scheme.ladder) is not None
+        if (ladder := line.ladder) is not None
     )

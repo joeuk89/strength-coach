@@ -84,7 +84,7 @@ def _lines(form: ProgramForm) -> list[tuple[str, Line]]:
 
 def _standing(line: Line, session_id: str, rungs: tuple[DecisionInForce, ...]) -> Line | None:
     """An `exercise_ladder` line as its standing rung prescribes it."""
-    ladder = line.scheme.ladder
+    ladder = line.ladder
     if ladder is None:
         return None
     standing = standing_rung(

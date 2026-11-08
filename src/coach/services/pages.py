@@ -246,7 +246,7 @@ def _ladders(
     row names the rung the week prescribed."""
     found: dict[str, tuple[RungShape, ...]] = {}
     for line in session.lines:
-        ladder = line.scheme.ladder
+        ladder = line.ladder
         if ladder is None:
             continue
         rungs = rung_shapes(
@@ -254,7 +254,7 @@ def _ladders(
             standing.get((session.id, line.exercise), OPENING_RUNG),
             name_of=lambda exercise: names.get(exercise, (exercise, None))[0],
         )
-        found |= {rung.exercise: rungs for rung in ladder.rungs}
+        found |= dict.fromkeys(line.rung_exercises, rungs)
     return found
 
 

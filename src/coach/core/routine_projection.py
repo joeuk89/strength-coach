@@ -62,7 +62,7 @@ def _authored(lines: Sequence[Line]) -> dict[str, _Authored]:
     found: dict[str, _Authored] = {}
     for position, line in enumerate(lines):
         found[line.exercise] = _Authored(position, line)
-        ladder = line.scheme.ladder
+        ladder = line.ladder
         if ladder is None:
             continue
         for index, rung in enumerate(ladder.rungs, start=1):
