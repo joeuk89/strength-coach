@@ -92,8 +92,9 @@ line stands on one rung at a time.
 _Avoid_: progression (alone), stages, pathway
 
 **Rung**:
-One position on a ladder: an assistance load, or an exercise with its cues and set groups and
-the criterion for climbing off it. The ladder moves one rung at a time on a hit and steps back
+One position on a ladder: an assistance load, or an exercise, or a harder way of performing the
+same exercise, with its cues and set groups and the criterion for climbing off it. Two rungs
+may name one exercise; what tells them apart is when the line stood on each. The ladder moves one rung at a time on a hit and steps back
 by rungs in a return band instead of cutting load.
 _Avoid_: level, step (which is a derivation step), stage
 

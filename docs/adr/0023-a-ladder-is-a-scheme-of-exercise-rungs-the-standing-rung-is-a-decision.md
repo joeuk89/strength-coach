@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-07
-amended: 2026-11-08 by the owner (a practice line raises neither `stall_streak` nor `cadence_slow`; `rung_met` and `ladder_top` stay)
+amended: 2026-11-08 by the owner (a practice line raises neither `stall_streak` nor `cadence_slow`; `rung_met` and `ladder_top` stay); 2026-11-08 by ADR 0025 (rungs may share an exercise)
 ---
 
 # A ladder is a scheme whose rungs may be exercises, the standing rung is a Decision, and the engine offers the climb but never takes it
@@ -42,9 +42,10 @@ the athlete had to remember to report a change. The research note
   the athlete's word.
 - **A ladder on any line, loaded lifts included.** Rejected: a loaded lift already has a ladder
   of schemes driven by cadence signals; a second record would duplicate it.
-- **Rungs that share an exercise and differ by cues only.** Rejected: Hevy logs the exercise id,
-  so two stances under one id are one history; a stance that must be told apart is its own
-  custom exercise and `manual` is kept for the rare rung that cannot be.
+- **Rungs that share an exercise and differ by cues only.** Rejected here: Hevy logs the exercise
+  id, so two stances under one id are one history; a stance that must be told apart is its own
+  custom exercise and `manual` is kept for the rare rung that cannot be. Reversed by ADR 0025:
+  the criterion reads from the rung's start, so the start tells the stages apart.
 
 ## Consequences
 
