@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 
@@ -52,7 +53,39 @@ def m0002(conn: sqlite3.Connection) -> None:
     )
 
 
-MIGRATIONS: tuple[Migration, ...] = (m0001, m0002)
+NO_MUSCLES = '{"primary":[],"secondary":[]}'
+FULL_BODY = ('{"primary":["full_body"],"secondary":[]}', NO_MUSCLES)
+CARDIO = ('{"primary":["cardio"],"secondary":[]}', NO_MUSCLES)
+CARDIO_AND_CALVES = (
+    '{"primary":["cardio"],"secondary":["calves"]}',
+    '{"primary":[],"secondary":["calves"]}',
+)
+RETIRED_MUSCLES = {
+    "burpee": FULL_BODY,
+    "cycling": CARDIO,
+    "elliptical": CARDIO,
+    "jump_rope": CARDIO_AND_CALVES,
+    "mountain_climber": FULL_BODY,
+    "rowing_machine": CARDIO,
+    "running": CARDIO,
+    "stationary_bike": CARDIO,
+    "treadmill": CARDIO,
+}
+
+
+def m0003(conn: sqlite3.Connection) -> None:
+    """Seeded rows off the retired muscles `cardio` and `full_body` (ADR 0024). A row whose muscles
+    differ carries the athlete's edit. Compares values because adopt rewrites the text with spaces
+    and in the Draft's key order."""
+    for id_, (before, after) in RETIRED_MUSCLES.items():
+        found = conn.execute(
+            "SELECT muscles FROM exercise WHERE id = ? AND source = 'catalogue'", (id_,)
+        ).fetchone()
+        if found is not None and json.loads(found[0]) == json.loads(before):
+            conn.execute("UPDATE exercise SET muscles = ? WHERE id = ?", (after, id_))
+
+
+MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003)
 
 
 def widen_checks(

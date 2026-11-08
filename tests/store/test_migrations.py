@@ -5,8 +5,10 @@ from pathlib import Path
 
 import pytest
 from support.chains import TEMPORARY
+from support.seeded_rows import SEEDED_MUSCLES, a_store_seeded_at
 
-from coach.store import week_plans
+from coach.store import exercises, week_plans
+from coach.store.catalogue import seed_catalogue
 from coach.store.chain import ENGINE, Chain, Migrated, migrate
 from coach.store.connection import connect, schema_version
 from coach.store.export import export
@@ -222,17 +224,17 @@ def test_m0002_numbers_a_v2_stores_rows_across_each_plan_in_the_order_readers_sh
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0002",)
+    assert migrated.steps == ("m0002", "m0003")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
 
 
-def test_a_v1_store_with_prescriptions_migrates_through_both_steps() -> None:
+def test_a_v1_store_with_prescriptions_migrates_through_every_step() -> None:
     conn = with_unpositioned_prescriptions(at_version(ENGINE, 1))
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0001", "m0002")
+    assert migrated.steps == ("m0001", "m0002", "m0003")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
 
 
@@ -259,3 +261,118 @@ def test_an_export_written_at_v2_rebuilds_with_its_prescriptions_numbered(tmp_pa
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     first = json.loads(export(conn, "0.6.0").files["prescription.jsonl"].splitlines()[0])
     assert list(first)[:5] == ["plan_id", "session_id", "date", "exercise_id", "position"]
+
+
+def a_fresh_catalogue() -> sqlite3.Connection:
+    conn = at_version(ENGINE, ENGINE.version)
+    with conn:
+        seed_catalogue(conn)
+    return conn
+
+
+def stored_muscles(conn: sqlite3.Connection, id_: str) -> str:
+    (text,) = conn.execute("SELECT muscles FROM exercise WHERE id = ?", (id_,)).fetchone()
+    return text
+
+
+def test_m0003_gives_a_v3_stores_seeded_rows_the_muscles_the_catalogue_now_holds() -> None:
+    conn = a_store_seeded_at(3)
+
+    migrated = migrate(conn)
+
+    assert migrated.steps == ("m0003",)
+    assert stored_muscles(conn, "burpee") == '{"primary":[],"secondary":[]}'
+    assert stored_muscles(conn, "jump_rope") == '{"primary":[],"secondary":["calves"]}'
+    assert (
+        export(conn, "0.6.0").files["exercise.jsonl"]
+        == (export(a_fresh_catalogue(), "0.6.0").files["exercise.jsonl"])
+    )
+
+
+def test_the_nine_seeded_rows_are_the_only_ones_a_v3_store_holds_with_a_retired_muscle() -> None:
+    conn = a_store_seeded_at(3)
+
+    retired = conn.execute(
+        "SELECT id FROM exercise WHERE muscles LIKE '%cardio%' OR muscles LIKE '%full_body%'"
+    ).fetchall()
+
+    assert {id_ for (id_,) in retired} == set(SEEDED_MUSCLES)
+    migrate(conn)
+    assert (
+        conn.execute(
+            "SELECT id FROM exercise WHERE muscles LIKE '%cardio%' OR muscles LIKE '%full_body%'"
+        ).fetchall()
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        {"primary": ["cardio"], "secondary": ["calves"]},
+        {"secondary": ["calves"], "primary": ["cardio"]},
+    ],
+    ids=["spaced_as_adopt_writes_it", "keys_in_the_drafts_order"],
+)
+def test_m0003_matches_a_seeded_row_on_its_value_not_its_text(
+    written: dict[str, list[str]],
+) -> None:
+    conn = a_store_seeded_at(3)
+    with conn:
+        exercises.update(conn, "jump_rope", {"muscles": written})
+    assert stored_muscles(conn, "jump_rope") != SEEDED_MUSCLES["jump_rope"]
+
+    migrate(conn)
+
+    assert stored_muscles(conn, "jump_rope") == '{"primary":[],"secondary":["calves"]}'
+
+
+@pytest.mark.parametrize(
+    ("id_", "edited"),
+    [
+        ("burpee", {"primary": ["abdominals"], "secondary": []}),
+        ("jump_rope", {"primary": ["cardio"], "secondary": []}),
+        ("running", {"primary": ["cardio"], "secondary": ["calves"]}),
+    ],
+    ids=["a_new_muscle", "a_dropped_secondary", "an_added_secondary"],
+)
+def test_m0003_leaves_a_row_the_athlete_edited_alone(
+    id_: str, edited: dict[str, list[str]]
+) -> None:
+    conn = a_store_seeded_at(3)
+    with conn:
+        exercises.update(conn, id_, {"muscles": edited})
+
+    migrate(conn)
+
+    found = exercises.get(conn, id_)
+    assert found is not None
+    assert found["muscles"] == edited
+
+
+@pytest.mark.parametrize("source", ["draft", "record"])
+def test_m0003_leaves_a_row_the_catalogue_did_not_seed_alone(source: str) -> None:
+    conn = a_store_seeded_at(3)
+    with conn:
+        conn.execute("UPDATE exercise SET source = ? WHERE id = 'treadmill'", (source,))
+
+    migrate(conn)
+
+    assert stored_muscles(conn, "treadmill") == SEEDED_MUSCLES["treadmill"]
+
+
+@pytest.mark.parametrize(
+    ("version", "steps"),
+    [(1, ("m0001", "m0002", "m0003")), (2, ("m0002", "m0003"))],
+    ids=["v1", "v2"],
+)
+def test_a_seeded_store_below_v3_reaches_version_4_with_the_new_muscles(
+    version: int, steps: tuple[str, ...]
+) -> None:
+    conn = a_store_seeded_at(version)
+
+    migrated = migrate(conn)
+
+    assert migrated.steps == steps
+    assert schema_version(conn) == 4
+    assert stored_muscles(conn, "cycling") == '{"primary":[],"secondary":[]}'
