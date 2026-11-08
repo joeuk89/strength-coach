@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-11-07
+amended: 2026-11-08 by the owner (a practice line raises neither `stall_streak` nor `cadence_slow`; `rung_met` and `ladder_top` stay)
 ---
 
 # A ladder is a scheme whose rungs may be exercises, the standing rung is a Decision, and the engine offers the climb but never takes it
@@ -62,3 +63,5 @@ the athlete had to remember to report a change. The research note
 - The Hevy routine carries the standing rung only, with the next rung named in that exercise's
   note; the routine page, `program show` and the progress page show the whole ladder with the
   standing rung marked.
+- A line in a practice session raises neither `stall_streak` nor `cadence_slow`; `rung_met` and
+  `ladder_top` still offer the step (amended 2026-11-08).

@@ -24,7 +24,7 @@ from coach.core.prescription import PrescribeRequest, Step
 from coach.core.program.form import LOAD_BEARING_MODES, Line, SetGroup
 from coach.core.progression import Verdict, judge
 from coach.core.rack import Rack, Rounding, next_row_up
-from coach.core.stall import stall_streak
+from coach.core.stall import judged, stall_streak
 from coach.core.top_backoff import top_set
 from coach.core.wave_531 import (
     REP_OUTS,
@@ -120,6 +120,8 @@ class SchemeMoves:
         return self._held(self._start_load(found))
 
     def stall(self, exposure: Exposure) -> None:
+        if not judged(self.given.request.planned.kind):
+            return
         history = since_redesign(
             ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on)),
             self.given.request.redesigned,

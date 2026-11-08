@@ -13,6 +13,11 @@ STREAK = 3
 type Metric = Callable[[Line, Exposure], tuple[float, ...]]
 
 
+def judged(session_kind: str) -> bool:
+    """A practice is never judged: no line in one raises a stall or a slow cadence."""
+    return session_kind != "practice"
+
+
 def stall_streak(line: Line, history: Sequence[Exposure]) -> tuple[Exposure, ...]:
     """The newest three of `history` (ordinary, newest first), oldest first, when neither later
     one gains on the first; empty otherwise or for a scheme with no metric."""

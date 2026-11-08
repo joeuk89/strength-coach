@@ -26,7 +26,7 @@ from coach.core.progress import (
     best_set,
     milestone_read,
 )
-from coach.core.stall import stall_streak
+from coach.core.stall import judged, stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
@@ -140,10 +140,25 @@ def _lift(
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
-        stall_streak=len(stall_streak(line, since_redesign(history, redesigned))) if line else 0,
+        stall_streak=_stall_streak(form, exercise, since_redesign(history, redesigned)),
         resets=_resets(line, history),
         signal=signal,
     )
+
+
+def _stall_streak(form: ProgramForm | None, exercise: str, history: Sequence[Exposure]) -> int:
+    """Read on the exercise's first line in a judged session; 0 when it has none."""
+    line = next(
+        (
+            line
+            for session in (form.sessions if form else ())
+            if judged(session.kind)
+            for line in session.lines
+            if line.exercise == exercise
+        ),
+        None,
+    )
+    return len(stall_streak(line, history)) if line else 0
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:

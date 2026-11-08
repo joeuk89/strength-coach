@@ -245,9 +245,9 @@ Every row requires adherence at or above the floor (`week.md`) over the blocks i
 
 | Code | Line's scheme | Condition over the closed block and the one before |
 | --- | --- | --- |
-| `cadence_slow` | `linear` | two resets on the line under the scheme within the two blocks |
-| `cadence_slow` | `double_progression`, `assistance_ladder`, `exercise_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them); an `exercise_ladder` reads its standing rung's exercise and the signal keeps the line's key |
-| `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks |
+| `cadence_slow` | `linear` | two resets on the line under the scheme within the two blocks; never in a `practice` session |
+| `cadence_slow` | `double_progression`, `assistance_ladder`, `exercise_ladder` | a `stall_streak` open on the line at the end of both blocks (no gain on the scheme's metric across them); an `exercise_ladder` reads its standing rung's exercise and the signal keeps the line's key; never in a `practice` session |
+| `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks; never in a `practice` session |
 | `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
 | `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
 | `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |

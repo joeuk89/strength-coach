@@ -323,3 +323,25 @@ def test_stall_streak_reads_only_exposures_since_the_standing_rungs_start() -> N
 
     assert [f.code for f in since_before.flags] == ["stall_streak"]
     assert [f.code for f in since_between.flags] == []
+
+
+def test_a_practice_ladder_held_at_target_for_three_exposures_raises_no_stall_streak() -> None:
+    held = (negatives("2026-10-12"), negatives("2026-10-19"), negatives("2026-10-26"))
+
+    assert "stall_streak" not in [
+        f.code for f in derive(PULL_UP_LADDER, *held, kind="practice").flags
+    ]
+
+
+def test_a_lifting_ladder_with_the_same_exposures_still_raises_stall_streak() -> None:
+    held = (negatives("2026-10-12"), negatives("2026-10-19"), negatives("2026-10-26"))
+
+    assert "stall_streak" in [f.code for f in derive(PULL_UP_LADDER, *held).flags]
+
+
+def test_a_practice_ladder_still_raises_rung_met() -> None:
+    held = (negatives("2026-10-19"), negatives("2026-10-26"))
+
+    assert [code for code, _ in ladder_flags(derive(PULL_UP_LADDER, *held, kind="practice"))] == [
+        "rung_met"
+    ]

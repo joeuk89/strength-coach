@@ -93,12 +93,13 @@ def a_request(
     exercises: Mapping[str, ExerciseFacts] | None = None,
     dose: Dose | None = None,
     deload: Deload | None = DELOAD,
+    kind: str = "lifting",
     **request: Any,
 ) -> PrescribeRequest:
     """`request` takes the other request fields: overrides, Decisions, niggle constraints,
     status spans and trained-unlogged dates."""
     lines = lines or (a_line(),)
-    session = Session("lower", "Lower", "lifting", "core", lines=lines)
+    session = Session("lower", "Lower", kind, "core", lines=lines)
     form = ProgramForm(
         name="Test",
         kind="redesign",
@@ -114,7 +115,7 @@ def a_request(
         version=ProgramVersion(form, {**EXERCISES, **(exercises or {})}),
         exposures=exposures,
         racks={"home": HOME_RACKS if racks is None else racks},
-        planned=PlannedSession("lower", on, "home", "lifting", lines),
+        planned=PlannedSession("lower", on, "home", kind, lines),
         **request,
     )
 
