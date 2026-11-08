@@ -59,7 +59,9 @@ def status_of(
 
 
 def published(conn: Connection) -> dict[str, str]:
-    return dict(publish(conn, engine_version=ENGINE, config=a_config()).export.files)
+    return dict(
+        publish(conn, engine_version=ENGINE, config=a_config(), zone=datetime.UTC).export.files
+    )
 
 
 def test_status_reports_the_engine_against_its_pin_and_the_store_schema_version() -> None:

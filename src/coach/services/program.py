@@ -115,7 +115,7 @@ def adopt(
             signals={
                 str(flag.scope.exercise_id): flag
                 for flag in cadence_signals(
-                    conn, closed, units=config.athlete.units, on=clock.today()
+                    conn, closed, units=config.athlete.units, on=clock.today(), zone=clock.zone
                 )
             },
         )
@@ -173,9 +173,9 @@ def _with_plan_behind(conn: Connection, result: AdoptResult, clock: Clock) -> Ad
     return replace(result, warnings=(*result.warnings, *behind))
 
 
-def show(conn: Connection) -> ShowResult:
+def show(conn: Connection, *, zone: datetime.tzinfo) -> ShowResult:
     version = _in_force(conn)
-    standing = standing_rungs(version.form, rung_decisions(conn))
+    standing = standing_rungs(version.form, rung_decisions(conn, zone))
     return ShowResult(
         version_id=version.id,
         kind=version.form.kind,

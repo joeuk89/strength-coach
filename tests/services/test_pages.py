@@ -107,7 +107,9 @@ def a_curl_page(load: float, *, with_tables: bool = True) -> str:
     kit = kit_files(tables=split_hardware_tables()["tables"])
     if not with_tables:
         kit = dataclasses.replace(kit, tables=None)
-    facts = page_facts(conn, config=a_config_with_both_screws(), kits=(kit,), profile=None)
+    facts = page_facts(
+        conn, config=a_config_with_both_screws(), kits=(kit,), profile=None, zone=datetime.UTC
+    )
     return render_pages(facts)["pages/routines/lower.md"]
 
 
@@ -202,9 +204,9 @@ def test_the_athlete_page_carries_the_profile_verbatim_and_the_last_three_reads(
 def test_the_progress_page_shows_each_priority_lifts_e1rm_now() -> None:
     conn = two_closed_blocks(bench_tops=(100, 105, 105, 110, 115, 115), pull_up_reps=(6,) * 6)
 
-    page = render_pages(page_facts(conn, config=a_config(), kits=(), profile=None))[
-        "pages/progress.md"
-    ]
+    page = render_pages(
+        page_facts(conn, config=a_config(), kits=(), profile=None, zone=datetime.UTC)
+    )["pages/progress.md"]
 
     bench = next(line for line in page.splitlines() if line.startswith("| bb_bench_press"))
     assert bench.split(" | ")[2] == "141.83"

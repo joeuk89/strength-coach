@@ -28,7 +28,7 @@ def run(call: InstanceCall) -> Outcome:
     if week is not None and not as_draft:
         raise Invalid("invalid_argument", "--apply-plan folds into the Draft; add --draft")
     with open_instance_store(call.instance) as conn:
-        shown = show(conn)
+        shown = show(conn, zone=call.clock.zone)
         drafted = show_draft(conn, apply_plan=week) if as_draft else None
     if drafted is None:
         return Outcome(_summary(shown, None if call.full else call.last))

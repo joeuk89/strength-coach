@@ -57,7 +57,7 @@ def page_facts(
     config: Config,
     kits: Sequence[KitFiles],
     profile: str | None,
-    zone: datetime.tzinfo = datetime.UTC,
+    zone: datetime.tzinfo,
 ) -> Pages:
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
@@ -80,7 +80,7 @@ def page_facts(
             zone=zone,
         ),
         week=_week(conn, names),
-        routines=_routines(conn, config, kits, names),
+        routines=_routines(conn, config, kits, names, zone),
         check_ins=records,
     )
 
@@ -194,8 +194,9 @@ def _routines(
     config: Config,
     kits: Sequence[KitFiles],
     names: Mapping[str, tuple[str, str | None]],
+    zone: datetime.tzinfo,
 ) -> tuple[RoutinePage, ...]:
-    return tuple(_routine(conn, live, config, kits, names) for live in routine_map.live(conn))
+    return tuple(_routine(conn, live, config, kits, names, zone) for live in routine_map.live(conn))
 
 
 def _routine(
@@ -204,6 +205,7 @@ def _routine(
     config: Config,
     kits: Sequence[KitFiles],
     names: Mapping[str, tuple[str, str | None]],
+    zone: datetime.tzinfo,
 ) -> RoutinePage:
     plan = week_plans.by_id(conn, live.plan_id) if live.plan_id else None
     version = _version_of(conn, plan)
@@ -222,7 +224,7 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
-    standing = standing_rungs(version.form, rung_decisions(conn)) if version else {}
+    standing = standing_rungs(version.form, rung_decisions(conn, zone)) if version else {}
     ladders = _ladders(session, names, standing) if session else {}
     return RoutinePage(
         session_id=live.session_id,

@@ -19,7 +19,7 @@ _DAY = datetime.timedelta(days=1)
 
 
 def rung_decisions(
-    conn: Connection, on: datetime.date | None = None, zone: datetime.tzinfo = datetime.UTC
+    conn: Connection, zone: datetime.tzinfo, on: datetime.date | None = None
 ) -> tuple[DecisionInForce, ...]:
     """The `ladder_rung` Decisions in force, each dated by the day it was recorded on in the
     athlete's timezone."""
@@ -41,13 +41,13 @@ def standing_rungs(
 
 
 def ladder_reads(
-    conn: Connection, *, units: Units, on: datetime.date, zone: datetime.tzinfo = datetime.UTC
+    conn: Connection, *, units: Units, on: datetime.date, zone: datetime.tzinfo
 ) -> tuple[LadderRead, ...]:
     """Every ladder line of the version in force as the exposures logged up to `on` leave it."""
     version = programs.latest(conn)
     if version is None:
         return ()
-    found = rung_decisions(conn, on, zone)
+    found = rung_decisions(conn, zone, on)
     adopted = version.adopted_on
     exposures = read_history(conn, units).lifting
     plan = week_plans.latest_through(conn, week_monday(on).isoformat())

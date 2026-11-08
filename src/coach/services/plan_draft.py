@@ -202,7 +202,7 @@ def _exercise_facts(conn: Connection) -> Mapping[str, ExerciseFacts]:
 def _decisions(
     conn: Connection, session: PlannedSession, clock: Clock
 ) -> tuple[DecisionInForce, ...]:
-    return decisions.in_force_dated(conn, session.date, PRESCRIBING_DECISIONS, clock.now().tzinfo)
+    return decisions.in_force_dated(conn, session.date, PRESCRIBING_DECISIONS, clock.zone)
 
 
 def _week_checks(

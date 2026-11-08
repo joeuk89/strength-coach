@@ -31,7 +31,7 @@ def closed_spans(closed: ClosedWeeks) -> tuple[BlockSpan, ...]:
 
 
 def cadence_signals(
-    conn: Connection, closed: ClosedWeeks, *, units: Units, on: datetime.date
+    conn: Connection, closed: ClosedWeeks, *, units: Units, on: datetime.date, zone: datetime.tzinfo
 ) -> tuple[Flag, ...]:
     """Each signal left by a `leave_warning` Decision in force on `on`; none once a version is
     adopted after the closed Block's end, since a new version clears them."""
@@ -47,7 +47,7 @@ def cadence_signals(
     adherence = _adherence(closed, before, last)
     exposures = read_history(conn, units).lifting
     left = leave_warning_decisions(conn, on)
-    rungs = rung_decisions(conn, on)
+    rungs = rung_decisions(conn, zone, on)
     found: list[Flag] = []
     for session_id, line in _lines(version.form):
         if any(
