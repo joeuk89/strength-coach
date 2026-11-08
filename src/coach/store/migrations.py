@@ -97,9 +97,9 @@ def rebuild_table(
     try:
         conn.execute(f"ALTER TABLE {_quoted(table)} RENAME TO {_quoted(aside)}")
         conn.execute(create)
-        kept = [name for name in _columns(conn, table) if name in _columns(conn, aside)]
-        names = ", ".join(_quoted(name) for name in (*kept, *filled))
-        values = ", ".join((*(_quoted(name) for name in kept), *filled.values()))
+        kept = [_quoted(name) for name in _columns(conn, table) if name in _columns(conn, aside)]
+        names = ", ".join((*kept, *map(_quoted, filled)))
+        values = ", ".join((*kept, *filled.values()))
         conn.execute(
             f"INSERT INTO {_quoted(table)} ({names}) SELECT {values} FROM {_quoted(aside)}"
         )

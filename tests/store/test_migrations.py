@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,14 @@ def schema_of(conn: sqlite3.Connection) -> list[tuple[str, str, str]]:
     return conn.execute(
         "SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY name"
     ).fetchall()
+
+
+def an_export_dir(tmp_path: Path, files: Mapping[str, str]) -> Path:
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    for name, text in files.items():
+        (export_dir / name).write_text(text, encoding="utf-8")
+    return export_dir
 
 
 def a_v1_store_with_rows() -> sqlite3.Connection:
@@ -113,13 +122,9 @@ def test_an_export_at_version_n_rebuilds_through_the_frozen_ddl_and_migrates_wit
     tmp_path: Path,
 ) -> None:
     files = export(a_v1_store_with_rows(), "0.3.0").files
-    export_dir = tmp_path / "export"
-    export_dir.mkdir()
-    for name, text in files.items():
-        (export_dir / name).write_text(text, encoding="utf-8")
     database = tmp_path / "coach.db"
 
-    rebuilt = rebuild_missing(database, export_dir, TEMPORARY)
+    rebuilt = rebuild_missing(database, an_export_dir(tmp_path, files), TEMPORARY)
 
     assert rebuilt == Rebuilt(schema_version=1)
     conn = connect(database)
@@ -240,13 +245,9 @@ def test_a_migrated_prescription_table_has_a_fresh_stores_definition() -> None:
 def test_an_export_written_at_v2_rebuilds_with_its_prescriptions_numbered(tmp_path: Path) -> None:
     files = export(with_unpositioned_prescriptions(at_version(ENGINE, 2)), "0.6.0").files
     assert "position" not in json.loads(files["prescription.jsonl"].splitlines()[0])
-    export_dir = tmp_path / "export"
-    export_dir.mkdir()
-    for name, text in files.items():
-        (export_dir / name).write_text(text, encoding="utf-8")
     database = tmp_path / "coach.db"
 
-    rebuilt = rebuild_missing(database, export_dir)
+    rebuilt = rebuild_missing(database, an_export_dir(tmp_path, files))
 
     assert rebuilt == Rebuilt(schema_version=2)
     conn = connect(database)
