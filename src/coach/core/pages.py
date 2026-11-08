@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from coach.core.check_in import Window
 from coach.core.check_in_card import Card
 from coach.core.config import Athlete, ImplementChoice, Location, Units
+from coach.core.exercise_ladder import RungShape
 from coach.core.progress import Progress
 from coach.core.rack import ListedRack
 
@@ -41,18 +42,6 @@ class PlatePoolKit:
 
 
 @dataclass(frozen=True)
-class PageRung:
-    """One rung of a line's ladder as the version authors it; `criterion` is in full."""
-
-    rung: int
-    name: str
-    cues: str | None
-    set_groups: tuple[Json, ...]
-    criterion: Json
-    standing: bool
-
-
-@dataclass(frozen=True)
 class PageLine:
     """One frozen prescription row; `set_groups` carry `load` in athlete units. `ladder` is the
     whole ladder of an `exercise_ladder` line."""
@@ -65,7 +54,7 @@ class PageLine:
     flags: tuple[Json, ...] = ()
     change: str = ""
     derived_from: str = ""
-    ladder: tuple[PageRung, ...] = ()
+    ladder: tuple[RungShape, ...] = ()
 
 
 @dataclass(frozen=True)

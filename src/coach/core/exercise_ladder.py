@@ -4,14 +4,21 @@ standing rung is a `ladder_rung` Decision; the engine offers the climb and never
 (ADR 0023)."""
 
 import datetime
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 
 from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
 from coach.core.line_history import newest_first, ordinary
 from coach.core.prescription import DecisionInForce
-from coach.core.program.form import Advance, ExerciseLadder, Line, ProgramForm, SetGroup
+from coach.core.program.form import (
+    Advance,
+    ExerciseLadder,
+    Line,
+    ProgramForm,
+    SetGroup,
+    group_document,
+)
 from coach.core.registries.schemes import DEFAULT_EXPOSURES
 
 # The scheme's opening position; the line stands here until a rung is a recorded choice.
@@ -44,6 +51,39 @@ def full_criterion(ladder: ExerciseLadder, index: int) -> Advance:
         exposures=DEFAULT_EXPOSURES,
     )
     return replace(filled, **criterion.stated())
+
+
+@dataclass(frozen=True)
+class RungShape:
+    """One rung of a line's ladder as the version authors it; `criterion` is in full."""
+
+    rung: int
+    exercise: str
+    name: str
+    cues: str | None
+    set_groups: tuple[Mapping[str, object], ...]
+    criterion: Mapping[str, object]
+    standing: bool
+
+
+def rung_shapes(
+    ladder: ExerciseLadder,
+    standing: int,
+    *,
+    name_of: Callable[[str], str] = lambda exercise: exercise,
+) -> tuple[RungShape, ...]:
+    return tuple(
+        RungShape(
+            rung=index,
+            exercise=rung.exercise,
+            name=name_of(rung.exercise),
+            cues=rung.cues,
+            set_groups=tuple(group_document(group) for group in rung.sets),
+            criterion=full_criterion(ladder, index).stated(),
+            standing=index == standing,
+        )
+        for index, rung in enumerate(ladder.rungs, start=1)
+    )
 
 
 def ladder_of(form: ProgramForm, session_id: str, exercise_id: str) -> ExerciseLadder | None:

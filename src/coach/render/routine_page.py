@@ -1,7 +1,8 @@
 from collections.abc import Mapping
 
 from coach.core.config import Units
-from coach.core.pages import PageLine, PageRung, RoutinePage
+from coach.core.exercise_ladder import RungShape
+from coach.core.pages import PageLine, RoutinePage
 from coach.render.markdown import bullets, group_text, number, page, section
 from coach.render.plate_pool import line_link, set_up_link
 
@@ -36,7 +37,7 @@ def _line(line: PageLine, routine: RoutinePage, units: Units) -> str:
     return section(line.name, body)
 
 
-def _rung(rung: PageRung, units: Units) -> str:
+def _rung(rung: RungShape, units: Units) -> str:
     name = f"**{rung.name}** (standing)" if rung.standing else rung.name
     groups = ", ".join(group_text(g, units) for g in rung.set_groups)
     cues = f" {rung.cues}." if rung.cues else ""

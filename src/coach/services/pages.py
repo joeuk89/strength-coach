@@ -7,7 +7,7 @@ from typing import cast
 
 from coach.core.closed_week.match import PlannedRef
 from coach.core.config import Config, PlatePoolLocation, Units
-from coach.core.exercise_ladder import OPENING_RUNG, full_criterion
+from coach.core.exercise_ladder import OPENING_RUNG, RungShape, rung_shapes
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
     AthletePage,
@@ -16,14 +16,13 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
-    PageRung,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
     RoutinePage,
     WeekPage,
 )
-from coach.core.program.form import Session, group_document
+from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
@@ -242,25 +241,18 @@ def _ladders(
     session: Session,
     names: Mapping[str, tuple[str, str | None]],
     standing: Mapping[tuple[str, str], int],
-) -> dict[str, tuple[PageRung, ...]]:
+) -> dict[str, tuple[RungShape, ...]]:
     """Each `exercise_ladder` line's rungs, keyed on every rung's exercise, since the frozen
     row names the rung the week prescribed."""
-    found: dict[str, tuple[PageRung, ...]] = {}
+    found: dict[str, tuple[RungShape, ...]] = {}
     for line in session.lines:
         ladder = line.scheme.ladder
         if ladder is None:
             continue
-        stands_on = standing.get((session.id, line.exercise), OPENING_RUNG)
-        rungs = tuple(
-            PageRung(
-                rung=index,
-                name=names.get(rung.exercise, (rung.exercise, None))[0],
-                cues=rung.cues,
-                set_groups=tuple(group_document(g) for g in rung.sets),
-                criterion=full_criterion(ladder, index).stated(),
-                standing=index == stands_on,
-            )
-            for index, rung in enumerate(ladder.rungs, start=1)
+        rungs = rung_shapes(
+            ladder,
+            standing.get((session.id, line.exercise), OPENING_RUNG),
+            name_of=lambda exercise: names.get(exercise, (exercise, None))[0],
         )
         found |= {rung.exercise: rungs for rung in ladder.rungs}
     return found
