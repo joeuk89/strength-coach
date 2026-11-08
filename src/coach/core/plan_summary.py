@@ -13,6 +13,7 @@ from coach.core.frozen_prescription import frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import RotationPosition
 from coach.core.prescription import PlanOverride
+from coach.core.routine_projection import FrozenLine
 
 type Json = Mapping[str, object]
 
@@ -22,6 +23,7 @@ class SummaryLine:
     exercise_id: str
     set_groups: Sequence[Json]
     change: str
+    next_rung: str | None = None
 
 
 @dataclass(frozen=True)
@@ -42,7 +44,10 @@ class PlanSummary:
     flags: tuple[Flag, ...]
 
 
-def fresh_summary(checked: CheckedPlan, units: Units) -> PlanSummary:
+def fresh_summary(
+    checked: CheckedPlan, units: Units, next_rungs: Mapping[str, Mapping[str, str]]
+) -> PlanSummary:
+    """`next_rungs` are each session's next rung names, keyed on the authored exercise."""
     draft = checked.draft
     return PlanSummary(
         week=draft.week,
@@ -54,7 +59,17 @@ def fresh_summary(checked: CheckedPlan, units: Units) -> PlanSummary:
                 prescribed.session.date,
                 prescribed.session.location,
                 tuple(
-                    SummaryLine(line.exercise_id, frozen_groups(line.groups, units), line.change)
+                    SummaryLine(
+                        line.exercise_id,
+                        frozen_groups(line.groups, units),
+                        line.change,
+                        _next_rung(
+                            next_rungs,
+                            prescribed.session.session_id,
+                            line.exercise_id,
+                            [step.to_json() for step in line.steps],
+                        ),
+                    )
                     for line in prescribed.lines
                 ),
             )
@@ -73,10 +88,12 @@ def frozen_summary(
     rows: Sequence[Json],
     overrides: Sequence[PlanOverride],
     locations: Mapping[str, str],
+    next_rungs: Mapping[str, Mapping[str, str]],
 ) -> PlanSummary:
     """The WeekPlan as its prescription rows froze it, in their order. The rows carry no
-    location, so each session's comes from `locations` with the plan's overrides folded in. A
-    flag is frozen on every line it bears on; the summary shows it once."""
+    location, so each session's comes from `locations` with the plan's overrides folded in, and
+    no ladder, so a line's next rung comes from `next_rungs`, as in `fresh_summary`. A flag is
+    frozen on every line it bears on; the summary shows it once."""
     days: dict[tuple[datetime.date, str], list[Json]] = {}
     for row in rows:
         day = datetime.date.fromisoformat(str(row["date"]))
@@ -86,7 +103,7 @@ def frozen_summary(
             session_id,
             day,
             _location(session_id, day, locations, overrides),
-            tuple(_line(row) for row in found),
+            tuple(_line(row, next_rungs) for row in found),
         )
         for (day, session_id), found in days.items()
     )
@@ -105,10 +122,24 @@ def frozen_summary(
     )
 
 
-def _line(row: Json) -> SummaryLine:
+def _line(row: Json, next_rungs: Mapping[str, Mapping[str, str]]) -> SummaryLine:
+    exercise_id = str(row["exercise_id"])
     return SummaryLine(
-        str(row["exercise_id"]), cast(list[Json], row["set_groups"]), str(row["change"])
+        exercise_id,
+        cast(list[Json], row["set_groups"]),
+        str(row["change"]),
+        _next_rung(next_rungs, str(row["session_id"]), exercise_id, cast(list[Json], row["steps"])),
     )
+
+
+def _next_rung(
+    next_rungs: Mapping[str, Mapping[str, str]],
+    session_id: str,
+    exercise_id: str,
+    steps: Sequence[Json],
+) -> str | None:
+    authored = FrozenLine(exercise_id, (), steps).authored_exercise
+    return next_rungs.get(session_id, {}).get(authored)
 
 
 def _location(

@@ -1,7 +1,7 @@
 """Each routine as the approved WeekPlan that wrote it projects it: what a push sends, what a
 re-run compares with live, and what import finds drift against (ADR 0011)."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -9,9 +9,15 @@ from coach.core.config import Units
 from coach.core.hevy_actions import STANDING_CADENCES
 from coach.core.mirror import FolderRole
 from coach.core.program.form import Session
-from coach.core.routine_projection import FrozenLine, SessionRoutine, project_routine
+from coach.core.routine_projection import (
+    FrozenLine,
+    SessionRoutine,
+    next_rung_names,
+    project_routine,
+)
 from coach.store import exercises, mirrors, niggles, programs, week_plans
 from coach.store.connection import Connection
+from coach.store.programs import VersionRow
 from coach.store.rows import Row
 
 type Json = dict[str, object]
@@ -29,7 +35,19 @@ class SessionFacts:
 def session_facts(conn: Connection, plan: Mapping[str, object]) -> dict[str, SessionFacts]:
     """Every session as it stood when the plan was approved: the version then in force and
     every niggle's rehab session. A later adopt never changes what the plan projects."""
-    version = programs.in_force_at(conn, str(plan["approved_at"]))
+    return _facts(conn, programs.in_force_at(conn, str(plan["approved_at"])))
+
+
+def next_rungs(conn: Connection, version: VersionRow | None) -> dict[str, dict[str, str]]:
+    """Each session's next rung names under `version`, read as the routine's note reads them."""
+    names = _library_names(exercises.every(conn))
+    return {
+        session_id: next_rung_names(found.session.lines, names)
+        for session_id, found in _facts(conn, version).items()
+    }
+
+
+def _facts(conn: Connection, version: VersionRow | None) -> dict[str, SessionFacts]:
     facts: dict[str, SessionFacts] = {}
     if version is not None:
         for session in version.form.sessions:
@@ -59,12 +77,16 @@ def projection(
         week_line=f"Week of {plan['week']}, rotation week {plan['position']}",
         authored=facts.session.lines,
         lines=[_frozen(r) for r in rows if r["date"] == first],
-        names={str(row["id"]): str(row["name"]) for row in library},
+        names=_library_names(library),
     )
     templates = {
         str(row["id"]): str(row["hevy_template_id"]) for row in library if row["hevy_template_id"]
     }
     return project_routine(session, templates, units)
+
+
+def _library_names(library: Sequence[Row]) -> dict[str, str]:
+    return {str(row["id"]): str(row["name"]) for row in library}
 
 
 def folder_role(facts: SessionFacts) -> FolderRole:

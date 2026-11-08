@@ -1,19 +1,24 @@
+import datetime
+
 from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.kit_fixtures import kit_files
-from support.ladders import a_ladder_program, ladder_rung_decision
+from support.ladders import CORE_LADDER, a_ladder_program, ladder_rung_decision
 from support.plan_drafts import a_plan_draft
-from support.plans import squat_logged
+from support.plans import SQUAT_LINE, a_squat_program, squat_logged
+from support.program_drafts import a_draft, a_ladder_line, a_line, a_rung, a_session, toml
 from support.programs import a_config
 
 from coach.cli.verbs.plan_apply import dry_run_result
 from coach.core.mirror import RoutineExercise
 from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
+from coach.services.program import adopt
 from coach.services.record import record
 from coach.store.connection import Connection
 
 AB_WHEEL = "99D5F10E"
 HANGING_LEG_RAISE = "F8356514"
+DEAD_BUG = "D8911FC4"
 
 
 def a_ladder_week(rung: int) -> Connection:
@@ -35,7 +40,10 @@ def the_dry_run(conn: Connection, data: bytes) -> DryRun:
 
 
 def pushed(conn: Connection, hevy: FakeHevy) -> ApplyResult:
-    data = a_plan_draft(conn, hevy=True)
+    return pushed_draft(conn, hevy, a_plan_draft(conn, hevy=True))
+
+
+def pushed_draft(conn: Connection, hevy: FakeHevy, data: bytes) -> ApplyResult:
     return apply(
         conn,
         hevy,
@@ -89,3 +97,160 @@ def test_on_the_last_rung_the_note_names_no_next_rung() -> None:
     notes = str(the_ladder_exercise(hevy, HANGING_LEG_RAISE).notes).splitlines()
     assert notes[1:] == ["Cues: hanging_leg_raise cues"]
     assert [(o.session_id, o.outcome) for o in result.routines] == [("lower", "verified")]
+
+
+def prompt_lines(dry: DryRun) -> list[str]:
+    return str(dry_run_result(dry, units="lb", full=True)["prompt"]).splitlines()
+
+
+SQUAT_PROMPT_LINE = "  bb_back_squat 4×6–8 at 125 lb · 4×6–8 @8: 120 → 125"
+
+
+def test_the_prompt_names_the_next_rung_on_a_line_below_the_top() -> None:
+    conn = a_ladder_week(2)
+
+    lines = prompt_lines(the_dry_run(conn, a_plan_draft(conn, hevy=True)))
+
+    assert "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise" in lines
+    assert SQUAT_PROMPT_LINE in lines
+
+
+def test_on_the_last_rung_the_prompt_shows_nothing_extra() -> None:
+    conn = a_ladder_week(3)
+
+    lines = prompt_lines(the_dry_run(conn, a_plan_draft(conn, hevy=True)))
+
+    assert "  hanging_leg_raise 3×6 · first prescription" in lines
+    assert SQUAT_PROMPT_LINE in lines
+
+
+def test_a_resumed_prompt_names_the_next_rung_below_the_top() -> None:
+    conn = a_ladder_week(2)
+    data = a_plan_draft(conn, hevy=True)
+    pushed_draft(conn, FakeHevy(FixedClock()), data)
+
+    resumed = the_dry_run(conn, data)
+
+    assert resumed.resumes == "wp-2026-11-02"
+    lines = prompt_lines(resumed)
+    assert "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise" in lines
+    assert SQUAT_PROMPT_LINE in lines
+
+
+def test_a_resumed_prompt_on_the_last_rung_shows_nothing_extra() -> None:
+    conn = a_ladder_week(3)
+    data = a_plan_draft(conn, hevy=True)
+    pushed_draft(conn, FakeHevy(FixedClock()), data)
+
+    resumed = the_dry_run(conn, data)
+
+    assert resumed.resumes == "wp-2026-11-02"
+    lines = prompt_lines(resumed)
+    assert "  hanging_leg_raise 3×6 · first prescription" in lines
+    assert SQUAT_PROMPT_LINE in lines
+
+
+def test_a_rung_exercise_on_a_plain_line_of_another_session_names_no_next_rung() -> None:
+    conn = a_squat_program(
+        a_session("lower", SQUAT_LINE, CORE_LADDER),
+        a_session(
+            "upper",
+            a_line("ab_wheel", sets=[{"count": 3, "reps": 8, "rpe": 8}], start_load=None),
+        ),
+    )
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh = prompt_lines(the_dry_run(conn, data))
+    pushed_draft(conn, FakeHevy(FixedClock()), data)
+    resumed = prompt_lines(the_dry_run(conn, data))
+
+    for lines in (fresh, resumed):
+        lower, upper = [n for n, line in enumerate(lines) if line.startswith("  ab_wheel")]
+        assert lines[lower] == "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise"
+        assert lines[upper] == "  ab_wheel 3×8 · first prescription"
+
+
+def the_note_next(hevy: FakeHevy, template: str) -> list[str]:
+    notes = str(the_ladder_exercise(hevy, template).notes).splitlines()
+    return [note for note in notes if note.startswith("Next: ")]
+
+
+def the_prompt_next(lines: list[str], exercise: str) -> list[str]:
+    [line] = [line for line in lines if line.startswith(f"  {exercise} ")]
+    return [part for part in line.split(" · ") if part.startswith("Next: ")]
+
+
+def test_the_prompt_names_the_rung_the_real_push_writes_on_the_note() -> None:
+    conn = a_ladder_week(2)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh = prompt_lines(the_dry_run(conn, data))
+    pushed_draft(conn, hevy, data)
+    resumed = prompt_lines(the_dry_run(conn, data))
+
+    assert the_note_next(hevy, AB_WHEEL) == ["Next: Hanging Leg Raise"]
+    assert the_prompt_next(fresh, "ab_wheel") == the_note_next(hevy, AB_WHEEL)
+    assert the_prompt_next(resumed, "ab_wheel") == the_note_next(hevy, AB_WHEEL)
+
+
+def a_swap_of_the_standing_rung_to(exercise: str) -> str:
+    return (
+        f'[[override]]\nkind = "swap_exercise"\nsession = "lower"\nexercise = "dead_bug"\n'
+        f'to = "{exercise}"\nbecause = "kit"\ntext = "No wheel this week."\n'
+    )
+
+
+def test_a_rung_swapped_by_an_override_shows_the_notes_next_rung_in_the_prompt() -> None:
+    conn = a_ladder_week(2)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True, overrides=a_swap_of_the_standing_rung_to("dead_bug"))
+
+    fresh = prompt_lines(the_dry_run(conn, data))
+    pushed_draft(conn, hevy, data)
+    resumed = prompt_lines(the_dry_run(conn, data))
+
+    assert the_note_next(hevy, DEAD_BUG) == ["Next: Hanging Leg Raise"]
+    assert the_prompt_next(fresh, "dead_bug") == ["Next: Hanging Leg Raise"]
+    assert the_prompt_next(resumed, "dead_bug") == ["Next: Hanging Leg Raise"]
+
+
+def test_the_last_rung_swapped_by_an_override_names_no_next_rung_anywhere() -> None:
+    conn = a_ladder_week(3)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True, overrides=a_swap_of_the_standing_rung_to("dead_bug"))
+
+    fresh = prompt_lines(the_dry_run(conn, data))
+    pushed_draft(conn, hevy, data)
+    resumed = prompt_lines(the_dry_run(conn, data))
+
+    assert the_note_next(hevy, DEAD_BUG) == []
+    assert the_prompt_next(fresh, "dead_bug") == []
+    assert the_prompt_next(resumed, "dead_bug") == []
+
+
+def test_a_program_adopted_after_approval_leaves_the_resumed_prompts_rung_alone() -> None:
+    conn = a_ladder_week(2)
+    data = a_plan_draft(conn, hevy=True)
+    pushed_draft(conn, FakeHevy(FixedClock()), data)
+    another_ladder = a_ladder_line(
+        "dead_bug",
+        a_rung(sets=[{"count": 3, "reps": 10, "rpe": 8}]),
+        a_rung("ab_wheel", sets=[{"count": 3, "reps": 8, "rpe": 8}]),
+        a_rung("plank", sets=[{"count": 3, "duration_s": 30, "rpe": 8}]),
+    )
+    adopt(
+        conn,
+        toml(a_draft(a_session("lower", SQUAT_LINE, another_ladder))),
+        file="next.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(datetime.datetime(2026, 10, 31, 12, tzinfo=datetime.UTC)),
+    )
+
+    resumed = the_dry_run(conn, data)
+
+    assert resumed.resumes == "wp-2026-11-02"
+    assert "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise" in prompt_lines(resumed)
