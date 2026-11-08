@@ -55,7 +55,7 @@ def cadence_signals(
         ):
             continue
         standing = _standing(line, session_id, rungs)
-        measured = line if standing is None else standing
+        measured = CadenceRead.measuring(line, standing)
         read = CadenceRead(
             line,
             (before, last),
