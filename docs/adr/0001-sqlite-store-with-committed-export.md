@@ -47,7 +47,7 @@ foreign keys replace about 7 checks, not 15; per-file atomic writes already exis
   `adopt` verb validates a text form and records it as a new program version.
 - Git sees one commit per `publish`; Drafts never reach git (`.coach/drafts/` is gitignored).
 - A schema change is one linear `user_version` migration over one frozen DDL per schema version,
-  so a rebuild can build an export at any version it was written at. Adding a UNIQUE constraint or changing a CHECK
-  needs a table rebuild in SQLite.
+  so a rebuild can build an export at any version it was written at. Adding a UNIQUE constraint
+  or changing a CHECK needs a table rebuild in SQLite.
 - A second machine clones the instance and runs the engine; the missing database is rebuilt
   from the export on the first verb. To take a newer export later, delete the database file.
