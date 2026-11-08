@@ -53,7 +53,9 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 | `exercise` | exercise id | one exercise across blocks, for cadence signals and milestones (ADR 0014) |
 
 Two flags with the same code on the same scope cannot exist: a code states one condition per
-scope, so the key is a key. The message is display only and is never stored. The params (the
+scope, so the key is a key. The one exception is `hevy_template_value_unknown`: one scope holds
+one flag per bad column, each with the same key, and the params name the column. The message is
+display only and is never stored. The params (the
 facts of the condition: a streak length, a ceiling and its kind, a drift class) ride alongside
 the key and are hashed separately; they are condition facts only, never derived display numbers
 that move with rounding.
