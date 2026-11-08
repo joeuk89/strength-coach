@@ -27,7 +27,7 @@ PRESCRIPTION_V3 = """CREATE TABLE prescription (                -- frozen at app
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
-  position     INTEGER NOT NULL,           -- order within the session
+  position     INTEGER NOT NULL,           -- order within the plan
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
@@ -38,15 +38,16 @@ PRESCRIPTION_V3 = """CREATE TABLE prescription (                -- frozen at app
 
 
 def m0002(conn: sqlite3.Connection) -> None:
-    """A prescription line's position. Rows already frozen number by exercise id, the order every
-    reader showed them in, since their Draft order was never kept."""
+    """A prescription line's position within its plan. Rows already frozen number by date, session
+    and exercise id, the order every reader showed them in, since their Draft order was never
+    kept."""
     rebuild_table(
         conn,
         "prescription",
         PRESCRIPTION_V3,
         filled={
-            "position": "ROW_NUMBER() OVER (PARTITION BY plan_id, session_id, date "
-            "ORDER BY exercise_id)"
+            "position": "ROW_NUMBER() OVER (PARTITION BY plan_id "
+            "ORDER BY date, session_id, exercise_id)"
         },
     )
 

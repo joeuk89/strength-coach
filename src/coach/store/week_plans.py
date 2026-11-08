@@ -57,11 +57,11 @@ def overrides(conn: Connection, plan_id: str) -> list[Row]:
 
 
 def prescriptions(conn: Connection, plan_id: str) -> list[Row]:
-    """The plan's frozen prescription rows, set groups, steps and flags decoded, ordered by date,
-    session and position."""
+    """The plan's frozen prescription rows, set groups, steps and flags decoded, in the order the
+    Draft listed them: its sessions are always in date order, and position counts across them."""
     found = select(
         conn,
-        "SELECT * FROM prescription WHERE plan_id = ? ORDER BY date, session_id, position",
+        "SELECT * FROM prescription WHERE plan_id = ? ORDER BY date, position",
         (plan_id,),
     )
     for row in found:

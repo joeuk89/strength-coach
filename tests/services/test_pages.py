@@ -308,6 +308,23 @@ def test_the_week_page_keeps_a_frozen_row_the_derivation_no_longer_plans_after_t
     assert page.count(NOT_DERIVED) == 1
 
 
+def test_the_week_page_lists_frozen_rows_the_derivation_no_longer_plans_in_their_frozen_order() -> (
+    None
+):
+    conn = a_squat_program()
+    plan_id = a_planned_squat_week(conn, monday(0))
+    for session in ("shoulders", "arms"):
+        a_frozen_prescription(
+            conn, plan_id, session, "2026-11-03", "db_curl", set_groups=[AT_175], change="held"
+        )
+
+    assert headings(the_pages(conn)["pages/week.md"]) == [
+        "## Mon 2026-11-02: Lower",
+        "## Tue 2026-11-03: shoulders",
+        "## Tue 2026-11-03: arms",
+    ]
+
+
 def test_the_week_page_renders_the_frozen_rows_of_a_plan_with_no_version_in_force() -> None:
     conn = a_squat_program()
     plan_id = an_approved_plan(conn, monday(0), approved_at="2026-10-01T08:00:00+00:00")

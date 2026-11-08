@@ -210,7 +210,7 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   session_id   TEXT NOT NULL REFERENCES session(id),
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
-  position     INTEGER NOT NULL,           -- order within the session
+  position     INTEGER NOT NULL,           -- order within the plan
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
@@ -220,8 +220,9 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
 );
 ```
 
-`plan apply` freezes each line's `position` from its order in the Draft's session, on the same
-base as `program_line.position`, and a plan's rows read back by date, session and position.
+`plan apply` freezes each line's `position`, its order within the plan, counting from 1 through
+the Draft's sessions. A plan's rows read back by date and position, which is the Draft's order
+because its sessions are always in date order.
 
 A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
 in force on that date; a past plan's sessions are read from its `prescription` rows.

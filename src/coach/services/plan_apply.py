@@ -373,7 +373,11 @@ def _override_row(override: PlanOverride) -> dict[str, object]:
 
 
 def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, object]]:
-    """Each line frozen with its steps and every flag of the plan that bears on it."""
+    """Each line frozen with its place in the whole plan, its steps and every flag of the plan
+    that bears on it."""
+    lines = (
+        (prescribed, line) for prescribed in checked.draft.sessions for line in prescribed.lines
+    )
     return [
         {
             "session_id": prescribed.session.session_id,
@@ -392,8 +396,7 @@ def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, obj
             ),
             "change": line.change,
         }
-        for prescribed in checked.draft.sessions
-        for position, line in enumerate(prescribed.lines, start=1)
+        for position, (prescribed, line) in enumerate(lines, start=1)
     ]
 
 
