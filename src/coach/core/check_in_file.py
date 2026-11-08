@@ -38,7 +38,7 @@ def parse_check_in_file(data: bytes, *, file: str) -> CheckInFile:
             draft=draft,
             readiness=header.term("readiness", READINESS),
             window_start=header.date("window_start"),
-            phase=_phase(phase.subtable("phase")) if phase else None,
+            phase=_phase(phase.table("phase")) if phase else None,
         )
     )
 
