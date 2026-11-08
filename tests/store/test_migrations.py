@@ -275,6 +275,13 @@ def stored_muscles(conn: sqlite3.Connection, id_: str) -> str:
     return text
 
 
+def holding_a_retired_muscle(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute(
+        "SELECT id FROM exercise WHERE muscles LIKE '%cardio%' OR muscles LIKE '%full_body%'"
+    )
+    return {id_ for (id_,) in rows}
+
+
 def test_m0003_gives_a_v3_stores_seeded_rows_the_muscles_the_catalogue_now_holds() -> None:
     conn = a_store_seeded_at(3)
 
@@ -285,25 +292,16 @@ def test_m0003_gives_a_v3_stores_seeded_rows_the_muscles_the_catalogue_now_holds
     assert stored_muscles(conn, "jump_rope") == '{"primary":[],"secondary":["calves"]}'
     assert (
         export(conn, "0.6.0").files["exercise.jsonl"]
-        == (export(a_fresh_catalogue(), "0.6.0").files["exercise.jsonl"])
+        == export(a_fresh_catalogue(), "0.6.0").files["exercise.jsonl"]
     )
 
 
 def test_the_nine_seeded_rows_are_the_only_ones_a_v3_store_holds_with_a_retired_muscle() -> None:
     conn = a_store_seeded_at(3)
 
-    retired = conn.execute(
-        "SELECT id FROM exercise WHERE muscles LIKE '%cardio%' OR muscles LIKE '%full_body%'"
-    ).fetchall()
-
-    assert {id_ for (id_,) in retired} == set(SEEDED_MUSCLES)
+    assert holding_a_retired_muscle(conn) == set(SEEDED_MUSCLES)
     migrate(conn)
-    assert (
-        conn.execute(
-            "SELECT id FROM exercise WHERE muscles LIKE '%cardio%' OR muscles LIKE '%full_body%'"
-        ).fetchall()
-        == []
-    )
+    assert holding_a_retired_muscle(conn) == set()
 
 
 @pytest.mark.parametrize(
