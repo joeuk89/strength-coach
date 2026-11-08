@@ -2,13 +2,11 @@
 card, the progress view and the pages read, from the same rule `plan draft` prescribes by."""
 
 import datetime
-from collections.abc import Mapping, Sequence
-from typing import cast
+from collections.abc import Sequence
 
 from coach.core.config import Units
 from coach.core.exercise_ladder import LadderRead, ladder_read, standing_rung
 from coach.core.flag import Scope
-from coach.core.instant import parse_instant
 from coach.core.planned_week import week_monday
 from coach.core.prescription import DecisionInForce
 from coach.core.program.form import ProgramForm
@@ -25,18 +23,7 @@ def rung_decisions(
 ) -> tuple[DecisionInForce, ...]:
     """The `ladder_rung` Decisions in force, each dated by the day it was recorded on in the
     athlete's timezone."""
-    return tuple(
-        DecisionInForce(
-            id=str(row["id"]),
-            kind=str(row["kind"]),
-            session_id=cast(str | None, row["session_id"]),
-            exercise_id=cast(str | None, row["exercise_id"]),
-            params=cast(Mapping[str, object], row["params"]),
-            on=parse_instant(str(row["recorded_at"])).astimezone(zone).date(),
-        )
-        for row in decisions.in_force(conn, None if on is None else on.isoformat())
-        if row["kind"] == "ladder_rung"
-    )
+    return decisions.in_force_dated(conn, on, ("ladder_rung",), zone)
 
 
 def standing_rungs(
@@ -61,7 +48,7 @@ def ladder_reads(
     if version is None:
         return ()
     found = rung_decisions(conn, on, zone)
-    adopted = datetime.date.fromisoformat(version.adopted[:10])
+    adopted = version.adopted_on
     exposures = read_history(conn, units).lifting
     plan = week_plans.latest_through(conn, week_monday(on).isoformat())
     monday = None if plan is None else datetime.date.fromisoformat(str(plan["week"]))

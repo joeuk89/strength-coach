@@ -172,7 +172,7 @@ def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> dat
         line = _line(version.form, exercise)
         if line is None or line.scheme.name != current.scheme.name:
             break
-        since = datetime.date.fromisoformat(version.adopted[:10])
+        since = version.adopted_on
     return since
 
 

@@ -2,7 +2,6 @@
 (docs/spec/goals.md, "Cadence signals")."""
 
 import datetime
-from collections.abc import Mapping
 from typing import cast
 
 from coach.core.cadence import BlockSpan, CadenceRead, cadence_signal
@@ -14,8 +13,9 @@ from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Line, ProgramForm
 from coach.services.closed_weeks import ClosedWeeks
 from coach.services.history import read_history
+from coach.services.ladders import rung_decisions
 from coach.services.leave_warning import leave_warning_decisions
-from coach.store import decisions, programs, week_plans
+from coach.store import programs, week_plans
 from coach.store.connection import Connection
 
 _DAY = datetime.timedelta(days=1)
@@ -47,7 +47,7 @@ def cadence_signals(
     adherence = _adherence(closed, before, last)
     exposures = read_history(conn, units).lifting
     left = leave_warning_decisions(conn, on)
-    rungs = _ladder_rungs(conn, on)
+    rungs = rung_decisions(conn, on)
     found: list[Flag] = []
     for session_id, line in _lines(version.form):
         if any(
@@ -80,20 +80,6 @@ def _lines(form: ProgramForm) -> list[tuple[str, Line]]:
         for line in session.lines:
             seen.setdefault(line.exercise, (session.id, line))
     return list(seen.values())
-
-
-def _ladder_rungs(conn: Connection, on: datetime.date) -> tuple[DecisionInForce, ...]:
-    return tuple(
-        DecisionInForce(
-            id=str(row["id"]),
-            kind=str(row["kind"]),
-            session_id=cast(str | None, row["session_id"]),
-            exercise_id=cast(str | None, row["exercise_id"]),
-            params=cast(Mapping[str, object], row["params"]),
-        )
-        for row in decisions.in_force(conn, on.isoformat())
-        if row["kind"] == "ladder_rung"
-    )
 
 
 def _standing(line: Line, session_id: str, rungs: tuple[DecisionInForce, ...]) -> Line | None:

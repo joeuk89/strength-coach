@@ -1,3 +1,5 @@
+import datetime
+
 from support.ledger import a_store, an_exercise
 from support.program_drafts import a_draft, a_line, a_session, toml
 
@@ -21,6 +23,18 @@ def a_version(conn: Connection, sequence: int, kind: str = "redesign") -> progra
     with conn:
         programs.insert_version(conn, row)
     return row
+
+
+def test_a_version_reads_its_adopted_column_as_a_date() -> None:
+    conn = a_store()
+    an_exercise(conn, "bb_bench_press")
+    an_exercise(conn, "db_curl")
+    a_version(conn, 3)
+
+    version = programs.latest(conn)
+
+    assert version is not None
+    assert version.adopted_on == datetime.date(2026, 11, 3)
 
 
 def test_a_version_round_trips_with_its_sessions_and_lines() -> None:

@@ -132,7 +132,7 @@ def plan_draft(
                 status_spans=spans,
                 hard_week_count=hard_week_count,
                 redesigned=redesigned,
-                adopted=datetime.date.fromisoformat(version.adopted),
+                adopted=version.adopted_on,
             )
         )
         for session in planned
@@ -203,19 +203,7 @@ def _decisions(
     conn: Connection, session: PlannedSession, clock: Clock
 ) -> tuple[DecisionInForce, ...]:
     """Each with the date it was recorded on in the athlete's timezone."""
-    zone = clock.now().tzinfo
-    return tuple(
-        DecisionInForce(
-            id=str(row["id"]),
-            kind=str(row["kind"]),
-            session_id=cast(str | None, row["session_id"]),
-            exercise_id=cast(str | None, row["exercise_id"]),
-            params=cast(Mapping[str, object], row["params"]),
-            on=parse_instant(str(row["recorded_at"])).astimezone(zone).date(),
-        )
-        for row in decisions.in_force(conn, session.date.isoformat())
-        if row["kind"] in PRESCRIBING_DECISIONS
-    )
+    return decisions.in_force_dated(conn, session.date, PRESCRIBING_DECISIONS, clock.now().tzinfo)
 
 
 def _week_checks(
