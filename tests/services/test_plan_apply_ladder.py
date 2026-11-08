@@ -103,6 +103,15 @@ def prompt_lines(dry: DryRun) -> list[str]:
     return str(dry_run_result(dry, units="lb", full=True)["prompt"]).splitlines()
 
 
+def prompts_around_the_push(
+    conn: Connection, hevy: FakeHevy, data: bytes
+) -> tuple[list[str], list[str]]:
+    """The fresh prompt, then the resumed one after the real push."""
+    fresh = prompt_lines(the_dry_run(conn, data))
+    pushed_draft(conn, hevy, data)
+    return fresh, prompt_lines(the_dry_run(conn, data))
+
+
 SQUAT_PROMPT_LINE = "  bb_back_squat 4×6–8 at 125 lb · 4×6–8 @8: 120 → 125"
 
 
@@ -162,11 +171,7 @@ def test_a_rung_exercise_on_a_plain_line_of_another_session_names_no_next_rung()
     record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock())
     data = a_plan_draft(conn, hevy=True)
 
-    fresh = prompt_lines(the_dry_run(conn, data))
-    pushed_draft(conn, FakeHevy(FixedClock()), data)
-    resumed = prompt_lines(the_dry_run(conn, data))
-
-    for lines in (fresh, resumed):
+    for lines in prompts_around_the_push(conn, FakeHevy(FixedClock()), data):
         lower, upper = [n for n, line in enumerate(lines) if line.startswith("  ab_wheel")]
         assert lines[lower] == "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise"
         assert lines[upper] == "  ab_wheel 3×8 · first prescription"
@@ -187,30 +192,25 @@ def test_the_prompt_names_the_rung_the_real_push_writes_on_the_note() -> None:
     hevy = FakeHevy(FixedClock())
     data = a_plan_draft(conn, hevy=True)
 
-    fresh = prompt_lines(the_dry_run(conn, data))
-    pushed_draft(conn, hevy, data)
-    resumed = prompt_lines(the_dry_run(conn, data))
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
 
     assert the_note_next(hevy, AB_WHEEL) == ["Next: Hanging Leg Raise"]
     assert the_prompt_next(fresh, "ab_wheel") == the_note_next(hevy, AB_WHEEL)
     assert the_prompt_next(resumed, "ab_wheel") == the_note_next(hevy, AB_WHEEL)
 
 
-def a_swap_of_the_standing_rung_to(exercise: str) -> str:
-    return (
-        f'[[override]]\nkind = "swap_exercise"\nsession = "lower"\nexercise = "dead_bug"\n'
-        f'to = "{exercise}"\nbecause = "kit"\ntext = "No wheel this week."\n'
-    )
+SWAP_THE_STANDING_RUNG_TO_DEAD_BUG = (
+    '[[override]]\nkind = "swap_exercise"\nsession = "lower"\nexercise = "dead_bug"\n'
+    'to = "dead_bug"\nbecause = "kit"\ntext = "No wheel this week."\n'
+)
 
 
 def test_a_rung_swapped_by_an_override_shows_the_notes_next_rung_in_the_prompt() -> None:
     conn = a_ladder_week(2)
     hevy = FakeHevy(FixedClock())
-    data = a_plan_draft(conn, hevy=True, overrides=a_swap_of_the_standing_rung_to("dead_bug"))
+    data = a_plan_draft(conn, hevy=True, overrides=SWAP_THE_STANDING_RUNG_TO_DEAD_BUG)
 
-    fresh = prompt_lines(the_dry_run(conn, data))
-    pushed_draft(conn, hevy, data)
-    resumed = prompt_lines(the_dry_run(conn, data))
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
 
     assert the_note_next(hevy, DEAD_BUG) == ["Next: Hanging Leg Raise"]
     assert the_prompt_next(fresh, "dead_bug") == ["Next: Hanging Leg Raise"]
@@ -220,11 +220,9 @@ def test_a_rung_swapped_by_an_override_shows_the_notes_next_rung_in_the_prompt()
 def test_the_last_rung_swapped_by_an_override_names_no_next_rung_anywhere() -> None:
     conn = a_ladder_week(3)
     hevy = FakeHevy(FixedClock())
-    data = a_plan_draft(conn, hevy=True, overrides=a_swap_of_the_standing_rung_to("dead_bug"))
+    data = a_plan_draft(conn, hevy=True, overrides=SWAP_THE_STANDING_RUNG_TO_DEAD_BUG)
 
-    fresh = prompt_lines(the_dry_run(conn, data))
-    pushed_draft(conn, hevy, data)
-    resumed = prompt_lines(the_dry_run(conn, data))
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
 
     assert the_note_next(hevy, DEAD_BUG) == []
     assert the_prompt_next(fresh, "dead_bug") == []

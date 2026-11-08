@@ -16,6 +16,7 @@ from coach.core.prescription import PlanOverride
 from coach.core.routine_projection import FrozenLine
 
 type Json = Mapping[str, object]
+type NextRungs = Mapping[str, Mapping[str, str]]
 
 
 @dataclass(frozen=True)
@@ -44,9 +45,7 @@ class PlanSummary:
     flags: tuple[Flag, ...]
 
 
-def fresh_summary(
-    checked: CheckedPlan, units: Units, next_rungs: Mapping[str, Mapping[str, str]]
-) -> PlanSummary:
+def fresh_summary(checked: CheckedPlan, units: Units, next_rungs: NextRungs) -> PlanSummary:
     """`next_rungs` are each session's next rung names, keyed on the authored exercise."""
     draft = checked.draft
     return PlanSummary(
@@ -88,7 +87,7 @@ def frozen_summary(
     rows: Sequence[Json],
     overrides: Sequence[PlanOverride],
     locations: Mapping[str, str],
-    next_rungs: Mapping[str, Mapping[str, str]],
+    next_rungs: NextRungs,
 ) -> PlanSummary:
     """The WeekPlan as its prescription rows froze it, in their order. The rows carry no
     location, so each session's comes from `locations` with the plan's overrides folded in, and
@@ -122,7 +121,7 @@ def frozen_summary(
     )
 
 
-def _line(row: Json, next_rungs: Mapping[str, Mapping[str, str]]) -> SummaryLine:
+def _line(row: Json, next_rungs: NextRungs) -> SummaryLine:
     exercise_id = str(row["exercise_id"])
     return SummaryLine(
         exercise_id,
@@ -133,10 +132,7 @@ def _line(row: Json, next_rungs: Mapping[str, Mapping[str, str]]) -> SummaryLine
 
 
 def _next_rung(
-    next_rungs: Mapping[str, Mapping[str, str]],
-    session_id: str,
-    exercise_id: str,
-    steps: Sequence[Json],
+    next_rungs: NextRungs, session_id: str, exercise_id: str, steps: Sequence[Json]
 ) -> str | None:
     authored = FrozenLine(exercise_id, (), steps).authored_exercise
     return next_rungs.get(session_id, {}).get(authored)
