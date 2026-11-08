@@ -378,6 +378,7 @@ def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, obj
             "session_id": prescribed.session.session_id,
             "date": prescribed.session.date.isoformat(),
             "exercise_id": line.exercise_id,
+            "position": position,
             "set_groups": _json(frozen_groups(line.groups, units)),
             "derived_from": line.derived_from or "start_load",
             "steps": _json([step.to_json() for step in line.steps]),
@@ -391,7 +392,7 @@ def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, obj
             "change": line.change,
         }
         for prescribed in checked.draft.sessions
-        for line in prescribed.lines
+        for position, line in enumerate(prescribed.lines, start=1)
     ]
 
 
