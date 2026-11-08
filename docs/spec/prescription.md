@@ -157,7 +157,8 @@ Notes:
 One definition: three consecutive ordinary exposures of the line (light-week and return-week
 exposures skipped) with no gain on the scheme's metric raise `stall_streak` with the three
 exposure refs. Three is opinion: the sources say read the trend, not one session, and name no
-count (rn:progression-methods §4).
+count (rn:progression-methods §4). A line in a `practice` session raises none, and the progress
+view shows its streak as 0.
 
 The streak reads exposures on or after the latest redesign's adoption date and none before it: a
 redesign starts every line with a clean streak, because a stall under the old design says
