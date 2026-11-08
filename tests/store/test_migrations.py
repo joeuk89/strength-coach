@@ -164,7 +164,9 @@ def test_m0001_keeps_every_decision_and_takes_ladder_rung_and_the_reason_progres
 def with_unpositioned_prescriptions(conn: sqlite3.Connection) -> sqlite3.Connection:
     """Rows as a store below version 3 holds them, written out of exercise order."""
     with conn:
-        conn.execute("INSERT INTO session VALUES ('lower', 'pv-1'), ('upper', 'pv-1')")
+        conn.execute(
+            "INSERT INTO session VALUES ('lower', 'pv-1'), ('upper', 'pv-1'), ('core', 'pv-1')"
+        )
         for id_ in ("ab_wheel", "bb_back_squat", "bb_bench_press"):
             conn.execute(
                 "INSERT INTO exercise (id, name, load_mode, equipment_kind, pattern, muscles, "
@@ -180,6 +182,7 @@ def with_unpositioned_prescriptions(conn: sqlite3.Connection) -> sqlite3.Connect
             )
         for plan, session, day, exercise in (
             ("wp-2026-11-02", "lower", "2026-11-02", "bb_bench_press"),
+            ("wp-2026-11-02", "core", "2026-11-02", "bb_back_squat"),
             ("wp-2026-11-02", "lower", "2026-11-02", "ab_wheel"),
             ("wp-2026-11-02", "lower", "2026-11-02", "bb_back_squat"),
             ("wp-2026-11-02", "lower", "2026-11-05", "bb_bench_press"),
@@ -204,22 +207,23 @@ def positions(
     ]
 
 
-NUMBERED_BY_EXERCISE = [
-    ("lower", "2026-11-02", "ab_wheel", 1),
-    ("lower", "2026-11-02", "bb_back_squat", 2),
-    ("lower", "2026-11-02", "bb_bench_press", 3),
-    ("upper", "2026-11-03", "bb_bench_press", 1),
-    ("lower", "2026-11-05", "bb_bench_press", 1),
+NUMBERED_ACROSS_THE_PLAN = [
+    ("core", "2026-11-02", "bb_back_squat", 1),
+    ("lower", "2026-11-02", "ab_wheel", 2),
+    ("lower", "2026-11-02", "bb_back_squat", 3),
+    ("lower", "2026-11-02", "bb_bench_press", 4),
+    ("upper", "2026-11-03", "bb_bench_press", 5),
+    ("lower", "2026-11-05", "bb_bench_press", 6),
 ]
 
 
-def test_m0002_numbers_a_v2_stores_rows_in_the_order_every_reader_showed_them() -> None:
+def test_m0002_numbers_a_v2_stores_rows_across_each_plan_in_the_order_readers_showed_them() -> None:
     conn = with_unpositioned_prescriptions(at_version(ENGINE, 2))
 
     migrated = migrate(conn)
 
     assert migrated.steps == ("m0002",)
-    assert positions(conn) == NUMBERED_BY_EXERCISE
+    assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
 
 
@@ -229,7 +233,7 @@ def test_a_v1_store_with_prescriptions_migrates_through_both_steps() -> None:
     migrated = migrate(conn)
 
     assert migrated.steps == ("m0001", "m0002")
-    assert positions(conn) == NUMBERED_BY_EXERCISE
+    assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
 
 
 def test_a_migrated_prescription_table_has_a_fresh_stores_definition() -> None:
@@ -252,6 +256,6 @@ def test_an_export_written_at_v2_rebuilds_with_its_prescriptions_numbered(tmp_pa
     assert rebuilt == Rebuilt(schema_version=2)
     conn = connect(database)
     assert schema_version(conn) == ENGINE.version
-    assert positions(conn) == NUMBERED_BY_EXERCISE
+    assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     first = json.loads(export(conn, "0.6.0").files["prescription.jsonl"].splitlines()[0])
     assert list(first)[:5] == ["plan_id", "session_id", "date", "exercise_id", "position"]

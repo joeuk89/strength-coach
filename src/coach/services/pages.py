@@ -141,7 +141,7 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
         _session_page(
             session_id, day, _kind(authored, session_id), rows, authored, names, derived=False
         )
-        for (day, session_id), rows in sorted(frozen.items())
+        for (day, session_id), rows in frozen.items()
         if (day, session_id) not in planned
     )
     return WeekPage(

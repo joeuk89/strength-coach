@@ -1,6 +1,7 @@
 import datetime
 from collections import Counter
 from dataclasses import replace
+from itertools import takewhile
 from typing import Any, cast
 
 import pytest
@@ -13,6 +14,7 @@ from support.program_drafts import a_draft, a_line, a_session, toml
 from support.programs import a_config
 
 from coach.core.errors import Invalid, Refused
+from coach.render.approval_prompt import approval_prompt
 from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
 from coach.services.program import adopt
 from coach.services.record import record
@@ -745,3 +747,66 @@ def test_the_routine_follows_the_authored_order_and_a_resume_keeps_the_approved_
     routine = hevy.routine(lower_routine(conn))
     assert [e.hevy_template_id for e in routine.exercises] == [BENCH_TEMPLATE, SQUAT_TEMPLATE]
     assert a_rerun_dry_run(conn, data).write_plan_hash == digest
+
+
+def lower_and_core_on_one_monday() -> Connection:
+    """`lower` is drafted first though `core` sorts before it, and both fall on the Monday."""
+    conn = a_squat_week(
+        a_session("lower", a_line("bb_bench_press"), a_line("bb_back_squat")),
+        a_session("upper", a_line("bb_bench_press")),
+        a_session(
+            "core", a_line("bb_bench_press"), a_line("bb_overhead_press"), cadence="standing"
+        ),
+    )
+    with conn:
+        exercises.update(conn, "bb_overhead_press", {"hevy_template_id": "OH-0001"})
+    return conn
+
+
+def the_sessions_shown(found: DryRun) -> list[str]:
+    """The prompt's session lines, between its header and its first titled section."""
+    shown = approval_prompt(found.summary, found.actions, found.write_plan_hash, units="lb")
+    return list(
+        takewhile(lambda line: line.startswith(("Mon", "Wed", "  ")), shown.splitlines()[1:])
+    )
+
+
+def test_a_resumed_prompt_lists_same_day_sessions_and_their_lines_as_the_fresh_one_did() -> None:
+    conn = lower_and_core_on_one_monday()
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh = a_rerun_dry_run(conn, data)
+    push(conn, FakeHevy(FixedClock()), data, fresh.write_plan_hash)
+    resumed = a_rerun_dry_run(conn, data)
+
+    assert resumed.resumes == "wp-2026-11-02"
+    assert [(s.session_id, s.date.isoformat()) for s in resumed.summary.sessions] == [
+        ("lower", "2026-11-02"),
+        ("core", "2026-11-02"),
+        ("upper", "2026-11-04"),
+    ]
+    assert resumed.summary.sessions == fresh.summary.sessions
+    assert the_sessions_shown(resumed) == the_sessions_shown(fresh)
+    assert [line for line in the_sessions_shown(resumed) if not line.startswith(" ")] == [
+        "Mon 2026-11-02 lower (home)",
+        "Mon 2026-11-02 core (home)",
+        "Wed 2026-11-04 upper (home)",
+    ]
+
+
+def test_a_plan_freezes_each_line_at_its_place_in_the_whole_plan() -> None:
+    conn = lower_and_core_on_one_monday()
+    data = a_plan_draft(conn, hevy=True)
+
+    push(conn, FakeHevy(FixedClock()), data, the_hash(conn, data))
+
+    assert [
+        (r["session_id"], r["exercise_id"], r["position"])
+        for r in week_plans.prescriptions(conn, "wp-2026-11-02")
+    ] == [
+        ("lower", "bb_bench_press", 1),
+        ("lower", "bb_back_squat", 2),
+        ("core", "bb_bench_press", 3),
+        ("core", "bb_overhead_press", 4),
+        ("upper", "bb_bench_press", 5),
+    ]
