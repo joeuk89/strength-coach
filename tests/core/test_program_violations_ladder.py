@@ -208,3 +208,49 @@ def test_a_declared_rung_exercise_with_a_bad_template_value_names_the_rung_exerc
         "value": "bands",
     }
     assert flag.message.startswith("custom_board has hevy_equipment 'bands'")
+
+
+@pytest.mark.parametrize(
+    ("row", "code", "params"),
+    [
+        ({"pattern": "balanse"}, "unknown_pattern", {"pattern": "balanse"}),
+        (
+            {"muscles": {"primary": ["cardio"], "secondary": []}},
+            "unknown_muscle",
+            {"muscle": "cardio"},
+        ),
+    ],
+)
+def test_a_later_rungs_bad_library_row_is_refused_as_a_lines_would_be(
+    row: dict[str, object], code: str, params: dict[str, object]
+) -> None:
+    library = {**LIBRARY, "side_plank": {**DURATION, **row}}
+    parsed = parse_program_draft(
+        toml(a_draft(a_session("core", a_ladder_line("plank", a_rung(), a_rung("side_plank"))))),
+        file="d.toml",
+    )
+
+    [flag] = violations(parsed.form, replace(CONTEXT, library=library), parsed.unknown_keys)
+
+    assert flag.key == f"{code}@exercise:side_plank"
+    assert flag.params == params
+
+
+def test_a_rung_exercise_that_is_also_a_line_raises_one_flag_for_it() -> None:
+    library = {**LIBRARY, "side_plank": {**DURATION, "pattern": "balanse"}}
+    ladder = a_ladder_line("plank", a_rung(), a_rung("side_plank"))
+    parsed = parse_program_draft(
+        toml(
+            a_draft(
+                a_session("core", ladder),
+                a_session("extra", a_line("side_plank", load_mode="duration")),
+            )
+        ),
+        file="d.toml",
+    )
+
+    found = violations(parsed.form, replace(CONTEXT, library=library), parsed.unknown_keys)
+
+    assert [f.key for f in found if f.code == "unknown_pattern"] == [
+        "unknown_pattern@exercise:side_plank"
+    ]

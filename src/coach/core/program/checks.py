@@ -141,7 +141,12 @@ class _Checks:
             )
 
     def exercises(self) -> None:
-        referenced = [line.exercise for session in self.form.sessions for line in session.lines]
+        referenced = [
+            exercise
+            for session in self.form.sessions
+            for line in session.lines
+            for exercise in _exercises_of(line)
+        ]
         counts = self.form.dose.counted().values() if self.form.dose else ()
         counted = [variant for variants in counts for variant in variants]
         for id_ in dict.fromkeys([*referenced, *counted, *self.form.exercises]):
