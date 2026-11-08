@@ -71,9 +71,20 @@ def _authored(lines: Sequence[Line]) -> dict[str, _Authored]:
     return found
 
 
+def next_rung_names(lines: Sequence[Line], names: Mapping[str, str]) -> dict[str, str]:
+    """The next rung's display name, keyed on each authored exercise that has one. `names` are the
+    library's exercise names; an exercise missing from them shows its id."""
+    return {
+        exercise: names.get(found.next_rung, found.next_rung)
+        for exercise, found in _authored(lines).items()
+        if found.next_rung is not None
+    }
+
+
 def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], units: Units) -> Json:
     """The routine body: no null keys and no routine-level note, since Hevy drops it on PUT."""
     authored = _authored(session.authored)
+    following = next_rung_names(session.authored, session.names)
     last = len(session.authored)
     lines = sorted(
         session.lines,
@@ -85,8 +96,9 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
         found = authored.get(frozen.authored_exercise)
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
-        if found is not None and found.next_rung is not None:
-            notes.append(f"Next: {session.names.get(found.next_rung, found.next_rung)}")
+        next_rung = following.get(frozen.authored_exercise)
+        if next_rung is not None:
+            notes.append(f"Next: {next_rung}")
         if position == 0:
             notes = [session.week_line, *notes]
         exercise: Json = {
