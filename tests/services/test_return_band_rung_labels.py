@@ -86,10 +86,6 @@ def prompt_lines_around_the_push(conn: Connection, hevy: FakeHevy, data: bytes) 
     return [fresh, the_prompt_line(conn, data)]
 
 
-def the_week_page(conn: Connection) -> str:
-    return the_pages(conn)["pages/week.md"]
-
-
 def test_a_52_day_layoff_on_a_shared_exercise_shows_the_weeks_rung_and_no_next_rung() -> None:
     conn = standing_after_a_layoff(3, FIFTY_TWO_DAYS_OFF)
     hevy = FakeHevy(FixedClock())
@@ -134,7 +130,8 @@ def test_the_week_page_step_table_names_both_rungs_with_its_cause() -> None:
     conn = standing_after_a_layoff(3, EIGHTEEN_DAYS_OFF)
     pushed(conn, FakeHevy(FixedClock()), a_plan_draft(conn, hevy=True))
 
-    assert "| cut | rung 3 | rung 2 | return 11–21, 18 days off |" in the_week_page(conn)
+    week_page = the_pages(conn)["pages/week.md"]
+    assert "| cut | rung 3 | rung 2 | return 11–21, 18 days off |" in week_page
 
 
 def test_a_week_with_no_step_back_keeps_its_next_rung_and_note() -> None:
