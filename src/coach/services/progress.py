@@ -182,7 +182,8 @@ def _stall_streak(
     rungs: Sequence[DecisionInForce],
     adopted: datetime.date | None,
 ) -> int:
-    """Read on the judged line, a ladder's standing rung from its start; 0 when it has none."""
+    """Read on the judged line, a ladder's from the exposures that count on its standing rung; 0
+    when it has none."""
     if judged_line is None:
         return 0
     session_id, line = judged_line

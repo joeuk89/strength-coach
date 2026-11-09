@@ -26,7 +26,6 @@ from coach.core.registries.schemes import DEFAULT_EXPOSURES
 
 # The scheme's opening position; the line stands here until a rung is a recorded choice.
 OPENING_RUNG = 1
-_DAY = datetime.timedelta(days=1)
 
 
 @dataclass(frozen=True)
@@ -130,7 +129,7 @@ def standing_rung(
     index = rung if isinstance(rung, int) else OPENING_RUNG
     return StandingRung(
         min(max(index, OPENING_RUNG), len(ladder.rungs)),
-        None if decision.on is None else decision.on + _DAY,
+        None if decision.on is None else decision.on + datetime.timedelta(days=1),
     )
 
 

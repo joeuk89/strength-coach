@@ -152,8 +152,9 @@ Notes:
   that date does not count. From adoption they count on the date itself, since no earlier rung
   earned the first. The load, the criterion and `stall_streak` read only the standing rung's
   exercise's exposures that count, and exposures on another rung's exercise, or on its own before
-  they count, count for nothing, so two rungs may share an exercise (ADR 0025). The line's key stays its first rung's exercise for
-  every flag and override; the prescription and history matching carry the standing rung's. A
+  they count, count for nothing, so two rungs may share an exercise (ADR 0025). The line's key
+  stays its first rung's exercise for every flag and override; the prescription and history
+  matching carry the standing rung's. A
   light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
   after the athlete's yes.
 
