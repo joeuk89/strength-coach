@@ -2,14 +2,14 @@
 (ADR 0011, "Push"; docs/spec/parity.md, the routine body and note rules)."""
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal, cast
 
 from coach.core.config import Units
 from coach.core.exercise_ladder import rung_label, rung_line
 from coach.core.mirror import Routine, RoutineSet
 from coach.core.note_dose import working_rpe, working_shape
-from coach.core.prescription import RungNaming
+from coach.core.prescription import RungNaming, stepped_back_a_rung
 from coach.core.program.form import Line
 
 type Json = dict[str, object]
@@ -100,6 +100,11 @@ def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Autho
     return found
 
 
+def week_labels(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> RungLabels:
+    """A stepped-back week offers no climb: the line returns to its standing rung next."""
+    return replace(labels, next=None) if stepped_back_a_rung(steps) else labels
+
+
 def rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, RungLabels]:
     """The labels of every ladder rung, keyed on the authored exercise and rung."""
     return {
@@ -123,8 +128,8 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
         found = authored.get(_origin(frozen))
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
-        if found is not None and found.labels is not None and found.labels.next is not None:
-            notes.append(f"Next: {found.labels.next}")
+        if found is not None and found.labels is not None:
+            notes += _rung_notes(found.labels, frozen.steps)
         if position == 0:
             notes = [session.week_line, *notes]
         exercise: Json = {
@@ -203,6 +208,12 @@ def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
     if line is not None and line.cues:
         notes.append(f"Cues: {line.cues}")
     return notes
+
+
+def _rung_notes(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> list[str]:
+    if stepped_back_a_rung(steps):
+        return [f"This week: {labels.own}"]
+    return [] if labels.next is None else [f"Next: {labels.next}"]
 
 
 def _target(groups: Sequence[Mapping[str, object]], units: Units) -> str:
