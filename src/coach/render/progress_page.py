@@ -1,11 +1,14 @@
 """`coach progress` as a page (docs/spec/goals.md, "`coach progress`")."""
 
 from coach.core.config import Units
+from coach.core.pages import PageNames
 from coach.core.progress import Progress
-from coach.render.markdown import bullets, cell, flag_text, page, section, table
+from coach.render.markdown import MANUAL_CLIMB, bullets, cell, flag_text, page, section, table
 
 
-def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pin: str) -> str:
+def progress_page(
+    report: Progress, *, names: PageNames, units: Units, bodyweight_units: Units, pin: str
+) -> str:
     block = report.block
     intro = (
         f"Closed Block `{block.id}`, {block.start.isoformat()} to {block.end.isoformat()}."
@@ -68,11 +71,9 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
                 ["line", "standing rung", "exposures toward the criterion", "met"],
                 [
                     [
-                        f"{r.line.session_id}/{r.line.line_key}",
-                        f"{r.rung} of {r.rungs}, {r.exercise}",
-                        "the athlete's word"
-                        if r.needed is None
-                        else f"{r.exposures} of {r.needed}",
+                        f"{names.session(r.line.session_id)}: {names.exercise(r.line.line_key)}",
+                        f"{r.rung} of {r.rungs}, {names.exercise(r.exercise)}",
+                        MANUAL_CLIMB if r.needed is None else f"{r.exposures} of {r.needed}",
                         r.met,
                     ]
                     for r in report.ladders

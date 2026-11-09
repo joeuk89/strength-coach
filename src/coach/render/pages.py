@@ -19,6 +19,7 @@ def render_pages(pages: Pages) -> dict[str, str]:
         f"{PAGES_DIR}/athlete.md": athlete_page(pages.athlete),
         f"{PAGES_DIR}/progress.md": progress_page(
             pages.progress,
+            names=pages.names,
             units=pages.units,
             bodyweight_units=pages.bodyweight_units,
             pin=pages.pin,

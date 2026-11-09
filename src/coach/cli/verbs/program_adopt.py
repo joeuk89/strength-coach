@@ -12,7 +12,7 @@ from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files
 from coach.cli.pull import PULL_SCHEMA
-from coach.core.drafts.program import PROGRAM
+from coach.core.draft_kinds.program import PROGRAM
 from coach.services.program import AdoptResult, adopt
 
 

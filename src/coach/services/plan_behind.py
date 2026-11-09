@@ -3,7 +3,7 @@
 import datetime
 
 from coach.core.flag import Flag
-from coach.core.plan_behind import PlanUnder, plan_behind_program
+from coach.core.plan_behind import ApprovedPlan, plan_behind_program
 from coach.core.planned_week import week_monday
 from coach.store import programs, week_plans
 from coach.store.connection import Connection
@@ -22,5 +22,5 @@ def plan_behind(
         latest = programs.latest(conn)
         version_id = latest.id if latest else None
     under = programs.in_force_at(conn, str(row["approved_at"]))
-    plan = PlanUnder(str(row["id"]), monday, under.id if under else None)
+    plan = ApprovedPlan(str(row["id"]), monday, under.id if under else None)
     return plan_behind_program(plan, version_id)

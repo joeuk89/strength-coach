@@ -208,7 +208,7 @@ def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked(
         "Ladder:\n\n"
         "1. **Balance board: two feet, still** (standing): 2×30 s @5. near a wall. "
         "Climb on 30 s at RPE 5 or under, 2 exposures running.\n"
-        "2. Balance board: one foot, eyes closed: 4×8 @7. Climb on the athlete's word."
+        "2. Balance board: one foot, eyes closed: 4×8 @7. Climb when you and the coach agree."
     ) in text
 
 

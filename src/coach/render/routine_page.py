@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from coach.core.config import Units
 from coach.core.exercise_ladder import RungShape
 from coach.core.pages import PageLine, RoutinePage
-from coach.render.markdown import bullets, group_text, number, page, section
+from coach.render.markdown import MANUAL_CLIMB, bullets, group_text, number, page, section
 from coach.render.plate_pool import line_link, set_up_link
 
 
@@ -41,12 +41,12 @@ def _rung(rung: RungShape, units: Units) -> str:
     name = f"**{rung.name}** (standing)" if rung.standing else rung.name
     groups = ", ".join(group_text(g, units) for g in rung.set_groups)
     cues = f" {rung.cues}." if rung.cues else ""
-    return f"{rung.rung}. {name}: {groups}.{cues} Climb on {_criterion(rung.criterion)}."
+    return f"{rung.rung}. {name}: {groups}.{cues} Climb {_climb(rung.criterion)}."
 
 
-def _criterion(criterion: Mapping[str, object]) -> str:
+def _climb(criterion: Mapping[str, object]) -> str:
     if criterion.get("manual"):
-        return "the athlete's word"
+        return MANUAL_CLIMB
     reps, duration, rpe = (criterion.get(k) for k in ("reps", "duration_s", "rpe_at_most"))
     head = [f"{reps} reps"] if reps is not None else []
     if duration is not None:
@@ -54,4 +54,4 @@ def _criterion(criterion: Mapping[str, object]) -> str:
     if isinstance(rpe, int | float):
         head.append(f"RPE {number(rpe)} or under")
     exposures = f"{criterion.get('exposures')} exposures running"
-    return f"{' at '.join(head)}, {exposures}" if head else exposures
+    return "on " + (f"{' at '.join(head)}, {exposures}" if head else exposures)

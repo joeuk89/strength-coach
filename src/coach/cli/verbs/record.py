@@ -10,7 +10,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
-from coach.core.drafts.ledger import RECORD
+from coach.core.draft_kinds.ledger import RECORD
 from coach.services.record import record
 
 
