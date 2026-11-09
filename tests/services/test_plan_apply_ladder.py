@@ -1,4 +1,5 @@
 import datetime
+from typing import cast
 
 import pytest
 from support.check_in_cards import field_of, opened
@@ -410,7 +411,7 @@ def test_the_check_in_card_and_the_prompt_show_the_same_label() -> None:
 
     lines = prompt_lines(the_dry_run(conn, a_plan_draft(conn, hevy=True)))
 
-    [row] = field_of(opened(conn), "ladders").facts["rows"]
+    [row] = cast(list[dict[str, object]], field_of(opened(conn), "ladders").facts["rows"])
     assert row["next_label"] == "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues"
     assert the_prompt_next(lines, "dead_bug") == [f"Next: {row['next_label']}"]
     assert any(f"{row['next_label']} is offered" in line for line in lines)
