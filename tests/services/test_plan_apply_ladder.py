@@ -32,7 +32,12 @@ AB_WHEEL = "99D5F10E"
 HANGING_LEG_RAISE = "F8356514"
 DEAD_BUG = "D8911FC4"
 NEXT_FROM_AB_WHEEL = "Next: rung 3 · Hanging Leg Raise · 3×6 @8 · hanging_leg_raise cues"
-AB_WHEEL_PROMPT_LINE = f"  ab_wheel 3×8 · first prescription · {NEXT_FROM_AB_WHEEL}"
+AB_WHEEL_PROMPT_LINE = (
+    f"  ab_wheel 3×8 · first prescription · rung 2 · 3×8 @8 · ab_wheel cues · {NEXT_FROM_AB_WHEEL}"
+)
+TOP_RUNG_PROMPT_LINE = (
+    "  hanging_leg_raise 3×6 · first prescription · rung 3 · 3×6 @8 · hanging_leg_raise cues"
+)
 
 
 def a_ladder_week(rung: int) -> Connection:
@@ -138,12 +143,12 @@ def test_the_prompt_names_the_next_rung_on_a_line_below_the_top() -> None:
     assert SQUAT_PROMPT_LINE in lines
 
 
-def test_on_the_last_rung_the_prompt_shows_nothing_extra() -> None:
+def test_on_the_last_rung_the_prompt_shows_its_label_and_no_next_rung() -> None:
     conn = a_ladder_week(3)
 
     lines = prompt_lines(the_dry_run(conn, a_plan_draft(conn, hevy=True)))
 
-    assert "  hanging_leg_raise 3×6 · first prescription" in lines
+    assert TOP_RUNG_PROMPT_LINE in lines
     assert SQUAT_PROMPT_LINE in lines
 
 
@@ -160,7 +165,7 @@ def test_a_resumed_prompt_names_the_next_rung_below_the_top() -> None:
     assert SQUAT_PROMPT_LINE in lines
 
 
-def test_a_resumed_prompt_on_the_last_rung_shows_nothing_extra() -> None:
+def test_a_resumed_prompt_on_the_last_rung_shows_its_label_and_no_next_rung() -> None:
     conn = a_ladder_week(3)
     data = a_plan_draft(conn, hevy=True)
     pushed_draft(conn, FakeHevy(FixedClock()), data)
@@ -169,7 +174,7 @@ def test_a_resumed_prompt_on_the_last_rung_shows_nothing_extra() -> None:
 
     assert resumed.resumes == "wp-2026-11-02"
     lines = prompt_lines(resumed)
-    assert "  hanging_leg_raise 3×6 · first prescription" in lines
+    assert TOP_RUNG_PROMPT_LINE in lines
     assert SQUAT_PROMPT_LINE in lines
 
 
@@ -415,3 +420,17 @@ def test_the_check_in_card_and_the_prompt_show_the_same_label() -> None:
     assert row["next_label"] == "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues"
     assert the_prompt_next(lines, "dead_bug") == [f"Next: {row['next_label']}"]
     assert any(f"{row['next_label']} is offered" in line for line in lines)
+
+
+def test_the_prompt_after_a_ladder_rung_decision_shows_the_adopted_rungs_label() -> None:
+    conn = a_tempo_week(2)
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh, resumed = prompts_around_the_push(conn, FakeHevy(FixedClock()), data)
+
+    adopted = (
+        "  dead_bug 3×4 · first prescription · rung 2 · 3×4 @8 · lower for 6 s"
+        " · Next: rung 3 · 3×4 @8 · lower for 8 s"
+    )
+    assert adopted in fresh
+    assert adopted in resumed

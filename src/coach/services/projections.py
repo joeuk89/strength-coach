@@ -13,9 +13,10 @@ from coach.core.program.form import Session
 from coach.core.routine_projection import (
     FrozenLine,
     RungKey,
+    RungLabels,
     SessionRoutine,
-    next_rung_labels,
     project_routine,
+    rung_labels,
 )
 from coach.store import exercises, mirrors, niggles, programs, week_plans
 from coach.store.connection import Connection
@@ -40,13 +41,13 @@ def session_facts(conn: Connection, plan: Mapping[str, object]) -> dict[str, Ses
     return _facts(conn, programs.in_force_at(conn, str(plan["approved_at"])))
 
 
-def next_rungs(
+def session_rung_labels(
     conn: Connection, version: VersionRow | None, units: Units
-) -> dict[str, dict[RungKey, str]]:
-    """Each session's next rung labels under `version`, read as the routine's note reads them."""
+) -> dict[str, dict[RungKey, RungLabels]]:
+    """Each session's rung labels under `version`, read as the routine's note reads them."""
     naming = rung_naming(conn, units)
     return {
-        session_id: next_rung_labels(found.session.lines, naming)
+        session_id: rung_labels(found.session.lines, naming)
         for session_id, found in _facts(conn, version).items()
     }
 

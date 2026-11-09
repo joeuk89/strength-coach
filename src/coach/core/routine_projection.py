@@ -57,13 +57,22 @@ class SessionRoutine:
 
 
 @dataclass(frozen=True)
+class RungLabels:
+    """A frozen rung's own label and the next rung's, if any. A frozen row records only the rung
+    its week prescribed, so that rung is the standing rung of both."""
+
+    own: str
+    next: str | None
+
+
+@dataclass(frozen=True)
 class _Authored:
     """The authored line a frozen line projects from: on a ladder, the line as the frozen rung
-    prescribes it, with the next rung's exercise."""
+    prescribes it, with its labels."""
 
     position: int
     line: Line
-    next_rung: str | None = None
+    labels: RungLabels | None = None
 
 
 def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Authored]:
@@ -77,24 +86,26 @@ def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Autho
         if ladder is None:
             continue
         for index, rung in enumerate(ladder.rungs, start=1):
-            following = (
-                rung_label(line, ladder, index + 1, standing=index, naming=naming)
-                if index < len(ladder.rungs)
-                else None
+            labels = RungLabels(
+                own=rung_label(line, ladder, index, standing=index, naming=naming),
+                next=(
+                    rung_label(line, ladder, index + 1, standing=index, naming=naming)
+                    if index < len(ladder.rungs)
+                    else None
+                ),
             )
-            shaped = _Authored(position, rung_line(line, ladder, index), following)
+            shaped = _Authored(position, rung_line(line, ladder, index), labels)
             found[rung.exercise, index] = shaped
             found[rung.exercise, None] = shaped
     return found
 
 
-def next_rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, str]:
-    """The next rung's label, keyed on each authored exercise and rung that has one. A frozen row
-    records only the rung its week prescribed, so that rung is the label's standing rung."""
+def rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, RungLabels]:
+    """The labels of every ladder rung, keyed on the authored exercise and rung."""
     return {
-        key: found.next_rung
+        key: found.labels
         for key, found in _authored(lines, naming).items()
-        if found.next_rung is not None
+        if found.labels is not None
     }
 
 
@@ -112,8 +123,8 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
         found = authored.get(_origin(frozen))
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
-        if found is not None and found.next_rung is not None:
-            notes.append(f"Next: {found.next_rung}")
+        if found is not None and found.labels is not None and found.labels.next is not None:
+            notes.append(f"Next: {found.labels.next}")
         if position == 0:
             notes = [session.week_line, *notes]
         exercise: Json = {
