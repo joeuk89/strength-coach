@@ -170,8 +170,8 @@ def _stall_streak(
     )
     if found is None:
         return 0
-    standing, since = standing_line(found[1], found[0], rungs)
-    return len(stall_streak(standing, [e for e in history if since is None or since <= e.date]))
+    session_id, line = found
+    return len(stall_streak(*standing_line(line, session_id, rungs, history)))
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:

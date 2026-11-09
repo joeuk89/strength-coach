@@ -37,6 +37,10 @@ def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -
     return exercise_id
 
 
+def _origin(frozen: FrozenLine) -> RungKey:
+    return authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung
+
+
 @dataclass(frozen=True)
 class SessionRoutine:
     """`names` are the library's exercise names, for the next rung a ladder line's note names."""
@@ -94,16 +98,12 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
     last = len(session.authored)
     lines = sorted(
         session.lines,
-        key=lambda f: (
-            a.position
-            if (a := authored.get((authored_exercise(f.exercise_id, f.steps), f.rung)))
-            else last
-        ),
+        key=lambda f: a.position if (a := authored.get(_origin(f))) else last,
     )
     supersets: dict[str, int] = {}
     exercises: list[Json] = []
     for position, frozen in enumerate(lines):
-        origin = authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung
+        origin = _origin(frozen)
         found = authored.get(origin)
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)

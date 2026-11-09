@@ -52,15 +52,11 @@ def cadence_signals(
             form is None or _scheme_of(form, line.exercise) != line.scheme.name for form in forms
         ):
             continue
-        standing, since = standing_line(line, session_id, rungs)
+        standing, counted = standing_line(line, session_id, rungs, exposures)
         read = CadenceRead(
             line,
             (before, last),
-            [
-                e
-                for e in exposures
-                if e.exercise_id == standing.exercise and (since is None or since <= e.date)
-            ],
+            [e for e in counted if e.exercise_id == standing.exercise],
             adherence,
             _capped(conn, closed, last, line) if line.scheme.name == "top_backoff" else (),
             session_id,
