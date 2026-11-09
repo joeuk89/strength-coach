@@ -29,7 +29,6 @@ def rung_decisions(
 
 
 def standing_rungs(form: ProgramForm, found: Sequence[DecisionInForce]) -> dict[LineRef, int]:
-    """Each ladder line's standing rung."""
     return {
         (ref := LineRef(session.id, line.exercise)): standing_rung(
             found, ladder, line=ref, adopted=None

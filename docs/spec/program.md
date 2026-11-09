@@ -361,7 +361,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `session_unscheduled` | session | a session in no rotation week with no `cadence` |
 | `cadence_on_scheduled` | session | a scheduled session states a cadence |
 | `location_unknown` | version or session | a location with no `[location.<name>]` in `coach.toml` |
-| `equipment_unsupplied` | line | a `total`, `per_hand_x2` or `single_implement` line whose equipment kind is not in the session location's `implements` (`instance.md`, ADR 0008) |
+| `equipment_unsupplied` | line | a `total`, `per_hand_x2` or `single_implement` line, or a later rung in one of those modes, whose equipment kind is not in the session location's `implements` (`instance.md`, ADR 0008) |
 | `rehab_in_version` | session | `kind = "rehab"` |
 | `practice_not_optional` | session | a practice with `tier = "core"` |
 | `coach_led_has_lines` | session | a coach-led session with lines, or a lifting session with `estimated_sets` |

@@ -165,7 +165,8 @@ Three things are injected into a service, because each has two adapters:
   real one appends to `hevy/writes.jsonl` (a request line before each send, a response line
   after the attempt ends, verify lines after each read-back), the fake keeps the same lines in
   memory. So the audit needs no filesystem in `services` and no fourth seam.
-- **The clock**: `Clock`, a protocol with `today()` and `now()` in the athlete's timezone.
+- **The clock**: `Clock`, a protocol with `zone`, the athlete's timezone, and `today()` and
+  `now()` in it.
   Services take it; `cli` builds it from `[athlete].timezone` and passes it to every service
   and to the real client, whose audit timestamps come from it. It has no sleeper: the 429 wait
   is the real client's, below the protocol.
