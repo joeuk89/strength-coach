@@ -149,10 +149,10 @@ Notes:
   The rung's start is the Decision's date, or the version's adoption for the first rung; the
   criterion and `stall_streak` read only exposures of the standing rung's exercise from it, and
   exposures on another rung's exercise, or on its own before its start, count for nothing, so two
-  rungs may share an exercise (ADR 0025). The line's key stays its first rung's
-  exercise for every flag and override; the prescription and history matching carry the
-  standing rung's. A light week holds the rung with its sets cut. The climb is the agent's: a
-  `ladder_rung` Decision after the athlete's yes.
+  rungs may share an exercise (ADR 0025). The line's key stays its first rung's exercise for
+  every flag and override; the prescription and history matching carry the standing rung's. A
+  light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
+  after the athlete's yes.
 
 ## Stalls
 

@@ -298,7 +298,6 @@ tier = "core"
 )
 
 
-# A balance-board ladder whose rungs change exercise, one custom exercise per stance.
 BALANCE_STANCES_DRAFT = """\
 name = "Daily balance practice"
 kind = "redesign"

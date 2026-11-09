@@ -330,12 +330,12 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 
 - **Dry run** prints the diff against the previous version (sessions and lines added, removed,
   changed; the defaults the emphasis filled, marked as such), every flag, each start load in
-  athlete units with its Hevy kg (a ladder rung's with its index), and every session of the filled version, in version order,
-  with its time estimate beside its filled `minutes`. The estimate sums `count × (duration_s +
-  rest_s)` over each set group of the session's lines, with 40 s for a group that states no
-  `duration_s`, and rounds up to whole minutes; it is null for a session with no lines or with
-  no `minutes`, and it is the number `session_over_minutes` reports. The `program` skill shows
-  this to the athlete and runs the real adopt on their yes.
+  athlete units with its Hevy kg (a ladder rung's with its index), and every session of the
+  filled version, in version order, with its time estimate beside its filled `minutes`. The
+  estimate sums `count × (duration_s + rest_s)` over each set group of the session's lines, with
+  40 s for a group that states no `duration_s`, and rounds up to whole minutes; it is null for a
+  session with no lines or with no `minutes`, and it is the number `session_over_minutes`
+  reports. The `program` skill shows this to the athlete and runs the real adopt on their yes.
 - **Kind.** `amend` continues the open Block and the rotation position. `redesign` closes the
   open Block, opens one dated today and restarts the rotation at the first week unless
   `--position` names another; a redesign with an open Block warns `block_open_at_redesign`.
@@ -715,7 +715,8 @@ hevy_muscle_group = "lats"
 
 What the dry run shows for this file: no violations; `start_loads` lists the top rung, with its
 index and Hevy-bound kg, and no other. The file is one session, so it also raises the warnings of a
-week with nothing else in it (`priority_lift_absent`, `muscle_no_hard_sets`). Rung 4's label names its exercise while the line stands below it:
+week with nothing else in it (`priority_lift_absent`, `muscle_no_hard_sets`). Rung 4's label
+names its exercise while the line stands below it:
 `rung 4 · Weighted negative pull-up · 3×5 @8 · 10 lb · dumbbell between the feet · lower for 8 s · dead hang at the bottom`.
 
 ## Handed to other tickets
