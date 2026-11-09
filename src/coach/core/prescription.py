@@ -2,7 +2,7 @@
 handed" and "What the agent is handed"). The request is rebuilt on demand and never stored."""
 
 import datetime
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
 from coach.core.config import Units
@@ -150,6 +150,18 @@ class Step:
             "to": value(self.to),
             "cause": self.cause,
         }
+
+
+def rung_step_back(standing: int, week: int, cause: str) -> Step:
+    return Step("cut", f"rung {standing}", f"rung {week}", cause)
+
+
+def stepped_back_a_rung(steps: Iterable[Mapping[str, object]]) -> bool:
+    """A frozen line's step back. A WeekPlan frozen when the step named exercises reads False, so
+    it keeps projecting the note it pushed and raises no false drift."""
+    return any(
+        step.get("step") == "cut" and str(step.get("from")).startswith("rung ") for step in steps
+    )
 
 
 @dataclass(frozen=True)

@@ -38,6 +38,7 @@ from coach.core.prescription import (
     PrescribeRequest,
     SessionPrescription,
     Step,
+    rung_step_back,
 )
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
@@ -322,7 +323,7 @@ class _Derivation:
             week = max(OPENING_RUNG, standing.index - band.rungs_back)
             if week != standing.index:
                 cause = f"return {band.label}, {days.days} days off"
-                self.steps.append(Step("cut", standing_exercise, rungs[week - 1], cause))
+                self.steps.append(rung_step_back(standing.index, week, cause))
         self.week_rung = week
         self._keep(
             climb_offer(
