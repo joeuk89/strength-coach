@@ -6,6 +6,7 @@ from coach.core.program.form import Line, SchemeRef, SetGroup
 from coach.core.routine_projection import (
     FrozenLine,
     SessionRoutine,
+    authored_exercise,
     drift_class,
     project_routine,
     retired_routine,
@@ -40,6 +41,19 @@ def a_session(*lines: FrozenLine) -> SessionRoutine:
 
 def projected(*lines: FrozenLine) -> dict[str, Any]:
     return cast(dict[str, Any], project_routine(a_session(*lines), TEMPLATES, "lb"))
+
+
+def test_a_line_with_no_swap_was_authored_on_its_own_exercise() -> None:
+    steps = [{"step": "cut", "from": "ab_wheel", "to": "dead_bug", "cause": "return short"}]
+
+    assert authored_exercise("dead_bug", steps) == "dead_bug"
+    assert authored_exercise("dead_bug", ()) == "dead_bug"
+
+
+def test_a_swapped_line_was_authored_on_the_exercise_it_swapped_from() -> None:
+    steps = [{"step": "swap", "from": "db_curl", "to": "db_hammer_curl", "cause": "swap_exercise"}]
+
+    assert authored_exercise("db_hammer_curl", steps) == "db_curl"
 
 
 def test_the_body_sends_the_hevy_kg_each_set_and_no_routine_level_note() -> None:

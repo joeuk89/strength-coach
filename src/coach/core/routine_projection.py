@@ -25,13 +25,13 @@ class FrozenLine:
     set_groups: Sequence[Mapping[str, object]]
     steps: Sequence[Mapping[str, object]] = ()
 
-    @property
-    def authored_exercise(self) -> str:
-        """The exercise the version authored, before any swap."""
-        for step in self.steps:
-            if step.get("cause") == "swap_exercise":
-                return str(step["from"])
-        return self.exercise_id
+
+def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -> str:
+    """The exercise the version authored, before any swap."""
+    for step in steps:
+        if step.get("cause") == "swap_exercise":
+            return str(step["from"])
+    return exercise_id
 
 
 @dataclass(frozen=True)
@@ -88,15 +88,18 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
     last = len(session.authored)
     lines = sorted(
         session.lines,
-        key=lambda f: a.position if (a := authored.get(f.authored_exercise)) else last,
+        key=lambda f: (
+            a.position if (a := authored.get(authored_exercise(f.exercise_id, f.steps))) else last
+        ),
     )
     supersets: dict[str, int] = {}
     exercises: list[Json] = []
     for position, frozen in enumerate(lines):
-        found = authored.get(frozen.authored_exercise)
+        origin = authored_exercise(frozen.exercise_id, frozen.steps)
+        found = authored.get(origin)
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
-        next_rung = following.get(frozen.authored_exercise)
+        next_rung = following.get(origin)
         if next_rung is not None:
             notes.append(f"Next: {next_rung}")
         if position == 0:
