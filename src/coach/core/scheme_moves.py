@@ -321,6 +321,8 @@ class SchemeMoves:
             )
 
     def _reset(self, exposure: Exposure, before: Load) -> Move | None:
+        if not judged(self.given.request.planned.kind):
+            return None
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
         misses = misses_at(self.line, history, before, self.given.rack)
         if misses < misses_before_reset(self.line):

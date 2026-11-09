@@ -127,6 +127,7 @@ def _lift(
     rungs: Sequence[DecisionInForce],
 ) -> LiftProgress:
     line = _line(form, exercise)
+    judged_line = _judged_line(form, exercise)
     read = spans[-BLOCKS_READ:]
     at_end = tuple((s.id, _e1rm(exposures, exercise, s.end + _DAY)) for s in read)
     history = ordinary(
@@ -144,21 +145,15 @@ def _lift(
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
-        stall_streak=_stall_streak(form, exercise, since_redesign(history, redesigned), rungs),
-        resets=_resets(line, history),
+        stall_streak=_stall_streak(judged_line, since_redesign(history, redesigned), rungs),
+        resets=_resets(judged_line, history),
         signal=signal,
     )
 
 
-def _stall_streak(
-    form: ProgramForm | None,
-    exercise: str,
-    history: Sequence[Exposure],
-    rungs: Sequence[DecisionInForce],
-) -> int:
-    """Read on the exercise's first line in a judged session, a ladder's standing rung from its
-    start; 0 when it has none."""
-    found = next(
+def _judged_line(form: ProgramForm | None, exercise: str) -> tuple[str, Line] | None:
+    """The exercise's first line in a judged session, with that session's id."""
+    return next(
         (
             (session.id, line)
             for session in (form.sessions if form else ())
@@ -168,10 +163,24 @@ def _stall_streak(
         ),
         None,
     )
-    if found is None:
+
+
+def _of_session(history: Sequence[Exposure], session_id: str) -> tuple[Exposure, ...]:
+    """What the line in `session_id` reads: exposures matched to it or to no session."""
+    return tuple(e for e in history if e.session_id in (None, session_id))
+
+
+def _stall_streak(
+    judged_line: tuple[str, Line] | None,
+    history: Sequence[Exposure],
+    rungs: Sequence[DecisionInForce],
+) -> int:
+    """Read on the judged line, a ladder's standing rung from its start; 0 when it has none."""
+    if judged_line is None:
         return 0
-    session_id, line = found
-    return len(stall_streak(*standing_line(line, session_id, rungs, history)))
+    session_id, line = judged_line
+    read = _of_session(history, session_id)
+    return len(stall_streak(*standing_line(line, session_id, rungs, read)))
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:
@@ -208,11 +217,13 @@ def _change(
     return None if start is None or end is None else round(end - start, PRECISION)
 
 
-def _resets(line: Line | None, history: Sequence[Exposure]) -> int:
-    if line is None or line.scheme.name != "linear":
+def _resets(judged_line: tuple[str, Line] | None, history: Sequence[Exposure]) -> int:
+    if judged_line is None or judged_line[1].scheme.name != "linear":
         return 0
-    loads = [e.top_load for e in history if e.top_load is not None]
-    return len(resets(line, history, None, loads[0].mode)) if loads else 0
+    session_id, line = judged_line
+    read = _of_session(history, session_id)
+    loads = [e.top_load for e in read if e.top_load is not None]
+    return len(resets(line, read, None, loads[0].mode)) if loads else 0
 
 
 def _weeks_in(closed: ClosedWeeks, block: BlockSpan | None) -> list[ClosedWeek]:

@@ -49,9 +49,11 @@ def a_push_program(
     bench_line: dict[str, object] = BENCH_LINE,
     pull_up_line: dict[str, object] = PULL_UP_LINE,
     practice_pull_ups: bool = False,
+    drill_line: dict[str, object] | None = None,
 ) -> Connection:
     """The worked Goal with a `why` and two bench milestones, the maintenance Phase, and `push`
-    adopted on 30 Oct 2026. With `practice_pull_ups` the pull-up line stands alone in `drill`."""
+    adopted on 30 Oct 2026. With `practice_pull_ups` the pull-up line stands alone in `drill`.
+    With `drill_line`, `drill` holds that line and is listed before `push`, which keeps Monday."""
     conn = a_library_store()
     a_goal(conn, why=WHY, milestones=MILESTONES)
     a_phase(conn, "maintenance")
@@ -60,9 +62,13 @@ def a_push_program(
         if practice_pull_ups
         else (a_session("push", bench_line, pull_up_line),)
     )
+    schedule = None
+    if drill_line is not None:
+        sessions = (a_drill(drill_line), *sessions)
+        schedule = {"rotation": ["A"], "A": {"mon": "push", "wed": "drill"}}
     adopt(
         conn,
-        toml(a_draft(*sessions)),
+        toml(a_draft(*sessions, schedule=schedule) if schedule else a_draft(*sessions)),
         file="d.toml",
         config=a_config(),
         kits=(kit_files(),),
@@ -83,6 +89,7 @@ def two_closed_blocks(
     thursday_pull_ups: bool = False,
     pull_up_line: dict[str, object] = PULL_UP_LINE,
     practice_pull_ups: bool = False,
+    drill_line: dict[str, object] | None = None,
 ) -> Connection:
     """Six weeks of `push` on each Monday, weeks 3 and 6 light, all closed by one Check-in:
     Blocks b-2026-10-30 and b-2026-11-23 closed, b-2026-12-14 open. Bench logs a top set of
@@ -90,8 +97,9 @@ def two_closed_blocks(
     `thursday_pull_ups` each ordinary week also logs the week's pull-ups in an unplanned
     Thursday workout, so each Block holds three ordinary pull-up exposures. With
     `practice_pull_ups` the pull-up line stands alone in the practice session `drill` and its
-    Monday log moves to Wednesday, matched to `drill`."""
-    conn = a_push_program(bench_line, pull_up_line, practice_pull_ups)
+    Monday log moves to Wednesday, matched to `drill`. With `drill_line`, `drill` also holds that
+    line, listed first, and nothing is logged to it."""
+    conn = a_push_program(bench_line, pull_up_line, practice_pull_ups, drill_line)
     for week in range(WEEKS):
         plan_id = an_approved_plan(conn, monday(week))
         a_frozen_prescription(
