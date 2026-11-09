@@ -1,7 +1,7 @@
 """A session's Hevy routine as the plan projects it, and the diff of a read-back against it
 (ADR 0011, "Push"; docs/spec/parity.md, the routine body and note rules)."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Literal, cast
 
@@ -18,6 +18,7 @@ type RungKey = tuple[str, int | None]
 
 WEIGHT_TOLERANCE_KG = 0.001
 RETIRED_PREFIX = "(unused) "
+NEXT_LINE_PREFIX = "Next: "
 
 
 @dataclass(frozen=True)
@@ -168,6 +169,18 @@ def retired_routine(live: Routine, folder_id: str) -> Json:
 def routine_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...]:
     """What the read-back changed, by position: template id, set type, reps or range, duration,
     `weight_kg` within 0.001, rest, exercise notes, title and folder."""
+    return _diff(body, routine, lambda note: note)
+
+
+def drift_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...]:
+    """What an app edit changed: `routine_diff`, setting aside each note's `Next:` line on both
+    sides, since the engine derives that line and its wording moves between releases."""
+    return _diff(body, routine, _without_next_line)
+
+
+def _diff(
+    body: Mapping[str, object], routine: Routine, compared_note: Callable[[str | None], str | None]
+) -> tuple[str, ...]:
     found: list[str] = []
     if body.get("title") != routine.title:
         found.append("title")
@@ -182,7 +195,8 @@ def routine_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...
             found.append(f"{where} template")
         if want.get("rest_seconds") != got.rest_s:
             found.append(f"{where} rest")
-        if (want.get("notes") or None) != got.notes:
+        sent_note = cast(str | None, want.get("notes")) or None
+        if compared_note(sent_note) != compared_note(got.notes):
             found.append(f"{where} notes")
         sets = cast(Sequence[Mapping[str, object]], want.get("sets") or [])
         if len(sets) != len(got.sets):
@@ -196,6 +210,13 @@ def routine_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...
 def drift_class(diff: Sequence[str]) -> DriftClass:
     """An app edit that only moved weights is a load edit; anything else is structural."""
     return "load" if all(d.endswith("weight_kg") for d in diff) else "structural"
+
+
+def _without_next_line(note: str | None) -> str | None:
+    if note is None:
+        return None
+    kept = [line for line in note.split("\n") if not line.startswith(NEXT_LINE_PREFIX)]
+    return "\n".join(kept) or None
 
 
 def _hevy_folder_id(folder_id: str) -> int | str:
@@ -213,7 +234,7 @@ def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
 def _rung_notes(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> list[str]:
     if stepped_back_a_rung(steps):
         return [f"This week: {labels.own}"]
-    return [] if labels.next is None else [f"Next: {labels.next}"]
+    return [] if labels.next is None else [f"{NEXT_LINE_PREFIX}{labels.next}"]
 
 
 def _target(groups: Sequence[Mapping[str, object]], units: Units) -> str:
