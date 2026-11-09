@@ -17,6 +17,7 @@ from coach.core.e1rm import e1rm
 from coach.core.e1rm_checks import over_rep_cap, top_set_above_e1rm
 from coach.core.exercise_ladder import (
     OPENING_RUNG,
+    LineRef,
     StandingRung,
     climb_offer,
     rung_line,
@@ -298,8 +299,7 @@ class _Derivation:
         standing = standing_rung(
             request.decisions,
             ladder,
-            session_id=planned.session_id,
-            line_key=self.line.exercise,
+            line=LineRef(planned.session_id, self.line.exercise),
             adopted=request.adopted,
         )
         self.standing = standing

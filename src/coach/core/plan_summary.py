@@ -13,7 +13,7 @@ from coach.core.frozen_prescription import frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import RotationPosition
 from coach.core.prescription import PlanOverride
-from coach.core.routine_projection import FrozenLine
+from coach.core.routine_projection import authored_exercise
 
 type Json = Mapping[str, object]
 type NextRungs = Mapping[str, Mapping[str, str]]
@@ -134,8 +134,7 @@ def _line(row: Json, next_rungs: NextRungs) -> SummaryLine:
 def _next_rung(
     next_rungs: NextRungs, session_id: str, exercise_id: str, steps: Sequence[Json]
 ) -> str | None:
-    authored = FrozenLine(exercise_id, (), steps).authored_exercise
-    return next_rungs.get(session_id, {}).get(authored)
+    return next_rungs.get(session_id, {}).get(authored_exercise(exercise_id, steps))
 
 
 def _location(

@@ -1,4 +1,16 @@
-from coach.core.exercise_ladder import RungShape, full_criterion, rung_shapes
+import datetime
+
+from coach.core.exercise_ladder import (
+    LineRef,
+    RungShape,
+    StandingRung,
+    full_criterion,
+    ladder_read,
+    rung_shapes,
+    standing_rung,
+)
+from coach.core.flag import Scope
+from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Advance, ExerciseLadder, Rung, SetGroup
 
 LADDER = ExerciseLadder(
@@ -75,3 +87,52 @@ def test_a_rung_shape_says_its_exercise_by_the_name_it_is_given() -> None:
     [first, *_] = rung_shapes(LADDER, standing=1, name_of=names.__getitem__)
 
     assert (first.exercise, first.name) == ("negative_pull_up", "Negatives")
+
+
+def a_rung_decision(session_id: str, line_key: str, rung: int) -> DecisionInForce:
+    return DecisionInForce(
+        f"d-{session_id}-{line_key}",
+        "ladder_rung",
+        session_id=session_id,
+        exercise_id=line_key,
+        params={"rung": rung},
+        on=datetime.date(2026, 11, 2),
+    )
+
+
+def test_a_line_stands_on_the_decision_that_names_its_session_and_its_key() -> None:
+    decisions = (
+        a_rung_decision("upper", "negative_pull_up", 3),
+        a_rung_decision("lower", "dead_bug", 3),
+        a_rung_decision("lower", "negative_pull_up", 2),
+    )
+
+    standing = standing_rung(
+        decisions, LADDER, line=LineRef("lower", "negative_pull_up"), adopted=None
+    )
+
+    assert standing == StandingRung(2, datetime.date(2026, 11, 2))
+
+
+def test_a_line_no_decision_names_stands_on_the_opening_rung_from_its_adoption() -> None:
+    adopted = datetime.date(2026, 10, 30)
+    decisions = (a_rung_decision("upper", "negative_pull_up", 3),)
+
+    standing = standing_rung(
+        decisions, LADDER, line=LineRef("lower", "negative_pull_up"), adopted=adopted
+    )
+
+    assert standing == StandingRung(1, adopted)
+
+
+def test_a_ladder_read_names_the_line_its_scope_names() -> None:
+    read = ladder_read(
+        LADDER,
+        StandingRung(1, None),
+        (),
+        scope=Scope("line", session_id="lower", exercise_id="negative_pull_up"),
+        before=datetime.date(2026, 11, 2),
+        acknowledgements=(),
+    )
+
+    assert read.line == LineRef("lower", "negative_pull_up")

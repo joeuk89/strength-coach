@@ -68,7 +68,7 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
                 ["line", "standing rung", "exposures toward the criterion", "met"],
                 [
                     [
-                        f"{r.session_id}/{r.line_key}",
+                        f"{r.line.session_id}/{r.line.line_key}",
                         f"{r.rung} of {r.rungs}, {r.exercise}",
                         "the athlete's word"
                         if r.needed is None

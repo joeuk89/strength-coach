@@ -7,7 +7,7 @@ from typing import cast
 
 from coach.core.closed_week.match import PlannedRef
 from coach.core.config import Config, PlatePoolLocation, Units
-from coach.core.exercise_ladder import OPENING_RUNG, RungShape, rung_shapes
+from coach.core.exercise_ladder import OPENING_RUNG, LineRef, RungShape, rung_shapes
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
     AthletePage,
@@ -242,7 +242,7 @@ def _routine(
 def _ladders(
     session: Session,
     names: Mapping[str, tuple[str, str | None]],
-    standing: Mapping[tuple[str, str], int],
+    standing: Mapping[LineRef, int],
 ) -> dict[str, tuple[RungShape, ...]]:
     """Each `exercise_ladder` line's rungs, keyed on every rung's exercise, since the frozen
     row names the rung the week prescribed."""
@@ -253,7 +253,7 @@ def _ladders(
             continue
         rungs = rung_shapes(
             ladder,
-            standing.get((session.id, line.exercise), OPENING_RUNG),
+            standing.get(LineRef(session.id, line.exercise), OPENING_RUNG),
             name_of=lambda exercise: names.get(exercise, (exercise, None))[0],
         )
         found |= dict.fromkeys(line.rung_exercises, rungs)

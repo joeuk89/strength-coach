@@ -26,6 +26,14 @@ OPENING_RUNG = 1
 
 
 @dataclass(frozen=True)
+class LineRef:
+    """A session's line: `line_key` is the line's own exercise, its first rung's on a ladder."""
+
+    session_id: str
+    line_key: str
+
+
+@dataclass(frozen=True)
 class StandingRung:
     """The rung a line stands on (from 1) and its start: the Decision's date, or the version's
     adoption for the opening rung. Only exposures on or after the start count."""
@@ -98,8 +106,7 @@ def standing_rung(
     decisions: Iterable[DecisionInForce],
     ladder: ExerciseLadder,
     *,
-    session_id: str,
-    line_key: str,
+    line: LineRef,
     adopted: datetime.date | None,
 ) -> StandingRung:
     """The `ladder_rung` Decision in force on the line, or the opening rung. A rung past a
@@ -107,7 +114,7 @@ def standing_rung(
     found = [
         d
         for d in decisions
-        if (d.kind, d.session_id, d.exercise_id) == ("ladder_rung", session_id, line_key)
+        if (d.kind, d.session_id, d.exercise_id) == ("ladder_rung", line.session_id, line.line_key)
     ]
     if not found:
         return StandingRung(OPENING_RUNG, adopted)
@@ -172,8 +179,7 @@ class LadderRead:
     its criterion out of the `needed` (none on a `manual` rung), `met` where the climb is offered
     as `rung_met` or `ladder_top`, and `held` where an acknowledgement leaves that offer."""
 
-    session_id: str
-    line_key: str
+    line: LineRef
     rung: int
     exercise: str
     rungs: int
@@ -205,8 +211,7 @@ def ladder_read(
     offer = climb_offer(ladder, standing, exposures, scope=scope, on=before)
     top = standing.index == len(ladder.rungs)
     return LadderRead(
-        session_id=session_id,
-        line_key=str(scope.exercise_id),
+        line=LineRef(session_id, str(scope.exercise_id)),
         rung=standing.index,
         exercise=ladder.rungs[standing.index - 1].exercise,
         rungs=len(ladder.rungs),
