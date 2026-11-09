@@ -15,7 +15,6 @@ from support.programs import a_config
 from support.pushes import a_pushed_week, push
 
 from coach.core.errors import Invalid
-from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import ReadBack, RoutineDiff, WriteContext
 from coach.services.hevy_import import import_hevy
 from coach.services.program import adopt
@@ -319,7 +318,7 @@ def test_a_row_frozen_before_rungs_projects_the_cues_and_sets_it_pushed() -> Non
 
 
 class OldNextLineHevy(FakeHevy):
-    """Holds a routine's `Next:` line in the old wording, or returns it so on the next read-back."""
+    """Holds a routine's `Next:` line in the old wording, on demand or once a read-back comes."""
 
     moving_on_read_back = False
 
@@ -327,12 +326,9 @@ class OldNextLineHevy(FakeHevy):
         with_ladder_note(next_line_as(OLD_NEXT))(self._routines[routine_id])
 
     def read_back(self, routine_id: str, context: WriteContext, diff: RoutineDiff) -> ReadBack:
-        if not self.moving_on_read_back:
-            return super().read_back(routine_id, context, diff)
-        changed = json.loads(self.routine(routine_id).raw)
-        with_ladder_note(next_line_as(OLD_NEXT))(changed)
-        routine = parse_routine({"routine": changed})
-        return ReadBack(routine=routine, diff=diff(routine))
+        if self.moving_on_read_back:
+            self.hold_old_next_line(routine_id)
+        return super().read_back(routine_id, context, diff)
 
 
 def test_a_put_whose_read_back_next_line_differs_fails_verification() -> None:
@@ -344,7 +340,7 @@ def test_a_put_whose_read_back_next_line_differs_fails_verification() -> None:
         push(conn, hevy, a_plan_draft(conn, hevy=True, overrides=PIN_115))
 
     assert failed.value.code == "verify_failed"
-    assert [c[0] for c in hevy.calls if c[0] == "PUT"] == ["PUT"]
+    assert [c[0] for c in hevy.calls].count("PUT") == 1
     assert [status for _, _, status in routine_map.every(conn)] == ["unverified"]
 
 
