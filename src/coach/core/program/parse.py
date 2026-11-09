@@ -53,7 +53,7 @@ REPS: Json = {
         {"type": "string", "pattern": "^[0-9]+\\+$"},
     ]
 }
-MUSCLES: Json = {
+MUSCLES_SHAPE: Json = {
     "type": "object",
     "properties": {
         "primary": {"type": "array", "items": {"type": "string"}},
@@ -422,7 +422,7 @@ class _Reader(Reader):
         raise self.wrong(key, "a load of at least 0 in athlete units")
 
     def muscles(self, key: str) -> dict[str, list[str]]:
-        muscles = read_muscles(self._typed(key, MUSCLES, required=True))
+        muscles = read_muscles(self._typed(key, MUSCLES_SHAPE, required=True))
         if muscles is None:
             raise self.wrong(key, MUSCLES_WANTED)
         return muscles

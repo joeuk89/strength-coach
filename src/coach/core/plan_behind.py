@@ -5,7 +5,7 @@ from coach.core.flag import Flag, Scope, raise_flag
 
 
 @dataclass(frozen=True)
-class PlanUnder:
+class ApprovedPlan:
     """A WeekPlan with the Program version in force when it was approved, if any was."""
 
     id: str
@@ -13,7 +13,7 @@ class PlanUnder:
     approved_under: str | None
 
 
-def plan_behind_program(plan: PlanUnder | None, version_id: str | None) -> tuple[Flag, ...]:
+def plan_behind_program(plan: ApprovedPlan | None, version_id: str | None) -> tuple[Flag, ...]:
     if plan is None or version_id is None or plan.approved_under == version_id:
         return ()
     flag = raise_flag(

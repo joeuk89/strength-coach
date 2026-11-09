@@ -10,7 +10,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import DRY_RUN, DRY_RUN_OUTPUT, marked, read_draft
 from coach.cli.instance import open_instance_store
-from coach.core.drafts.goal import GOAL
+from coach.core.draft_kinds.goal import GOAL
 from coach.services.goal_adopt import goal_adopt
 
 ID_OR_NULL = {"type": ["string", "null"]}

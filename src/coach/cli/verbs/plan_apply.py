@@ -14,7 +14,7 @@ from coach.cli.keys import hevy_key
 from coach.cli.kit import read_kit_files
 from coach.cli.terminal import Terminal
 from coach.core.config import Units
-from coach.core.drafts.plan import PLAN
+from coach.core.draft_kinds.plan import PLAN
 from coach.core.flag import Flag
 from coach.render.approval_prompt import approval_prompt
 from coach.services.plan_apply import DryRun, dry_run, expected, push_approved
