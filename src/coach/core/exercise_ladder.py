@@ -36,7 +36,7 @@ class LineRef:
 @dataclass(frozen=True)
 class StandingRung:
     """The rung a line stands on (from 1) and its start: the Decision's date, or the version's
-    adoption for the opening rung. Only exposures on or after the start count."""
+    adoption for the opening rung. The criterion counts only exposures on or after the start."""
 
     index: int
     since: datetime.date | None
@@ -126,11 +126,27 @@ def standing_rung(
 
 def rung_line(line: Line, ladder: ExerciseLadder, index: int) -> Line:
     """The line as rung `index` prescribes it: the rung's exercise, sets and cues under the
-    line's scheme. The line's own key stays with the caller's scope."""
+    line's scheme. The line's `start_load` and `load_mode` are the first rung's; a later rung
+    has its own load in its own exercise's mode. The line's own key stays with the caller's
+    scope."""
     rung = ladder.rungs[index - 1]
-    start_load = line.start_load if index == OPENING_RUNG else None
-    return replace(
-        line, exercise=rung.exercise, sets=rung.sets, cues=rung.cues, start_load=start_load
+    shaped = replace(line, exercise=rung.exercise, sets=rung.sets, cues=rung.cues)
+    if index == OPENING_RUNG:
+        return shaped
+    return replace(shaped, start_load=rung.start_load, load_mode=None)
+
+
+def rung_anchors(
+    exposures: Iterable[Exposure], standing: StandingRung, week: int, session_id: str
+) -> tuple[Exposure, ...]:
+    """What may anchor a later rung carrying its own start load this `week`: its exposures after
+    the rung's start date. A log on that date is the previous rung's, since the workout that
+    earned the climb is often logged that day and neither carries a time. A rung a return band
+    stepped back to has none: the standing rung's start says nothing of that rung's history."""
+    if week != standing.index:
+        return ()
+    return tuple(
+        e for e in _since_start(exposures, standing, session_id) if e.date != standing.since
     )
 
 
@@ -240,15 +256,11 @@ def _qualifying_run(
     first, up to the first that misses the rung's criterion."""
     criterion = full_criterion(ladder, standing.index)
     rung = ladder.rungs[standing.index - 1]
-    since = standing.since
     history = ordinary(
         newest_first(
             e
-            for e in exposures
-            if e.exercise_id == rung.exercise
-            and e.session_id in (None, session_id)
-            and (since is None or since <= e.date)
-            and e.date < before
+            for e in _since_start(exposures, standing, session_id)
+            if e.exercise_id == rung.exercise and e.date < before
         )
     )
     run: list[Exposure] = []
@@ -257,6 +269,17 @@ def _qualifying_run(
             break
         run.append(exposure)
     return run
+
+
+def _since_start(
+    exposures: Iterable[Exposure], standing: StandingRung, session_id: str
+) -> Iterable[Exposure]:
+    since = standing.since
+    return (
+        e
+        for e in exposures
+        if e.session_id in (None, session_id) and (since is None or since <= e.date)
+    )
 
 
 def _meets(sets: Sequence[SetGroup], criterion: Advance, exposure: Exposure) -> bool:
