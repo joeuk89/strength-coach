@@ -181,7 +181,7 @@ verbs:
 
 | Code | Raised by | Clears by |
 | --- | --- | --- |
-| `routine_drift` (ADR 0011) | `import` and every pulling verb (`verbs.md`) | an override on the next WeekPlan, or the next push overwriting it |
+| `routine_drift` (ADR 0011) | `import` and every pulling verb (`verbs.md`). The comparison ignores a note's `Next:` line on both sides, since the engine derives it: an edit to that line alone is not drift. A push's read-back verify still compares it | an override on the next WeekPlan, or the next push overwriting it |
 | `workout_reappeared` (ADR 0011) | `import` and every pulling verb | a `match` or `void` Annotation on the new version |
 | `exercise_unmapped` (`cutover.md`) | `import` and every pulling verb | an `[[exercise]]` record that maps or declares the Exercise |
 | `frozen_load_off_rack` (ADR 0021) | `plan draft` | the next WeekPlan, whose loads freeze on the current rack (`plan apply`); a frozen load never re-rounds (ADR 0008) |
