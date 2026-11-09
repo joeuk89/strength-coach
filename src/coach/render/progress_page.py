@@ -1,6 +1,9 @@
 """`coach progress` as a page (docs/spec/goals.md, "`coach progress`")."""
 
+from collections.abc import Mapping
+
 from coach.core.config import Units
+from coach.core.flag import Flag
 from coach.core.pages import PageNames
 from coach.core.progress import Progress
 from coach.render.markdown import (
@@ -43,7 +46,7 @@ def progress_page(
                 ],
                 [
                     [
-                        lift.exercise_id,
+                        names.exercise(lift.exercise_id),
                         lift.scheme,
                         lift.e1rm_now,
                         lift.change_over_block,
@@ -65,7 +68,7 @@ def progress_page(
                 ["lift", "target", "reached", "to go"],
                 [
                     [
-                        m.milestone.exercise,
+                        names.exercise(m.milestone.exercise),
                         m.milestone.target.describe(),
                         m.reached.isoformat() if m.reached else None,
                         m.to_go if m.computable else "not computable",
@@ -108,9 +111,12 @@ def progress_page(
                 for part in (
                     table(
                         ["week", "kind", "muscles", "priority lifts"],
-                        [[w.monday.isoformat(), w.kind, w.muscles, w.lifts] for w in report.dose],
+                        [
+                            [w.monday.isoformat(), w.kind, w.muscles, _named(w.lifts, names)]
+                            for w in report.dose
+                        ],
                     ),
-                    f"Target: {cell(report.dose_target)}." if report.dose_target else "",
+                    f"Target: {_named(report.dose_target, names)}." if report.dose_target else "",
                 )
                 if part
             ),
@@ -148,5 +154,17 @@ def progress_page(
             if report.goal is None
             else f"{report.goal.kind}, adopted {report.goal.adopted}.\n\n{report.goal.why}",
         ),
-        section("Signals", bullets([flag_text(s.to_json(), pin) for s in report.signals])),
+        section("Signals", bullets([_signal(s, names, pin) for s in report.signals])),
     )
+
+
+def _named(by_exercise: Mapping[str, int], names: PageNames) -> str:
+    """Pairs, not a renamed mapping: two exercises can share a name and each keeps its figure."""
+    return ", ".join(f"{names.exercise(id_)} {cell(n)}" for id_, n in by_exercise.items())
+
+
+def _signal(flag: Flag, names: PageNames, pin: str) -> str:
+    """A cadence signal's message opens with the exercise its scope names."""
+    exercise = str(flag.scope.exercise_id)
+    message = flag.message.replace(exercise, names.exercise(exercise), 1)
+    return flag_text({**flag.to_json(), "message": message}, pin)

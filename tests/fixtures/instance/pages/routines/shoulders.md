@@ -2,7 +2,7 @@
 
 # Shoulders
 
-Session `shoulders` at gym as written for the week of 2026-10-26.
+Session Shoulders at gym as written for the week of 2026-10-26.
 
 ## Lateral Raise (Dumbbell)
 

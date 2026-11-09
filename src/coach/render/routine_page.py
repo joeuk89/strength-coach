@@ -16,7 +16,7 @@ from coach.render.plate_pool import line_link, set_up_link
 
 
 def routine_page(routine: RoutinePage, *, units: Units) -> str:
-    facts = [f"Session `{routine.session_id}`"]
+    facts = [f"Session {routine.title}"]
     if routine.location is not None:
         facts.append(f"at {routine.location}")
     if routine.week is not None:

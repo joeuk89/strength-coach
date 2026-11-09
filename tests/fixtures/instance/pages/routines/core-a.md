@@ -2,7 +2,7 @@
 
 # Core-A
 
-Session `core-a` at gym as written for the week of 2026-10-26.
+Session Core-A at gym as written for the week of 2026-10-26.
 
 ## Cable Crunch
 
