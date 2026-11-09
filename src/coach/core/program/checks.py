@@ -530,6 +530,7 @@ class _Checks:
                 scope,
                 {"exercise_id": id_, "missing_columns": missing},
                 f"{id_} has no Hevy template and lacks {', '.join(missing)}",
+                distinct=id_,
             )
         for column, registry in TEMPLATE_REGISTRIES.items():
             value = exercise.get(column)
@@ -540,7 +541,7 @@ class _Checks:
                     {"exercise_id": id_, "column": column, "value": value},
                     f"{id_} has {column} {value!r}, which Hevy does not accept; "
                     f"coach schema --registry {registry.name}",
-                    distinct=column,
+                    distinct=f"{id_}#{column}",
                 )
 
     def unknown_keys(self) -> None:

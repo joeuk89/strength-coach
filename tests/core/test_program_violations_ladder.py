@@ -212,6 +212,26 @@ def test_a_declared_rung_exercise_with_a_bad_template_value_names_the_rung_exerc
     assert flag.message.startswith("custom_board has hevy_equipment 'bands'")
 
 
+def test_one_bad_value_on_an_exercise_two_rungs_share_is_one_flag() -> None:
+    line = a_ladder_line("plank", a_rung(), a_rung("custom_board"), a_rung("custom_board"))
+    template = {
+        "hevy_title": "Board",
+        "hevy_exercise_type": "duration",
+        "hevy_equipment": "bands",
+        "hevy_muscle_group": "abdominals",
+    }
+    declared = {"custom_board": {"name": "Board", **DURATION, **template}}
+    parsed = parse_program_draft(
+        toml(a_draft(a_session("core", line), exercise=declared)), file="d.toml"
+    )
+
+    found = violations(parsed.form, replace(CONTEXT, hevy_on=True), parsed.unknown_keys)
+
+    assert [f.params for f in found if f.code == "hevy_template_value_unknown"] == [
+        {"exercise_id": "custom_board", "column": "hevy_equipment", "value": "bands"}
+    ]
+
+
 @pytest.mark.parametrize(
     ("row", "code", "params"),
     [

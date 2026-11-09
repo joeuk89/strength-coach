@@ -134,7 +134,8 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
   flags        TEXT NOT NULL,              -- JSON [Flag]
   change       TEXT NOT NULL,
-  PRIMARY KEY (plan_id, session_id, date, exercise_id)
+  PRIMARY KEY (plan_id, session_id, date, exercise_id),
+  UNIQUE (plan_id, position)
 );
 
 CREATE TABLE workout (                     -- append-only, versioned by (id, updated_at)

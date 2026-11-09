@@ -39,6 +39,17 @@ def test_the_second_consecutive_miss_at_one_load_resets_to_0_9_rounded_down() ->
     assert line.groups[0].load == Load(107.5, "total")
 
 
+def test_a_practice_line_holds_through_two_misses_at_one_load() -> None:
+    line = derive(
+        bench_on("2026-10-19", 120, 5, 5, 5, 4),
+        bench_on("2026-10-26", 120, 5, 5, 4, 3),
+        kind="practice",
+    )
+
+    assert (line.change, line.groups[0].load) == ("held", Load(120, "total"))
+    assert not [step for step in line.steps if step.cause.startswith("reset")]
+
+
 def test_a_reset_lowered_further_by_a_niggle_cap_reports_the_load_prescribed() -> None:
     cap = NiggleConstraint("n-0001", "load_cap", exercise_id="bb_bench_press", value=100)
 

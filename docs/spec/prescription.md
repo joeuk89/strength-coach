@@ -158,7 +158,10 @@ One definition: three consecutive ordinary exposures of the line (light-week and
 exposures skipped) with no gain on the scheme's metric raise `stall_streak` with the three
 exposure refs. Three is opinion: the sources say read the trend, not one session, and name no
 count (rn:progression-methods §4). A line in a `practice` session raises none, and the progress
-view shows its streak as 0.
+view shows its streak as 0. It never resets either: a reset is a judgement on failed progress and
+a practice is never judged, so a `practice` line on `linear` holds through its misses and the
+progress view shows its resets as 0. The progress view reads a lift's streak and resets on its
+first line in a judged session, from the exposures matched to that session or to none.
 
 The streak reads exposures on or after the latest redesign's adoption date and none before it: a
 redesign starts every line with a clean streak, because a stall under the old design says

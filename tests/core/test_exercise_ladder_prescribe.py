@@ -339,6 +339,18 @@ def test_a_lifting_ladder_with_the_same_exposures_still_raises_stall_streak() ->
     assert "stall_streak" in [f.code for f in derive(PULL_UP_LADDER, *held).flags]
 
 
+def test_a_practice_ladder_still_raises_ladder_top_on_its_last_rung() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        pull_ups("2026-10-22"),
+        pull_ups("2026-10-29"),
+        decisions=(ladder_rung(3, "2026-10-20"),),
+        kind="practice",
+    )
+
+    assert ladder_flags(line) == [("ladder_top", {"rung": 3})]
+
+
 def test_a_practice_ladder_still_raises_rung_met() -> None:
     held = (negatives("2026-10-19"), negatives("2026-10-26"))
 

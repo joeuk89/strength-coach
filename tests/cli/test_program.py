@@ -17,7 +17,9 @@ from support.program_drafts import (
     CUSTOM_EXERCISES,
     WORKED_DRAFT_COMPLETE,
     a_draft,
+    a_ladder_line,
     a_line,
+    a_rung,
     a_session,
     toml,
 )
@@ -222,6 +224,83 @@ def test_with_hevy_on_a_template_value_hevy_rejects_is_exit_1_and_nothing_adopts
         "value": "bands",
     }
     assert coach("program", "show").code != 0
+
+
+def _rung_exercise(name: str, **columns: str) -> dict[str, object]:
+    return {
+        "name": name,
+        "load_mode": "bodyweight",
+        "equipment_kind": "bodyweight",
+        "pattern": "horizontal_pull",
+        "muscles": {"primary": ["lats"], "secondary": []},
+        **columns,
+    }
+
+
+def _adopting_a_two_rung_ladder(root: Path, exercise: dict[str, Any]) -> Any:
+    with (root / "coach.toml").open("a", encoding="utf-8") as config:
+        config.write("\n[hevy]\n")
+    rung_sets = [{"count": 3, "reps": 10, "rpe": 8}]
+    ladder = a_ladder_line(
+        "custom_ring_row",
+        a_rung(sets=rung_sets),
+        a_rung("custom_ring_dip", sets=rung_sets),
+    )
+    return run_coach(
+        "program",
+        "adopt",
+        a_draft_file(root, toml(a_draft(a_session("push", a_line(), ladder), exercise=exercise))),
+        env={"HEVY_API_KEY": "a-key"},
+        clock=CLOCK,
+        make_client=serving(FakeHevy(CLOCK)),
+    )
+
+
+def test_two_rungs_with_a_bad_value_in_one_template_column_raise_a_flag_each(
+    instance: Path,
+) -> None:
+    run = _adopting_a_two_rung_ladder(
+        instance,
+        {
+            "custom_ring_row": _rung_exercise(
+                "Ring row",
+                hevy_title="Ring Row",
+                hevy_exercise_type="reps_only",
+                hevy_equipment="bands",
+                hevy_muscle_group="lats",
+            ),
+            "custom_ring_dip": _rung_exercise(
+                "Ring dip",
+                hevy_title="Ring Dip",
+                hevy_exercise_type="reps_only",
+                hevy_equipment="straps",
+                hevy_muscle_group="lats",
+            ),
+        },
+    )
+
+    assert run.code == 1, run.stdout
+    assert [flag["params"] for flag in run.envelope["error"]["violations"]] == [
+        {"exercise_id": "custom_ring_dip", "column": "hevy_equipment", "value": "straps"},
+        {"exercise_id": "custom_ring_row", "column": "hevy_equipment", "value": "bands"},
+    ]
+
+
+def test_two_rungs_with_no_hevy_template_raise_a_flag_each(instance: Path) -> None:
+    run = _adopting_a_two_rung_ladder(
+        instance,
+        {
+            "custom_ring_row": _rung_exercise("Ring row", hevy_title="Ring Row"),
+            "custom_ring_dip": _rung_exercise("Ring dip", hevy_title="Ring Dip"),
+        },
+    )
+
+    assert run.code == 1, run.stdout
+    columns = ["hevy_exercise_type", "hevy_equipment", "hevy_muscle_group"]
+    assert [flag["params"] for flag in run.envelope["error"]["violations"]] == [
+        {"exercise_id": "custom_ring_dip", "missing_columns": columns},
+        {"exercise_id": "custom_ring_row", "missing_columns": columns},
+    ]
 
 
 def test_a_stale_kit_at_the_draft_location_is_exit_5_kit_tables_stale(instance: Path) -> None:

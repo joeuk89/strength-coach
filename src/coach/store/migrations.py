@@ -100,7 +100,18 @@ def m0004(conn: sqlite3.Connection) -> None:
     rebuild_table(conn, "prescription", PRESCRIPTION_V5)
 
 
-MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003, m0004)
+PRESCRIPTION_V6 = PRESCRIPTION_V5.replace(
+    "exercise_id)\n)", "exercise_id),\n  UNIQUE (plan_id, position)\n)"
+)
+
+
+def m0005(conn: sqlite3.Connection) -> None:
+    """One prescription per position in a plan. m0002 and `plan apply` both number across the
+    whole plan, so every row already held satisfies it."""
+    rebuild_table(conn, "prescription", PRESCRIPTION_V6)
+
+
+MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003, m0004, m0005)
 
 
 def widen_checks(

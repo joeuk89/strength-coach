@@ -68,13 +68,14 @@ def progress_page(
         section(
             "Ladders",
             table(
-                ["line", "standing rung", "exposures toward the criterion", "met"],
+                ["line", "standing rung", "exposures toward the criterion", "met", "held"],
                 [
                     [
                         f"{names.session(r.line.session_id)}: {names.exercise(r.line.line_key)}",
                         f"{r.rung} of {r.rungs}, {names.exercise(r.exercise)}",
                         MANUAL_CLIMB if r.needed is None else f"{r.exposures} of {r.needed}",
                         r.met,
+                        r.held,
                     ]
                     for r in report.ladders
                 ],

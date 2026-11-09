@@ -2,7 +2,14 @@ import datetime
 
 from support.check_in_cards import field_of, opened
 from support.clock import FixedClock, at
-from support.ladders import a_ladder_program, ladder_rung_decision, logged
+from support.ladders import (
+    a_ladder_program,
+    a_met_rung,
+    ladder_rung_decision,
+    leave_warning,
+    logged,
+    the_prompts_flag,
+)
 from support.pages import the_pages
 from support.plans import a_squat_program
 from support.program_drafts import a_ladder_line, a_rung
@@ -49,9 +56,9 @@ def test_the_progress_page_prints_a_ladders_table() -> None:
 
     assert (
         "## Ladders\n\n"
-        "| line | standing rung | exposures toward the criterion | met |\n"
-        "| --- | --- | --- | --- |\n"
-        "| Lower: Dead Bug | 1 of 3, Dead Bug | 1 of 2 | no |"
+        "| line | standing rung | exposures toward the criterion | met | held |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| Lower: Dead Bug | 1 of 3, Dead Bug | 1 of 2 | no | no |"
     ) in page
 
 
@@ -74,7 +81,7 @@ def test_a_manual_rung_on_the_progress_page_reads_in_plain_words() -> None:
 
     page = the_pages(conn)["pages/progress.md"]
 
-    assert "| Lower: Dead Bug | 1 of 2, Dead Bug | when you and the coach agree | no |" in page
+    assert "| Lower: Dead Bug | 1 of 2, Dead Bug | when you and the coach agree | no | no |" in page
 
 
 def test_a_progress_page_with_no_ladder_line_prints_no_ladders_table() -> None:
@@ -124,3 +131,20 @@ def test_the_criterion_met_from_the_rungs_start_offers_the_climb_on_a_shared_exe
     logged(conn, "dead_bug", "2026-11-07", 10)
 
     assert a_read_of(conn, FIRST_SUNDAY) == {"rung": 2, "exposures": 2, "met": True}
+
+
+def test_the_progress_page_tells_a_met_rung_that_is_not_held_from_a_held_one() -> None:
+    conn = a_met_rung()
+
+    page = the_pages(conn)["pages/progress.md"]
+
+    assert "| Lower: Dead Bug | 1 of 3, Dead Bug | 2 of 2 | yes | no |" in page
+
+
+def test_the_progress_page_shows_a_rung_held_by_a_leave_warning() -> None:
+    conn = a_met_rung()
+    leave_warning(conn, the_prompts_flag(conn))
+
+    page = the_pages(conn)["pages/progress.md"]
+
+    assert "| Lower: Dead Bug | 1 of 3, Dead Bug | 2 of 2 | yes | yes |" in page
