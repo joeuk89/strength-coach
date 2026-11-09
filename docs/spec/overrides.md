@@ -100,7 +100,7 @@ triple; `until` where the table says so. Ids are engine-assigned (`d-0001`) and 
 | `decline_ceiling` | `block` id | required: the Sunday of the week it is made in, so it lapses when the week closes and the ceiling proposes again; `decision_in_force` is the one in-force rule | the earlier one on the same block |
 | `defer_deep_review` | none | required: the date it is due | the latest wins |
 | `against_research` | `ref` (`rn:…`) | none | nothing |
-| `ladder_rung` | `session`, `exercise` (the line's key, its first rung's exercise), `rung` (from 1, at most the ladder's length; ADR 0023) | none | the earlier one on the same (session, exercise); moving down is allowed |
+| `ladder_rung` | `session`, `exercise` (the line's key, its first rung's exercise), `rung` (from 1, at most the ladder's length; ADR 0023); a climb names `rung_met`'s `next_rung` here | none | the earlier one on the same (session, exercise); moving down is allowed |
 | `retire` | `decision` id | none | ends the named Decision early |
 
 An override Decision applies itself to every WeekPlan in its span: `prescribe` reads it beside

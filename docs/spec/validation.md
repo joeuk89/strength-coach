@@ -279,7 +279,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `stall_streak` | line | streak length, exposure refs (all on or after the latest redesign's adoption date; `prescription.md`, **Stalls**) | rn:progression-methods §4 |
 | `rep_range_missed` | line | set index, reps, range, logged RPE, authored RPE | `null` |
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
-| `rung_met` | line | the standing rung (from 1), the next rung's exercise id, the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the params hash covers the rung and the next rung only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
+| `rung_met` | line | `rung` the standing rung (from 1), `next` the next rung's exercise id, `next_rung` its index, `exposures` the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the message names the next rung by its label (ADR 0025); the params hash covers `rung` and `next` only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
 | `ladder_top` | line | the standing rung, the ladder's last; raised instead of `rung_met` when the last rung's criterion holds | rn:bodyweight-skill-progression.3 |
 | `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref | rn:autoregulation.6 |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
