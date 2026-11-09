@@ -262,7 +262,7 @@ grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 
 | Key | Required | Notes |
 | --- | --- | --- |
-| `exercise` | yes, except on the first rung | A library id or one declared in the Draft's `[exercise.<id>]`; unknown is `rung_exercise_unknown`. The first rung is the line's `exercise` and may leave it unsaid. A stance the logs cannot tell apart is its own custom exercise, since Hevy logs the exercise id |
+| `exercise` | yes, except on the first rung | A library id or one declared in the Draft's `[exercise.<id>]`; unknown is `rung_exercise_unknown`. The first rung is the line's `exercise` and may leave it unsaid. A rung may share its exercise with another rung when it differs in `sets` or `cues` (ADR 0025) |
 | `cues` | no | Prose, the rung's form cues |
 | `sets` | yes | Exactly one working group with `reps` or `duration_s` and `rpe`; otherwise `set_groups_off_scheme` or `rpe_missing` |
 | `advance` | no | The rung's criterion: restates or overrides the scheme-level `advance` key by key; `manual = true` stands alone |
@@ -343,7 +343,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `unknown_load_mode` | line | `load_mode` is not one of the glossary's |
 | `unknown_pattern` | exercise | an exercise the Draft references or declares has a `pattern` outside the `patterns` registry |
 | `unknown_muscle` | exercise or session | a name in an exercise's `primary` or `secondary` list, or a key of a coach-led session's `estimated_sets`, is outside the `muscles` registry |
-| `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session (a rung exercise of an `exercise_ladder` counts as one of its session's), or one session appears twice on a weekday |
+| `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session (a rung exercise of an `exercise_ladder` counts as one of its session's, once per line), or one session appears twice on a weekday |
 | `schedule_session_missing` | version | the schedule names a session the version lacks |
 | `session_unscheduled` | session | a session in no rotation week with no `cadence` |
 | `cadence_on_scheduled` | session | a scheduled session states a cadence |
