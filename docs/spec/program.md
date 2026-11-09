@@ -314,8 +314,11 @@ from the last matched Activity; their lines use `hold`.
   `start_load_ignored`. A rung's load off the session location's rack is `start_load_off_rack`.
   Both are scoped to the line with the rung index in params. `start_load` on the first rung or on
   a rung that bears no load is `unknown_key`. The rung's load opens the line while it stands on
-  the rung with no Exposure of the rung's exercise since the rung's start, in the session or
-  unmatched; after that the newest such Exposure's load holds, and the load never steps up.
+  the rung with no Exposure of the rung's exercise after the date of the rung's start, in the
+  session or unmatched; after that the newest such Exposure's load holds, and the load never
+  steps up. An Exposure on the Decision's own date belongs to the previous rung for this read,
+  since neither carries a time of day and the workout that earned the climb is often logged that
+  day; the criterion still counts it.
 
 ## Adopt
 

@@ -36,7 +36,7 @@ class LineRef:
 @dataclass(frozen=True)
 class StandingRung:
     """The rung a line stands on (from 1) and its start: the Decision's date, or the version's
-    adoption for the opening rung. Only exposures on or after the start count."""
+    adoption for the opening rung. The criterion counts only exposures on or after the start."""
 
     index: int
     since: datetime.date | None
@@ -139,12 +139,17 @@ def rung_line(line: Line, ladder: ExerciseLadder, index: int) -> Line:
 def rung_anchors(
     exposures: Iterable[Exposure], standing: StandingRung, week: int, session_id: str
 ) -> tuple[Exposure, ...]:
-    """What may anchor a later rung carrying its own start load this `week`: its exposures since
-    the rung's start, which the load opens until there is one. A rung a return band stepped back
-    to has none, since the standing rung's start says nothing of that earlier rung's history."""
+    """What may anchor a later rung carrying its own start load this `week`: its exposures after
+    the rung's start date, which the load opens until there is one. A log on that date is taken
+    as the previous rung's, since the workout that earned the climb is often logged on the day of
+    the Decision and neither carries a time. A rung a return band stepped back to has none, since
+    the standing rung's start says nothing of that earlier rung's history."""
     if week != standing.index:
         return ()
-    return tuple(_since_start(exposures, standing, session_id))
+    since = standing.since
+    return tuple(
+        e for e in _since_start(exposures, standing, session_id) if since is None or since < e.date
+    )
 
 
 def climb_offer(

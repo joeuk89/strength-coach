@@ -174,6 +174,37 @@ def test_older_logs_of_the_rungs_exercise_at_another_load_do_not_anchor_it() -> 
     assert line.derived_from == "start_load"
 
 
+def test_a_shared_rung_opens_on_its_own_load_after_a_workout_on_the_decisions_date() -> None:
+    conn = the_worked_store()
+    ladder = a_ladder_line(
+        "weighted_negative",
+        a_rung(sets=REPS, cues="lower for 4 s"),
+        a_rung("weighted_negative", sets=REPS, cues="lower for 8 s", start_load=15),
+    )
+    session = a_session("pull", ladder | {"start_load": 5}, location="gym")
+    adopted(conn, toml(a_draft(session, exercise={"weighted_negative": WEIGHTED_NEGATIVE})))
+    with conn:
+        exercises.update(conn, "weighted_negative", {"hevy_template_id": VEST_TEMPLATE})
+    earned_the_climb = ((5 * KG_PER_LB, 4, 8),) * 3
+    a_logged_workout(
+        conn, "h-climb", FixedClock().today().isoformat(), (VEST_TEMPLATE, earned_the_climb)
+    )
+    record(
+        conn,
+        b'[[decision]]\nkind = "ladder_rung"\nsession = "pull"\nexercise = "weighted_negative"\n'
+        b'rung = 2\nbecause = "progress"\ntext = "Clean sets; the athlete said yes."\n',
+        file="decision.toml",
+        clock=FixedClock(),
+    )
+
+    line = the_line(conn)
+
+    [group] = line.groups
+    assert group.load is not None
+    assert group.load.amount == 15
+    assert line.derived_from == "start_load"
+
+
 def test_the_hevy_routine_for_the_weighted_rung_carries_the_load() -> None:
     conn = standing_on_the_weighted_rung()
     hevy = FakeHevy(FixedClock())

@@ -141,6 +141,43 @@ def test_a_shared_exercises_earlier_exposures_at_another_load_do_not_anchor_the_
     assert line.groups[0].load == Load(20, "per_hand_x2")
 
 
+def test_a_shared_exercises_log_on_the_rungs_start_date_belongs_to_the_previous_rung() -> None:
+    shared = a_ladder(
+        Rung("db_negative", SETS, "lower for 4 s"),
+        Rung("db_negative", SETS, "lower for 8 s", start_load=20),
+        start_load=10,
+    )
+    earned_the_climb = Exposure(
+        workout_id="w-1",
+        exercise_id="db_negative",
+        date=RUNG_START,
+        sets=tuple(ExposureSet(i, "working", Load(10, "per_hand_x2"), 4, 8) for i in range(3)),
+        match=Matched("lower"),
+    )
+
+    line = derive(
+        shared,
+        earned_the_climb,
+        decisions=(replace(standing_on(2), exercise_id="db_negative"),),
+    )
+
+    assert line.groups[0].load == Load(20, "per_hand_x2")
+    assert line.derived_from == "start_load"
+    assert line.change == "first prescription"
+
+
+def test_a_log_on_the_rungs_start_date_still_counts_toward_its_criterion() -> None:
+    top = a_ladder(
+        Rung("negative_pull_up", SETS),
+        Rung("weighted_negative", SETS, start_load=5),
+        Rung("chin_up", SETS),
+    )
+
+    line = derive(top, logged("2026-10-25", 5), logged("2026-10-27", 5))
+
+    assert "rung_met" in codes(line)
+
+
 def test_another_sessions_exposures_since_the_rungs_start_do_not_anchor_it() -> None:
     line = derive(LADDER, logged("2026-10-27", 20, session="upper"))
 
