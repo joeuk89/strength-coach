@@ -1,7 +1,7 @@
 """`program adopt` and `program show` (docs/spec/program.md, "Adopt")."""
 
 import datetime
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, replace
 from typing import cast
@@ -10,7 +10,7 @@ from coach.core.clock import Clock
 from coach.core.closed_week.adherence import adherence
 from coach.core.config import Config
 from coach.core.errors import Invalid
-from coach.core.exercise_ladder import LineRef
+from coach.core.exercise_ladder import OPENING_RUNG, LineRef, rung_line
 from coach.core.exposure import Exposure
 from coach.core.flag import REFS, Flag, FlagKey
 from coach.core.goal import Goal
@@ -322,15 +322,26 @@ def _start_loads(
     return tuple(
         {
             "session": session.id,
-            "exercise": line.exercise,
-            "start_load": line.start_load,
+            "exercise": loaded.exercise,
+            **({} if rung is None else {"rung": rung}),
+            "start_load": loaded.start_load,
             "units": units,
-            "kg": Load(line.start_load, _load_mode(form, library, line)).hevy_kg(units),
+            "kg": Load(loaded.start_load, _load_mode(form, library, loaded)).hevy_kg(units),
         }
         for session in form.sessions
         for line in session.lines
-        if line.start_load is not None
+        for rung, loaded in _load_bearers(line)
+        if loaded.start_load is not None
     )
+
+
+def _load_bearers(line: Line) -> Iterable[tuple[int | None, Line]]:
+    """The line, then each rung after the first as it prescribes, with its index."""
+    yield None, line
+    ladder = line.ladder
+    if ladder is not None:
+        for index in range(OPENING_RUNG + 1, len(ladder.rungs) + 1):
+            yield index, rung_line(line, ladder, index)
 
 
 def _session_estimates(form: ProgramForm) -> tuple[Mapping[str, object], ...]:
