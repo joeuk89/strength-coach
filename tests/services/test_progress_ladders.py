@@ -133,6 +133,14 @@ def test_the_criterion_met_from_the_rungs_start_offers_the_climb_on_a_shared_exe
     assert a_read_of(conn, FIRST_SUNDAY) == {"rung": 2, "exposures": 2, "met": True}
 
 
+def test_the_progress_page_tells_a_met_rung_that_is_not_held_from_a_held_one() -> None:
+    conn = a_met_rung()
+
+    page = the_pages(conn)["pages/progress.md"]
+
+    assert "| Lower: Dead Bug | 1 of 3, Dead Bug | 2 of 2 | yes | no |" in page
+
+
 def test_the_progress_page_shows_a_rung_held_by_a_leave_warning() -> None:
     conn = a_met_rung()
     leave_warning(conn, the_prompts_flag(conn))
