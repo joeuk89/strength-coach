@@ -112,7 +112,7 @@ cut.
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
 | `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
-| `exercise_ladder` | the standing rung (below), its exercise's ordinary exposures from the rung's start | the rung's advance criterion (`program.md`) on its run of the newest exposures | never moves: warn `rung_met` naming the next rung, or `ladder_top` on the last; a `manual` rung raises neither | hold the rung | hold the rung |
+| `exercise_ladder` | the standing rung (below), its exercise's ordinary exposures from the rung's start, its `start_load` on a load-bearing rung | the rung's advance criterion (`program.md`) on its run of the newest exposures | never moves: warn `rung_met` naming the next rung, or `ladder_top` on the last; a `manual` rung raises neither | hold the rung | hold the rung |
 | `top_backoff` | the exercise's best e1RM in the window, or the carried e1RM while it binds (**The carried e1RM**, below) | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included; while the carried e1RM binds, the pre-layoff heaviest top × the band factor too)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window and no carried e1RM: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
@@ -144,13 +144,15 @@ Notes:
   one rep per exercise up to `reps_cap`; over target → hold. `circuit_rounds` → one round up to
   `rounds_cap`, then reps. No Activity → the params as authored. Their lines run `hold`.
 - An `exercise_ladder` line stands on the rung its `ladder_rung` Decision names (`overrides.md`),
-  or the first with none, and prescribes that rung's exercise, cues and working group (ADR 0023).
+  or the first with none, and prescribes that rung's exercise, cues and working group (ADR 0023),
+  and on a load-bearing rung its load (`program.md`, **Start loads**; ADR 0025).
   The rung's start is the Decision's date, or the version's adoption for the first rung; the
   criterion and `stall_streak` read only exposures of the standing rung's exercise from it, and
-  exposures on another rung's exercise count for nothing. The line's key stays its first rung's
-  exercise for every flag and override; the prescription and history matching carry the
-  standing rung's. A light week holds the rung with its sets cut. The climb is the agent's: a
-  `ladder_rung` Decision after the athlete's yes.
+  exposures on another rung's exercise, or on its own before its start, count for nothing, so two
+  rungs may share an exercise (ADR 0025). The line's key stays its first rung's exercise for
+  every flag and override; the prescription and history matching carry the standing rung's. A
+  light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
+  after the athlete's yes.
 
 ## Stalls
 

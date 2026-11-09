@@ -13,7 +13,7 @@ from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
 from support.plans import a_plan_override, an_approved_plan
 from support.program_drafts import (
-    BALANCE_BOARD_DRAFT,
+    BALANCE_STANCES_DRAFT,
     CUSTOM_EXERCISES,
     WORKED_DRAFT_COMPLETE,
     a_draft,
@@ -457,7 +457,7 @@ def test_apply_plan_needs_draft(instance: Path) -> None:
 
 
 def test_program_show_prints_every_rung_of_the_balance_board_ladder(instance: Path) -> None:
-    adopted = coach("program", "adopt", a_draft_file(instance, BALANCE_BOARD_DRAFT))
+    adopted = coach("program", "adopt", a_draft_file(instance, BALANCE_STANCES_DRAFT))
 
     run = coach("program", "show")
 
@@ -500,7 +500,7 @@ def test_program_show_of_a_version_with_no_ladder_prints_no_ladders(instance: Pa
 
 
 def test_program_show_marks_the_rung_a_ladder_rung_decision_names(instance: Path) -> None:
-    coach("program", "adopt", a_draft_file(instance, BALANCE_BOARD_DRAFT))
+    coach("program", "adopt", a_draft_file(instance, BALANCE_STANCES_DRAFT))
     decision = (
         '[[decision]]\nkind = "ladder_rung"\nsession = "daily-balance"\n'
         'exercise = "custom_balance_board_stand"\nrung = 3\nbecause = "progress"\n'
@@ -515,7 +515,7 @@ def test_program_show_marks_the_rung_a_ladder_rung_decision_names(instance: Path
 
 
 def test_progress_carries_each_ladder_line_on_its_standing_rung(instance: Path) -> None:
-    coach("program", "adopt", a_draft_file(instance, BALANCE_BOARD_DRAFT))
+    coach("program", "adopt", a_draft_file(instance, BALANCE_STANCES_DRAFT))
 
     run = coach("progress")
 
