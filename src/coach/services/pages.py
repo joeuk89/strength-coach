@@ -16,6 +16,7 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
+    PageNames,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
@@ -78,6 +79,10 @@ def page_facts(
             units=units,
             bodyweight_units=bodyweight_units,
             zone=zone,
+        ),
+        names=PageNames(
+            sessions={s.id: s.title for s in _authored(conn, programs.latest(conn)).values()},
+            exercises={id_: name for id_, (name, _) in names.items()},
         ),
         week=_week(conn, names),
         routines=_routines(conn, config, kits, names, zone),

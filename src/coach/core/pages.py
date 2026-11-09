@@ -153,12 +153,27 @@ class AthletePage:
 
 
 @dataclass(frozen=True)
+class PageNames:
+    """What the athlete calls a session and an exercise; an id with no name stands for itself."""
+
+    sessions: Mapping[str, str]
+    exercises: Mapping[str, str]
+
+    def session(self, session_id: str) -> str:
+        return self.sessions.get(session_id, session_id)
+
+    def exercise(self, exercise_id: str) -> str:
+        return self.exercises.get(exercise_id, exercise_id)
+
+
+@dataclass(frozen=True)
 class Pages:
     units: Units
     bodyweight_units: Units
     pin: str
     athlete: AthletePage
     progress: Progress
+    names: PageNames
     week: WeekPage | None = None
     routines: tuple[RoutinePage, ...] = ()
     check_ins: tuple[CheckInRecord, ...] = ()

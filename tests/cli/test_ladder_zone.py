@@ -77,4 +77,4 @@ def test_publish_dates_the_rung_in_the_clocks_zone(
 
     assert run.code == 0, run.stdout
     page = (instance / "pages" / "progress.md").read_text(encoding="utf-8")
-    assert f"| lower/dead_bug | 2 of 3, ab_wheel | {exposures} of 2 | no |" in page
+    assert f"| Lower: Dead Bug | 2 of 3, Ab Wheel Rollout | {exposures} of 2 | no |" in page
