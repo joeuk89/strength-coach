@@ -648,8 +648,9 @@ carry an athlete's edit (`[[exercise]]`) or a verified template id. No verb dele
 `m0003` is the one migration of seeded catalogue rows (ADR 0024). It moves a `source = 'catalogue'`
 row whose muscles still hold the seeded value off the retired muscles `cardio` and `full_body`.
 Every other row stands: an athlete-edited row keeps `cardio` or `full_body`, and adopt refuses it
-with `unknown_muscle` when a Draft references it. The fix is the normal path: an `[[exercise]]`
-record or the Draft's own declaration of the row.
+with `unknown_muscle` when a Draft references it. The fix is the Draft's own declaration of the
+row; an `[[exercise]]` record refuses a change to `muscles` on a row the library holds, with
+`state_conflict`.
 
 ## Export
 
