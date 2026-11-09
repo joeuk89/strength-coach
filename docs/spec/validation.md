@@ -236,7 +236,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `unknown_load_mode` | line | load mode | a glossary load mode | `null` |
 | `unknown_pattern` | exercise | pattern | a `patterns` registry name on the exercise, in the Draft or an `[[exercise]]` record | `null` |
 | `unknown_muscle` | exercise, session | muscle | a `muscles` registry name on the exercise or in `estimated_sets` | `null` |
-| `duplicate_id` | version | session id or (session, exercise) | unique ids; merging the duplicate lines | `null` |
+| `duplicate_id` | version | session id or (session, exercise); a rung exercise counts once per line | unique ids; merging the duplicate lines | `null` |
 | `schedule_session_missing` | version | week, weekday, session id | a session with that id, or removing the slot | `null` |
 | `session_unscheduled` | session | session id | a slot in a rotation week, or a `cadence` | `null` |
 | `cadence_on_scheduled` | session | session id, cadence | removing the cadence | `null` |
@@ -253,6 +253,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on, a rung's included | `null` |
 | `rung_exercise_unknown` | version | rung index, exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id (`program.md`, "Schemes") | `null` |
 | `ladder_too_short` | line | rung count | a second rung, or another scheme | `null` |
+| `rung_repeated` | line | rung index, the previous rung's index | a rung that differs from the one before it in `sets` or `cues`; only neighbours are compared (ADR 0025) | `null` |
 | `advance_criterion_off_rung` | line | rung index, criterion key | a criterion key the rung can read: `reps` on a reps rung, `duration_s` on a duration rung, `manual` alone | `null` |
 | `acknowledgement_unmatched` | version | the first stale flag key, every stale flag key in Draft order | removing the stale `[[acknowledge]]` entries | `null` |
 | `counted_variant_unknown` | version | lift, exercise id | an `[exercise.<id>]` declaration in the Draft, a library id, or removing it from the lift's `counts` (`program.md`, "Dose and deload") | `null` |

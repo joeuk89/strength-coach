@@ -11,6 +11,7 @@ from coach.core.mirror import FolderRole
 from coach.core.program.form import Session
 from coach.core.routine_projection import (
     FrozenLine,
+    RungKey,
     SessionRoutine,
     next_rung_names,
     project_routine,
@@ -38,7 +39,7 @@ def session_facts(conn: Connection, plan: Mapping[str, object]) -> dict[str, Ses
     return _facts(conn, programs.in_force_at(conn, str(plan["approved_at"])))
 
 
-def next_rungs(conn: Connection, version: VersionRow | None) -> dict[str, dict[str, str]]:
+def next_rungs(conn: Connection, version: VersionRow | None) -> dict[str, dict[RungKey, str]]:
     """Each session's next rung names under `version`, read as the routine's note reads them."""
     names = _library_names(exercises.every(conn))
     return {
@@ -98,4 +99,5 @@ def _frozen(row: Row) -> FrozenLine:
         str(row["exercise_id"]),
         cast(list[Mapping[str, object]], row["set_groups"]),
         cast(list[Mapping[str, object]], row["steps"]),
+        cast(int | None, row["rung"]),
     )

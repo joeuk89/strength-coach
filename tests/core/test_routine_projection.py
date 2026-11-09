@@ -1,8 +1,10 @@
 import json
 from typing import Any, cast
 
+import pytest
+
 from coach.core.mirror import Routine, RoutineExercise, RoutineSet
-from coach.core.program.form import Line, SchemeRef, SetGroup
+from coach.core.program.form import Advance, ExerciseLadder, Line, Rung, SchemeRef, SetGroup
 from coach.core.routine_projection import (
     FrozenLine,
     SessionRoutine,
@@ -212,3 +214,72 @@ def test_a_faithful_read_back_of_a_rep_out_has_no_diff() -> None:
         one["reps"] = 5
 
     assert routine_diff(body, as_routine(hevy_holds)) == ()
+
+
+TEMPO_SETS = (SetGroup(3, reps=4, rpe=8),)
+TEMPO_GROUPS = [{"type": "working", "count": 3, "reps": 4, "rpe": 8}]
+TEMPO_LADDER = Line(
+    "pull_up_negative",
+    TEMPO_SETS,
+    rest_s=120,
+    scheme=SchemeRef(
+        "exercise_ladder",
+        {},
+        ExerciseLadder(
+            (
+                Rung("pull_up_negative", TEMPO_SETS, "lower for 4 s"),
+                Rung("pull_up_negative", TEMPO_SETS, "lower for 6 s"),
+                Rung("weighted_negative", TEMPO_SETS, "lower for 6 s, loaded"),
+            ),
+            Advance(exposures=2),
+        ),
+    ),
+)
+LADDER_TEMPLATES = {"pull_up_negative": "PN-1", "weighted_negative": "WN-1"}
+
+
+def the_ladder_note(frozen: FrozenLine) -> list[str]:
+    session = SessionRoutine(
+        title="Pull",
+        folder_id="9000",
+        week_line="Week of 2026-11-02, rotation week A",
+        authored=(TEMPO_LADDER,),
+        lines=(frozen,),
+        names={"pull_up_negative": "Negative", "weighted_negative": "Weighted"},
+    )
+    body = cast(dict[str, Any], project_routine(session, LADDER_TEMPLATES, "lb"))
+    return body["exercises"][0]["notes"].splitlines()[2:]
+
+
+@pytest.mark.parametrize(
+    ("rung", "cues", "following"),
+    [
+        (1, "lower for 4 s", "Negative"),
+        (2, "lower for 6 s", "Weighted"),
+    ],
+)
+def test_a_note_on_a_shared_exercise_reads_the_rung_the_row_froze(
+    rung: int, cues: str, following: str
+) -> None:
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, rung=rung)
+
+    assert the_ladder_note(frozen) == [f"Cues: {cues}", f"Next: {following}"]
+
+
+def test_a_note_on_the_top_rung_names_no_next_rung() -> None:
+    frozen = FrozenLine("weighted_negative", TEMPO_GROUPS, rung=3)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]
+
+
+def test_a_swapped_rung_keeps_the_cues_of_the_rung_the_row_froze() -> None:
+    swap = [{"step": "swap", "from": "pull_up_negative", "to": "x", "cause": "swap_exercise"}]
+    frozen = FrozenLine("weighted_negative", TEMPO_GROUPS, swap, rung=1)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 4 s", "Next: Negative"]
+
+
+def test_a_row_frozen_before_rungs_were_recorded_finds_its_rung_by_exercise() -> None:
+    frozen = FrozenLine("weighted_negative", TEMPO_GROUPS)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]

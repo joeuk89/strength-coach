@@ -23,6 +23,7 @@ def a_row(
         "session_id": session_id,
         "date": day,
         "exercise_id": exercise_id,
+        "rung": None,
         "set_groups": set_groups,
         "change": "4×6–8 @8: 120 → 125",
         "steps": [],

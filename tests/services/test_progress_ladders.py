@@ -1,7 +1,7 @@
 import datetime
 
 from support.check_in_cards import field_of, opened
-from support.clock import FixedClock
+from support.clock import FixedClock, at
 from support.ladders import a_ladder_program, ladder_rung_decision, logged
 from support.pages import the_pages
 from support.plans import a_squat_program
@@ -10,6 +10,7 @@ from support.program_drafts import a_ladder_line, a_rung
 from coach.core.check_in_card import ladder_row
 from coach.services.progress import progress
 from coach.services.record import record
+from coach.store.connection import Connection
 
 FIRST_SUNDAY = datetime.date(2026, 11, 8)
 
@@ -80,3 +81,46 @@ def test_a_progress_page_with_no_ladder_line_prints_no_ladders_table() -> None:
     conn = a_squat_program()
 
     assert "## Ladders" not in the_pages(conn)["pages/progress.md"]
+
+
+TEMPO_LADDER = a_ladder_line(
+    "dead_bug",
+    a_rung(sets=[{"count": 3, "reps": 10, "rpe": 8}], cues="lower for 4 s"),
+    a_rung("dead_bug", sets=[{"count": 3, "reps": 10, "rpe": 8}], cues="lower for 6 s"),
+    a_rung("dead_bug", sets=[{"count": 3, "reps": 10, "rpe": 8}], cues="lower for 8 s"),
+)
+
+
+def a_read_of(conn: Connection, on: datetime.date) -> dict[str, object]:
+    report = progress(conn, on=on, units="lb", bodyweight_units="kg", zone=datetime.UTC)
+    [row] = [ladder_row(r) for r in report.ladders]
+    return {key: row[key] for key in ("rung", "exposures", "met")}
+
+
+def climbed_to_rung_2_on(conn: Connection, on: datetime.date) -> None:
+    record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock(at(on)))
+
+
+def test_a_ladder_of_three_rungs_on_one_exercise_adopts_and_stands_on_the_first() -> None:
+    conn = a_ladder_program(TEMPO_LADDER)
+
+    assert a_read_of(conn, FIRST_SUNDAY) == {"rung": 1, "exposures": 0, "met": False}
+
+
+def test_exposures_before_the_climb_count_for_nothing_on_a_shared_exercise() -> None:
+    conn = a_ladder_program(TEMPO_LADDER)
+    logged(conn, "dead_bug", "2026-11-02", 10)
+    logged(conn, "dead_bug", "2026-11-05", 10)
+    climbed_to_rung_2_on(conn, datetime.date(2026, 11, 6))
+
+    assert a_read_of(conn, FIRST_SUNDAY) == {"rung": 2, "exposures": 0, "met": False}
+
+
+def test_the_criterion_met_from_the_rungs_start_offers_the_climb_on_a_shared_exercise() -> None:
+    conn = a_ladder_program(TEMPO_LADDER)
+    logged(conn, "dead_bug", "2026-11-02", 10)
+    climbed_to_rung_2_on(conn, datetime.date(2026, 11, 3))
+    logged(conn, "dead_bug", "2026-11-05", 10)
+    logged(conn, "dead_bug", "2026-11-07", 10)
+
+    assert a_read_of(conn, FIRST_SUNDAY) == {"rung": 2, "exposures": 2, "met": True}

@@ -83,6 +83,7 @@ class _Derivation:
     steps: list[Step] = field(default_factory=list[Step])
     flags: list[Flag] = field(default_factory=list[Flag])
     standing: StandingRung | None = None
+    week_rung: int | None = None
 
     @property
     def scope(self) -> Scope:
@@ -320,6 +321,7 @@ class _Derivation:
             if week != standing.index:
                 cause = f"return {band.label}, {days.days} days off"
                 self.steps.append(Step("cut", standing_exercise, rungs[week - 1], cause))
+        self.week_rung = week
         self._keep(
             climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
         )
@@ -391,6 +393,7 @@ class _Derivation:
             steps=tuple(self.steps),
             flags=tuple(self.flags),
             change=change,
+            rung=self.week_rung,
         )
 
     def _groups(

@@ -1,5 +1,6 @@
 import datetime
 
+import pytest
 from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.kit_fixtures import kit_files
@@ -14,6 +15,7 @@ from coach.core.mirror import RoutineExercise
 from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
 from coach.services.program import adopt
 from coach.services.record import record
+from coach.store import week_plans
 from coach.store.connection import Connection
 
 AB_WHEEL = "99D5F10E"
@@ -252,3 +254,97 @@ def test_a_program_adopted_after_approval_leaves_the_resumed_prompts_rung_alone(
 
     assert resumed.resumes == "wp-2026-11-02"
     assert "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise" in prompt_lines(resumed)
+
+
+def test_a_ladder_on_one_exercise_pushes_the_standing_rungs_sets_and_verifies() -> None:
+    climbing = a_ladder_line(
+        "dead_bug",
+        a_rung(sets=[{"count": 3, "reps": 10, "rpe": 8}]),
+        a_rung("dead_bug", sets=[{"count": 3, "reps": 12, "rpe": 8}]),
+    )
+    conn = a_ladder_program(climbing)
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock())
+    hevy = FakeHevy(FixedClock())
+
+    result = pushed(conn, hevy)
+
+    exercise = the_ladder_exercise(hevy, DEAD_BUG)
+    assert [s.reps for s in exercise.sets] == [12, 12, 12]
+    assert [(o.session_id, o.outcome) for o in result.routines] == [("lower", "verified")]
+
+
+TEMPO_SETS = [{"count": 3, "reps": 4, "rpe": 8}]
+TEMPO_LADDER = a_ladder_line(
+    "dead_bug",
+    a_rung(cues="lower for 4 s", sets=TEMPO_SETS),
+    a_rung("dead_bug", cues="lower for 6 s", sets=TEMPO_SETS),
+    a_rung("dead_bug", cues="lower for 8 s", sets=TEMPO_SETS),
+)
+
+
+def a_tempo_week(rung: int) -> Connection:
+    conn = a_ladder_program(TEMPO_LADDER)
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    record(conn, ladder_rung_decision(rung).encode(), file="d.toml", clock=FixedClock())
+    return conn
+
+
+@pytest.mark.parametrize("rung", [1, 2, 3])
+def test_the_routine_note_on_a_shared_exercise_carries_the_standing_rungs_cues(rung: int) -> None:
+    conn = a_tempo_week(rung)
+    hevy = FakeHevy(FixedClock())
+
+    result = pushed(conn, hevy)
+
+    notes = str(the_ladder_exercise(hevy, DEAD_BUG).notes).splitlines()
+    assert f"Cues: lower for {2 + 2 * rung} s" in notes
+    assert [(o.session_id, o.outcome) for o in result.routines] == [("lower", "verified")]
+
+
+def test_the_prompt_and_the_note_agree_on_a_next_rung_of_the_same_exercise() -> None:
+    conn = a_tempo_week(2)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
+
+    assert the_note_next(hevy, DEAD_BUG) == ["Next: Dead Bug"]
+    assert the_prompt_next(fresh, "dead_bug") == ["Next: Dead Bug"]
+    assert the_prompt_next(resumed, "dead_bug") == ["Next: Dead Bug"]
+
+
+def test_on_a_shared_exercises_top_rung_the_prompt_and_the_note_name_no_next_rung() -> None:
+    conn = a_tempo_week(3)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True)
+
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
+
+    assert the_note_next(hevy, DEAD_BUG) == []
+    assert the_prompt_next(fresh, "dead_bug") == []
+    assert the_prompt_next(resumed, "dead_bug") == []
+
+
+def test_the_frozen_row_records_the_rung_and_a_plain_line_records_none() -> None:
+    conn = a_tempo_week(2)
+    pushed(conn, FakeHevy(FixedClock()))
+
+    rows = week_plans.prescriptions(conn, "wp-2026-11-02")
+
+    assert {str(r["exercise_id"]): r["rung"] for r in rows} == {
+        "bb_back_squat": None,
+        "dead_bug": 2,
+    }
+
+
+def test_the_write_plan_hash_moves_with_the_rung_when_the_sets_are_the_same() -> None:
+    on_rung_2 = a_tempo_week(2)
+    on_rung_3 = a_tempo_week(3)
+
+    digests = {
+        the_dry_run(conn, a_plan_draft(conn, hevy=True)).write_plan_hash
+        for conn in (on_rung_2, on_rung_3)
+    }
+
+    assert len(digests) == 2

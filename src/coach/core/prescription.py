@@ -158,6 +158,7 @@ class LinePrescription:
     steps: tuple[Step, ...]
     flags: tuple[Flag, ...]
     change: str
+    rung: int | None = None
 
 
 @dataclass(frozen=True)

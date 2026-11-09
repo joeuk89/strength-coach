@@ -378,6 +378,7 @@ class _Checks:
                 {"rungs": len(ladder.rungs)},
                 f"the ladder on {line.exercise} has one rung; a ladder climbs to a second",
             )
+        self._repeated_rung(line, ladder, scope)
         for index, rung in enumerate(ladder.rungs, start=1):
             rung_exercise = self._exercise(rung.exercise) if index > 1 else None
             if index > 1 and rung_exercise is None:
@@ -399,6 +400,21 @@ class _Checks:
                     {"rung": index, "criterion_key": key},
                     f"rung {index} of {line.exercise} cannot advance on {key}: "
                     "reps on a reps rung, duration_s on a duration rung, manual alone",
+                )
+
+    def _repeated_rung(self, line: Line, ladder: ExerciseLadder, scope: Scope) -> None:
+        for index, (previous, rung) in enumerate(itertools.pairwise(ladder.rungs), start=2):
+            if (rung.exercise, rung.sets, rung.cues) == (
+                previous.exercise,
+                previous.sets,
+                previous.cues,
+            ):
+                self.raise_(
+                    "rung_repeated",
+                    scope,
+                    {"rung": index, "previous_rung": index - 1},
+                    f"rung {index} of {line.exercise} repeats rung {index - 1}: "
+                    "a rung on one exercise differs from the one before it in sets or cues",
                 )
 
     def _set_groups(
@@ -584,8 +600,8 @@ def _instead(text: str, replaced: Sequence[str]) -> str:
 
 
 def _exercises_of(line: Line) -> tuple[str, ...]:
-    """The line's exercise and each later rung's: every exercise the line can put in a session."""
-    return (line.exercise, *line.rung_exercises[1:])
+    """Each distinct exercise the line can put in a session: its own and its rungs'."""
+    return tuple(dict.fromkeys((line.exercise, *line.rung_exercises)))
 
 
 def _off_rung_shape(group: SetGroup) -> str | None:

@@ -226,6 +226,7 @@ VIOLATIONS = (
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
     violation("rung_exercise_unknown", ("version",), ("rung", "exercise_id"), ("program adopt",)),
     violation("ladder_too_short", ("line",), ("rungs",), ("program adopt",)),
+    violation("rung_repeated", ("line",), ("rung", "previous_rung"), ("program adopt",)),
     violation(
         "advance_criterion_off_rung", ("line",), ("rung", "criterion_key"), ("program adopt",)
     ),

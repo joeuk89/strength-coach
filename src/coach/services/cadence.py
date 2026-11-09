@@ -6,14 +6,12 @@ from typing import cast
 
 from coach.core.cadence import BlockSpan, CadenceRead, cadence_signal
 from coach.core.config import Units
-from coach.core.exercise_ladder import LineRef, rung_line, standing_rung
 from coach.core.flag import Flag, leave
 from coach.core.planned_week import week_monday
-from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Line, ProgramForm
 from coach.services.closed_weeks import ClosedWeeks
 from coach.services.history import read_history
-from coach.services.ladders import rung_decisions
+from coach.services.ladders import rung_decisions, standing_line
 from coach.services.leave_warning import leave_warning_decisions
 from coach.store import programs, week_plans
 from coach.store.connection import Connection
@@ -54,12 +52,11 @@ def cadence_signals(
             form is None or _scheme_of(form, line.exercise) != line.scheme.name for form in forms
         ):
             continue
-        standing = _standing(line, session_id, rungs)
-        measured = CadenceRead.measuring(line, standing)
+        standing, counted = standing_line(line, session_id, rungs, exposures)
         read = CadenceRead(
             line,
             (before, last),
-            [e for e in exposures if e.exercise_id == measured.exercise],
+            [e for e in counted if e.exercise_id == standing.exercise],
             adherence,
             _capped(conn, closed, last, line) if line.scheme.name == "top_backoff" else (),
             session_id,
@@ -80,15 +77,6 @@ def _lines(form: ProgramForm) -> list[tuple[str, Line]]:
         for line in session.lines:
             seen.setdefault(line.exercise, (session.id, line))
     return list(seen.values())
-
-
-def _standing(line: Line, session_id: str, rungs: tuple[DecisionInForce, ...]) -> Line | None:
-    """An `exercise_ladder` line as its standing rung prescribes it."""
-    ladder = line.ladder
-    if ladder is None:
-        return None
-    standing = standing_rung(rungs, ladder, line=LineRef(session_id, line.exercise), adopted=None)
-    return rung_line(line, ladder, standing.index)
 
 
 def _form_at(conn: Connection, span: BlockSpan) -> ProgramForm | None:

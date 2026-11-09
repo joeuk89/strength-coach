@@ -12,6 +12,7 @@ from coach.core.program.form import Line
 
 type Json = dict[str, object]
 type DriftClass = Literal["structural", "load"]
+type RungKey = tuple[str, int | None]
 
 WEIGHT_TOLERANCE_KG = 0.001
 RETIRED_PREFIX = "(unused) "
@@ -19,11 +20,13 @@ RETIRED_PREFIX = "(unused) "
 
 @dataclass(frozen=True)
 class FrozenLine:
-    """One `prescription` row of a session: its exercise, frozen set groups and steps."""
+    """One `prescription` row of a session: its exercise, frozen set groups and steps, and on a
+    ladder the rung its week prescribed."""
 
     exercise_id: str
     set_groups: Sequence[Mapping[str, object]]
     steps: Sequence[Mapping[str, object]] = ()
+    rung: int | None = None
 
 
 def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -> str:
@@ -32,6 +35,10 @@ def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -
         if step.get("cause") == "swap_exercise":
             return str(step["from"])
     return exercise_id
+
+
+def _origin(frozen: FrozenLine) -> RungKey:
+    return authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung
 
 
 @dataclass(frozen=True)
@@ -56,27 +63,30 @@ class _Authored:
     next_rung: str | None = None
 
 
-def _authored(lines: Sequence[Line]) -> dict[str, _Authored]:
-    """Every authored line keyed on its exercise, and a ladder line on each rung's exercise too,
-    since the frozen row names the rung the week prescribed."""
-    found: dict[str, _Authored] = {}
+def _authored(lines: Sequence[Line]) -> dict[RungKey, _Authored]:
+    """Every authored line keyed on its exercise and no rung, and a ladder line on each rung's
+    exercise and index too. A row frozen before rungs were recorded has no rung, and finds its
+    ladder rung by exercise: adopt then refused two rungs on one exercise."""
+    found: dict[RungKey, _Authored] = {}
     for position, line in enumerate(lines):
-        found[line.exercise] = _Authored(position, line)
+        found[line.exercise, None] = _Authored(position, line)
         ladder = line.ladder
         if ladder is None:
             continue
         for index, rung in enumerate(ladder.rungs, start=1):
             following = ladder.rungs[index].exercise if index < len(ladder.rungs) else None
-            found[rung.exercise] = _Authored(position, rung_line(line, ladder, index), following)
+            shaped = _Authored(position, rung_line(line, ladder, index), following)
+            found[rung.exercise, index] = shaped
+            found[rung.exercise, None] = shaped
     return found
 
 
-def next_rung_names(lines: Sequence[Line], names: Mapping[str, str]) -> dict[str, str]:
-    """The next rung's display name, keyed on each authored exercise that has one. `names` are the
-    library's exercise names; an exercise missing from them shows its id."""
+def next_rung_names(lines: Sequence[Line], names: Mapping[str, str]) -> dict[RungKey, str]:
+    """The next rung's display name, keyed on each authored exercise and rung that has one. `names`
+    are the library's exercise names; an exercise missing from them shows its id."""
     return {
-        exercise: names.get(found.next_rung, found.next_rung)
-        for exercise, found in _authored(lines).items()
+        key: names.get(found.next_rung, found.next_rung)
+        for key, found in _authored(lines).items()
         if found.next_rung is not None
     }
 
@@ -88,14 +98,12 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
     last = len(session.authored)
     lines = sorted(
         session.lines,
-        key=lambda f: (
-            a.position if (a := authored.get(authored_exercise(f.exercise_id, f.steps))) else last
-        ),
+        key=lambda f: a.position if (a := authored.get(_origin(f))) else last,
     )
     supersets: dict[str, int] = {}
     exercises: list[Json] = []
     for position, frozen in enumerate(lines):
-        origin = authored_exercise(frozen.exercise_id, frozen.steps)
+        origin = _origin(frozen)
         found = authored.get(origin)
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
