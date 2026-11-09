@@ -137,6 +137,7 @@ def _lift(
             if e.exercise_id == exercise and (since is None or since <= e.date) and e.date <= today
         )
     )
+    judged_history = _of_session(history, judged_line[0]) if judged_line else ()
     return LiftProgress(
         exercise_id=exercise,
         scheme=line.scheme.name if line else None,
@@ -145,8 +146,8 @@ def _lift(
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
-        stall_streak=_stall_streak(judged_line, since_redesign(history, redesigned), rungs),
-        resets=_resets(judged_line, history),
+        stall_streak=_stall_streak(judged_line, since_redesign(judged_history, redesigned), rungs),
+        resets=_resets(judged_line[1] if judged_line else None, judged_history),
         signal=signal,
     )
 
@@ -179,8 +180,7 @@ def _stall_streak(
     if judged_line is None:
         return 0
     session_id, line = judged_line
-    read = _of_session(history, session_id)
-    return len(stall_streak(*standing_line(line, session_id, rungs, read)))
+    return len(stall_streak(*standing_line(line, session_id, rungs, history)))
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:
@@ -217,13 +217,11 @@ def _change(
     return None if start is None or end is None else round(end - start, PRECISION)
 
 
-def _resets(judged_line: tuple[str, Line] | None, history: Sequence[Exposure]) -> int:
-    if judged_line is None or judged_line[1].scheme.name != "linear":
+def _resets(line: Line | None, history: Sequence[Exposure]) -> int:
+    if line is None or line.scheme.name != "linear":
         return 0
-    session_id, line = judged_line
-    read = _of_session(history, session_id)
-    loads = [e.top_load for e in read if e.top_load is not None]
-    return len(resets(line, read, None, loads[0].mode)) if loads else 0
+    loads = [e.top_load for e in history if e.top_load is not None]
+    return len(resets(line, history, None, loads[0].mode)) if loads else 0
 
 
 def _weeks_in(closed: ClosedWeeks, block: BlockSpan | None) -> list[ClosedWeek]:

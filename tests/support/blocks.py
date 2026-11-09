@@ -62,13 +62,13 @@ def a_push_program(
         if practice_pull_ups
         else (a_session("push", bench_line, pull_up_line),)
     )
-    schedule = None
+    fields: dict[str, object] = {}
     if drill_line is not None:
         sessions = (a_drill(drill_line), *sessions)
-        schedule = {"rotation": ["A"], "A": {"mon": "push", "wed": "drill"}}
+        fields["schedule"] = {"rotation": ["A"], "A": {"mon": "push", "wed": "drill"}}
     adopt(
         conn,
-        toml(a_draft(*sessions, schedule=schedule) if schedule else a_draft(*sessions)),
+        toml(a_draft(*sessions, **fields)),
         file="d.toml",
         config=a_config(),
         kits=(kit_files(),),

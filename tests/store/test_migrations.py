@@ -309,6 +309,13 @@ def another_row_at_position_1(conn: sqlite3.Connection) -> None:
         )
 
 
+def assert_a_second_row_at_position_1_is_refused(conn: sqlite3.Connection) -> None:
+    with pytest.raises(
+        sqlite3.IntegrityError, match=r"prescription\.plan_id, prescription\.position"
+    ):
+        another_row_at_position_1(conn)
+
+
 def test_m0005_keeps_a_v5_stores_rows_and_refuses_a_second_row_at_one_position_in_a_plan() -> None:
     conn = a_v5_store_with_prescriptions()
     another_row_at_position_1(conn)
@@ -322,10 +329,7 @@ def test_m0005_keeps_a_v5_stores_rows_and_refuses_a_second_row_at_one_position_i
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
     assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02-2")} == {2}
-    with pytest.raises(
-        sqlite3.IntegrityError, match=r"prescription\.plan_id, prescription\.position"
-    ):
-        another_row_at_position_1(conn)
+    assert_a_second_row_at_position_1_is_refused(conn)
 
 
 def test_an_export_written_at_v5_rebuilds_with_its_rows_under_the_constraint(
@@ -341,10 +345,7 @@ def test_an_export_written_at_v5_rebuilds_with_its_rows_under_the_constraint(
     assert schema_version(conn) == 6
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02-2")} == {2}
-    with pytest.raises(
-        sqlite3.IntegrityError, match=r"prescription\.plan_id, prescription\.position"
-    ):
-        another_row_at_position_1(conn)
+    assert_a_second_row_at_position_1_is_refused(conn)
 
 
 def a_fresh_catalogue() -> sqlite3.Connection:
