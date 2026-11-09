@@ -56,7 +56,7 @@ filed under `core`, where its sets would have counted toward `abdominals` dose.
 - The nine conditioning catalogue rows that named `cardio` or `full_body` lose those names:
   eight carry `{primary = [], secondary = []}` and `jump_rope` keeps `secondary = ["calves"]`.
   Seeded rows are migrated: `m0003` moves a `source = 'catalogue'` row whose muscles still hold
-  the old value, so an athlete's edit stands. Instance-added rows outside the sets are not
-  migrated: the next adopt that references one raises the error and the agent fixes the row
-  through the normal path.
+  the old value. Every other row stands, an athlete-edited row and an instance-added row alike:
+  one that still names `cardio` or `full_body` keeps it, the next adopt that references it raises
+  `unknown_muscle`, and the agent fixes the row through the normal path.
 - A contract test asserts every catalogue pattern and muscle is in its registry.

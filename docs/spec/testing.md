@@ -112,7 +112,7 @@ the acceptance check, nothing else.
 One repo is the package and the plugin (ADR 0007). `pyproject.toml` at the root declares the
 `coach` package under `src/`, two console scripts (`coach` and `coach-hook`), no runtime
 dependencies, a Python 3.12 floor, and a `dev` dependency group holding pytest, pytest-xdist,
-ruff and pyright. Two installs: `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for
+pyyaml, ruff and pyright. Two installs: `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for
 the instances on this machine, and `uv sync` in the checkout makes the dev environment that
 `uv run pytest`, `uv run ruff` and `uv run pyright` use. The suite needs only the second.
 
