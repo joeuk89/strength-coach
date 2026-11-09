@@ -3,17 +3,28 @@ from typing import cast
 
 from support.check_in_cards import field_of, opened
 from support.clock import FixedClock, at
-from support.kit_fixtures import kit_files
-from support.ladders import a_ladder_program, ladder_rung_decision, logged
-from support.plan_drafts import a_plan_draft
-from support.plans import a_squat_program, an_acknowledgement, an_approved_plan, squat_logged
-from support.program_drafts import a_ladder_line, a_rung
-from support.programs import a_config
+from support.history import a_logged_workout
+from support.ladders import (
+    CORE_LADDER,
+    TEMPLATES,
+    a_ladder_program,
+    a_met_rung,
+    ladder_rung_decision,
+    leave_warning,
+    logged,
+    the_prompts_flag,
+)
+from support.plans import (
+    SQUAT_LINE,
+    a_squat_program,
+    an_acknowledgement,
+    an_approved_plan,
+    squat_logged,
+)
+from support.program_drafts import a_ladder_line, a_rung, a_session
 
 from coach.core.check_in_card import Ask
-from coach.core.flag import Flag, FlagKey
 from coach.services.checkin_record import checkin_record
-from coach.services.plan_apply import dry_run
 from coach.services.record import record
 from coach.store.connection import Connection
 
@@ -87,43 +98,6 @@ def test_a_manual_rung_asks_whether_the_athlete_is_ready_for_the_next_rung() -> 
     [row] = cast(list[Row], ladders.facts["rows"])
     assert (row["met"], row["needed"], row["next"]) == (False, None, "ab_wheel")
     assert ladders.asks == (Ask("ready_for_next_rung", "line:lower/dead_bug"),)
-
-
-def a_met_rung() -> Connection:
-    """`dead_bug` met before the first planned week, so the plan raises what the card reads."""
-    conn = a_ladder_program()
-    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
-    logged(conn, "dead_bug", "2026-10-30", 10)
-    logged(conn, "dead_bug", "2026-10-31", 10)
-    return conn
-
-
-def the_prompts_flag(conn: Connection, code: str = "rung_met") -> Flag:
-    checked = dry_run(
-        conn,
-        a_plan_draft(conn),
-        file="plan.toml",
-        config=a_config(),
-        kits=(kit_files(),),
-        clock=FixedClock(),
-    ).checked
-    assert checked is not None
-    [flag] = [f for f in checked.flags if f.code == code]
-    return flag
-
-
-def leave_warning(conn: Connection, flag: Flag, *, until: str = "2026-12-31") -> None:
-    key = str(FlagKey.parse(flag.key).calendar_free())
-    record(
-        conn,
-        (
-            f'[[decision]]\nkind = "leave_warning"\nflag = "{key}"\n'
-            f'params_hash = "{flag.params_hash}"\nuntil = {until}\n'
-            'because = "coach_judgement"\ntext = "Hold the rung through the holiday."\n'
-        ).encode(),
-        file="d.toml",
-        clock=FixedClock(),
-    )
 
 
 def test_a_leave_warning_holds_the_met_rung_the_prompt_shows_left() -> None:
@@ -230,3 +204,36 @@ def test_a_ladder_rung_in_the_check_in_draft_moves_the_next_card_to_the_new_rung
         "held": False,
         "next": "hanging_leg_raise",
     }
+
+
+def test_the_cards_ladders_row_on_a_practice_ladder_on_its_last_rung_says_met() -> None:
+    conn = a_squat_program(
+        a_session("lower", SQUAT_LINE),
+        a_session("drill", CORE_LADDER, kind="practice", tier="optional"),
+    )
+    record(
+        conn, ladder_rung_decision(3, session="drill").encode(), file="d.toml", clock=FixedClock()
+    )
+    for on in ("2026-11-04", "2026-11-05"):
+        a_logged_workout(
+            conn,
+            f"h-drill-{on}",
+            on,
+            (TEMPLATES["hanging_leg_raise"], ((None, 6, 8),) * 3),
+            session_id="drill",
+        )
+
+    assert ladder_rows(conn) == [
+        {
+            "session": "drill",
+            "line": "dead_bug",
+            "rung": 3,
+            "exercise": "hanging_leg_raise",
+            "rungs": 3,
+            "exposures": 2,
+            "needed": 2,
+            "met": True,
+            "held": False,
+            "next": None,
+        }
+    ]
