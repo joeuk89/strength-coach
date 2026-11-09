@@ -5,6 +5,7 @@ import datetime
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from coach.core.config import Units
 from coach.core.days_off import SessionTrained
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag
@@ -28,6 +29,18 @@ class ProgramVersion:
 
     form: ProgramForm
     exercises: Mapping[str, ExerciseFacts]
+
+
+@dataclass(frozen=True)
+class RungNaming:
+    """What a rung's label reads beyond its ladder: the athlete's units for a load and the
+    library's exercise names. An exercise missing from `names` shows its id."""
+
+    units: Units
+    names: Mapping[str, str]
+
+    def name(self, exercise_id: str) -> str:
+        return self.names.get(exercise_id, exercise_id)
 
 
 @dataclass(frozen=True)
@@ -106,6 +119,7 @@ class PrescribeRequest:
     exposures: tuple[Exposure, ...]
     racks: Mapping[str, Mapping[str, Rack]]
     planned: PlannedSession
+    rung_naming: RungNaming
     trained: tuple[SessionTrained, ...] = ()
     overrides: tuple[PlanOverride, ...] = ()
     decisions: tuple[DecisionInForce, ...] = ()

@@ -54,8 +54,8 @@ def test_the_published_progress_page_dates_the_rung_in_the_zone_it_is_given() ->
         for zone in (datetime.UTC, TOKYO)
     ]
 
-    assert "| Lower: Dead Bug | 2 of 3, Ab Wheel Rollout | 1 of 2 | no |" in pages[0]
-    assert "| Lower: Dead Bug | 2 of 3, Ab Wheel Rollout | 0 of 2 | no |" in pages[1]
+    assert "| 1 of 2 | no |" in pages[0]
+    assert "| 0 of 2 | no |" in pages[1]
 
 
 def test_the_check_in_card_dates_the_rung_in_the_clocks_zone() -> None:

@@ -1,6 +1,5 @@
 import datetime
 import hashlib
-from typing import cast
 
 from coach.cli.declaration import (
     Argument,
@@ -14,8 +13,6 @@ from coach.cli.declaration import (
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Invalid
-from coach.core.exercise_ladder import rung_shapes
-from coach.core.program.form import ExerciseLadder
 from coach.services.program import ShownLadder, ShowResult, show, show_draft
 
 
@@ -28,7 +25,7 @@ def run(call: InstanceCall) -> Outcome:
     if week is not None and not as_draft:
         raise Invalid("invalid_argument", "--apply-plan folds into the Draft; add --draft")
     with open_instance_store(call.instance) as conn:
-        shown = show(conn, zone=call.clock.zone)
+        shown = show(conn, units=call.instance.units, zone=call.clock.zone)
         drafted = show_draft(conn, apply_plan=week) if as_draft else None
     if drafted is None:
         return Outcome(_summary(shown, None if call.full else call.last))
@@ -76,20 +73,20 @@ def _summary(shown: ShowResult, last: int | None) -> Json:
 
 
 def _ladder(shown: ShownLadder) -> Json:
-    ladder = cast(ExerciseLadder, shown.line.ladder)
     return {
         "session": shown.session_id,
-        "exercise": shown.line.exercise,
+        "exercise": shown.exercise,
         "rungs": [
             {
                 "rung": rung.rung,
                 "exercise": rung.exercise,
+                "label": rung.label,
                 "cues": rung.cues,
                 "sets": list(rung.set_groups),
                 "criterion": rung.criterion,
                 "standing": rung.standing,
             }
-            for rung in rung_shapes(ladder, shown.standing)
+            for rung in shown.rungs
         ],
     }
 
@@ -144,6 +141,7 @@ DECLARATION = Declaration(
                                 "properties": {
                                     "rung": {"type": "integer"},
                                     "exercise": {"type": "string"},
+                                    "label": {"type": "string"},
                                     "cues": {"type": ["string", "null"]},
                                     "sets": {"type": "array", "items": {"type": "object"}},
                                     "criterion": {

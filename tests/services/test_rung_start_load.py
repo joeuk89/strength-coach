@@ -17,7 +17,7 @@ from coach.core.prescription import LinePrescription
 from coach.core.units import KG_PER_LB
 from coach.services.plan_apply import apply, dry_run
 from coach.services.plan_draft import PlanDraftResult, plan_draft
-from coach.services.program import AdoptResult, adopt, show_draft
+from coach.services.program import AdoptResult, adopt, show, show_draft
 from coach.services.record import record
 from coach.store import exercises
 from coach.store.connection import Connection
@@ -228,3 +228,14 @@ def test_the_hevy_routine_for_the_weighted_rung_carries_the_load() -> None:
     [routine] = hevy.routines()
     [exercise] = [e for e in routine.exercises if e.hevy_template_id == VEST_TEMPLATE]
     assert [s.weight_kg for s in exercise.sets] == [round(5 * KG_PER_LB, 4)] * 3
+
+
+def test_a_loaded_rung_reads_its_load_in_the_athletes_units_on_its_label() -> None:
+    conn, draft = adopting()
+    adopted(conn, draft)
+
+    [ladder] = show(conn, units="lb", zone=datetime.UTC).ladders
+
+    assert [rung.label for rung in ladder.rungs][1] == (
+        "rung 2 · Weighted Negative · 3×4 @8 · 5 lb · vest on"
+    )

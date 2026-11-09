@@ -371,9 +371,10 @@ def test_a_routine_page_prints_a_ladder_line_rung_by_rung_from_the_version() -> 
 
     assert (
         "Ladder:\n\n"
-        "1. **Plank** (standing): 2×30 s @6. near a wall. "
+        "- **rung 1 · 2×30 s @6 · near a wall** (standing). "
         "Climb on 30 s at RPE 6 or under, 2 exposures running.\n"
-        "2. Side Plank: 2×30 s @6. Climb on 30 s at RPE 6 or under, 2 exposures running."
+        "- rung 2 · Side Plank · 2×30 s @6. "
+        "Climb on 30 s at RPE 6 or under, 2 exposures running."
     ) in page
     assert page.count("Ladder:") == 1
 
@@ -399,8 +400,8 @@ def test_a_routine_page_marks_the_rung_a_ladder_rung_decision_names() -> None:
 
     page = the_pages(conn, kits=(kit_files(),))["pages/routines/lower.md"]
 
-    assert "1. Plank: 2×30 s @6." in page
-    assert "2. **Side Plank** (standing): 2×30 s @6." in page
+    assert "- rung 1 · Plank · 2×30 s @6." in page
+    assert "- **rung 2 · 2×30 s @6** (standing)." in page
     assert page.count("Ladder:") == 1
 
 

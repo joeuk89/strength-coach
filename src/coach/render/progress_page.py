@@ -3,7 +3,16 @@
 from coach.core.config import Units
 from coach.core.pages import PageNames
 from coach.core.progress import Progress
-from coach.render.markdown import MANUAL_CLIMB, bullets, cell, flag_text, page, section, table
+from coach.render.markdown import (
+    MANUAL_CLIMB,
+    bullets,
+    cell,
+    flag_text,
+    marked_rung,
+    page,
+    section,
+    table,
+)
 
 
 def progress_page(
@@ -68,11 +77,22 @@ def progress_page(
         section(
             "Ladders",
             table(
-                ["line", "standing rung", "exposures toward the criterion", "met", "held"],
+                [
+                    "line",
+                    "standing exercise",
+                    "rungs",
+                    "exposures toward the criterion",
+                    "met",
+                    "held",
+                ],
                 [
                     [
                         f"{names.session(r.line.session_id)}: {names.exercise(r.line.line_key)}",
-                        f"{r.rung} of {r.rungs}, {names.exercise(r.exercise)}",
+                        names.exercise(r.exercise),
+                        "<br>".join(
+                            marked_rung(label, standing=index == r.rung)
+                            for index, label in enumerate(r.labels, start=1)
+                        ),
                         MANUAL_CLIMB if r.needed is None else f"{r.exposures} of {r.needed}",
                         r.met,
                         r.held,

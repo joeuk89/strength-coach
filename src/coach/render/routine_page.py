@@ -3,7 +3,15 @@ from collections.abc import Mapping
 from coach.core.config import Units
 from coach.core.exercise_ladder import RungShape
 from coach.core.pages import PageLine, RoutinePage
-from coach.render.markdown import MANUAL_CLIMB, bullets, group_text, number, page, section
+from coach.render.markdown import (
+    MANUAL_CLIMB,
+    bullets,
+    group_text,
+    marked_rung,
+    number,
+    page,
+    section,
+)
 from coach.render.plate_pool import line_link, set_up_link
 
 
@@ -33,15 +41,13 @@ def _line(line: PageLine, routine: RoutinePage, units: Units) -> str:
     if link is not None:
         body += f"\n\n[Load it in plate-pool]({link})"
     if line.ladder:
-        body += "\n\nLadder:\n\n" + "\n".join(_rung(rung, units) for rung in line.ladder)
+        body += "\n\nLadder:\n\n" + bullets([_rung(rung) for rung in line.ladder])
     return section(line.name, body)
 
 
-def _rung(rung: RungShape, units: Units) -> str:
-    name = f"**{rung.name}** (standing)" if rung.standing else rung.name
-    groups = ", ".join(group_text(g, units) for g in rung.set_groups)
-    cues = f" {rung.cues}." if rung.cues else ""
-    return f"{rung.rung}. {name}: {groups}.{cues} Climb {_climb(rung.criterion)}."
+def _rung(rung: RungShape) -> str:
+    shown = marked_rung(rung.label, standing=rung.standing)
+    return f"{shown}. Climb {_climb(rung.criterion)}."
 
 
 def _climb(criterion: Mapping[str, object]) -> str:

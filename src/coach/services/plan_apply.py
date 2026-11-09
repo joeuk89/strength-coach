@@ -123,7 +123,7 @@ def dry_run(
     found = parse_plan_input(data, file=file)
     approved = week_plans.with_draft(conn, found.week.isoformat(), draft_hash(data))
     if approved is not None:
-        return _resumed(conn, approved, hevy=config.hevy is not None)
+        return _resumed(conn, approved, hevy=config.hevy is not None, units=config.athlete.units)
     validated = _validated(conn, found, config=config, kits=kits, clock=clock)
     checked = validated.checked
     if checked.violations:
@@ -143,7 +143,11 @@ def dry_run(
         units=config.athlete.units,
     )
     return DryRun(
-        fresh_summary(checked, config.athlete.units, next_rungs(conn, programs.latest(conn))),
+        fresh_summary(
+            checked,
+            config.athlete.units,
+            next_rungs(conn, programs.latest(conn), config.athlete.units),
+        ),
         actions,
         digest,
         validated.acknowledgements,
@@ -151,7 +155,7 @@ def dry_run(
     )
 
 
-def _resumed(conn: Connection, approved: Row, *, hevy: bool) -> DryRun:
+def _resumed(conn: Connection, approved: Row, *, hevy: bool, units: Units) -> DryRun:
     """The same Draft already approved: the dry run shows and pushes the frozen WeekPlan under
     the approved hash, or a new one when a touched routine moved in Hevy since approval."""
     plan_id = str(approved["id"])
@@ -164,7 +168,7 @@ def _resumed(conn: Connection, approved: Row, *, hevy: bool) -> DryRun:
         rows=rows,
         overrides=week_plans.stored_overrides(conn, plan_id),
         locations=_locations(conn, version),
-        next_rungs=next_rungs(conn, version),
+        next_rungs=next_rungs(conn, version, units),
     )
     actions = _frozen_actions(conn, approved, version, rows) if hevy else HevyActions()
     moved = moved_routines(

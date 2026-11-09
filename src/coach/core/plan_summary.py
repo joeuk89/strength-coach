@@ -46,7 +46,7 @@ class PlanSummary:
 
 
 def fresh_summary(checked: CheckedPlan, units: Units, next_rungs: NextRungs) -> PlanSummary:
-    """`next_rungs` are each session's next rung names, keyed on the authored exercise
+    """`next_rungs` are each session's next rung labels, keyed on the authored exercise
     and rung."""
     draft = checked.draft
     return PlanSummary(

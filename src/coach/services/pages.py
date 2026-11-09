@@ -23,6 +23,7 @@ from coach.core.pages import (
     RoutinePage,
     WeekPage,
 )
+from coach.core.prescription import RungNaming
 from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
@@ -230,7 +231,10 @@ def _routine(
     )
     first = min((str(r["date"]) for r in rows), default=None)
     standing = standing_rungs(version.form, rung_decisions(conn, zone)) if version else {}
-    ladders = _ladders(session, names, standing) if session else {}
+    naming = RungNaming(
+        config.athlete.units, {exercise: name for exercise, (name, _) in names.items()}
+    )
+    ladders = _ladders(session, naming, standing) if session else {}
     return RoutinePage(
         session_id=live.session_id,
         title=_title(sessions, live.session_id),
@@ -246,7 +250,7 @@ def _routine(
 
 def _ladders(
     session: Session,
-    names: Mapping[str, tuple[str, str | None]],
+    naming: RungNaming,
     standing: Mapping[LineRef, int],
 ) -> dict[str, tuple[RungShape, ...]]:
     """Each `exercise_ladder` line's rungs, keyed on every rung's exercise, since the frozen
@@ -257,9 +261,10 @@ def _ladders(
         if ladder is None:
             continue
         rungs = rung_shapes(
+            line,
             ladder,
             standing.get(LineRef(session.id, line.exercise), OPENING_RUNG),
-            name_of=lambda exercise: names.get(exercise, (exercise, None))[0],
+            naming=naming,
         )
         found |= dict.fromkeys(line.rung_exercises, rungs)
     return found

@@ -4,18 +4,21 @@ standing rung is a `ladder_rung` Decision; the engine offers the climb and never
 (ADR 0023)."""
 
 import datetime
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 
 from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
+from coach.core.frozen_prescription import frozen_groups
 from coach.core.line_history import newest_first, ordinary
-from coach.core.prescription import DecisionInForce
+from coach.core.note_dose import working_rpe, working_shape
+from coach.core.prescription import DecisionInForce, PrescribedGroup, RungNaming
 from coach.core.program.form import (
     Advance,
     ExerciseLadder,
     Line,
     ProgramForm,
+    Rung,
     SetGroup,
     group_document,
 )
@@ -67,7 +70,7 @@ class RungShape:
 
     rung: int
     exercise: str
-    name: str
+    label: str
     cues: str | None
     set_groups: tuple[Mapping[str, object], ...]
     criterion: Mapping[str, object]
@@ -75,16 +78,13 @@ class RungShape:
 
 
 def rung_shapes(
-    ladder: ExerciseLadder,
-    standing: int,
-    *,
-    name_of: Callable[[str], str] = lambda exercise: exercise,
+    line: Line, ladder: ExerciseLadder, standing: int, *, naming: RungNaming
 ) -> tuple[RungShape, ...]:
     return tuple(
         RungShape(
             rung=index,
             exercise=rung.exercise,
-            name=name_of(rung.exercise),
+            label=rung_label(line, ladder, index, standing=standing, naming=naming),
             cues=rung.cues,
             set_groups=tuple(group_document(group) for group in rung.sets),
             criterion=full_criterion(ladder, index).stated(),
@@ -136,6 +136,36 @@ def rung_line(line: Line, ladder: ExerciseLadder, index: int) -> Line:
     return replace(shaped, start_load=rung.start_load, load_mode=None)
 
 
+def rung_label(
+    line: Line, ladder: ExerciseLadder, index: int, *, standing: int, naming: RungNaming
+) -> str:
+    """`rung <n> · [<exercise name> · ]<dose>[ · <load>][ · <cues>]`: the name only when the
+    rung's exercise differs from the standing rung's, and an empty segment left out."""
+    rung = ladder.rungs[index - 1]
+    named = rung.exercise != ladder.rungs[standing - 1].exercise
+    load = rung_line(line, ladder, index).start_load
+    segments = (
+        f"rung {index}",
+        naming.name(rung.exercise) if named else None,
+        _rung_dose(rung, naming),
+        None if load is None else f"{load:g} {naming.units}",
+        rung.cues,
+    )
+    return " · ".join(s for s in segments if s)
+
+
+def _rung_dose(rung: Rung, naming: RungNaming) -> str:
+    working = frozen_groups(
+        [
+            PrescribedGroup(g.type, g.count, reps=g.reps, duration_s=g.duration_s, rpe=g.rpe)
+            for g in rung.sets
+            if g.working
+        ],
+        naming.units,
+    )
+    return working_shape(working) + working_rpe(working)
+
+
 def rung_anchors(
     exposures: Iterable[Exposure], standing: StandingRung, week: int, session_id: str
 ) -> tuple[Exposure, ...]:
@@ -151,15 +181,17 @@ def rung_anchors(
 
 
 def climb_offer(
+    line: Line,
     ladder: ExerciseLadder,
     standing: StandingRung,
     exposures: Iterable[Exposure],
     *,
     scope: Scope,
     on: datetime.date,
+    naming: RungNaming,
 ) -> Flag | None:
-    """`rung_met` naming the next rung, or `ladder_top` on the last, when the newest run of
-    ordinary exposures of the standing rung's exercise since its start each meet the rung's
+    """`rung_met` offering the next rung by its label, or `ladder_top` on the last, when the newest
+    run of ordinary exposures of the standing rung's exercise since its start each meet the rung's
     criterion. A `manual` rung waits for the athlete's word."""
     needed = _needed(ladder, standing.index)
     if needed is None:
@@ -175,17 +207,18 @@ def climb_offer(
             f"rung {standing.index}, the ladder's top, met its criterion on {len(run)} exposures; "
             "the version may hold it or move the line on",
         )
-    following = ladder.rungs[standing.index].exercise
+    next_rung = standing.index + 1
+    label = rung_label(line, ladder, next_rung, standing=standing.index, naming=naming)
     return raise_flag(
         "rung_met",
         scope,
         {
             "rung": standing.index,
-            "next": following,
+            "next": ladder.rungs[standing.index].exercise,
+            "next_rung": next_rung,
             "exposures": [e.ref for e in reversed(run)],
         },
-        f"rung {standing.index} met its criterion on {len(run)} exposures; rung "
-        f"{standing.index + 1}, {following}, is offered",
+        f"rung {standing.index} met its criterion on {len(run)} exposures; {label} is offered",
     )
 
 
@@ -193,7 +226,8 @@ def climb_offer(
 class LadderRead:
     """Where a line stands on its ladder: the standing rung, the newest run of exposures toward
     its criterion out of the `needed` (none on a `manual` rung), `met` where the climb is offered
-    as `rung_met` or `ladder_top`, and `held` where an acknowledgement leaves that offer."""
+    as `rung_met` or `ladder_top`, `held` where an acknowledgement leaves that offer, and every
+    rung's label in rung order."""
 
     line: LineRef
     rung: int
@@ -204,9 +238,19 @@ class LadderRead:
     needed: int | None
     met: bool
     held: bool
+    labels: tuple[str, ...]
+
+    @property
+    def label(self) -> str:
+        return self.labels[self.rung - 1]
+
+    @property
+    def next_label(self) -> str | None:
+        return None if self.next is None else self.labels[self.rung]
 
 
 def ladder_read(
+    line: Line,
     ladder: ExerciseLadder,
     standing: StandingRung,
     exposures: Sequence[Exposure],
@@ -214,6 +258,7 @@ def ladder_read(
     scope: Scope,
     before: datetime.date,
     acknowledgements: Iterable[Acknowledgement],
+    naming: RungNaming,
 ) -> LadderRead:
     """The line's ladder as the exposures logged before `before` leave it, on the line `scope`
     names. The climb offer goes through `leave`, as every flag on the approval prompt does."""
@@ -224,7 +269,7 @@ def ladder_read(
         if needed is None
         else min(len(_qualifying_run(ladder, standing, exposures, session_id, before)), needed)
     )
-    offer = climb_offer(ladder, standing, exposures, scope=scope, on=before)
+    offer = climb_offer(line, ladder, standing, exposures, scope=scope, on=before, naming=naming)
     top = standing.index == len(ladder.rungs)
     return LadderRead(
         line=LineRef(session_id, str(scope.exercise_id)),
@@ -236,6 +281,10 @@ def ladder_read(
         needed=needed,
         met=offer is not None,
         held=offer is not None and leave(offer, acknowledgements).left is not None,
+        labels=tuple(
+            rung_label(line, ladder, index, standing=standing.index, naming=naming)
+            for index in range(OPENING_RUNG, len(ladder.rungs) + 1)
+        ),
     )
 
 

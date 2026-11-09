@@ -8,9 +8,9 @@ from typing import cast
 
 from coach.core.clock import Clock
 from coach.core.closed_week.adherence import adherence
-from coach.core.config import Config
+from coach.core.config import Config, Units
 from coach.core.errors import Invalid
-from coach.core.exercise_ladder import OPENING_RUNG, LineRef, rung_line
+from coach.core.exercise_ladder import OPENING_RUNG, LineRef, RungShape, rung_line, rung_shapes
 from coach.core.exposure import Exposure
 from coach.core.flag import REFS, Flag, FlagKey
 from coach.core.goal import Goal
@@ -30,6 +30,7 @@ from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
 from coach.services.ladders import rung_decisions, standing_rungs
 from coach.services.plan_behind import plan_behind
+from coach.services.projections import rung_naming
 from coach.services.racks import racks_by_location
 from coach.store import exercises, goals, phases, programs, routine_map, week_plans
 from coach.store.connection import Connection
@@ -56,11 +57,11 @@ class AdoptResult:
 
 @dataclass(frozen=True)
 class ShownLadder:
-    """An `exercise_ladder` line with its session and standing rung."""
+    """An `exercise_ladder` line's key, its session and every rung, the standing one marked."""
 
     session_id: str
-    line: Line
-    standing: int
+    exercise: str
+    rungs: tuple[RungShape, ...]
 
 
 @dataclass(frozen=True)
@@ -181,9 +182,10 @@ def _with_plan_behind(conn: Connection, result: AdoptResult, clock: Clock) -> Ad
     return replace(result, warnings=(*result.warnings, *behind))
 
 
-def show(conn: Connection, *, zone: datetime.tzinfo) -> ShowResult:
+def show(conn: Connection, *, units: Units, zone: datetime.tzinfo) -> ShowResult:
     version = _in_force(conn)
     standing = standing_rungs(version.form, rung_decisions(conn, zone))
+    naming = rung_naming(conn, units)
     return ShowResult(
         version_id=version.id,
         kind=version.form.kind,
@@ -192,10 +194,16 @@ def show(conn: Connection, *, zone: datetime.tzinfo) -> ShowResult:
         because=version.form.because,
         sessions=tuple(programs.line_counts(conn, version.id)),
         ladders=tuple(
-            ShownLadder(session.id, line, standing[LineRef(session.id, line.exercise)])
+            ShownLadder(
+                session.id,
+                line.exercise,
+                rung_shapes(
+                    line, ladder, standing[LineRef(session.id, line.exercise)], naming=naming
+                ),
+            )
             for session in version.form.sessions
             for line in session.lines
-            if line.ladder is not None
+            if (ladder := line.ladder) is not None
         ),
     )
 

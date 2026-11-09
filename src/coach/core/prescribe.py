@@ -325,7 +325,15 @@ class _Derivation:
                 self.steps.append(Step("cut", standing_exercise, rungs[week - 1], cause))
         self.week_rung = week
         self._keep(
-            climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
+            climb_offer(
+                self.line,
+                ladder,
+                standing,
+                request.exposures,
+                scope=self.scope,
+                on=planned.date,
+                naming=request.rung_naming,
+            )
         )
         line = rung_line(self.line, ladder, week)
         if week != OPENING_RUNG and line.start_load is not None:
