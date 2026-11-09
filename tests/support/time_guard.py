@@ -18,8 +18,12 @@ def limit_s() -> float:
     return CI_LIMIT_S if os.environ.get("CI") else LIMIT_S
 
 
+def _clock(config: pytest.Config) -> Callable[[], float]:
+    return config.stash.get(clock_key, time.process_time)
+
+
 def _timed(item: pytest.Item) -> Generator[None]:
-    clock = item.config.stash.get(clock_key, time.process_time)
+    clock = _clock(item.config)
     start = clock()
     shared_before = item.config.stash.get(_shared_key, 0.0)
     yield
@@ -39,7 +43,7 @@ def pytest_fixture_setup(
     """A module- or session-scoped fixture is setup every test shares, not the cost of the first."""
     if fixturedef.scope == "function":
         return (yield)
-    clock = request.config.stash.get(clock_key, time.process_time)
+    clock = _clock(request.config)
     start = clock()
     try:
         return (yield)
