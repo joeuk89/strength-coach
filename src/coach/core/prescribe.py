@@ -20,6 +20,7 @@ from coach.core.exercise_ladder import (
     LineRef,
     StandingRung,
     climb_offer,
+    rung_anchors,
     rung_line,
     standing_rung,
 )
@@ -84,6 +85,7 @@ class _Derivation:
     flags: list[Flag] = field(default_factory=list[Flag])
     standing: StandingRung | None = None
     week_rung: int | None = None
+    rung_anchors: tuple[Exposure, ...] | None = None
 
     @property
     def scope(self) -> Scope:
@@ -130,7 +132,7 @@ class _Derivation:
         rack = self._rack(exercise, mode)
         start = None if authored.start_load is None else Load(authored.start_load, mode)
         found = anchor(
-            self.request.exposures,
+            self.request.exposures if self.rung_anchors is None else self.rung_anchors,
             exercise_id=authored.exercise,
             session_id=self.request.planned.session_id,
             on=self.request.planned.date,
@@ -325,11 +327,15 @@ class _Derivation:
         self._keep(
             climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
         )
-        return rung_line(self.line, ladder, week)
+        line = rung_line(self.line, ladder, week)
+        if week != OPENING_RUNG and line.start_load is not None:
+            self.rung_anchors = rung_anchors(request.exposures, standing, week, planned.session_id)
+        return line
 
     def _swap(self, authored: Line, step: str, swap: PlanOverride) -> Line:
         """The other exercise under the line's scheme and sets, with the swap's own start load
         and load mode: nothing of the swapped-out exercise carries."""
+        self.rung_anchors = None
         to = str(swap.params["to"])
         self.steps.append(Step(step, authored.exercise, to, "swap_exercise"))
         start = cast(float | None, swap.params.get("start_load"))
