@@ -282,13 +282,13 @@ def test_a_swapped_rung_keeps_the_cues_of_the_rung_the_row_froze() -> None:
     ]
 
 
-def test_a_stepped_back_rung_shows_its_label_and_no_next_rung() -> None:
+def test_a_stepped_back_rung_names_only_its_index_and_no_next_rung() -> None:
     step = [{"step": "cut", "from": "rung 3", "to": "rung 1", "cause": "return 43+, 52 days off"}]
     frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, step, rung=1)
 
     assert the_ladder_note(frozen) == [
         "Cues: lower for 4 s",
-        "This week: rung 1 · 3×4 @8 · lower for 4 s",
+        "This week: rung 1",
     ]
 
 

@@ -297,8 +297,8 @@ class _Derivation:
         return found
 
     def _week_rung(self, ladder: ExerciseLadder) -> Line:
-        """The standing rung, or in a return band the rung the band steps back to; the climb
-        offer reads the standing rung either way."""
+        """The standing rung, or in a return band the rung the band steps back to; only a week on
+        the standing rung offers the climb."""
         request, planned = self.request, self.request.planned
         standing = standing_rung(
             request.decisions,
@@ -325,17 +325,18 @@ class _Derivation:
                 cause = f"return {band.label}, {days.days} days off"
                 self.steps.append(rung_step_back(standing.index, week, cause))
         self.week_rung = week
-        self._keep(
-            climb_offer(
-                self.line,
-                ladder,
-                standing,
-                request.exposures,
-                scope=self.scope,
-                on=planned.date,
-                naming=request.rung_naming,
+        if week == standing.index:
+            self._keep(
+                climb_offer(
+                    self.line,
+                    ladder,
+                    standing,
+                    request.exposures,
+                    scope=self.scope,
+                    on=planned.date,
+                    naming=request.rung_naming,
+                )
             )
-        )
         line = rung_line(self.line, ladder, week)
         if week != OPENING_RUNG and line.start_load is not None:
             self.rung_anchors = rung_anchors(request.exposures, standing, week, planned.session_id)

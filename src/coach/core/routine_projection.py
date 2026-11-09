@@ -2,14 +2,14 @@
 (ADR 0011, "Push"; docs/spec/parity.md, the routine body and note rules)."""
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Literal, cast
 
 from coach.core.config import Units
 from coach.core.exercise_ladder import rung_label, rung_line
 from coach.core.mirror import Routine, RoutineSet
 from coach.core.note_dose import working_rpe, working_shape
-from coach.core.prescription import RungNaming, stepped_back_a_rung
+from coach.core.prescription import RungNaming, stepped_back_to
 from coach.core.program.form import Line
 
 type Json = dict[str, object]
@@ -102,8 +102,10 @@ def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Autho
 
 
 def week_labels(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> RungLabels:
-    """A stepped-back week offers no climb: the line returns to its standing rung next."""
-    return replace(labels, next=None) if stepped_back_a_rung(steps) else labels
+    """A stepped-back week offers no climb, since the line returns to its standing rung next, and
+    names its rung by index alone, since the band cut the dose the label would print."""
+    to = stepped_back_to(steps)
+    return labels if to is None else RungLabels(own=to, next=None)
 
 
 def rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, RungLabels]:
@@ -232,8 +234,9 @@ def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
 
 
 def _rung_notes(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> list[str]:
-    if stepped_back_a_rung(steps):
-        return [f"This week: {labels.own}"]
+    to = stepped_back_to(steps)
+    if to is not None:
+        return [f"This week: {to}"]
     return [] if labels.next is None else [f"{NEXT_LINE_PREFIX}{labels.next}"]
 
 

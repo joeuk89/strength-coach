@@ -92,12 +92,12 @@ def test_a_52_day_layoff_on_a_shared_exercise_shows_the_weeks_rung_and_no_next_r
 
     prompts = prompt_lines_around_the_push(conn, hevy, a_plan_draft(conn, hevy=True))
 
-    expected = f"  dead_bug 2×8 · 3×8 @8 → 2×8 @≤7 · {RUNG_ONE}"
+    expected = "  dead_bug 2×8 · 3×8 @8 → 2×8 @≤7 · rung 1"
     assert prompts == [expected, expected]
     assert str(the_dead_bug_on(hevy).notes).splitlines() == [
         "Target: 2×8 @7, choose the load",
         "Cues: lower for 4 s",
-        f"This week: {RUNG_ONE}",
+        "This week: rung 1",
     ]
 
 
@@ -107,12 +107,12 @@ def test_a_one_rung_step_back_shows_the_rung_below_and_no_next_rung() -> None:
 
     prompts = prompt_lines_around_the_push(conn, hevy, a_plan_draft(conn, hevy=True))
 
-    expected = f"  dead_bug 2×8 · 3×8 @8 → 2×8 @≤8 · {RUNG_TWO}"
+    expected = "  dead_bug 2×8 · 3×8 @8 → 2×8 @≤8 · rung 2"
     assert prompts == [expected, expected]
     assert str(the_dead_bug_on(hevy).notes).splitlines() == [
         "Target: 2×8 @8, choose the load",
         "Cues: lower for 6 s",
-        f"This week: {RUNG_TWO}",
+        "This week: rung 2",
     ]
 
 

@@ -272,9 +272,10 @@ return week only, with no rep-out set. A return line whose band, load, set delta
 not all derive together (an override fought the band) is `return_band_disagrees`.
 
 A week an `exercise_ladder` line steps back offers no climb, since the line returns to its standing
-rung next. The approval prompt and the Hevy note show that week's rung label and no `Next:`, and the
-note says it on a `This week:` line. The `cut` step names both rungs by index, for example from
-`rung 3` to `rung 1`, with its cause, and the plan Draft and the week page show that step. The
+rung next: it raises no `rung_met` or `ladder_top`, and they return with the rung. The approval
+prompt and the Hevy note name that week's rung by index alone, since the band cut the dose a label
+would print, with no `Next:`; the note says it on a `This week:` line. The `cut` step names both
+rungs by index, for example from `rung 3` to `rung 1`, with its cause, and the plan Draft and the week page show that step. The
 check-in card still measures from the standing rung. All of this reads the frozen line's `rung` and
 steps, not the Decisions in force, so a Decision recorded after approval leaves the note alone. A
 line in a band that steps back no rung, because it stands on the first, keeps its `Next:`.
