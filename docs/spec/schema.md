@@ -217,7 +217,8 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
   flags        TEXT NOT NULL,              -- JSON [Flag]
   change       TEXT NOT NULL,
-  PRIMARY KEY (plan_id, session_id, date, exercise_id)
+  PRIMARY KEY (plan_id, session_id, date, exercise_id),
+  UNIQUE (plan_id, position)
 );
 ```
 
@@ -643,6 +644,12 @@ new store. `upgrade` merges it: a catalogue id the store lacks is inserted, an i
 is left exactly as it stands, whatever the catalogue now says, because the instance's row may
 carry an athlete's edit (`[[exercise]]`) or a verified template id. No verb deletes an
 `exercise` row. The seed content is `cutover.md`'s (the old library's catalogue pairs and the built-in templates the history uses).
+
+`m0003` is the one migration of seeded catalogue rows (ADR 0024). It moves a `source = 'catalogue'`
+row whose muscles still hold the seeded value off the retired muscles `cardio` and `full_body`.
+Every other row stands: an athlete-edited row keeps `cardio` or `full_body`, and adopt refuses it
+with `unknown_muscle` when a Draft references it. The fix is the normal path: an `[[exercise]]`
+record or the Draft's own declaration of the row.
 
 ## Export
 
