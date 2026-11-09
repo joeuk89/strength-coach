@@ -13,8 +13,8 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import read_draft
 from coach.cli.keys import find_secret, github_token
+from coach.core.draft_kinds.report import report_kind
 from coach.core.draft_schema import DraftKind
-from coach.core.drafts.report import report_kind
 from coach.core.report import REPO, Footer, Issue, athlete_name, issue_draft
 from coach.github.client import TOKEN_NAME
 from coach.render.report_prompt import report_prompt

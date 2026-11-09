@@ -17,6 +17,7 @@ from coach.core.program.form import (
     Advance,
     ExerciseLadder,
     Line,
+    Number,
     ProgramForm,
     Rung,
     SchemeRef,
@@ -43,6 +44,27 @@ PER_CASE_WARNINGS = {
     "priority_lift_absent": "priority lift",
     "counted_variant_off_pattern": "counted variant",
 }
+
+
+@dataclass(frozen=True)
+class _Loaded:
+    """A line, or a rung after the first, as the start-load checks read it."""
+
+    exercise_id: str
+    exercise: Mapping[str, object]
+    mode: str
+    start_load: Number | None
+    key_path: str
+    missing_because: str | None
+    rung: int | None = None
+
+    @property
+    def rung_param(self) -> dict[str, object]:
+        return {} if self.rung is None else {"rung": self.rung}
+
+    @property
+    def distinct(self) -> str:
+        return "" if self.rung is None else f"rung {self.rung}"
 
 
 @dataclass(frozen=True)
@@ -354,10 +376,10 @@ class _Checks:
             )
             return
         scheme = self._scheme(line.scheme, "line", scope)
-        if line.scheme.ladder is None:
+        if line.ladder is None:
             self._set_groups(session, line, line.sets, scheme, scope)
         elif scheme is not None:
-            self._ladder(session, line, line.scheme.ladder, scheme, scope)
+            self._ladder(session, line, line.ladder, scheme, scope)
         self._start_load(session, line, exercise, scope)
         self._template(line.exercise, exercise, scope)
 
@@ -378,6 +400,7 @@ class _Checks:
                 {"rungs": len(ladder.rungs)},
                 f"the ladder on {line.exercise} has one rung; a ladder climbs to a second",
             )
+        self._repeated_rung(line, ladder, scope)
         for index, rung in enumerate(ladder.rungs, start=1):
             rung_exercise = self._exercise(rung.exercise) if index > 1 else None
             if index > 1 and rung_exercise is None:
@@ -391,6 +414,7 @@ class _Checks:
             elif rung_exercise is not None:
                 self._template(rung.exercise, rung_exercise, scope)
             self._set_groups(session, line, rung.sets, scheme, scope, rung=index)
+            self._rung_start_load(session, line, rung, index, rung_exercise, scope)
             key = _off_rung(rung, ladder.criterion(index))
             if key is not None:
                 self.raise_(
@@ -399,6 +423,21 @@ class _Checks:
                     {"rung": index, "criterion_key": key},
                     f"rung {index} of {line.exercise} cannot advance on {key}: "
                     "reps on a reps rung, duration_s on a duration rung, manual alone",
+                )
+
+    def _repeated_rung(self, line: Line, ladder: ExerciseLadder, scope: Scope) -> None:
+        for index, (previous, rung) in enumerate(itertools.pairwise(ladder.rungs), start=2):
+            if (rung.exercise, rung.sets, rung.cues) == (
+                previous.exercise,
+                previous.sets,
+                previous.cues,
+            ):
+                self.raise_(
+                    "rung_repeated",
+                    scope,
+                    {"rung": index, "previous_rung": index - 1},
+                    f"rung {index} of {line.exercise} repeats rung {index - 1}: "
+                    "a rung on one exercise differs from the one before it in sets or cues",
                 )
 
     def _set_groups(
@@ -465,25 +504,77 @@ class _Checks:
     def _start_load(
         self, session: Session, line: Line, exercise: Mapping[str, object], scope: Scope
     ) -> None:
-        mode = line.load_mode or str(exercise.get("load_mode"))
-        if mode in NO_LOAD_MODES:
-            if line.start_load is not None:
-                self.unknown.append(f"session.{session.id}.line.{line.exercise}.start_load")
+        self._loaded(
+            session,
+            _Loaded(
+                exercise_id=line.exercise,
+                exercise=exercise,
+                mode=line.load_mode or str(exercise.get("load_mode")),
+                start_load=line.start_load,
+                key_path=f"session.{session.id}.line.{line.exercise}.start_load",
+                missing_because=(
+                    None
+                    if line.exercise in self.context.last_exposures
+                    else f"{line.exercise} has no Exposure yet, so the line needs a start_load"
+                ),
+            ),
+            scope,
+        )
+
+    def _rung_start_load(
+        self,
+        session: Session,
+        line: Line,
+        rung: Rung,
+        index: int,
+        exercise: Mapping[str, object] | None,
+        scope: Scope,
+    ) -> None:
+        """A later rung's load is read in its own exercise's mode. Exposures before the rung's
+        start count for nothing on it, so unlike a line's, history never waives it."""
+        key_path = f"session.{session.id}.line.{line.exercise}.scheme.rungs.{index}.start_load"
+        if index == 1:
+            if rung.start_load is not None:
+                self.unknown.append(key_path)
             return
-        if mode not in LOAD_BEARING_MODES:
+        if exercise is None:
             return
-        if line.start_load is None and line.exercise not in self.context.last_exposures:
+        self._loaded(
+            session,
+            _Loaded(
+                exercise_id=rung.exercise,
+                exercise=exercise,
+                mode=str(exercise.get("load_mode")),
+                start_load=rung.start_load,
+                key_path=key_path,
+                missing_because=(
+                    f"rung {index} of {line.exercise} bears a load, so it needs its own start_load"
+                ),
+                rung=index,
+            ),
+            scope,
+        )
+
+    def _loaded(self, session: Session, loaded: _Loaded, scope: Scope) -> None:
+        if loaded.mode in NO_LOAD_MODES:
+            if loaded.start_load is not None:
+                self.unknown.append(loaded.key_path)
+            return
+        if loaded.mode not in LOAD_BEARING_MODES:
+            return
+        if loaded.start_load is None and loaded.missing_because is not None:
             self.raise_(
                 "start_load_missing",
                 scope,
-                {"exercise_id": line.exercise},
-                f"{line.exercise} has no Exposure yet, so the line needs a start_load",
+                {"exercise_id": loaded.exercise_id, **loaded.rung_param},
+                loaded.missing_because,
+                distinct=loaded.distinct,
             )
         location = session.location or self.form.location
         racks = self.context.racks.get(location)
-        if mode not in RACK_MODES or racks is None:
+        if loaded.mode not in RACK_MODES or racks is None:
             return
-        kind = str(exercise.get("equipment_kind"))
+        kind = str(loaded.exercise.get("equipment_kind"))
         rack = racks.get(kind)
         if rack is None:
             self.raise_(
@@ -491,15 +582,22 @@ class _Checks:
                 scope,
                 {"equipment_kind": kind, "location": location},
                 f"{location} maps no implement to {kind} in its implements",
+                distinct=kind,
             )
             return
-        if line.start_load is not None and not on_rack(rack, line.start_load):
-            nearest = list(rows_beside(rack, line.start_load))
+        if loaded.start_load is not None and not on_rack(rack, loaded.start_load):
+            nearest = list(rows_beside(rack, loaded.start_load))
             self.raise_(
                 "start_load_off_rack",
                 scope,
-                {"start_load": line.start_load, "location": location, "nearest_rows": nearest},
-                f"{line.start_load} is not on the {kind} rack at {location}; nearest {nearest}",
+                {
+                    "start_load": loaded.start_load,
+                    "location": location,
+                    "nearest_rows": nearest,
+                    **loaded.rung_param,
+                },
+                f"{loaded.start_load} is not on the {kind} rack at {location}; nearest {nearest}",
+                distinct=loaded.distinct,
             )
 
     def _template(self, id_: str, exercise: Mapping[str, object], scope: Scope) -> None:
@@ -514,6 +612,7 @@ class _Checks:
                 scope,
                 {"exercise_id": id_, "missing_columns": missing},
                 f"{id_} has no Hevy template and lacks {', '.join(missing)}",
+                distinct=id_,
             )
         for column, registry in TEMPLATE_REGISTRIES.items():
             value = exercise.get(column)
@@ -524,7 +623,7 @@ class _Checks:
                     {"exercise_id": id_, "column": column, "value": value},
                     f"{id_} has {column} {value!r}, which Hevy does not accept; "
                     f"coach schema --registry {registry.name}",
-                    distinct=column,
+                    distinct=f"{id_}#{column}",
                 )
 
     def unknown_keys(self) -> None:
@@ -584,9 +683,8 @@ def _instead(text: str, replaced: Sequence[str]) -> str:
 
 
 def _exercises_of(line: Line) -> tuple[str, ...]:
-    """The line's exercise and each later rung's: every exercise the line can put in a session."""
-    ladder = line.scheme.ladder
-    return (line.exercise, *(r.exercise for r in ladder.rungs[1:])) if ladder else (line.exercise,)
+    """Each distinct exercise the line can put in a session: its own and its rungs'."""
+    return tuple(dict.fromkeys((line.exercise, *line.rung_exercises)))
 
 
 def _off_rung_shape(group: SetGroup) -> str | None:

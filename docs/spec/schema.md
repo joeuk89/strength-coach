@@ -211,18 +211,22 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
   position     INTEGER NOT NULL,           -- order within the plan
+  rung         INTEGER,                    -- the ladder rung this row prescribes, from 1; NULL off a ladder and on rows frozen before m0004
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
   flags        TEXT NOT NULL,              -- JSON [Flag]
   change       TEXT NOT NULL,
-  PRIMARY KEY (plan_id, session_id, date, exercise_id)
+  PRIMARY KEY (plan_id, session_id, date, exercise_id),
+  UNIQUE (plan_id, position)
 );
 ```
 
 `plan apply` freezes each line's `position`, its order within the plan, counting from 1 through
 the Draft's sessions. A plan's rows read back by date and position, which is the Draft's order
-because its sessions are always in date order.
+because its sessions are always in date order. On an `exercise_ladder` line, `rung` freezes the
+rung the week prescribes, after any return-band step back: rungs may share an exercise (ADR 0025),
+so `exercise_id` alone does not tell them apart.
 
 A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
 in force on that date; a past plan's sessions are read from its `prescription` rows.
@@ -640,6 +644,13 @@ new store. `upgrade` merges it: a catalogue id the store lacks is inserted, an i
 is left exactly as it stands, whatever the catalogue now says, because the instance's row may
 carry an athlete's edit (`[[exercise]]`) or a verified template id. No verb deletes an
 `exercise` row. The seed content is `cutover.md`'s (the old library's catalogue pairs and the built-in templates the history uses).
+
+`m0003` is the one migration of seeded catalogue rows (ADR 0024). It moves a `source = 'catalogue'`
+row whose muscles still hold the seeded value off the retired muscles `cardio` and `full_body`.
+Every other row stands: an athlete-edited row keeps `cardio` or `full_body`, and adopt refuses it
+with `unknown_muscle` when a Draft references it. The fix is the Draft's own declaration of the
+row; an `[[exercise]]` record refuses a change to `muscles` on a row the library holds, with
+`state_conflict`.
 
 ## Export
 

@@ -149,7 +149,7 @@ def test_a_recorded_check_ins_card_reads_its_own_readiness() -> None:
     conn = proposed_and_recorded()
     row = check_ins.current(conn)[-1]
 
-    card = record_card(conn, row, units="lb", bodyweight_units="kg")
+    card = record_card(conn, row, units="lb", bodyweight_units="kg", zone=datetime.UTC)
 
     assert dict(field_of(card, "block").facts)["proposal"] == "light_week"
 

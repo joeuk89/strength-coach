@@ -298,9 +298,7 @@ tier = "core"
 )
 
 
-# The balance-board ladder of docs/spec/program.md ("Worked example: a balance-board
-# ladder"), under a minimal version header.
-BALANCE_BOARD_DRAFT = """\
+BALANCE_STANCES_DRAFT = """\
 name = "Daily balance practice"
 kind = "redesign"
 because = "a balance board joined the daily practice"
@@ -385,4 +383,123 @@ load_mode = "duration"
 equipment_kind = "bodyweight"
 pattern = "balance"
 muscles = { primary = [], secondary = [] }
+"""
+
+
+# The two worked ladders of docs/spec/program.md ("Worked example: a balance-board ladder",
+# "Worked example: a pull-up negatives ladder").
+BALANCE_HOLDS_DRAFT = """\
+name = "Daily balance practice"
+kind = "redesign"
+because = "a balance board joined the daily practice"
+emphasis = "hypertrophy"
+location = "home"
+
+[schedule]
+rotation = ["A"]
+
+[[session]]
+id = "daily-balance"
+title = "Daily practice · Balance board"
+kind = "practice"
+tier = "optional"
+cadence = "daily"
+
+  [[session.line]]
+  exercise = "custom_balance_board_hold"
+  rest_s = 30
+
+    [session.line.scheme]
+    name = "exercise_ladder"
+    advance = { exposures = 2 }
+
+    [[session.line.scheme.rungs]]
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 30, rpe = 5 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_hold"
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 40, rpe = 5 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_hold"
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 50, rpe = 6 }]
+    advance = { exposures = 3 }
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_balance_board_hold"
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 60, rpe = 6 }]
+
+[exercise.custom_balance_board_hold]
+name = "Balance board hold"
+load_mode = "duration"
+equipment_kind = "bodyweight"
+pattern = "balance"
+muscles = { primary = [], secondary = [] }
+hevy_title = "Balance Board Hold"
+hevy_exercise_type = "duration"
+hevy_equipment = "other"
+hevy_muscle_group = "other"
+"""
+
+PULL_UP_NEGATIVES_DRAFT = """\
+name = "Pull day around the negatives"
+kind = "redesign"
+because = "the strict pull-up is built on longer negatives"
+emphasis = "hypertrophy"
+location = "home"
+
+[schedule]
+rotation = ["A"]
+
+[schedule.A]
+sat = "pull"
+
+[[session]]
+id = "pull"
+title = "Sat — Pull: pull-up negatives"
+kind = "lifting"
+tier = "core"
+minutes = 45
+
+  [[session.line]]
+  exercise = "negative_pull_up"
+  rest_s = 120
+
+    [session.line.scheme]
+    name = "exercise_ladder"
+
+    [[session.line.scheme.rungs]]
+    cues = "jump or step to the top · lower for 4 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "negative_pull_up"
+    cues = "jump or step to the top · lower for 6 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "negative_pull_up"
+    cues = "jump or step to the top · lower for 8 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_weighted_negative_pull_up"
+    cues = "dumbbell between the feet · lower for 8 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+    start_load = 10
+
+[exercise.custom_weighted_negative_pull_up]
+name = "Weighted negative pull-up"
+load_mode = "single_implement"
+equipment_kind = "dumbbell"
+pattern = "vertical_pull"
+muscles = { primary = ["lats"], secondary = ["biceps", "upper_back"] }
+hevy_title = "Weighted Negative Pull Up"
+hevy_exercise_type = "weight_reps"
+hevy_equipment = "dumbbell"
+hevy_muscle_group = "lats"
 """

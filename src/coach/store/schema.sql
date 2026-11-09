@@ -128,12 +128,14 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
   date         TEXT NOT NULL,
   exercise_id  TEXT NOT NULL REFERENCES exercise(id),
   position     INTEGER NOT NULL,           -- order within the plan
+  rung         INTEGER,                    -- the ladder rung this row prescribes, from 1; NULL off a ladder and on rows frozen before m0004
   set_groups   TEXT NOT NULL,              -- JSON [{type, load, load_kg, reps|range|duration_s, rpe}]; load is athlete units for pages, load_kg the Hevy-bound value the Write plan hash covers (ADR 0006)
   derived_from TEXT NOT NULL,              -- 'exposure:<workout>/<exercise>' or 'start_load'
   steps        TEXT NOT NULL,              -- JSON [{step, from, to, cause}]
   flags        TEXT NOT NULL,              -- JSON [Flag]
   change       TEXT NOT NULL,
-  PRIMARY KEY (plan_id, session_id, date, exercise_id)
+  PRIMARY KEY (plan_id, session_id, date, exercise_id),
+  UNIQUE (plan_id, position)
 );
 
 CREATE TABLE workout (                     -- append-only, versioned by (id, updated_at)

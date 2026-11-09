@@ -128,7 +128,7 @@ def parse_niggle(f: Fields) -> NiggleRecord:
             f"{f.where}: a resolved event carries no constraints; a resolved niggle binds nothing",
         )
     opened = (f.date("opened") or date) if named is None else None
-    rehab = f.subtable("rehab")
+    rehab = f.table("rehab")
     if rehab is not None and named is not None:
         raise Invalid(
             "invalid_argument",
@@ -193,7 +193,7 @@ def _rehab_line(position: int, f: Fields) -> Json:
             "position": position,
             "load_mode": f.term("load_mode", LOAD_MODES),
             "set_groups": [_set_group(g) for g in groups],
-            "rest_s": required(f.integer("rest_s", required=True)),
+            "rest_s": required(f.whole("rest_s", required=True)),
             "cues": f.text("cues"),
             "scheme": {"name": "hold"},
             "start_load": f.number("start_load"),
@@ -204,11 +204,11 @@ def _rehab_line(position: int, f: Fields) -> Json:
 
 def _set_group(f: Fields) -> Json:
     group: dict[str, object] = {
-        "count": required(f.integer("count", required=True)),
+        "count": required(f.whole("count", required=True)),
         "type": f.term("type", SET_TYPES) or "working",
     }
     reps = f.raw("reps")
-    duration = f.integer("duration_s")
+    duration = f.whole("duration_s")
     if (reps is None) == (duration is None):
         raise f.wrong("reps", "given, or duration_s; exactly one of them")
     if reps is not None:
@@ -299,7 +299,7 @@ def parse_decision(f: Fields) -> DecisionRecord:
 def _decision_param(f: Fields, name: str) -> object | None:
     match name:
         case "override":
-            return _line_override(f.subtable(name) or _missing(f, name))
+            return _line_override(f.table(name) or _missing(f, name))
         case "flag":
             return _calendar_free_flag(f, required(f.text(name, required=True)))
         case "params_hash" | "activity_kind":
@@ -313,7 +313,7 @@ def _decision_param(f: Fields, name: str) -> object | None:
         case "ref":
             return str(f.ref(name, ("rn",)) or _missing(f, name))
         case "rung":
-            rung = required(f.integer(name, required=True))
+            rung = required(f.whole(name, required=True))
             if rung < 1:
                 raise f.wrong(name, "a rung number of at least 1")
             return rung
@@ -334,8 +334,8 @@ def _matching(f: Fields, name: str, pattern: re.Pattern[str], wanted: str) -> st
 
 def _line_override(f: Fields) -> Json:
     """Checked as the plan's own line override is, and stored as written."""
-    line_override(f.table, where=f.where)
-    return dict(f.table)
+    line_override(f.values, where=f.where)
+    return dict(f.values)
 
 
 def _calendar_free_flag(f: Fields, text: str) -> str:

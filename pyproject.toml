@@ -27,7 +27,7 @@ addopts = [
     "-p",
     "pytester",
     "-p",
-    "support.wall_time",
+    "support.time_guard",
     "-p",
     "support.no_network",
     "-p",

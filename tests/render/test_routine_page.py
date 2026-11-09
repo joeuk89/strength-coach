@@ -4,7 +4,8 @@ import re
 import zlib
 
 from coach.core.config import ImplementChoice
-from coach.core.pages import PageLine, PageRung, PlatePoolKit, RoutinePage
+from coach.core.exercise_ladder import RungShape
+from coach.core.pages import PageLine, PlatePoolKit, RoutinePage
 from coach.core.rack import ListedRack, RackRow
 from coach.render.routine_page import routine_page
 
@@ -179,17 +180,19 @@ def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked(
         equipment_kind="bodyweight",
         set_groups=({"type": "working", "count": 2, "duration_s": 30, "rpe": 5},),
         ladder=(
-            PageRung(
+            RungShape(
                 rung=1,
-                name="Balance board: two feet, still",
+                exercise="custom_balance_board_stand",
+                label="rung 1 · 2×30 s @5 · near a wall",
                 cues="near a wall",
                 set_groups=({"count": 2, "duration_s": 30, "rpe": 5},),
                 criterion={"duration_s": 30, "rpe_at_most": 5, "exposures": 2},
                 standing=True,
             ),
-            PageRung(
+            RungShape(
                 rung=2,
-                name="Balance board: one foot, eyes closed",
+                exercise="custom_balance_board_one_foot",
+                label="rung 2 · Balance board: one foot, eyes closed · 4×8 @7",
                 cues=None,
                 set_groups=({"count": 4, "reps": 8, "rpe": 7},),
                 criterion={"manual": True},
@@ -203,16 +206,18 @@ def test_a_ladder_line_prints_every_rung_under_it_with_the_standing_rung_marked(
 
     assert (
         "Ladder:\n\n"
-        "1. **Balance board: two feet, still** (standing): 2×30 s @5. near a wall. "
+        "- **rung 1 · 2×30 s @5 · near a wall** (standing). "
         "Climb on 30 s at RPE 5 or under, 2 exposures running.\n"
-        "2. Balance board: one foot, eyes closed: 4×8 @7. Climb on the athlete's word."
+        "- rung 2 · Balance board: one foot, eyes closed · 4×8 @7. "
+        "Climb when you and the coach agree."
     ) in text
 
 
 def test_a_rung_criterion_with_neither_reps_nor_duration_names_only_what_it_holds() -> None:
-    rung = PageRung(
+    rung = RungShape(
         rung=1,
-        name="Push-up",
+        exercise="push_up",
+        label="rung 1 · 3×8+ @8",
         cues=None,
         set_groups=({"count": 3, "reps": "8+", "rpe": 8},),
         criterion={"rpe_at_most": 8, "exposures": 2},
@@ -230,3 +235,10 @@ def test_a_rung_criterion_with_neither_reps_nor_duration_names_only_what_it_hold
 
     assert "None" not in text
     assert "Climb on RPE 8 or under, 2 exposures running." in text
+
+
+def test_a_routine_page_says_the_sessions_name_and_not_its_id() -> None:
+    text = routine_page(a_page(), units="lb")
+
+    assert "Session Lower A at home as written for the week of 2026-11-02." in text
+    assert "lower" not in text

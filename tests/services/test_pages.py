@@ -107,7 +107,9 @@ def a_curl_page(load: float, *, with_tables: bool = True) -> str:
     kit = kit_files(tables=split_hardware_tables()["tables"])
     if not with_tables:
         kit = dataclasses.replace(kit, tables=None)
-    facts = page_facts(conn, config=a_config_with_both_screws(), kits=(kit,), profile=None)
+    facts = page_facts(
+        conn, config=a_config_with_both_screws(), kits=(kit,), profile=None, zone=datetime.UTC
+    )
     return render_pages(facts)["pages/routines/lower.md"]
 
 
@@ -202,11 +204,11 @@ def test_the_athlete_page_carries_the_profile_verbatim_and_the_last_three_reads(
 def test_the_progress_page_shows_each_priority_lifts_e1rm_now() -> None:
     conn = two_closed_blocks(bench_tops=(100, 105, 105, 110, 115, 115), pull_up_reps=(6,) * 6)
 
-    page = render_pages(page_facts(conn, config=a_config(), kits=(), profile=None))[
-        "pages/progress.md"
-    ]
+    page = render_pages(
+        page_facts(conn, config=a_config(), kits=(), profile=None, zone=datetime.UTC)
+    )["pages/progress.md"]
 
-    bench = next(line for line in page.splitlines() if line.startswith("| bb_bench_press"))
+    bench = next(line for line in page.splitlines() if line.startswith("| Bench Press (Barbell)"))
     assert bench.split(" | ")[2] == "141.83"
 
 
@@ -369,9 +371,10 @@ def test_a_routine_page_prints_a_ladder_line_rung_by_rung_from_the_version() -> 
 
     assert (
         "Ladder:\n\n"
-        "1. **Plank** (standing): 2×30 s @6. near a wall. "
+        "- **rung 1 · 2×30 s @6 · near a wall** (standing). "
         "Climb on 30 s at RPE 6 or under, 2 exposures running.\n"
-        "2. Side Plank: 2×30 s @6. Climb on 30 s at RPE 6 or under, 2 exposures running."
+        "- rung 2 · Side Plank · 2×30 s @6. "
+        "Climb on 30 s at RPE 6 or under, 2 exposures running."
     ) in page
     assert page.count("Ladder:") == 1
 
@@ -397,8 +400,8 @@ def test_a_routine_page_marks_the_rung_a_ladder_rung_decision_names() -> None:
 
     page = the_pages(conn, kits=(kit_files(),))["pages/routines/lower.md"]
 
-    assert "1. Plank: 2×30 s @6." in page
-    assert "2. **Side Plank** (standing): 2×30 s @6." in page
+    assert "- rung 1 · Plank · 2×30 s @6." in page
+    assert "- **rung 2 · 2×30 s @6** (standing)." in page
     assert page.count("Ladder:") == 1
 
 
@@ -412,3 +415,42 @@ def test_a_check_in_record_shows_the_cards_ladders_field() -> None:
 
     assert f"## Ladders\n\n{ladders}\n" in page
     assert "| dead_bug |" in ladders
+
+
+def test_the_progress_page_names_each_lift_and_shows_no_exercise_id() -> None:
+    page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
+
+    rows = page.splitlines()
+    assert [row.split(" | ")[0] for row in rows if "| top_backoff |" in row] == [
+        "| Bench Press (Barbell)"
+    ]
+    assert [row.split(" | ")[0] for row in rows if "| double_progression |" in row] == ["| Pull Up"]
+    assert "| Bench Press (Barbell) | kind load_x_reps, load 110, reps 5 | – | load 10 |" in rows
+    assert "bb_bench_press" not in page
+    assert "pull_up" not in page
+
+
+def test_the_progress_page_names_each_priority_lift_in_its_dose() -> None:
+    page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
+
+    assert "| Bench Press (Barbell) 4, Pull Up 6 |" in page
+    assert "Target: per_muscle 10, Bench Press (Barbell) 8, Pull Up 8." in page
+
+
+def test_the_progress_page_names_the_lift_a_signal_is_about() -> None:
+    page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
+
+    assert "warning `cadence_slow`: Bench Press (Barbell) on top_backoff: cadence slow" in page
+    assert "warning `cadence_slow`: Pull Up on double_progression: cadence slow" in page
+
+
+def test_the_progress_page_shows_an_id_with_no_name_as_it_stands() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True)
+    facts = page_facts(conn, config=a_config(), kits=(), profile=None, zone=datetime.UTC)
+    nameless = dataclasses.replace(facts, names=dataclasses.replace(facts.names, exercises={}))
+
+    page = render_pages(nameless)["pages/progress.md"]
+
+    assert "| bb_bench_press | top_backoff |" in page
+    assert "| bb_bench_press 4, pull_up 6 |" in page
+    assert "warning `cadence_slow`: bb_bench_press on top_backoff" in page

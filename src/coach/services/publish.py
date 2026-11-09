@@ -25,7 +25,7 @@ def publish(
     config: Config,
     kits: Sequence[KitFiles] = (),
     profile: str | None = None,
-    zone: datetime.tzinfo = datetime.UTC,
+    zone: datetime.tzinfo,
 ) -> Publication:
     """What `publish` writes from the store: the export (schema.md, "Export") and the pages
     (ADR 0012)."""

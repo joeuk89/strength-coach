@@ -228,7 +228,7 @@ Compact summary by default; `--full` adds per-line history.
 | --- | --- |
 | Priority lifts | per lift: e1RM now, change over the closed block and over the last three, best load for reps, stall streak and resets under the current scheme, cadence signal if any |
 | Milestones | per milestone: distance (load, reps or ×BW to go) or the date reached |
-| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion since the rung's start and whether it is met; the same rows as the check-in card's Ladders field |
+| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion since the rung's start, whether it is met and whether an acknowledgement holds the offer (`held`); the same rows as the check-in card's Ladders field |
 | Dose | per muscle and per priority lift: hard sets achieved against target, by week of the block |
 | Adherence | core sessions by tier, misses by tag |
 | Phase | kind, target rate, 14-day bodyweight trend against it, the `until` condition and whether it is met |

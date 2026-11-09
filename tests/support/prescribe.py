@@ -14,6 +14,7 @@ from coach.core.prescription import (
     PlannedSession,
     PrescribeRequest,
     ProgramVersion,
+    RungNaming,
 )
 from coach.core.program.form import (
     Deload,
@@ -116,6 +117,7 @@ def a_request(
         exposures=exposures,
         racks={"home": HOME_RACKS if racks is None else racks},
         planned=PlannedSession("lower", on, "home", kind, lines),
+        rung_naming=RungNaming("lb", {}),
         **request,
     )
 
@@ -169,5 +171,6 @@ def a_conditioning_request(
         exposures=(),
         racks={"home": {}},
         planned=PlannedSession("cond", PLANNED, "home", "conditioning", lines),
+        rung_naming=RungNaming("lb", {}),
         activities={} if activity is None else {"cond": activity},
     )

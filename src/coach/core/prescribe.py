@@ -17,8 +17,10 @@ from coach.core.e1rm import e1rm
 from coach.core.e1rm_checks import over_rep_cap, top_set_above_e1rm
 from coach.core.exercise_ladder import (
     OPENING_RUNG,
+    LineRef,
     StandingRung,
     climb_offer,
+    rung_anchors,
     rung_line,
     standing_rung,
 )
@@ -36,6 +38,7 @@ from coach.core.prescription import (
     PrescribeRequest,
     SessionPrescription,
     Step,
+    rung_step_back,
 )
 from coach.core.program.form import (
     LOAD_BEARING_MODES,
@@ -82,6 +85,8 @@ class _Derivation:
     steps: list[Step] = field(default_factory=list[Step])
     flags: list[Flag] = field(default_factory=list[Flag])
     standing: StandingRung | None = None
+    week_rung: int | None = None
+    rung_anchors: tuple[Exposure, ...] | None = None
 
     @property
     def scope(self) -> Scope:
@@ -93,16 +98,11 @@ class _Derivation:
             exercise_id=self.line.exercise,
         )
 
-    @property
-    def rungs(self) -> tuple[str, ...]:
-        ladder = self.line.scheme.ladder
-        return () if ladder is None else tuple(rung.exercise for rung in ladder.rungs)
-
     def derive(self) -> LinePrescription | None:
         overrides = self._overrides()
         if "drop_line" in overrides:
             return None
-        ladder = self.line.scheme.ladder
+        ladder = self.line.ladder
         authored = self.line if ladder is None else self._week_rung(ladder)
         if "swap_exercise" in overrides:
             authored = self._swap(authored, *overrides["swap_exercise"])
@@ -133,7 +133,7 @@ class _Derivation:
         rack = self._rack(exercise, mode)
         start = None if authored.start_load is None else Load(authored.start_load, mode)
         found = anchor(
-            self.request.exposures,
+            self.request.exposures if self.rung_anchors is None else self.rung_anchors,
             exercise_id=authored.exercise,
             session_id=self.request.planned.session_id,
             on=self.request.planned.date,
@@ -152,7 +152,7 @@ class _Derivation:
                 rack,
                 self.scope,
                 read,
-                since=None if self.standing is None else self.standing.since,
+                standing=self.standing,
             ),
             self.steps,
             self.flags,
@@ -170,7 +170,7 @@ class _Derivation:
                 rack,
                 self.scope,
                 e1rm=read.best,
-                rung_exercises=self.rungs,
+                rung_exercises=self.line.rung_exercises,
             )
             opening = _first(move.proposal)
             loaded = mode in LOAD_BEARING_MODES
@@ -200,7 +200,7 @@ class _Derivation:
             scheme_load=moved,
             pin=pinned,
             e1rm=read.best,
-            rung_exercises=self.rungs,
+            rung_exercises=self.line.rung_exercises,
         )
         if pinned is not None:
             bounded = bound(context, _pinned(move.proposal, pinned), "hold", self.steps, self.flags)
@@ -297,25 +297,25 @@ class _Derivation:
         return found
 
     def _week_rung(self, ladder: ExerciseLadder) -> Line:
-        """The standing rung, or in a return band the rung the band steps back to; the climb
-        offer reads the standing rung either way."""
+        """The standing rung, or in a return band the rung the band steps back to; only a week on
+        the standing rung offers the climb."""
         request, planned = self.request, self.request.planned
         standing = standing_rung(
             request.decisions,
             ladder,
-            session_id=planned.session_id,
-            line_key=self.line.exercise,
+            line=LineRef(planned.session_id, self.line.exercise),
             adopted=request.adopted,
         )
         self.standing = standing
-        standing_exercise = self.rungs[standing.index - 1]
+        rungs = self.line.rung_exercises
+        standing_exercise = rungs[standing.index - 1]
         days = line_days_off(
             request.exposures,
             request.trained,
             exercise_id=standing_exercise,
             session_id=planned.session_id,
             on=planned.date,
-            rungs=self.rungs,
+            rungs=rungs,
         )
         week = standing.index
         band = return_band(days.days)
@@ -323,15 +323,29 @@ class _Derivation:
             week = max(OPENING_RUNG, standing.index - band.rungs_back)
             if week != standing.index:
                 cause = f"return {band.label}, {days.days} days off"
-                self.steps.append(Step("cut", standing_exercise, self.rungs[week - 1], cause))
-        self._keep(
-            climb_offer(ladder, standing, request.exposures, scope=self.scope, on=planned.date)
-        )
-        return rung_line(self.line, ladder, week)
+                self.steps.append(rung_step_back(standing.index, week, cause))
+        self.week_rung = week
+        if week == standing.index:
+            self._keep(
+                climb_offer(
+                    self.line,
+                    ladder,
+                    standing,
+                    request.exposures,
+                    scope=self.scope,
+                    on=planned.date,
+                    naming=request.rung_naming,
+                )
+            )
+        line = rung_line(self.line, ladder, week)
+        if week != OPENING_RUNG and line.start_load is not None:
+            self.rung_anchors = rung_anchors(request.exposures, standing, week, planned.session_id)
+        return line
 
     def _swap(self, authored: Line, step: str, swap: PlanOverride) -> Line:
         """The other exercise under the line's scheme and sets, with the swap's own start load
         and load mode: nothing of the swapped-out exercise carries."""
+        self.rung_anchors = None
         to = str(swap.params["to"])
         self.steps.append(Step(step, authored.exercise, to, "swap_exercise"))
         start = cast(float | None, swap.params.get("start_load"))
@@ -395,6 +409,7 @@ class _Derivation:
             steps=tuple(self.steps),
             flags=tuple(self.flags),
             change=change,
+            rung=self.week_rung,
         )
 
     def _groups(

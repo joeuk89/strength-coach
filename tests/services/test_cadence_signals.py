@@ -1,3 +1,5 @@
+import datetime
+
 from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, two_closed_blocks
 from support.check_in_cards import opened
 from support.clock import FixedClock, at
@@ -165,5 +167,57 @@ def test_a_ladder_standing_on_a_rung_with_no_exposures_raises_no_signal() -> Non
 
 def test_a_practice_line_stalled_across_two_blocks_raises_no_cadence_slow() -> None:
     conn = two_closed_blocks(thursday_pull_ups=True, practice_pull_ups=True)
+
+    assert "pull_up" not in signals_at_check_in(conn)
+
+
+TEMPO_LADDER = a_ladder_line(
+    "pull_up",
+    a_rung(sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 4 s"),
+    a_rung("pull_up", sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 6 s"),
+)
+CLIMBED_TO_RUNG_2 = (
+    b'[[decision]]\nkind = "ladder_rung"\nsession = "push"\nexercise = "pull_up"\n'
+    b'rung = 2\nbecause = "progress"\ntext = "on to 6 s lowers"\n'
+)
+
+
+def test_a_shared_exercise_ladder_stalled_on_its_first_rung_raises_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, pull_up_line=TEMPO_LADDER)
+
+    assert signals_at_check_in(conn)["pull_up"].code == "cadence_slow"
+
+
+def test_exposures_before_a_climb_on_a_shared_exercise_raise_no_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, pull_up_line=TEMPO_LADDER)
+    record(conn, CLIMBED_TO_RUNG_2, file="d.toml", clock=FixedClock(at(BOUNDARY)))
+
+    assert "pull_up" not in signals_at_check_in(conn)
+
+
+def test_a_practice_line_listed_first_on_another_scheme_leaves_a_lifting_lines_signal() -> None:
+    drill = a_line(
+        "pull_up", sets=[{"count": 3, "reps": 5}], scheme={"name": "hold"}, start_load=None
+    )
+    conn = two_closed_blocks(thursday_pull_ups=True, drill_line=drill)
+
+    found = signals_at_check_in(conn)
+
+    assert (found["pull_up"].code, found["pull_up"].params["scheme"]) == (
+        "cadence_slow",
+        "double_progression",
+    )
+
+
+def test_first_rung_exposures_before_its_adoption_raise_no_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, pull_up_line=TEMPO_LADDER)
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, TEMPO_LADDER), kind="amend", because="tempo")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY - datetime.timedelta(days=1))),
+    )
 
     assert "pull_up" not in signals_at_check_in(conn)

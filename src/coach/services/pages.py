@@ -7,7 +7,7 @@ from typing import cast
 
 from coach.core.closed_week.match import PlannedRef
 from coach.core.config import Config, PlatePoolLocation, Units
-from coach.core.exercise_ladder import OPENING_RUNG, full_criterion
+from coach.core.exercise_ladder import OPENING_RUNG, LineRef, RungShape, rung_shapes
 from coach.core.kit import SHORT_HASH_LENGTH, KitFiles, parse_kit_tables
 from coach.core.pages import (
     AthletePage,
@@ -16,14 +16,15 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
-    PageRung,
+    PageNames,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
     RoutinePage,
     WeekPage,
 )
-from coach.core.program.form import Session, group_document
+from coach.core.prescription import RungNaming
+from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
@@ -58,7 +59,7 @@ def page_facts(
     config: Config,
     kits: Sequence[KitFiles],
     profile: str | None,
-    zone: datetime.tzinfo = datetime.UTC,
+    zone: datetime.tzinfo,
 ) -> Pages:
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
@@ -80,8 +81,12 @@ def page_facts(
             bodyweight_units=bodyweight_units,
             zone=zone,
         ),
+        names=PageNames(
+            sessions={s.id: s.title for s in _authored(conn, programs.latest(conn)).values()},
+            exercises={id_: name for id_, (name, _) in names.items()},
+        ),
         week=_week(conn, names),
-        routines=_routines(conn, config, kits, names),
+        routines=_routines(conn, config, kits, names, zone),
         check_ins=records,
     )
 
@@ -195,8 +200,9 @@ def _routines(
     config: Config,
     kits: Sequence[KitFiles],
     names: Mapping[str, tuple[str, str | None]],
+    zone: datetime.tzinfo,
 ) -> tuple[RoutinePage, ...]:
-    return tuple(_routine(conn, live, config, kits, names) for live in routine_map.live(conn))
+    return tuple(_routine(conn, live, config, kits, names, zone) for live in routine_map.live(conn))
 
 
 def _routine(
@@ -205,6 +211,7 @@ def _routine(
     config: Config,
     kits: Sequence[KitFiles],
     names: Mapping[str, tuple[str, str | None]],
+    zone: datetime.tzinfo,
 ) -> RoutinePage:
     plan = week_plans.by_id(conn, live.plan_id) if live.plan_id else None
     version = _version_of(conn, plan)
@@ -223,8 +230,11 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
-    standing = standing_rungs(version.form, rung_decisions(conn)) if version else {}
-    ladders = _ladders(session, names, standing) if session else {}
+    standing = standing_rungs(version.form, rung_decisions(conn, zone)) if version else {}
+    naming = RungNaming(
+        config.athlete.units, {exercise: name for exercise, (name, _) in names.items()}
+    )
+    ladders = _ladders(session, naming, standing) if session else {}
     return RoutinePage(
         session_id=live.session_id,
         title=_title(sessions, live.session_id),
@@ -240,29 +250,23 @@ def _routine(
 
 def _ladders(
     session: Session,
-    names: Mapping[str, tuple[str, str | None]],
-    standing: Mapping[tuple[str, str], int],
-) -> dict[str, tuple[PageRung, ...]]:
+    naming: RungNaming,
+    standing: Mapping[LineRef, int],
+) -> dict[str, tuple[RungShape, ...]]:
     """Each `exercise_ladder` line's rungs, keyed on every rung's exercise, since the frozen
     row names the rung the week prescribed."""
-    found: dict[str, tuple[PageRung, ...]] = {}
+    found: dict[str, tuple[RungShape, ...]] = {}
     for line in session.lines:
-        ladder = line.scheme.ladder
+        ladder = line.ladder
         if ladder is None:
             continue
-        stands_on = standing.get((session.id, line.exercise), OPENING_RUNG)
-        rungs = tuple(
-            PageRung(
-                rung=index,
-                name=names.get(rung.exercise, (rung.exercise, None))[0],
-                cues=rung.cues,
-                set_groups=tuple(group_document(g) for g in rung.sets),
-                criterion=full_criterion(ladder, index).stated(),
-                standing=index == stands_on,
-            )
-            for index, rung in enumerate(ladder.rungs, start=1)
+        rungs = rung_shapes(
+            line,
+            ladder,
+            standing.get(LineRef(session.id, line.exercise), OPENING_RUNG),
+            naming=naming,
         )
-        found |= {rung.exercise: rungs for rung in ladder.rungs}
+        found |= dict.fromkeys(line.rung_exercises, rungs)
     return found
 
 

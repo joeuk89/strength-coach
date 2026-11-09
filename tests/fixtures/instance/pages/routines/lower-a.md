@@ -2,7 +2,7 @@
 
 # Lower-A
 
-Session `lower-a` at gym as written for the week of 2026-10-26.
+Session Lower-A at gym as written for the week of 2026-10-26.
 
 ## Back Squat (Barbell)
 

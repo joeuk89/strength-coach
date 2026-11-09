@@ -1,11 +1,26 @@
 """`coach progress` as a page (docs/spec/goals.md, "`coach progress`")."""
 
+from collections.abc import Mapping
+
 from coach.core.config import Units
+from coach.core.flag import Flag
+from coach.core.pages import PageNames
 from coach.core.progress import Progress
-from coach.render.markdown import bullets, cell, flag_text, page, section, table
+from coach.render.markdown import (
+    MANUAL_CLIMB,
+    bullets,
+    cell,
+    flag_text,
+    marked_rung,
+    page,
+    section,
+    table,
+)
 
 
-def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pin: str) -> str:
+def progress_page(
+    report: Progress, *, names: PageNames, units: Units, bodyweight_units: Units, pin: str
+) -> str:
     block = report.block
     intro = (
         f"Closed Block `{block.id}`, {block.start.isoformat()} to {block.end.isoformat()}."
@@ -31,7 +46,7 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
                 ],
                 [
                     [
-                        lift.exercise_id,
+                        names.exercise(lift.exercise_id),
                         lift.scheme,
                         lift.e1rm_now,
                         lift.change_over_block,
@@ -53,7 +68,7 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
                 ["lift", "target", "reached", "to go"],
                 [
                     [
-                        m.milestone.exercise,
+                        names.exercise(m.milestone.exercise),
                         m.milestone.target.describe(),
                         m.reached.isoformat() if m.reached else None,
                         m.to_go if m.computable else "not computable",
@@ -65,15 +80,25 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
         section(
             "Ladders",
             table(
-                ["line", "standing rung", "exposures toward the criterion", "met"],
+                [
+                    "line",
+                    "standing exercise",
+                    "rungs",
+                    "exposures toward the criterion",
+                    "met",
+                    "held",
+                ],
                 [
                     [
-                        f"{r.session_id}/{r.line_key}",
-                        f"{r.rung} of {r.rungs}, {r.exercise}",
-                        "the athlete's word"
-                        if r.needed is None
-                        else f"{r.exposures} of {r.needed}",
+                        f"{names.session(r.line.session_id)}: {names.exercise(r.line.line_key)}",
+                        names.exercise(r.exercise),
+                        "<br>".join(
+                            marked_rung(label, standing=index == r.rung)
+                            for index, label in enumerate(r.labels, start=1)
+                        ),
+                        MANUAL_CLIMB if r.needed is None else f"{r.exposures} of {r.needed}",
                         r.met,
+                        r.held,
                     ]
                     for r in report.ladders
                 ],
@@ -86,9 +111,12 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
                 for part in (
                     table(
                         ["week", "kind", "muscles", "priority lifts"],
-                        [[w.monday.isoformat(), w.kind, w.muscles, w.lifts] for w in report.dose],
+                        [
+                            [w.monday.isoformat(), w.kind, w.muscles, _named(w.lifts, names)]
+                            for w in report.dose
+                        ],
                     ),
-                    f"Target: {cell(report.dose_target)}." if report.dose_target else "",
+                    f"Target: {_named(report.dose_target, names)}." if report.dose_target else "",
                 )
                 if part
             ),
@@ -126,5 +154,17 @@ def progress_page(report: Progress, *, units: Units, bodyweight_units: Units, pi
             if report.goal is None
             else f"{report.goal.kind}, adopted {report.goal.adopted}.\n\n{report.goal.why}",
         ),
-        section("Signals", bullets([flag_text(s.to_json(), pin) for s in report.signals])),
+        section("Signals", bullets([_signal(s, names, pin) for s in report.signals])),
     )
+
+
+def _named(by_exercise: Mapping[str, int], names: PageNames) -> str:
+    """Pairs, not a renamed mapping: two exercises can share a name and each keeps its figure."""
+    return ", ".join(f"{names.exercise(id_)} {cell(n)}" for id_, n in by_exercise.items())
+
+
+def _signal(flag: Flag, names: PageNames, pin: str) -> str:
+    """A cadence signal's message opens with the exercise its scope names."""
+    exercise = str(flag.scope.exercise_id)
+    message = flag.message.replace(exercise, names.exercise(exercise), 1)
+    return flag_text({**flag.to_json(), "message": message}, pin)

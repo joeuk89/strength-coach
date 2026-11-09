@@ -112,7 +112,7 @@ the acceptance check, nothing else.
 One repo is the package and the plugin (ADR 0007). `pyproject.toml` at the root declares the
 `coach` package under `src/`, two console scripts (`coach` and `coach-hook`), no runtime
 dependencies, a Python 3.12 floor, and a `dev` dependency group holding pytest, pytest-xdist,
-ruff and pyright. Two installs: `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for
+pyyaml, ruff and pyright. Two installs: `uv tool install --editable .` puts `coach` and `coach-hook` on PATH for
 the instances on this machine, and `uv sync` in the checkout makes the dev environment that
 `uv run pytest`, `uv run ruff` and `uv run pyright` use. The suite needs only the second.
 
@@ -165,7 +165,8 @@ Three things are injected into a service, because each has two adapters:
   real one appends to `hevy/writes.jsonl` (a request line before each send, a response line
   after the attempt ends, verify lines after each read-back), the fake keeps the same lines in
   memory. So the audit needs no filesystem in `services` and no fourth seam.
-- **The clock**: `Clock`, a protocol with `today()` and `now()` in the athlete's timezone.
+- **The clock**: `Clock`, a protocol with `zone`, the athlete's timezone, and `today()` and
+  `now()` in it.
   Services take it; `cli` builds it from `[athlete].timezone` and passes it to every service
   and to the real client, whose audit timestamps come from it. It has no sleeper: the 429 wait
   is the real client's, below the protocol.
@@ -206,7 +207,7 @@ in strict mode run in the same `uv run` step. One GitHub Actions workflow runs t
 every push and pull request. No pre-commit framework.
 
 The whole suite aims to run in under thirty seconds on an idle laptop; no test enforces it, and a change that adds noticeably to it says why. A guard fails any single test that
-takes longer than two seconds (six on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated. A test is never cut or weakened to save time. A
+takes longer than two seconds of CPU time (six on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated, and host load cannot fail it. The cost: a test slowed by `time.sleep`, I/O or a subprocess no longer trips the guard. A test is never cut or weakened to save time. A
 module- or session-scoped fixture is setup the tests share, so the guard does not charge it to
 whichever test asks for it first. The
 old suite's eleven minutes against on-disk instances is the anti-pattern this budget rules out.

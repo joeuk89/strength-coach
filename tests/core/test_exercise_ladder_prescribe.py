@@ -1,7 +1,7 @@
 import datetime
 from typing import Any
 
-from support.prescribe import a_request
+from support.prescribe import a_line, a_request
 
 from coach.core.exposure import Exposure, ExposureSet, Matched
 from coach.core.flag import Flag
@@ -160,6 +160,7 @@ def test_two_exposures_meeting_the_criterion_raise_rung_met_naming_the_next_rung
             {
                 "rung": 1,
                 "next": "band_pull_up",
+                "next_rung": 2,
                 "exposures": [
                     "exposure:w-2026-10-19/negative_pull_up",
                     "exposure:w-2026-10-26/negative_pull_up",
@@ -289,7 +290,7 @@ def test_a_return_band_of_22_to_42_days_prescribes_two_rungs_back_with_the_bands
 
     assert line.exercise_id == "negative_pull_up"
     assert [(g.count, g.reps, g.rpe_cap) for g in line.groups] == [(2, 5, 8)]
-    assert line.steps[0] == Step("cut", "pull_up", "negative_pull_up", "return 22–42, 25 days off")
+    assert line.steps[0] == Step("cut", "rung 3", "rung 1", "return 22–42, 25 days off")
 
 
 def test_after_the_return_week_the_line_stands_on_its_rung_again() -> None:
@@ -302,6 +303,43 @@ def test_after_the_return_week_the_line_stands_on_its_rung_again() -> None:
 
     assert line.exercise_id == "pull_up"
     assert shape(line) == [(4, 3, 8)]
+
+
+def test_a_stepped_back_week_offers_no_climb_on_a_rung_that_met_its_criterion() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        bands("2026-09-20"),
+        bands("2026-09-27"),
+        decisions=(ladder_rung(2, "2026-09-01"),),
+    )
+
+    assert line.steps[0].to == "rung 1"
+    assert ladder_flags(line) == []
+
+
+def test_a_stepped_back_week_raises_no_ladder_top() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        pull_ups("2026-09-20"),
+        pull_ups("2026-09-27"),
+        decisions=(ladder_rung(3, "2026-09-01"),),
+    )
+
+    assert line.steps[0].to == "rung 1"
+    assert ladder_flags(line) == []
+
+
+def test_the_climb_is_offered_again_once_the_line_is_back_on_its_rung() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        bands("2026-09-20"),
+        bands("2026-09-27"),
+        negatives("2026-10-26"),
+        decisions=(ladder_rung(2, "2026-09-01"),),
+    )
+
+    assert line.exercise_id == "band_pull_up"
+    assert [code for code, _ in ladder_flags(line)] == ["rung_met"]
 
 
 def test_a_light_week_holds_the_rung_and_cuts_its_sets() -> None:
@@ -339,9 +377,255 @@ def test_a_lifting_ladder_with_the_same_exposures_still_raises_stall_streak() ->
     assert "stall_streak" in [f.code for f in derive(PULL_UP_LADDER, *held).flags]
 
 
+def test_a_practice_ladder_still_raises_ladder_top_on_its_last_rung() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        pull_ups("2026-10-22"),
+        pull_ups("2026-10-29"),
+        decisions=(ladder_rung(3, "2026-10-20"),),
+        kind="practice",
+    )
+
+    assert ladder_flags(line) == [("ladder_top", {"rung": 3})]
+
+
 def test_a_practice_ladder_still_raises_rung_met() -> None:
     held = (negatives("2026-10-19"), negatives("2026-10-26"))
 
     assert [code for code, _ in ladder_flags(derive(PULL_UP_LADDER, *held, kind="practice"))] == [
         "rung_met"
     ]
+
+
+TEMPO_LADDER = ladder_line(
+    Rung("negative_pull_up", (SetGroup(3, reps=4, rpe=8),), "lower for 4 s"),
+    Rung("negative_pull_up", (SetGroup(3, reps=4, rpe=8),), "lower for 6 s"),
+    Rung("negative_pull_up", (SetGroup(3, reps=4, rpe=8),), "lower for 8 s"),
+)
+
+
+def tempo_logs(on: str, reps: int = 4) -> Exposure:
+    return logged("negative_pull_up", on, *[(reps, 8)] * 3)
+
+
+def test_on_a_shared_exercise_exposures_before_the_decision_count_for_nothing() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-12"),
+        tempo_logs("2026-10-19"),
+        decisions=(ladder_rung(2, "2026-10-20"),),
+    )
+
+    assert ladder_flags(line) == []
+
+
+def test_one_exposure_since_a_climb_on_a_shared_exercise_is_not_the_run() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-12"),
+        tempo_logs("2026-10-19"),
+        tempo_logs("2026-10-26"),
+        decisions=(ladder_rung(2, "2026-10-20"),),
+    )
+
+    assert ladder_flags(line) == []
+
+
+def test_the_workout_that_earned_a_tempo_climb_is_not_the_new_rungs_first_exposure() -> None:
+    climbed = (ladder_rung(2, "2026-10-20"),)
+    earned = tempo_logs("2026-10-20")
+
+    one_after = derive(TEMPO_LADDER, earned, tempo_logs("2026-10-22"), decisions=climbed)
+    two_after = derive(
+        TEMPO_LADDER,
+        earned,
+        tempo_logs("2026-10-22"),
+        tempo_logs("2026-10-29"),
+        decisions=climbed,
+    )
+
+    assert ladder_flags(one_after) == []
+    assert ladder_flags(two_after) == [
+        (
+            "rung_met",
+            {
+                "rung": 2,
+                "next": "negative_pull_up",
+                "next_rung": 3,
+                "exposures": [
+                    "exposure:w-2026-10-22/negative_pull_up",
+                    "exposure:w-2026-10-29/negative_pull_up",
+                ],
+            },
+        )
+    ]
+
+
+def test_a_log_the_day_after_the_decision_counts_toward_the_criterion() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-26"),
+        tempo_logs("2026-10-27"),
+        decisions=(ladder_rung(2, "2026-10-25"),),
+    )
+
+    assert [code for code, _ in ladder_flags(line)] == ["rung_met"]
+
+
+def test_a_first_rung_log_on_the_adoption_date_counts_toward_the_criterion() -> None:
+    line = derive(TEMPO_LADDER, tempo_logs(ADOPTED.isoformat()), tempo_logs("2026-10-08"))
+
+    assert ladder_flags(line)[0][1]["exposures"] == [
+        "exposure:w-2026-10-01/negative_pull_up",
+        "exposure:w-2026-10-08/negative_pull_up",
+    ]
+
+
+def test_a_first_rung_log_before_the_adoption_date_does_not_count() -> None:
+    line = derive(TEMPO_LADDER, tempo_logs("2026-09-30"), tempo_logs("2026-10-08"))
+
+    assert ladder_flags(line) == []
+
+
+def test_a_decision_back_to_the_first_rung_counts_from_the_day_after_it() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-20"),
+        tempo_logs("2026-10-22"),
+        decisions=(ladder_rung(1, "2026-10-20"),),
+    )
+
+    assert ladder_flags(line) == []
+
+
+def test_on_a_shared_exercise_rung_met_fires_on_the_criterion_from_the_rungs_start() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-12"),
+        tempo_logs("2026-10-22"),
+        tempo_logs("2026-10-29"),
+        decisions=(ladder_rung(2, "2026-10-20"),),
+    )
+
+    assert ladder_flags(line) == [
+        (
+            "rung_met",
+            {
+                "rung": 2,
+                "next": "negative_pull_up",
+                "next_rung": 3,
+                "exposures": [
+                    "exposure:w-2026-10-22/negative_pull_up",
+                    "exposure:w-2026-10-29/negative_pull_up",
+                ],
+            },
+        )
+    ]
+
+
+def test_the_top_rung_of_a_shared_exercise_raises_ladder_top_from_its_start() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-22"),
+        tempo_logs("2026-10-29"),
+        decisions=(ladder_rung(3, "2026-10-20"),),
+    )
+
+    assert ladder_flags(line) == [("ladder_top", {"rung": 3})]
+
+
+def test_stall_streak_on_a_shared_exercise_reads_only_since_the_rungs_start() -> None:
+    flat = (tempo_logs("2026-10-15", 3), tempo_logs("2026-10-22", 3), tempo_logs("2026-10-29", 3))
+
+    since_before = derive(TEMPO_LADDER, *flat, decisions=(ladder_rung(2, "2026-10-10"),))
+    since_between = derive(TEMPO_LADDER, *flat, decisions=(ladder_rung(2, "2026-10-20"),))
+
+    assert [f.code for f in since_before.flags] == ["stall_streak"]
+    assert [f.code for f in since_between.flags] == []
+
+
+def test_stall_streak_leaves_out_a_log_on_the_decisions_date() -> None:
+    flat = (tempo_logs("2026-10-20", 3), tempo_logs("2026-10-22", 3), tempo_logs("2026-10-29", 3))
+
+    line = derive(TEMPO_LADDER, *flat, decisions=(ladder_rung(2, "2026-10-20"),))
+
+    assert [f.code for f in line.flags] == []
+
+
+def test_stall_streak_counts_a_log_the_day_after_the_decision() -> None:
+    flat = (tempo_logs("2026-10-21", 3), tempo_logs("2026-10-22", 3), tempo_logs("2026-10-29", 3))
+
+    line = derive(TEMPO_LADDER, *flat, decisions=(ladder_rung(2, "2026-10-20"),))
+
+    assert [f.code for f in line.flags] == ["stall_streak"]
+
+
+def test_stall_streak_on_a_first_rung_counts_a_log_on_the_adoption_date_only_from_it() -> None:
+    from_adoption = (
+        tempo_logs(ADOPTED.isoformat(), 3),
+        tempo_logs("2026-10-08", 3),
+        tempo_logs("2026-10-15", 3),
+    )
+    from_before = (
+        tempo_logs("2026-09-30", 3),
+        tempo_logs("2026-10-08", 3),
+        tempo_logs("2026-10-15", 3),
+    )
+
+    assert [f.code for f in derive(TEMPO_LADDER, *from_adoption).flags] == ["stall_streak"]
+    assert [f.code for f in derive(TEMPO_LADDER, *from_before).flags] == []
+
+
+def test_a_return_band_steps_back_by_rungs_on_a_shared_exercise() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-08"),
+        decisions=(ladder_rung(3, "2026-10-01"),),
+    )
+
+    assert line.exercise_id == "negative_pull_up"
+    assert [(g.count, g.reps, g.rpe_cap) for g in line.groups] == [(2, 4, 8)]
+    assert line.steps[0] == Step("cut", "rung 3", "rung 1", "return 22–42, 25 days off")
+
+
+def test_standing_on_a_later_shared_rung_prescribes_that_rungs_sets() -> None:
+    hold = ladder_line(
+        Rung("board_stand", (SetGroup(2, duration_s=30, rpe=6),)),
+        Rung("board_stand", (SetGroup(2, duration_s=40, rpe=6),)),
+    )
+
+    line = derive(hold, decisions=(ladder_rung(2, "2026-10-20", "board_stand"),))
+
+    assert line.exercise_id == "board_stand"
+    assert [(g.count, g.duration_s) for g in line.groups] == [(2, 40)]
+
+
+def test_rung_mets_hash_moves_with_the_rung_on_a_shared_exercise() -> None:
+    on_rung_1 = derive(TEMPO_LADDER, tempo_logs("2026-10-22"), tempo_logs("2026-10-29"))
+    on_rung_2 = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-22"),
+        tempo_logs("2026-10-29"),
+        decisions=(ladder_rung(2, "2026-10-20"),),
+    )
+
+    assert flag(on_rung_1, "rung_met").params_hash != flag(on_rung_2, "rung_met").params_hash
+
+
+def test_a_line_records_the_rung_it_prescribes_and_a_plain_line_records_none() -> None:
+    standing = derive(TEMPO_LADDER, decisions=(ladder_rung(2, "2026-10-20"),))
+    plain = derive(a_line("negative_pull_up", SetGroup(3, reps=5, rpe=8)))
+
+    assert derive(TEMPO_LADDER).rung == 1
+    assert standing.rung == 2
+    assert plain.rung is None
+
+
+def test_a_return_band_records_the_rung_it_steps_back_to() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-08"),
+        decisions=(ladder_rung(3, "2026-10-01"),),
+    )
+
+    assert line.rung == 1

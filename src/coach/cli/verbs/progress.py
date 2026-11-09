@@ -1,5 +1,3 @@
-import datetime
-
 from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall, Json, Outcome
 from coach.cli.instance import open_instance_store
 from coach.cli.pull import PULL_SCHEMA
@@ -25,7 +23,7 @@ def run(call: InstanceCall) -> Outcome:
             units=call.instance.units,
             bodyweight_units=call.instance.bodyweight_units,
             full=call.full,
-            zone=call.clock.now().tzinfo or datetime.UTC,
+            zone=call.clock.zone,
         )
     block = found.block
     result: Json = {
@@ -221,6 +219,8 @@ DECLARATION = Declaration(
                             "type": "boolean",
                         },
                         "next": {"type": ["string", "null"]},
+                        "label": {"type": "string"},
+                        "next_label": {"type": ["string", "null"]},
                     },
                 },
             },

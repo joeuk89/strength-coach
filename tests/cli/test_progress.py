@@ -52,3 +52,13 @@ def test_full_adds_per_line_history(instance: Path) -> None:
     assert "history" not in compact
     assert [h["exercise"] for h in full["history"]] == ["bb_bench_press", "pull_up"]
     assert len(full["history"][0]["exposures"]) == 3
+
+
+def test_the_verb_keeps_exercise_ids_where_the_page_shows_names(instance: Path) -> None:
+    run = coach("progress")
+
+    assert [lift["exercise"] for lift in run.envelope["result"]["priority_lifts"]] == [
+        "bb_bench_press",
+        "pull_up",
+    ]
+    assert run.envelope["warnings"][0]["message"].startswith("pull_up on double_progression")

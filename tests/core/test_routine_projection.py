@@ -1,11 +1,14 @@
 import json
 from typing import Any, cast
 
+import pytest
+
 from coach.core.mirror import Routine, RoutineExercise, RoutineSet
-from coach.core.program.form import Line, SchemeRef, SetGroup
+from coach.core.program.form import Advance, ExerciseLadder, Line, Rung, SchemeRef, SetGroup
 from coach.core.routine_projection import (
     FrozenLine,
     SessionRoutine,
+    authored_exercise,
     drift_class,
     project_routine,
     retired_routine,
@@ -40,6 +43,19 @@ def a_session(*lines: FrozenLine) -> SessionRoutine:
 
 def projected(*lines: FrozenLine) -> dict[str, Any]:
     return cast(dict[str, Any], project_routine(a_session(*lines), TEMPLATES, "lb"))
+
+
+def test_a_line_with_no_swap_was_authored_on_its_own_exercise() -> None:
+    steps = [{"step": "cut", "from": "ab_wheel", "to": "dead_bug", "cause": "return short"}]
+
+    assert authored_exercise("dead_bug", steps) == "dead_bug"
+    assert authored_exercise("dead_bug", ()) == "dead_bug"
+
+
+def test_a_swapped_line_was_authored_on_the_exercise_it_swapped_from() -> None:
+    steps = [{"step": "swap", "from": "db_curl", "to": "db_hammer_curl", "cause": "swap_exercise"}]
+
+    assert authored_exercise("db_hammer_curl", steps) == "db_curl"
 
 
 def test_the_body_sends_the_hevy_kg_each_set_and_no_routine_level_note() -> None:
@@ -198,3 +214,137 @@ def test_a_faithful_read_back_of_a_rep_out_has_no_diff() -> None:
         one["reps"] = 5
 
     assert routine_diff(body, as_routine(hevy_holds)) == ()
+
+
+TEMPO_SETS = (SetGroup(3, reps=4, rpe=8),)
+TEMPO_GROUPS = [{"type": "working", "count": 3, "reps": 4, "rpe": 8}]
+TEMPO_LADDER = Line(
+    "pull_up_negative",
+    TEMPO_SETS,
+    rest_s=120,
+    scheme=SchemeRef(
+        "exercise_ladder",
+        {},
+        ExerciseLadder(
+            (
+                Rung("pull_up_negative", TEMPO_SETS, "lower for 4 s"),
+                Rung("pull_up_negative", TEMPO_SETS, "lower for 6 s"),
+                Rung("weighted_negative", TEMPO_SETS, "lower for 6 s, loaded"),
+            ),
+            Advance(exposures=2),
+        ),
+    ),
+)
+LADDER_TEMPLATES = {"pull_up_negative": "PN-1", "weighted_negative": "WN-1"}
+
+
+def the_ladder_note(frozen: FrozenLine) -> list[str]:
+    session = SessionRoutine(
+        title="Pull",
+        folder_id="9000",
+        week_line="Week of 2026-11-02, rotation week A",
+        authored=(TEMPO_LADDER,),
+        lines=(frozen,),
+        names={"pull_up_negative": "Negative", "weighted_negative": "Weighted"},
+    )
+    body = cast(dict[str, Any], project_routine(session, LADDER_TEMPLATES, "lb"))
+    return body["exercises"][0]["notes"].splitlines()[2:]
+
+
+@pytest.mark.parametrize(
+    ("rung", "cues", "following"),
+    [
+        (1, "lower for 4 s", "rung 2 · 3×4 @8 · lower for 6 s"),
+        (2, "lower for 6 s", "rung 3 · Weighted · 3×4 @8 · lower for 6 s, loaded"),
+    ],
+)
+def test_a_note_on_a_shared_exercise_reads_the_rung_the_row_froze(
+    rung: int, cues: str, following: str
+) -> None:
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, rung=rung)
+
+    assert the_ladder_note(frozen) == [f"Cues: {cues}", f"Next: {following}"]
+
+
+def test_a_note_on_the_top_rung_names_no_next_rung() -> None:
+    frozen = FrozenLine("weighted_negative", TEMPO_GROUPS, rung=3)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]
+
+
+def test_a_swapped_rung_keeps_the_cues_of_the_rung_the_row_froze() -> None:
+    swap = [{"step": "swap", "from": "pull_up_negative", "to": "x", "cause": "swap_exercise"}]
+    frozen = FrozenLine("weighted_negative", TEMPO_GROUPS, swap, rung=1)
+
+    assert the_ladder_note(frozen) == [
+        "Cues: lower for 4 s",
+        "Next: rung 2 · 3×4 @8 · lower for 6 s",
+    ]
+
+
+def test_a_stepped_back_rung_names_only_its_index_and_no_next_rung() -> None:
+    step = [{"step": "cut", "from": "rung 3", "to": "rung 1", "cause": "return 43+, 52 days off"}]
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, step, rung=1)
+
+    assert the_ladder_note(frozen) == [
+        "Cues: lower for 4 s",
+        "This week: rung 1",
+    ]
+
+
+def test_a_step_back_frozen_naming_exercises_keeps_the_note_it_pushed() -> None:
+    step = [
+        {
+            "step": "cut",
+            "from": "pull_up_negative",
+            "to": "pull_up_negative",
+            "cause": "return 43+, 52 days off",
+        }
+    ]
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, step, rung=1)
+
+    assert the_ladder_note(frozen) == [
+        "Cues: lower for 4 s",
+        "Next: rung 2 · 3×4 @8 · lower for 6 s",
+    ]
+
+
+def test_a_row_frozen_before_rungs_were_recorded_finds_its_rung_by_exercise() -> None:
+    frozen = FrozenLine("weighted_negative", TEMPO_GROUPS)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]
+
+
+def test_the_balance_ladder_note_names_the_next_rungs_exercise() -> None:
+    stand = (SetGroup(2, duration_s=45, rpe=6),)
+    tilts = (SetGroup(2, duration_s=60, rpe=6),)
+    board = Line(
+        "board_stand",
+        (),
+        60,
+        SchemeRef(
+            "exercise_ladder",
+            {},
+            ExerciseLadder(
+                (Rung("board_stand", stand, "feet apart"), Rung("board_tilts", tilts, "slowly"))
+            ),
+        ),
+    )
+    session = SessionRoutine(
+        title="Balance",
+        folder_id="9000",
+        week_line="Week of 2026-11-02, rotation week A",
+        authored=(board,),
+        lines=(
+            FrozenLine(
+                "board_stand", [{"type": "working", "count": 2, "duration_s": 45, "rpe": 6}], rung=1
+            ),
+        ),
+        names={"board_stand": "Balance board: stand", "board_tilts": "Balance board: tilts"},
+    )
+
+    body = cast(dict[str, Any], project_routine(session, {"board_stand": "B-1"}, "lb"))
+
+    assert body["exercises"][0]["notes"].splitlines()[-1] == (
+        "Next: rung 2 · Balance board: tilts · 2×60 s @6 · slowly"
+    )

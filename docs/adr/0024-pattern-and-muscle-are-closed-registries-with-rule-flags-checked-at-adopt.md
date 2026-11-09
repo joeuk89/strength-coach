@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-07
-amended: 2026-11-08 by the review of PR #271 (nine catalogue rows changed, not seven; seeded rows are migrated by `m0003`, instance-added rows are not)
+amended: 2026-11-08 by the review of PR #271 (nine catalogue rows changed, not seven; seeded rows are migrated by `m0003`, instance-added rows are not); 2026-11-09 by the owner's review of PR #305 (athlete-edited rows are not migrated either)
 ---
 
 # Pattern and muscle are closed registries whose entries carry the rule flags, checked at adopt and not in the DDL
@@ -56,7 +56,7 @@ filed under `core`, where its sets would have counted toward `abdominals` dose.
 - The nine conditioning catalogue rows that named `cardio` or `full_body` lose those names:
   eight carry `{primary = [], secondary = []}` and `jump_rope` keeps `secondary = ["calves"]`.
   Seeded rows are migrated: `m0003` moves a `source = 'catalogue'` row whose muscles still hold
-  the old value, so an athlete's edit stands. Instance-added rows outside the sets are not
-  migrated: the next adopt that references one raises the error and the agent fixes the row
-  through the normal path.
+  the old value. Every other row stands, an athlete-edited row and an instance-added row alike:
+  one that still names `cardio` or `full_body` keeps it, the next adopt that references it raises
+  `unknown_muscle`, and the agent fixes the row through the normal path.
 - A contract test asserts every catalogue pattern and muscle is in its registry.

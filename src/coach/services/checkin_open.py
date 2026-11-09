@@ -81,7 +81,7 @@ def checkin_open(
         chosen,
         units=units,
         bodyweight_units=bodyweight_units,
-        zone=clock.now().tzinfo or datetime.UTC,
+        zone=clock.zone,
     )
 
 
@@ -91,7 +91,7 @@ def record_card(
     *,
     units: Units,
     bodyweight_units: Units,
-    zone: datetime.tzinfo = datetime.UTC,
+    zone: datetime.tzinfo,
 ) -> Card:
     """The card over a recorded Check-in's own window and tier, from the store as it stands now:
     what its rendered record shows (check-in.md, "Views")."""
@@ -191,7 +191,7 @@ def _card(
     ]
     warnings = (
         *check_in_warnings(conn, log, window, on=on, bodyweight_units=bodyweight_units),
-        *cadence_signals(conn, closed, units=units, on=on),
+        *cadence_signals(conn, closed, units=units, on=on, zone=zone),
     )
     return Card(window, chosen, card.assemble(fields), warnings)
 

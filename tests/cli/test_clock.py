@@ -70,6 +70,14 @@ def test_the_system_clock_reads_today_in_its_timezone(zone: str) -> None:
     assert clock.today() == datetime.datetime.now(ZoneInfo(zone)).date()
 
 
+def test_the_system_clock_tells_its_timezone() -> None:
+    assert clock_for("Asia/Tokyo").zone == ZoneInfo("Asia/Tokyo")
+
+
+def test_a_fixed_clock_tells_the_timezone_of_its_moment() -> None:
+    assert FixedClock(MONDAY).zone == ZoneInfo("Europe/London")
+
+
 def test_the_machine_timezone_comes_from_tz_when_it_names_a_zone() -> None:
     assert machine_timezone({"TZ": "Asia/Tokyo"}) == "Asia/Tokyo"
 

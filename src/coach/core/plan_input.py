@@ -34,7 +34,7 @@ def parse_plan_input(data: bytes, *, file: str) -> PlanInput:
         raise Invalid("invalid_argument", f"{file} is not a TOML plan Draft: {error}") from error
     top = Fields(document, file)
     week = required(top.date("week", required=True))
-    position = _position(top.subtable("position"))
+    position = _position(top.table("position"))
     top.raw("override")
     overrides = parse_plan_overrides(document, file=file)
     acknowledgements = tuple(_acknowledge(f) for f in top.tables("acknowledge"))

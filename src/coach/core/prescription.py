@@ -2,9 +2,10 @@
 handed" and "What the agent is handed"). The request is rebuilt on demand and never stored."""
 
 import datetime
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
+from coach.core.config import Units
 from coach.core.days_off import SessionTrained
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag
@@ -28,6 +29,18 @@ class ProgramVersion:
 
     form: ProgramForm
     exercises: Mapping[str, ExerciseFacts]
+
+
+@dataclass(frozen=True)
+class RungNaming:
+    """What a rung's label reads beyond its ladder: the athlete's units for a load and the
+    library's exercise names. An exercise missing from `names` shows its id."""
+
+    units: Units
+    names: Mapping[str, str]
+
+    def name(self, exercise_id: str) -> str:
+        return self.names.get(exercise_id, exercise_id)
 
 
 @dataclass(frozen=True)
@@ -106,6 +119,7 @@ class PrescribeRequest:
     exposures: tuple[Exposure, ...]
     racks: Mapping[str, Mapping[str, Rack]]
     planned: PlannedSession
+    rung_naming: RungNaming
     trained: tuple[SessionTrained, ...] = ()
     overrides: tuple[PlanOverride, ...] = ()
     decisions: tuple[DecisionInForce, ...] = ()
@@ -138,6 +152,19 @@ class Step:
         }
 
 
+def rung_step_back(standing: int, week: int, cause: str) -> Step:
+    return Step("cut", f"rung {standing}", f"rung {week}", cause)
+
+
+def stepped_back_to(steps: Iterable[Mapping[str, object]]) -> str | None:
+    """The rung a return band stepped this week back to. A step frozen when it named exercises reads
+    None, so its WeekPlan keeps projecting the note it pushed and raises no false drift."""
+    for step in steps:
+        if step.get("step") == "cut" and str(step.get("from")).startswith("rung "):
+            return str(step.get("to"))
+    return None
+
+
 @dataclass(frozen=True)
 class PrescribedGroup:
     type: str
@@ -158,6 +185,7 @@ class LinePrescription:
     steps: tuple[Step, ...]
     flags: tuple[Flag, ...]
     change: str
+    rung: int | None = None
 
 
 @dataclass(frozen=True)

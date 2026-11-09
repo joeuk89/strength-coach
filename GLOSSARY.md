@@ -98,6 +98,12 @@ may name one exercise; what tells them apart is when the line stood on each. The
 by rungs in a return band instead of cutting load.
 _Avoid_: level, step (which is a derivation step), stage
 
+**Standing rung**:
+The rung of an exercise **Ladder** the line stands on now: the rung its `ladder_rung` Decision
+names, or the first rung when none exists. A recorded choice, never stored on the line, and only
+the athlete's yes moves it; its start is the Decision's date, or adoption for the first rung.
+_Avoid_: current rung, active rung
+
 **Advance criterion**:
 What the logs must show on a rung before the next is offered: every working set at the rung's
 reps or duration at or under its RPE for a run of exposures, or the athlete's word where the

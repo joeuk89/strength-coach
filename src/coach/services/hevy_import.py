@@ -12,7 +12,7 @@ from coach.core.import_flags import (
 )
 from coach.core.instant import utc_instant
 from coach.core.mirror import BodyMeasurement, engine_folders, mirrored_routine
-from coach.core.routine_projection import routine_diff
+from coach.core.routine_projection import drift_diff
 from coach.core.workout_import import Changes, event_pull_changes, event_since, full_pull_changes
 from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
@@ -58,9 +58,7 @@ def import_hevy(
     """Pull Hevy append-only into the store (ADR 0011, "Import"). Every GET runs before the one
     write transaction, so an unreachable Hevy leaves the store as it was."""
     now = clock.now()
-    zone = now.tzinfo
-    if zone is None:
-        raise ValueError("the clock must tell the athlete's timezone")
+    zone = clock.zone
     last = last_import_at(conn)
     stored = hevy_presence(conn)
     kind, since = ("full", None) if full or last is None else ("event", event_since(last))
@@ -129,7 +127,7 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
         ):
             continue
         body = projection(conn, plan, row.session_id, session, units)
-        diff = routine_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))
+        diff = drift_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))
         if diff:
             flags.append(routine_drift(row.routine_id, row.plan_id, diff))
     return tuple(flags)

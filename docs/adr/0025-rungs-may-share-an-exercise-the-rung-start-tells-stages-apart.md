@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-11-08
+amended: 2026-11-09 by the owner on the review of PR #305 (exposures count from the day after a `ladder_rung` Decision's date, and from the adoption date itself on the first rung, for the load, the criterion and `stall_streak` alike)
 ---
 
 # Rungs may share an exercise, the rung's start tells the stages apart, and a later rung may carry its own start load
@@ -59,3 +60,9 @@ already told apart by when it began, not by its id.
   approval prompt, the routine page, the progress page and `program show`.
 - History matching, the return band, the light week and the `rung_met` / `ladder_top`
   hashes are unchanged: they keyed on the rung index and the rung's start already.
+- Exposures count on a rung from the day after a `ladder_rung` Decision's date, for the load,
+  the criterion and `stall_streak` alike, so the workout that earned a climb is never the new
+  rung's first exposure. The accepted cost: a session trained on the new rung on the Decision's
+  own date does not count. A first rung's start is adoption, which no earlier rung earned, so
+  its exposures count from the adoption date itself, in `coach progress` and the cadence signals
+  as in `plan draft`.

@@ -1,22 +1,35 @@
 import datetime
 
-from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, WHY, a_drill, two_closed_blocks
+from support.blocks import (
+    BENCH_LINE,
+    BENCH_TEMPLATE,
+    BOUNDARY,
+    PULL_UP_LINE,
+    WHY,
+    a_drill,
+    two_closed_blocks,
+)
 from support.clock import FixedClock, at
+from support.history import a_logged_workout
 from support.kit_fixtures import kit_files
 from support.ledger import a_weigh_in
-from support.program_drafts import a_draft, a_line, a_session, toml
+from support.program_drafts import a_draft, a_ladder_line, a_line, a_rung, a_session, toml
 from support.programs import a_config
 
 from coach.core.progress import LiftProgress, Progress
+from coach.core.units import KG_PER_LB
 from coach.services.program import adopt
 from coach.services.progress import progress
+from coach.services.record import record
 from coach.store.connection import Connection
 
 RISING = (100, 105, 105, 110, 115, 115)
 
 
 def report(conn: Connection, *, full: bool = False) -> Progress:
-    return progress(conn, on=BOUNDARY, units="lb", bodyweight_units="kg", full=full)
+    return progress(
+        conn, on=BOUNDARY, units="lb", bodyweight_units="kg", full=full, zone=datetime.UTC
+    )
 
 
 def a_store() -> Connection:
@@ -164,6 +177,27 @@ def test_flat_pull_ups_that_predate_the_latest_redesign_show_no_stall_streak() -
     assert pull_up_in(report(conn)).stall_streak == 0
 
 
+TEMPO_LADDER = a_ladder_line(
+    "pull_up",
+    a_rung(sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 4 s"),
+    a_rung("pull_up", sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 6 s"),
+)
+
+
+def test_flat_pull_ups_before_a_climb_on_a_shared_exercise_show_no_stall_streak() -> None:
+    conn = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+    assert pull_up_in(report(conn)).stall_streak == 3
+    record(
+        conn,
+        b'[[decision]]\nkind = "ladder_rung"\nsession = "push"\nexercise = "pull_up"\n'
+        b'rung = 2\nbecause = "progress"\ntext = "on to 6 s lowers"\n',
+        file="d.toml",
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert pull_up_in(report(conn)).stall_streak == 0
+
+
 def test_a_practice_line_shows_a_stall_streak_of_zero_on_flat_pull_ups() -> None:
     conn = two_closed_blocks(practice_pull_ups=True)
 
@@ -171,14 +205,86 @@ def test_a_practice_line_shows_a_stall_streak_of_zero_on_flat_pull_ups() -> None
 
 
 def test_a_lift_on_a_practice_line_and_a_lifting_line_shows_the_lifting_lines_stall() -> None:
-    conn = two_closed_blocks()
+    conn = two_closed_blocks(drill_line=PULL_UP_LINE)
+
+    assert pull_up_in(report(conn)).stall_streak == 3
+
+
+def bench_in_drill(conn: Connection, *tops_lb: float) -> None:
+    """A workout matched to `drill` for each top load, in the second Block's last ordinary week
+    and after its Monday."""
+    for top, on in zip(tops_lb, ("2026-12-01", "2026-12-02", "2026-12-03"), strict=False):
+        kg = top * KG_PER_LB
+        a_logged_workout(
+            conn, f"h-drill-{on}", on, (BENCH_TEMPLATE, ((kg, 5, 8),) * 4), session_id="drill"
+        )
+
+
+def test_flat_practice_exposures_do_not_make_a_rising_lifting_line_stall() -> None:
+    conn = two_closed_blocks(bench_tops=RISING, drill_line=BENCH_LINE)
+    bench_in_drill(conn, 80, 80, 80)
+
+    assert bench_in(report(conn)).stall_streak == 0
+
+
+def test_rising_practice_exposures_do_not_hide_a_lifting_lines_stall() -> None:
+    conn = two_closed_blocks(drill_line=BENCH_LINE)
+    bench_in_drill(conn, 110, 120, 130)
+
+    assert bench_in(report(conn)).stall_streak == 3
+
+
+def test_a_practice_line_on_linear_shows_zero_resets() -> None:
+    conn = two_closed_blocks(bench_line=LINEAR_BENCH, bench_tops=DROP_AFTER_MISSES)
     adopt(
         conn,
-        toml(a_draft(a_drill(PULL_UP_LINE), a_session("push", BENCH_LINE, PULL_UP_LINE))),
+        toml(a_draft(a_drill(LINEAR_BENCH), a_session("push", PULL_UP_LINE))),
         file="d.toml",
         config=a_config(),
         kits=(kit_files(),),
         clock=FixedClock(),
     )
 
+    bench = bench_in(report(conn))
+    assert (bench.scheme, bench.resets) == ("linear", 0)
+
+
+def test_a_lighter_practice_exposure_is_no_reset_of_a_lifting_line_on_linear() -> None:
+    conn = two_closed_blocks(
+        bench_line=LINEAR_BENCH, bench_tops=(100,) * 6, drill_line=LINEAR_BENCH
+    )
+    bench_in_drill(conn, 90)
+
+    assert bench_in(report(conn)).resets == 0
+
+
+def amended_on(conn: Connection, on: datetime.date) -> None:
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, TEMPO_LADDER), kind="amend", because="tempo")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(on)),
+    )
+
+
+def test_flat_pull_ups_on_a_first_rung_before_its_adoption_show_no_stall_streak() -> None:
+    conn = two_closed_blocks(pull_up_line=TEMPO_LADDER)
     assert pull_up_in(report(conn)).stall_streak == 3
+
+    amended_on(conn, BOUNDARY)
+
+    assert pull_up_in(report(conn)).stall_streak == 0
+
+
+def test_a_flat_pull_up_logged_on_a_first_rungs_adoption_date_counts_in_the_stall_streak() -> None:
+    logged_on_a_monday = datetime.date(2026, 11, 9)
+    on_the_date = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+    the_day_after = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+
+    amended_on(on_the_date, logged_on_a_monday)
+    amended_on(the_day_after, logged_on_a_monday + datetime.timedelta(days=1))
+
+    assert pull_up_in(report(on_the_date)).stall_streak == 3
+    assert pull_up_in(report(the_day_after)).stall_streak == 0

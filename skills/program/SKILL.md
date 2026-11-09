@@ -35,12 +35,14 @@ show. One message; follow up only for a gap that blocks the design.
   double progression elsewhere, a ladder while a lift is assisted. A coarse rack, a new lift or
   a technique lift stays on reps. `scheme_off_emphasis` marks each departure; acknowledge it
   with the reason or change the line.
-- **Ladders.** A line with no load to add whose next step is a different exercise or stance
-  gets an `exercise_ladder`; a loaded lift moves through its scheme and the cadence signals.
-  Every rung is an exercise; a stance the logs cannot tell apart is its own custom exercise,
-  never a ladder in `cues`. The line opens on rung 1, and the rung it stands on is a
-  `ladder_rung` Decision, never an edit to the version. Answer `ladder_top` at a block boundary
-  with an `amend` giving the line a new scheme.
+- **Ladders.** A line with no load to add whose next step is a different exercise or a harder
+  way of doing the same one gets an `exercise_ladder`; a loaded lift moves through its scheme and
+  the cadence signals. Rungs may share an exercise when they differ in `sets` or `cues`: tempo is
+  prose in the cues, a longer hold is its own rung. A stance gets its own exercise only when the
+  athlete wants it as its own history. A load-bearing rung after the first carries `start_load`.
+  Never a whole ladder in one rung's `cues`. The line opens on rung 1, and the rung it stands on
+  is a `ladder_rung` Decision, never an edit to the version. Answer `ladder_top` at a block
+  boundary with an `amend` giving the line a new scheme.
 - **New exercises.** An exercise the library lacks is declared in the Draft as
   `[exercise.<id>]` with `name`, `load_mode`, `equipment_kind`, `pattern` and `muscles`.
   Without a Hevy template id it also needs `hevy_title`, `hevy_exercise_type`,

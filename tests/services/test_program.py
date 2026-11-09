@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import json
 import tomllib
 from typing import Any, cast
@@ -7,9 +8,10 @@ import pytest
 from support.clock import FixedClock
 from support.history import a_logged_workout, an_annotation
 from support.kit_fixtures import kit_files
+from support.ladders import a_ladder_program, ladder_rung_decision
 from support.plans import a_mapped_routine
 from support.program_drafts import (
-    BALANCE_BOARD_DRAFT,
+    BALANCE_STANCES_DRAFT,
     WORKED_DRAFT_COMPLETE,
     a_draft,
     a_line,
@@ -22,6 +24,7 @@ from coach.core.errors import Invalid, Setup
 from coach.core.kit import KitFiles
 from coach.core.program.form import AcknowledgeEntry
 from coach.services.program import AdoptResult, adopt, show, show_draft
+from coach.services.record import record
 from coach.store import exercises, programs
 from coach.store.connection import Connection
 
@@ -239,7 +242,7 @@ def test_going_back_to_an_earlier_draft_records_a_new_version_in_force() -> None
     back = run(conn, rotation_draft())
 
     assert not back.no_op and back.version_id == "pv-3"
-    assert show(conn).version_id == "pv-3"
+    assert show(conn, units="lb", zone=datetime.UTC).version_id == "pv-3"
 
 
 def test_adopt_returns_the_acknowledgements_it_froze_and_so_does_the_no_op() -> None:
@@ -328,7 +331,7 @@ def test_show_reads_the_version_in_force() -> None:
     conn = the_worked_store()
     run(conn, WORKED_DRAFT_COMPLETE)
 
-    shown = show(conn)
+    shown = show(conn, units="lb", zone=datetime.UTC)
 
     assert (shown.version_id, shown.kind, shown.emphasis, shown.adopted) == (
         "pv-1",
@@ -342,7 +345,7 @@ def test_show_reads_the_version_in_force() -> None:
 
 def test_show_with_no_version_is_invalid() -> None:
     with pytest.raises(Invalid) as refused:
-        show(a_library_store())
+        show(a_library_store(), units="lb", zone=datetime.UTC)
 
     assert refused.value.code == "state_conflict"
 
@@ -526,7 +529,7 @@ def test_a_maintenance_version_under_a_hypertrophy_goal_warns_and_adopts() -> No
     result = run(conn, toml(a_draft(emphasis="maintenance")))
 
     assert "emphasis_off_goal@version:pv-1" in keys(result)
-    assert show(conn).emphasis == "maintenance"
+    assert show(conn, units="lb", zone=datetime.UTC).emphasis == "maintenance"
 
 
 def test_a_session_outside_the_available_days_warns_session_on_unavailable_day() -> None:
@@ -812,18 +815,28 @@ def test_two_stale_acknowledgements_are_refused_as_one_violation_naming_both() -
     ]
 
 
+def test_show_holds_each_ladder_line_with_its_session_and_its_standing_rung() -> None:
+    conn = a_ladder_program()
+    record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock())
+
+    [shown] = show(conn, units="lb", zone=datetime.UTC).ladders
+
+    assert (shown.session_id, shown.exercise) == ("lower", "dead_bug")
+    assert [rung.standing for rung in shown.rungs] == [False, True, False]
+
+
 def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts_unchanged() -> (
     None
 ):
     conn = the_worked_store()
 
-    adopted = run(conn, BALANCE_BOARD_DRAFT)
+    adopted = run(conn, BALANCE_STANCES_DRAFT)
     text = show_draft(conn).text
     dry = run(conn, text, dry_run=True)
 
     assert adopted.version_id == "pv-1"
     assert exercises.get(conn, "custom_balance_board_one_foot_eyes_closed") is not None
-    [(session, line, standing)] = show(conn).ladders
-    assert (session, standing) == ("daily-balance", 1) and line.scheme.ladder is not None
-    assert len(line.scheme.ladder.rungs) == 5
+    [shown] = show(conn, units="lb", zone=datetime.UTC).ladders
+    assert shown.session_id == "daily-balance"
+    assert [rung.standing for rung in shown.rungs] == [True, False, False, False, False]
     assert dry.diff.empty

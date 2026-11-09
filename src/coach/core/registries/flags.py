@@ -213,11 +213,13 @@ VIOLATIONS = (
     violation("rehab_in_version", ("session",), ("session_id",), ("program adopt",)),
     violation("practice_not_optional", ("session",), ("session_id",), ("program adopt",)),
     violation("coach_led_has_lines", ("session",), ("session_id",), ("program adopt",)),
-    violation("start_load_missing", ("line",), ("exercise_id",), ("program adopt", "plan apply")),
+    violation(
+        "start_load_missing", ("line",), ("exercise_id", "rung"), ("program adopt", "plan apply")
+    ),
     violation(
         "start_load_off_rack",
         ("line",),
-        ("start_load", "location", "nearest_rows"),
+        ("start_load", "location", "nearest_rows", "rung"),
         ("program adopt",),
     ),
     violation("no_working_sets", ("line",), ("scheme",), ("program adopt",)),
@@ -226,6 +228,7 @@ VIOLATIONS = (
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
     violation("rung_exercise_unknown", ("version",), ("rung", "exercise_id"), ("program adopt",)),
     violation("ladder_too_short", ("line",), ("rungs",), ("program adopt",)),
+    violation("rung_repeated", ("line",), ("rung", "previous_rung"), ("program adopt",)),
     violation(
         "advance_criterion_off_rung", ("line",), ("rung", "criterion_key"), ("program adopt",)
     ),
@@ -309,7 +312,7 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "rung_met",
         ("line",),
-        ("rung", "next", "exposures"),
+        ("rung", "next", "next_rung", "exposures"),
         ("rn:bodyweight-skill-progression.3",),
         hashed=("rung", "next"),
     ),

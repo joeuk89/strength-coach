@@ -38,8 +38,9 @@ class BlockSpan:
 
 @dataclass(frozen=True)
 class CadenceRead:
-    """`blocks` are the Block before and the closed one. `exposures` are the exercise's, every
-    one. `adherence` is trained over planned core sessions across both Blocks' ordinary weeks.
+    """`blocks` are the Block before and the closed one. `exposures` are the exercise's, on a
+    ladder only those that count on the standing rung. `adherence` is trained over planned core
+    sessions across both Blocks' ordinary weeks.
     `capped` is, per Prescription frozen in the closed Block, whether the one-row cap bound.
     `session_id` is the line's session: per-line reads skip Exposures matched to another.
     `standing` is an `exercise_ladder` line's standing rung, whose exercise and sets the metric
@@ -53,9 +54,14 @@ class CadenceRead:
     session_id: str | None = None
     standing: Line | None = None
 
+    @staticmethod
+    def measuring(line: Line, standing: Line | None) -> Line:
+        """The line whose exercise and sets the metric reads."""
+        return line if standing is None else standing
+
     @property
     def measured(self) -> Line:
-        return self.line if self.standing is None else self.standing
+        return self.measuring(self.line, self.standing)
 
 
 def cadence_signal(read: CadenceRead) -> Flag | None:

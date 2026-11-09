@@ -2,20 +2,18 @@
 (docs/spec/goals.md, "Cadence signals")."""
 
 import datetime
-from collections.abc import Mapping
 from typing import cast
 
 from coach.core.cadence import BlockSpan, CadenceRead, cadence_signal
 from coach.core.config import Units
-from coach.core.exercise_ladder import rung_line, standing_rung
 from coach.core.flag import Flag, leave
 from coach.core.planned_week import week_monday
-from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Line, ProgramForm
 from coach.services.closed_weeks import ClosedWeeks
 from coach.services.history import read_history
+from coach.services.ladders import rung_decisions, standing_line
 from coach.services.leave_warning import leave_warning_decisions
-from coach.store import decisions, programs, week_plans
+from coach.store import programs, week_plans
 from coach.store.connection import Connection
 
 _DAY = datetime.timedelta(days=1)
@@ -31,7 +29,7 @@ def closed_spans(closed: ClosedWeeks) -> tuple[BlockSpan, ...]:
 
 
 def cadence_signals(
-    conn: Connection, closed: ClosedWeeks, *, units: Units, on: datetime.date
+    conn: Connection, closed: ClosedWeeks, *, units: Units, on: datetime.date, zone: datetime.tzinfo
 ) -> tuple[Flag, ...]:
     """Each signal left by a `leave_warning` Decision in force on `on`; none once a version is
     adopted after the closed Block's end, since a new version clears them."""
@@ -47,19 +45,21 @@ def cadence_signals(
     adherence = _adherence(closed, before, last)
     exposures = read_history(conn, units).lifting
     left = leave_warning_decisions(conn, on)
-    rungs = _ladder_rungs(conn, on)
+    rungs = rung_decisions(conn, zone, on)
     found: list[Flag] = []
     for session_id, line in _lines(version.form):
         if any(
-            form is None or _scheme_of(form, line.exercise) != line.scheme.name for form in forms
+            form is None or _scheme_of(form, session_id, line.exercise) != line.scheme.name
+            for form in forms
         ):
             continue
-        standing = _standing(line, session_id, rungs)
-        measured = line if standing is None else standing
+        standing, counted = standing_line(
+            line, session_id, rungs, exposures, adopted=version.adopted_on
+        )
         read = CadenceRead(
             line,
             (before, last),
-            [e for e in exposures if e.exercise_id == measured.exercise],
+            [e for e in counted if e.exercise_id == standing.exercise],
             adherence,
             _capped(conn, closed, last, line) if line.scheme.name == "top_backoff" else (),
             session_id,
@@ -82,39 +82,15 @@ def _lines(form: ProgramForm) -> list[tuple[str, Line]]:
     return list(seen.values())
 
 
-def _ladder_rungs(conn: Connection, on: datetime.date) -> tuple[DecisionInForce, ...]:
-    return tuple(
-        DecisionInForce(
-            id=str(row["id"]),
-            kind=str(row["kind"]),
-            session_id=cast(str | None, row["session_id"]),
-            exercise_id=cast(str | None, row["exercise_id"]),
-            params=cast(Mapping[str, object], row["params"]),
-        )
-        for row in decisions.in_force(conn, on.isoformat())
-        if row["kind"] == "ladder_rung"
-    )
-
-
-def _standing(line: Line, session_id: str, rungs: tuple[DecisionInForce, ...]) -> Line | None:
-    """An `exercise_ladder` line as its standing rung prescribes it."""
-    ladder = line.scheme.ladder
-    if ladder is None:
-        return None
-    standing = standing_rung(
-        rungs, ladder, session_id=session_id, line_key=line.exercise, adopted=None
-    )
-    return rung_line(line, ladder, standing.index)
-
-
 def _form_at(conn: Connection, span: BlockSpan) -> ProgramForm | None:
     version = programs.in_force_at(conn, f"{span.end.isoformat()}T23:59:59")
     return None if version is None else version.form
 
 
-def _scheme_of(form: ProgramForm, exercise_id: str) -> str | None:
-    line = form.first_line(exercise_id)
-    return None if line is None else line.scheme.name
+def _scheme_of(form: ProgramForm, session_id: str, exercise_id: str) -> str | None:
+    session = form.session(session_id)
+    lines = session.lines if session else ()
+    return next((line.scheme.name for line in lines if line.exercise == exercise_id), None)
 
 
 def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:

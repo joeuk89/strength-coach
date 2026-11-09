@@ -9,6 +9,7 @@ from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
 from coach.core.carried_e1rm import E1rmRead
 from coach.core.e1rm import PRECISION, WINDOW_DAYS, E1rm
+from coach.core.exercise_ladder import StandingRung
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.line_history import (
@@ -41,8 +42,8 @@ from coach.core.wave_531 import (
 
 @dataclass(frozen=True)
 class SchemeInput:
-    """`line` is the version's, which the hit test reads; `sets` are the week's. `since` is a
-    ladder's standing rung's start: no exposure before it counts toward a stall."""
+    """`line` is the version's, which the hit test reads; `sets` are the week's. `standing` is a
+    ladder's standing rung, which says which exposures count toward a stall."""
 
     request: PrescribeRequest
     line: Line
@@ -51,7 +52,7 @@ class SchemeInput:
     rack: Rack | None
     scope: Scope
     e1rm: E1rmRead
-    since: datetime.date | None = None
+    standing: StandingRung | None = None
 
     @property
     def loaded(self) -> bool:
@@ -126,9 +127,8 @@ class SchemeMoves:
             ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on)),
             self.given.request.redesigned,
         )
-        since = self.given.since
-        history = tuple(e for e in history if since is None or since <= e.date)
-        streak = stall_streak(self.line, history)
+        standing = self.given.standing
+        streak = stall_streak(self.line, history if standing is None else standing.counted(history))
         if streak:
             self._raise(
                 "stall_streak",
@@ -321,6 +321,8 @@ class SchemeMoves:
             )
 
     def _reset(self, exposure: Exposure, before: Load) -> Move | None:
+        if not judged(self.given.request.planned.kind):
+            return None
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
         misses = misses_at(self.line, history, before, self.given.rack)
         if misses < misses_before_reset(self.line):

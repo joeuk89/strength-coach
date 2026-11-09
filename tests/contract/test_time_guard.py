@@ -2,7 +2,7 @@ import pytest
 
 PLANTED_CONFTEST = """
 import pytest
-from support.wall_time import clock_key
+from support.time_guard import clock_key
 
 
 class FakeClock:
@@ -40,7 +40,7 @@ def test_a_test_over_two_seconds_fails(pytester: pytest.Pytester) -> None:
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*2.50 s*over the 2.0 s budget*"])
@@ -55,7 +55,7 @@ def test_a_test_under_two_seconds_passes(pytester: pytest.Pytester) -> None:
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(passed=1)
 
@@ -75,7 +75,7 @@ def test_slow_fixture_setup_fails(pytester: pytest.Pytester) -> None:
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(errors=1)
 
@@ -95,7 +95,7 @@ def test_setup_and_body_together_over_two_seconds_fail(pytester: pytest.Pytester
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*2.40 s*over the 2.0 s budget*"])
@@ -117,7 +117,7 @@ def test_slow_teardown_counts_once_toward_the_budget(pytester: pytest.Pytester) 
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(passed=1, errors=1)
     result.stdout.fnmatch_lines(["*2.40 s*over the 2.0 s budget*"])
@@ -144,7 +144,7 @@ def test_a_shared_fixture_does_not_count_toward_the_first_test_that_uses_it(
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(passed=2)
 
@@ -165,7 +165,7 @@ def test_a_slow_test_using_a_shared_fixture_still_fails(pytester: pytest.Pyteste
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*2.50 s*over the 2.0 s budget*"])
@@ -183,7 +183,7 @@ def test_on_ci_a_test_over_two_seconds_and_under_six_passes(
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(passed=1)
 
@@ -200,7 +200,30 @@ def test_on_ci_a_test_over_six_seconds_fails(
         """
     )
 
-    result = pytester.runpytest("-p", "support.wall_time")
+    result = pytester.runpytest("-p", "support.time_guard")
 
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*6.50 s*over the 6.0 s budget*"])
+
+
+def test_time_spent_sleeping_does_not_count(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        """
+        import time
+
+        import pytest
+
+        from support import time_guard
+
+        @pytest.fixture(autouse=True)
+        def tight_budget(monkeypatch):
+            monkeypatch.setattr(time_guard, "LIMIT_S", 0.2)
+
+        def test_sleeps():
+            time.sleep(0.3)
+        """
+    )
+
+    result = pytester.runpytest("-p", "support.time_guard")
+
+    result.assert_outcomes(passed=1)

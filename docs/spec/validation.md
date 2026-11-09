@@ -53,8 +53,11 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 | `exercise` | exercise id | one exercise across blocks, for cadence signals and milestones (ADR 0014) |
 
 Two flags with the same code on the same scope cannot exist: a code states one condition per
-scope, so the key is a key. The one exception is `hevy_template_value_unknown`: one scope holds
-one flag per bad column, each with the same key, and the params name the column. The message is
+scope, so the key is a key. The exceptions are `program adopt`'s, since a ladder line's rungs share
+its scope: one scope holds `hevy_template_missing` once per exercise, `hevy_template_value_unknown`
+once per exercise and bad column, `equipment_unsupplied` once per equipment kind, and
+`start_load_missing` and `start_load_off_rack` once per rung. Each carries the same key, and the
+params tell them apart. The message is
 display only and is never stored. The params (the facts of the condition: a streak length, a
 ceiling and its kind, a drift class) ride alongside the key and are hashed separately; they are
 condition facts only, never derived display numbers that move with rounding.
@@ -181,7 +184,7 @@ verbs:
 
 | Code | Raised by | Clears by |
 | --- | --- | --- |
-| `routine_drift` (ADR 0011) | `import` and every pulling verb (`verbs.md`) | an override on the next WeekPlan, or the next push overwriting it |
+| `routine_drift` (ADR 0011) | `import` and every pulling verb (`verbs.md`). The comparison ignores a note's `Next:` line on both sides, since the engine derives it: an edit to that line alone is not drift. A push's read-back verify still compares it | an override on the next WeekPlan, or the next push overwriting it |
 | `workout_reappeared` (ADR 0011) | `import` and every pulling verb | a `match` or `void` Annotation on the new version |
 | `exercise_unmapped` (`cutover.md`) | `import` and every pulling verb | an `[[exercise]]` record that maps or declares the Exercise |
 | `frozen_load_off_rack` (ADR 0021) | `plan draft` | the next WeekPlan, whose loads freeze on the current rack (`plan apply`); a frozen load never re-rounds (ADR 0008) |
@@ -236,7 +239,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `unknown_load_mode` | line | load mode | a glossary load mode | `null` |
 | `unknown_pattern` | exercise | pattern | a `patterns` registry name on the exercise, in the Draft or an `[[exercise]]` record | `null` |
 | `unknown_muscle` | exercise, session | muscle | a `muscles` registry name on the exercise or in `estimated_sets` | `null` |
-| `duplicate_id` | version | session id or (session, exercise) | unique ids; merging the duplicate lines | `null` |
+| `duplicate_id` | version | session id or (session, exercise); a rung exercise counts once per line | unique ids; merging the duplicate lines | `null` |
 | `schedule_session_missing` | version | week, weekday, session id | a session with that id, or removing the slot | `null` |
 | `session_unscheduled` | session | session id | a slot in a rotation week, or a `cadence` | `null` |
 | `cadence_on_scheduled` | session | session id, cadence | removing the cadence | `null` |
@@ -245,14 +248,15 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `rehab_in_version` | session | session id | removing it; a rehab session is raised on a niggle | `null` |
 | `practice_not_optional` | session | session id | `tier = "optional"` | `null` |
 | `coach_led_has_lines` | session | session id | removing the lines or the `estimated_sets` | `null` |
-| `start_load_missing` | line | exercise id | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there; raised only with no Exposure of the exercise anywhere, the same rule at adopt and in `prescribe` | `null` |
-| `start_load_off_rack` | line | start load, location, two nearest rows | a start load on a rack row | `null` |
+| `start_load_missing` | line | exercise id; the rung index on a ladder rung after the first | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there, raised only with no Exposure of the exercise anywhere, the same rule at adopt and in `prescribe`; or a `start_load` on the rung, which adopt asks of a load-bearing rung whatever its exercise's history | `null` |
+| `start_load_off_rack` | line | start load, location, two nearest rows; the rung index on a ladder rung after the first | a start load on a rack row | `null` |
 | `no_working_sets` | line | scheme | a working group, or `hold` | `null` |
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on, a rung's included | `null` |
 | `rung_exercise_unknown` | version | rung index, exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id (`program.md`, "Schemes") | `null` |
 | `ladder_too_short` | line | rung count | a second rung, or another scheme | `null` |
+| `rung_repeated` | line | rung index, the previous rung's index | a rung that differs from the one before it in `sets` or `cues`; only neighbours are compared (ADR 0025) | `null` |
 | `advance_criterion_off_rung` | line | rung index, criterion key | a criterion key the rung can read: `reps` on a reps rung, `duration_s` on a duration rung, `manual` alone | `null` |
 | `acknowledgement_unmatched` | version | the first stale flag key, every stale flag key in Draft order | removing the stale `[[acknowledge]]` entries | `null` |
 | `counted_variant_unknown` | version | lift, exercise id | an `[exercise.<id>]` declaration in the Draft, a library id, or removing it from the lift's `counts` (`program.md`, "Dose and deload") | `null` |
@@ -278,7 +282,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `stall_streak` | line | streak length, exposure refs (all on or after the latest redesign's adoption date; `prescription.md`, **Stalls**) | rn:progression-methods §4 |
 | `rep_range_missed` | line | set index, reps, range, logged RPE, authored RPE | `null` |
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
-| `rung_met` | line | the standing rung (from 1), the next rung's exercise id, the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the params hash covers the rung and the next rung only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
+| `rung_met` | line | `rung` the standing rung (from 1), `next` the next rung's exercise id, `next_rung` its index, `exposures` the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the message names the next rung by its label (ADR 0025); the params hash covers `rung` and `next` only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
 | `ladder_top` | line | the standing rung, the ladder's last; raised instead of `rung_met` when the last rung's criterion holds | rn:bodyweight-skill-progression.3 |
 | `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref | rn:autoregulation.6 |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |

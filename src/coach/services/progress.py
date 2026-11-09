@@ -13,6 +13,7 @@ from coach.core.exposure import Exposure
 from coach.core.line_history import newest_first, ordinary, since_redesign
 from coach.core.linear import resets
 from coach.core.phase_trend import observed_rate, phase_condition_met
+from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Line, ProgramForm
 from coach.core.progress import (
     PRECISION,
@@ -30,7 +31,7 @@ from coach.core.stall import judged, stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
-from coach.services.ladders import ladder_reads
+from coach.services.ladders import ladder_reads, rung_decisions, standing_line
 from coach.store import annotations, check_ins, goals, phases, programs, readings
 from coach.store.connection import Connection
 
@@ -44,8 +45,8 @@ def progress(
     on: datetime.date,
     units: Units,
     bodyweight_units: Units,
+    zone: datetime.tzinfo,
     full: bool = False,
-    zone: datetime.tzinfo = datetime.UTC,
 ) -> Progress:
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
@@ -54,10 +55,12 @@ def progress(
     exposures = read_history(conn, units).lifting
     versions = programs.newest_first(conn)
     form = versions[0].form if versions else None
+    adopted = versions[0].adopted_on if versions else None
     stored = _goal(conn)
     priority = stored.goal.priority_lifts if stored else ()
-    signals = cadence_signals(conn, closed, units=units, on=on)
+    signals = cadence_signals(conn, closed, units=units, on=on, zone=zone)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
+    rungs = rung_decisions(conn, zone, on)
     opened = programs.block_opened(conn)
     redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     weigh_ins = {
@@ -76,6 +79,8 @@ def progress(
                 redesigned,
                 on,
                 by_exercise.get(exercise),
+                rungs,
+                adopted,
             )
             for exercise in priority
         ),
@@ -121,8 +126,11 @@ def _lift(
     redesigned: datetime.date | None,
     today: datetime.date,
     signal: str | None,
+    rungs: Sequence[DecisionInForce],
+    adopted: datetime.date | None,
 ) -> LiftProgress:
     line = _line(form, exercise)
+    judged_line = _judged_line(form, exercise)
     read = spans[-BLOCKS_READ:]
     at_end = tuple((s.id, _e1rm(exposures, exercise, s.end + _DAY)) for s in read)
     history = ordinary(
@@ -132,6 +140,7 @@ def _lift(
             if e.exercise_id == exercise and (since is None or since <= e.date) and e.date <= today
         )
     )
+    judged_history = _of_session(history, judged_line[0]) if judged_line else ()
     return LiftProgress(
         exercise_id=exercise,
         scheme=line.scheme.name if line else None,
@@ -140,17 +149,19 @@ def _lift(
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
-        stall_streak=_stall_streak(form, exercise, since_redesign(history, redesigned)),
-        resets=_resets(line, history),
+        stall_streak=_stall_streak(
+            judged_line, since_redesign(judged_history, redesigned), rungs, adopted
+        ),
+        resets=_resets(judged_line[1] if judged_line else None, judged_history),
         signal=signal,
     )
 
 
-def _stall_streak(form: ProgramForm | None, exercise: str, history: Sequence[Exposure]) -> int:
-    """Read on the exercise's first line in a judged session; 0 when it has none."""
-    line = next(
+def _judged_line(form: ProgramForm | None, exercise: str) -> tuple[str, Line] | None:
+    """The exercise's first line in a judged session, with that session's id."""
+    return next(
         (
-            line
+            (session.id, line)
             for session in (form.sessions if form else ())
             if judged(session.kind)
             for line in session.lines
@@ -158,7 +169,25 @@ def _stall_streak(form: ProgramForm | None, exercise: str, history: Sequence[Exp
         ),
         None,
     )
-    return len(stall_streak(line, history)) if line else 0
+
+
+def _of_session(history: Sequence[Exposure], session_id: str) -> tuple[Exposure, ...]:
+    """What the line in `session_id` reads: exposures matched to it or to no session."""
+    return tuple(e for e in history if e.session_id in (None, session_id))
+
+
+def _stall_streak(
+    judged_line: tuple[str, Line] | None,
+    history: Sequence[Exposure],
+    rungs: Sequence[DecisionInForce],
+    adopted: datetime.date | None,
+) -> int:
+    """Read on the judged line, a ladder's from the exposures that count on its standing rung; 0
+    when it has none."""
+    if judged_line is None:
+        return 0
+    session_id, line = judged_line
+    return len(stall_streak(*standing_line(line, session_id, rungs, history, adopted=adopted)))
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:
@@ -172,7 +201,7 @@ def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> dat
         line = _line(version.form, exercise)
         if line is None or line.scheme.name != current.scheme.name:
             break
-        since = datetime.date.fromisoformat(version.adopted[:10])
+        since = version.adopted_on
     return since
 
 

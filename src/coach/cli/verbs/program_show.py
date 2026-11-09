@@ -1,6 +1,5 @@
 import datetime
 import hashlib
-from typing import cast
 
 from coach.cli.declaration import (
     Argument,
@@ -14,9 +13,7 @@ from coach.cli.declaration import (
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Invalid
-from coach.core.exercise_ladder import full_criterion
-from coach.core.program.form import ExerciseLadder, Line, group_document
-from coach.services.program import ShowResult, show, show_draft
+from coach.services.program import ShownLadder, ShowResult, show, show_draft
 
 
 def run(call: InstanceCall) -> Outcome:
@@ -28,7 +25,7 @@ def run(call: InstanceCall) -> Outcome:
     if week is not None and not as_draft:
         raise Invalid("invalid_argument", "--apply-plan folds into the Draft; add --draft")
     with open_instance_store(call.instance) as conn:
-        shown = show(conn)
+        shown = show(conn, units=call.instance.units, zone=call.clock.zone)
         drafted = show_draft(conn, apply_plan=week) if as_draft else None
     if drafted is None:
         return Outcome(_summary(shown, None if call.full else call.last))
@@ -71,25 +68,25 @@ def _summary(shown: ShowResult, last: int | None) -> Json:
         "sessions": kept,
         "count": len(sessions),
         "truncated": len(kept) < len(sessions),
-        "ladders": [_ladder(*ladder) for ladder in shown.ladders],
+        "ladders": [_ladder(ladder) for ladder in shown.ladders],
     }
 
 
-def _ladder(session_id: str, line: Line, standing: int) -> Json:
-    ladder = cast(ExerciseLadder, line.scheme.ladder)
+def _ladder(shown: ShownLadder) -> Json:
     return {
-        "session": session_id,
-        "exercise": line.exercise,
+        "session": shown.session_id,
+        "exercise": shown.exercise,
         "rungs": [
             {
-                "rung": index,
+                "rung": rung.rung,
                 "exercise": rung.exercise,
+                "label": rung.label,
                 "cues": rung.cues,
-                "sets": [group_document(group) for group in rung.sets],
-                "criterion": full_criterion(ladder, index).stated(),
-                "standing": index == standing,
+                "sets": list(rung.set_groups),
+                "criterion": rung.criterion,
+                "standing": rung.standing,
             }
-            for index, rung in enumerate(ladder.rungs, start=1)
+            for rung in shown.rungs
         ],
     }
 
@@ -144,6 +141,7 @@ DECLARATION = Declaration(
                                 "properties": {
                                     "rung": {"type": "integer"},
                                     "exercise": {"type": "string"},
+                                    "label": {"type": "string"},
                                     "cues": {"type": ["string", "null"]},
                                     "sets": {"type": "array", "items": {"type": "object"}},
                                     "criterion": {

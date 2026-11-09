@@ -23,6 +23,7 @@ def a_row(
         "session_id": session_id,
         "date": day,
         "exercise_id": exercise_id,
+        "rung": None,
         "set_groups": set_groups,
         "change": "4×6–8 @8: 120 → 125",
         "steps": [],
@@ -44,7 +45,7 @@ def test_a_frozen_summary_shows_each_planned_session_with_its_frozen_lines() -> 
         rows=ROWS,
         overrides=(),
         locations={"lower": "home", "upper": "gym"},
-        next_rungs={},
+        rung_labels={},
     )
 
     assert [(s.session_id, s.date, s.location, s.lines) for s in found.sessions] == [
@@ -76,7 +77,7 @@ def test_a_flag_frozen_on_every_line_shows_once() -> None:
         rows=ROWS,
         overrides=(),
         locations={"lower": "home", "upper": "home"},
-        next_rungs={},
+        rung_labels={},
     )
 
     assert found.flags == (WEEK_FLAG,)
@@ -98,7 +99,7 @@ def test_a_relocated_session_shows_at_its_new_location() -> None:
         rows=ROWS,
         overrides=(relocate,),
         locations={"lower": "home", "upper": "home"},
-        next_rungs={},
+        rung_labels={},
     )
 
     assert [s.location for s in found.sessions] == ["home", "travel"]

@@ -90,7 +90,7 @@ No `status`: a parked session is a Decision, not a field (ADR 0010).
 
 | Key | Required | Notes |
 | --- | --- | --- |
-| `exercise` | yes | A library id; once per session at most, counting every rung of an `exercise_ladder`. Under a ladder it is the first rung's exercise and the line's key for every scope (overrides, flags, one exercise per session); no rung re-keys the line |
+| `exercise` | yes | A library id; once per session at most, each distinct rung exercise of an `exercise_ladder` counting once. Under a ladder it is the first rung's exercise and the line's key for every scope (overrides, flags, one exercise per session); no rung re-keys the line |
 | `load_mode` | no | Only when it departs from the Exercise's default; the Load type does the conversion |
 | `[[session.line.sets]]` | yes, at least one group; none under `exercise_ladder`, whose rungs carry them (a line `sets` there is `unknown_key`) | Set groups, below |
 | `rest_s` | yes | Seconds after each set of the line; the `program` skill proposes it from `goals.md`'s band, adopt never fills it |
@@ -258,16 +258,19 @@ grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 | `top_backoff` | `pct_of_top` | warm_up, working | the first working group is the top (`count = 1`, an integer `reps`, `rpe`); at least one later working group, each a back-off at `pct_of_top` | the top group | the exercise-wide e1RM (`prescription.md`), the top group's RPE as a cap | `start_load` is the top set; back-offs derive from it |
 | `wave_531` | none; the registry holds the waves `[[65, 75, 85], [70, 80, 90], [75, 85, 95]]` of the training max at `5/3/1` reps, last working set open (`"5+"`, `"3+"`, `"1+"`), the published numbers (rn:progression-training-age.9) | warm_up, working | one working group carrying `count` only; the wave owns reps and the open last set | none | the current `training_max` Decision on the exercise, the Block's hard-week count and the last rep-out | `start_load` is the training max until a Decision exists |
 
-`exercise_ladder` is the ladder for work with no load to add, whose next step is a different exercise or stance (ADR 0023): a bodyweight skill, a practice line. Lifting and practice sessions may carry one; a practice stays optional. The ladder is declared whole on the line; the line states no `sets`, and until a rung is chosen it stands on the first. Each `[[session.line.scheme.rungs]]` table:
+`exercise_ladder` is the ladder for work with no load to add, whose next step is a different exercise or a harder way of performing the same one (ADR 0023, ADR 0025): a bodyweight skill, a practice line. Lifting and practice sessions may carry one; a practice stays optional. The ladder is declared whole on the line; the line states no `sets`, and until a rung is chosen it stands on the first. Each `[[session.line.scheme.rungs]]` table:
 
 | Key | Required | Notes |
 | --- | --- | --- |
-| `exercise` | yes, except on the first rung | A library id or one declared in the Draft's `[exercise.<id>]`; unknown is `rung_exercise_unknown`. The first rung is the line's `exercise` and may leave it unsaid. A stance the logs cannot tell apart is its own custom exercise, since Hevy logs the exercise id |
-| `cues` | no | Prose, the rung's form cues |
-| `sets` | yes | Exactly one working group with `reps` or `duration_s` and `rpe`; otherwise `set_groups_off_scheme` or `rpe_missing` |
+| `exercise` | yes, except on the first rung | A library id or one declared in the Draft's `[exercise.<id>]`; unknown is `rung_exercise_unknown`. The first rung is the line's `exercise` and may leave it unsaid. A rung may share its exercise with another rung when it differs in `sets` or `cues`; the rung's start (`prescription.md`) tells their histories apart (ADR 0025). A stance gets its own exercise only when the athlete wants it as its own history |
+| `cues` | no | Prose, the rung's form cues. Tempo is written here: the engine cannot read it from a log or send it to Hevy, so a tempo rung's criterion is its reps at RPE and the athlete's yes to `rung_met` carries the word that the tempo was held (ADR 0025) |
+| `sets` | yes | Exactly one working group with `reps` or `duration_s` and `rpe`; otherwise `set_groups_off_scheme` or `rpe_missing`. A hold-length climb is explicit rungs, one per duration (ADR 0025) |
 | `advance` | no | The rung's criterion: restates or overrides the scheme-level `advance` key by key; `manual = true` stands alone |
+| `start_load` | a load-bearing rung after the first; not on the first rung, whose start load is the line's | Athlete units; per hand for per-hand modes. See **Start loads** |
 
-The criterion keys, at scheme level and on a rung: `reps` (a reps rung only), `duration_s` (a duration rung only), `rpe_at_most`, `exposures` and `manual` (`true`, with no other key: the athlete's word, for the rare rung the logs cannot tell). A key off its rung is `advance_criterion_off_rung`. With nothing said the criterion is every working set at the rung's reps or duration at or under its RPE on 2 consecutive exposures; a rep range reads its top and an open top `"8+"` its number. A ladder needs at least two rungs (`ladder_too_short`). The worked example below shows one in full.
+The criterion keys, at scheme level and on a rung: `reps` (a reps rung only), `duration_s` (a duration rung only), `rpe_at_most`, `exposures` and `manual` (`true`, with no other key: the athlete's word, for the rare rung the logs cannot tell). A key off its rung is `advance_criterion_off_rung`. With nothing said the criterion is every working set at the rung's reps or duration at or under its RPE on 2 consecutive exposures; a rep range reads its top and an open top `"8+"` its number. A ladder needs at least two rungs (`ladder_too_short`), and a rung equal to the one before it in `exercise`, `sets` and `cues` is `rung_repeated`; only neighbours are compared, so a ladder may return to an earlier shape later. The worked examples below show two in full.
+
+Every surface names a rung by its label, `rung <n> · [<exercise name> · ]<dose>[ · <load>][ · <cues>]`, with the name only when the rung's exercise differs from the standing rung's (ADR 0025): `rung_met`'s message, the Hevy note's "Next:", the check-in card, the approval prompt, the routine page, the progress page and `program show`.
 
 `wave_531` is the slow strength cadence: the scheme the `program` skill names when `cadence_slow`
 fires on a `top_backoff` lift (`goals.md`, **Response to a cadence signal**). Adopt never fills
@@ -306,6 +309,16 @@ from the last matched Activity; their lines use `hold`.
 - Before any Exposure, `prescribe` takes `start_load` as the load (already a rack row) and the
   scheme's opening position from the table above. Warm-up loads derive from it by the ADR 0008
   ladder.
+- A rung of an `exercise_ladder` after the first carries its own `start_load`, and the rung's
+  exercise decides whether it is load-bearing, in its own load mode (ADR 0025). A load-bearing
+  rung with none is `start_load_missing` whatever its exercise's history, since exposures before
+  a rung's start count for nothing on it, so history never waives it and it raises no
+  `start_load_ignored`. A rung's load off the session location's rack is `start_load_off_rack`.
+  Both are scoped to the line with the rung index in params. `start_load` on the first rung or on
+  a rung that bears no load is `unknown_key`. The rung's load opens the line while it stands on
+  the rung with no Exposure of the rung's exercise that counts on it (`prescription.md`), in the
+  session or unmatched; after that the newest such Exposure's load holds, and the load never
+  steps up. An Exposure on a `ladder_rung` Decision's own date belongs to the previous rung.
 
 ## Adopt
 
@@ -315,12 +328,12 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 
 - **Dry run** prints the diff against the previous version (sessions and lines added, removed,
   changed; the defaults the emphasis filled, marked as such), every flag, each start load in
-  athlete units with its Hevy kg, and every session of the filled version, in version order,
-  with its time estimate beside its filled `minutes`. The estimate sums `count × (duration_s +
-  rest_s)` over each set group of the session's lines, with 40 s for a group that states no
-  `duration_s`, and rounds up to whole minutes; it is null for a session with no lines or with
-  no `minutes`, and it is the number `session_over_minutes` reports. The `program` skill shows
-  this to the athlete and runs the real adopt on their yes.
+  athlete units with its Hevy kg (a ladder rung's with its index), and every session of the
+  filled version, in version order, with its time estimate beside its filled `minutes`. The
+  estimate sums `count × (duration_s + rest_s)` over each set group of the session's lines, with
+  40 s for a group that states no `duration_s`, and rounds up to whole minutes; it is null for a
+  session with no lines or with no `minutes`, and it is the number `session_over_minutes`
+  reports. The `program` skill shows this to the athlete and runs the real adopt on their yes.
 - **Kind.** `amend` continues the open Block and the rotation position. `redesign` closes the
   open Block, opens one dated today and restarts the rotation at the first week unless
   `--position` names another; a redesign with an open Block warns `block_open_at_redesign`.
@@ -337,18 +350,18 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 
 | Code | Scope | Condition |
 | --- | --- | --- |
-| `unknown_key` | version | a key outside the schema, including `start_load` on a bodyweight or duration line |
+| `unknown_key` | version | a key outside the schema, including `start_load` on a bodyweight or duration line or rung, or on a ladder's first rung |
 | `unknown_exercise` | line | `exercise` is not in the library and not declared in the Draft |
 | `unknown_scheme` | line or session | the scheme name or a param is not in the registry |
 | `unknown_load_mode` | line | `load_mode` is not one of the glossary's |
 | `unknown_pattern` | exercise | an exercise the Draft references or declares has a `pattern` outside the `patterns` registry |
 | `unknown_muscle` | exercise or session | a name in an exercise's `primary` or `secondary` list, or a key of a coach-led session's `estimated_sets`, is outside the `muscles` registry |
-| `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session (a rung exercise of an `exercise_ladder` counts as one of its session's), or one session appears twice on a weekday |
+| `duplicate_id` | version | two sessions share an id, one exercise appears twice in a session (a rung exercise of an `exercise_ladder` counts as one of its session's, once per line), or one session appears twice on a weekday |
 | `schedule_session_missing` | version | the schedule names a session the version lacks |
 | `session_unscheduled` | session | a session in no rotation week with no `cadence` |
 | `cadence_on_scheduled` | session | a scheduled session states a cadence |
 | `location_unknown` | version or session | a location with no `[location.<name>]` in `coach.toml` |
-| `equipment_unsupplied` | line | a `total`, `per_hand_x2` or `single_implement` line whose equipment kind is not in the session location's `implements` (`instance.md`, ADR 0008) |
+| `equipment_unsupplied` | line | a `total`, `per_hand_x2` or `single_implement` line, or a later rung in one of those modes, whose equipment kind is not in the session location's `implements` (`instance.md`, ADR 0008) |
 | `rehab_in_version` | session | `kind = "rehab"` |
 | `practice_not_optional` | session | a practice with `tier = "core"` |
 | `coach_led_has_lines` | session | a coach-led session with lines, or a lifting session with `estimated_sets` |
@@ -360,6 +373,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `rpe_missing` | line | a working group the scheme's row requires `rpe` on has none, a rung's included |
 | `rung_exercise_unknown` | version | a rung's `exercise` is not in the library and not declared in the Draft |
 | `ladder_too_short` | line | an `exercise_ladder` with fewer than two rungs |
+| `rung_repeated` | line | a rung equal to the one before it in `exercise`, `sets` and `cues` |
 | `advance_criterion_off_rung` | line | `reps` on a duration rung, `duration_s` on a reps rung, or `manual` beside another key |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011); only when `coach.toml` has a `[hevy]` table (`validation.md`) |
 | `hevy_template_value_unknown` | line | under the same conditions, a template column present on the new exercise holds a value outside its registry (`hevy-exercise-types`, `hevy-equipment`, `hevy-muscle-groups`); one flag per bad column, none for an absent one |
@@ -562,13 +576,23 @@ squat steps by the home rack's next barbell row.
 
 ## Worked example: a balance-board ladder
 
-A daily practice line climbing a five-rung balance-board ladder (issue #256, ADR 0023). Each
-stance is its own custom exercise, so the logs tell the rungs apart. The first rung is the
-line's `exercise` and states none; the line states no `sets`, since each rung carries its own.
-The ladder criterion is two exposures at the rung's duration at or under its RPE; the third rung
-asks for three.
+A daily practice line whose hold lengthens by 10 s once both holds are clean (issue #256,
+ADR 0023, ADR 0025). All four rungs are one exercise, so its history stays whole, and the rung's
+start tells them apart. A separate exercise is still right for a stance the athlete wants as its
+own history. The first rung is the line's `exercise` and states none; the line states no `sets`,
+since each rung carries its own. The ladder criterion is two exposures at the rung's duration at
+or under its RPE; the third rung asks for three.
 
 ```toml
+name = "Daily balance practice"
+kind = "redesign"
+because = "a balance board joined the daily practice"
+emphasis = "hypertrophy"
+location = "home"
+
+[schedule]
+rotation = ["A"]
+
 [[session]]
 id = "daily-balance"
 title = "Daily practice · Balance board"
@@ -577,7 +601,7 @@ tier = "optional"
 cadence = "daily"
 
   [[session.line]]
-  exercise = "custom_balance_board_stand"
+  exercise = "custom_balance_board_hold"
   rest_s = 30
 
     [session.line.scheme]
@@ -589,65 +613,109 @@ cadence = "daily"
     sets = [{ count = 2, duration_s = 30, rpe = 5 }]
 
     [[session.line.scheme.rungs]]
-    exercise = "custom_balance_board_tilt"
-    cues = "slow tilts front to back, then side to side · rim off the floor"
-    sets = [{ count = 2, duration_s = 60, rpe = 6 }]
+    exercise = "custom_balance_board_hold"
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 40, rpe = 5 }]
 
     [[session.line.scheme.rungs]]
-    exercise = "custom_balance_board_eyes_closed"
-    cues = "eyes closed for the hold · slow quarter squats with eyes open between holds"
-    sets = [{ count = 2, duration_s = 45, rpe = 6 }]
+    exercise = "custom_balance_board_hold"
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 50, rpe = 6 }]
     advance = { exposures = 3 }
 
     [[session.line.scheme.rungs]]
-    exercise = "custom_balance_board_one_foot"
-    cues = "one foot centred, the other lifted · switch feet each set"
-    sets = [{ count = 4, duration_s = 20, rpe = 7 }]
+    exercise = "custom_balance_board_hold"
+    cues = "both feet, still, near a wall · soft knees · eyes on a point ahead"
+    sets = [{ count = 2, duration_s = 60, rpe = 6 }]
 
-    [[session.line.scheme.rungs]]
-    exercise = "custom_balance_board_one_foot_eyes_closed"
-    cues = "one foot, eyes closed, a wall within reach"
-    sets = [{ count = 4, duration_s = 15, rpe = 7 }]
-
-# with Hevy on, each also carries the four template columns (New exercises, above)
-[exercise.custom_balance_board_stand]
-name = "Balance board: two feet, still"
+[exercise.custom_balance_board_hold]
+name = "Balance board hold"
 load_mode = "duration"
 equipment_kind = "bodyweight"
 pattern = "balance"
 muscles = { primary = [], secondary = [] }
-
-[exercise.custom_balance_board_tilt]
-name = "Balance board: two feet, tilting"
-load_mode = "duration"
-equipment_kind = "bodyweight"
-pattern = "balance"
-muscles = { primary = [], secondary = [] }
-
-[exercise.custom_balance_board_eyes_closed]
-name = "Balance board: eyes closed and squats"
-load_mode = "duration"
-equipment_kind = "bodyweight"
-pattern = "balance"
-muscles = { primary = [], secondary = [] }
-
-[exercise.custom_balance_board_one_foot]
-name = "Balance board: one foot"
-load_mode = "duration"
-equipment_kind = "bodyweight"
-pattern = "balance"
-muscles = { primary = [], secondary = [] }
-
-[exercise.custom_balance_board_one_foot_eyes_closed]
-name = "Balance board: one foot, eyes closed"
-load_mode = "duration"
-equipment_kind = "bodyweight"
-pattern = "balance"
-muscles = { primary = [], secondary = [] }
+hevy_title = "Balance Board Hold"
+hevy_exercise_type = "duration"
+hevy_equipment = "other"
+hevy_muscle_group = "other"
 ```
 
 Adopt validates every rung and stores the ladder on the line; `program show` prints every rung
-with its exercise, cues, sets and criterion.
+with its exercise, label, cues, sets and criterion. The template columns are needed only with
+Hevy on (New exercises, above).
+
+## Worked example: a pull-up negatives ladder
+
+A tempo ladder on one exercise, topped by a weighted rung (ADR 0025). The first three rungs are
+`negative_pull_up` at the same reps and differ only in their cues, which read lower for 4 s, 6 s
+and 8 s. Each rung's criterion is its reps at RPE, and the athlete's yes to `rung_met` carries the
+word that the tempo was held. The top rung is a load-bearing exercise, so it carries its own
+`start_load`, on the home dumbbell rack in the athlete's units.
+
+```toml
+name = "Pull day around the negatives"
+kind = "redesign"
+because = "the strict pull-up is built on longer negatives"
+emphasis = "hypertrophy"
+location = "home"
+
+[schedule]
+rotation = ["A"]
+
+[schedule.A]
+sat = "pull"
+
+[[session]]
+id = "pull"
+title = "Sat — Pull: pull-up negatives"
+kind = "lifting"
+tier = "core"
+minutes = 45
+
+  [[session.line]]
+  exercise = "negative_pull_up"
+  rest_s = 120
+
+    [session.line.scheme]
+    name = "exercise_ladder"
+
+    [[session.line.scheme.rungs]]
+    cues = "jump or step to the top · lower for 4 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "negative_pull_up"
+    cues = "jump or step to the top · lower for 6 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "negative_pull_up"
+    cues = "jump or step to the top · lower for 8 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+
+    [[session.line.scheme.rungs]]
+    exercise = "custom_weighted_negative_pull_up"
+    cues = "dumbbell between the feet · lower for 8 s · dead hang at the bottom"
+    sets = [{ count = 3, reps = 5, rpe = 8 }]
+    start_load = 10
+
+[exercise.custom_weighted_negative_pull_up]
+name = "Weighted negative pull-up"
+load_mode = "single_implement"
+equipment_kind = "dumbbell"
+pattern = "vertical_pull"
+muscles = { primary = ["lats"], secondary = ["biceps", "upper_back"] }
+hevy_title = "Weighted Negative Pull Up"
+hevy_exercise_type = "weight_reps"
+hevy_equipment = "dumbbell"
+hevy_muscle_group = "lats"
+```
+
+What the dry run shows for this file: no violations; `start_loads` lists the top rung, with its
+index and Hevy-bound kg, and no other. The file is one session, so it also raises the warnings of a
+week with nothing else in it (`priority_lift_absent`, `muscle_no_hard_sets`). Rung 4's label
+names its exercise while the line stands below it:
+`rung 4 · Weighted negative pull-up · 3×5 @8 · 10 lb · dumbbell between the feet · lower for 8 s · dead hang at the bottom`.
 
 ## Handed to other tickets
 
