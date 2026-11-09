@@ -245,8 +245,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `rehab_in_version` | session | session id | removing it; a rehab session is raised on a niggle | `null` |
 | `practice_not_optional` | session | session id | `tier = "optional"` | `null` |
 | `coach_led_has_lines` | session | session id | removing the lines or the `estimated_sets` | `null` |
-| `start_load_missing` | line | exercise id | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there; raised only with no Exposure of the exercise anywhere, the same rule at adopt and in `prescribe` | `null` |
-| `start_load_off_rack` | line | start load, location, two nearest rows | a start load on a rack row | `null` |
+| `start_load_missing` | line | exercise id; the rung index on a ladder rung after the first | a `start_load` on the line, or on the `swap_exercise` override that put the exercise there, raised only with no Exposure of the exercise anywhere, the same rule at adopt and in `prescribe`; or a `start_load` on the rung, which adopt asks of a load-bearing rung whatever its exercise's history | `null` |
+| `start_load_off_rack` | line | start load, location, two nearest rows; the rung index on a ladder rung after the first | a start load on a rack row | `null` |
 | `no_working_sets` | line | scheme | a working group, or `hold` | `null` |
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |

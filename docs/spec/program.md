@@ -266,6 +266,7 @@ grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 | `cues` | no | Prose, the rung's form cues |
 | `sets` | yes | Exactly one working group with `reps` or `duration_s` and `rpe`; otherwise `set_groups_off_scheme` or `rpe_missing` |
 | `advance` | no | The rung's criterion: restates or overrides the scheme-level `advance` key by key; `manual = true` stands alone |
+| `start_load` | a load-bearing rung after the first; not on the first rung, whose start load is the line's | Athlete units; per hand for per-hand modes. See **Start loads** |
 
 The criterion keys, at scheme level and on a rung: `reps` (a reps rung only), `duration_s` (a duration rung only), `rpe_at_most`, `exposures` and `manual` (`true`, with no other key: the athlete's word, for the rare rung the logs cannot tell). A key off its rung is `advance_criterion_off_rung`. With nothing said the criterion is every working set at the rung's reps or duration at or under its RPE on 2 consecutive exposures; a rep range reads its top and an open top `"8+"` its number. A ladder needs at least two rungs (`ladder_too_short`). The worked example below shows one in full.
 
@@ -306,6 +307,15 @@ from the last matched Activity; their lines use `hold`.
 - Before any Exposure, `prescribe` takes `start_load` as the load (already a rack row) and the
   scheme's opening position from the table above. Warm-up loads derive from it by the ADR 0008
   ladder.
+- A rung of an `exercise_ladder` after the first carries its own `start_load`, and the rung's
+  exercise decides whether it is load-bearing, in its own load mode (ADR 0025). A load-bearing
+  rung with none is `start_load_missing` whatever its exercise's history, since exposures before
+  a rung's start count for nothing on it, so history never waives it and it raises no
+  `start_load_ignored`. A rung's load off the session location's rack is `start_load_off_rack`.
+  Both are scoped to the line with the rung index in params. `start_load` on the first rung or on
+  a rung that bears no load is `unknown_key`. The rung's load opens the line while it stands on
+  the rung with no Exposure of the rung's exercise since the rung's start, in the session or
+  unmatched; after that the newest such Exposure's load holds, and the load never steps up.
 
 ## Adopt
 
@@ -337,7 +347,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 
 | Code | Scope | Condition |
 | --- | --- | --- |
-| `unknown_key` | version | a key outside the schema, including `start_load` on a bodyweight or duration line |
+| `unknown_key` | version | a key outside the schema, including `start_load` on a bodyweight or duration line or rung, or on a ladder's first rung |
 | `unknown_exercise` | line | `exercise` is not in the library and not declared in the Draft |
 | `unknown_scheme` | line or session | the scheme name or a param is not in the registry |
 | `unknown_load_mode` | line | `load_mode` is not one of the glossary's |
