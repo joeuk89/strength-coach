@@ -146,10 +146,13 @@ Notes:
 - An `exercise_ladder` line stands on the rung its `ladder_rung` Decision names (`overrides.md`),
   or the first with none, and prescribes that rung's exercise, cues and working group (ADR 0023),
   and on a load-bearing rung its load (`program.md`, **Start loads**; ADR 0025).
-  The rung's start is the Decision's date, or the version's adoption for the first rung; the
-  criterion and `stall_streak` read only exposures of the standing rung's exercise from it, and
-  exposures on another rung's exercise, or on its own before its start, count for nothing, so two
-  rungs may share an exercise (ADR 0025). The line's key stays its first rung's exercise for
+  The rung's start is the Decision's date, or the version's adoption for the first rung. From a
+  Decision's date, exposures count from the day after it: neither carries a time of day and the
+  workout that earned the climb is often logged that day, so a session trained on the new rung on
+  that date does not count. From adoption they count on the date itself, since no earlier rung
+  earned the first. The load, the criterion and `stall_streak` read only the standing rung's
+  exercise's exposures that count, and exposures on another rung's exercise, or on its own before
+  they count, count for nothing, so two rungs may share an exercise (ADR 0025). The line's key stays its first rung's exercise for
   every flag and override; the prescription and history matching carry the standing rung's. A
   light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
   after the athlete's yes.
