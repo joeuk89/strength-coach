@@ -1,6 +1,6 @@
 """A rung's start is the day its Decision was recorded on in the athlete's timezone: recorded at
-23:30 UTC on Monday, it starts on Monday in UTC and on Tuesday in Tokyo, so Monday's exposure
-counts toward the rung only in UTC."""
+23:30 UTC on Monday, it starts on Monday in UTC and on Tuesday in Tokyo, so Tuesday's exposure
+counts toward the rung only in UTC, where it is the day after the start."""
 
 import datetime
 from typing import cast
@@ -26,7 +26,7 @@ LATE_MONDAY = datetime.datetime(2026, 11, 2, 23, 30, tzinfo=datetime.UTC)
 def a_rung_recorded_late_on_monday() -> Connection:
     conn = a_ladder_program()
     record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock(LATE_MONDAY))
-    logged(conn, "ab_wheel", "2026-11-02", 8)
+    logged(conn, "ab_wheel", "2026-11-03", 8)
     return conn
 
 

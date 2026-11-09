@@ -53,7 +53,9 @@ def cadence_signals(
             for form in forms
         ):
             continue
-        standing, counted = standing_line(line, session_id, rungs, exposures)
+        standing, counted = standing_line(
+            line, session_id, rungs, exposures, adopted=version.adopted_on
+        )
         read = CadenceRead(
             line,
             (before, last),

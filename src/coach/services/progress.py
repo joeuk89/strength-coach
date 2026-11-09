@@ -55,6 +55,7 @@ def progress(
     exposures = read_history(conn, units).lifting
     versions = programs.newest_first(conn)
     form = versions[0].form if versions else None
+    adopted = versions[0].adopted_on if versions else None
     stored = _goal(conn)
     priority = stored.goal.priority_lifts if stored else ()
     signals = cadence_signals(conn, closed, units=units, on=on, zone=zone)
@@ -79,6 +80,7 @@ def progress(
                 on,
                 by_exercise.get(exercise),
                 rungs,
+                adopted,
             )
             for exercise in priority
         ),
@@ -125,6 +127,7 @@ def _lift(
     today: datetime.date,
     signal: str | None,
     rungs: Sequence[DecisionInForce],
+    adopted: datetime.date | None,
 ) -> LiftProgress:
     line = _line(form, exercise)
     judged_line = _judged_line(form, exercise)
@@ -146,7 +149,9 @@ def _lift(
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
-        stall_streak=_stall_streak(judged_line, since_redesign(judged_history, redesigned), rungs),
+        stall_streak=_stall_streak(
+            judged_line, since_redesign(judged_history, redesigned), rungs, adopted
+        ),
         resets=_resets(judged_line[1] if judged_line else None, judged_history),
         signal=signal,
     )
@@ -175,12 +180,14 @@ def _stall_streak(
     judged_line: tuple[str, Line] | None,
     history: Sequence[Exposure],
     rungs: Sequence[DecisionInForce],
+    adopted: datetime.date | None,
 ) -> int:
-    """Read on the judged line, a ladder's standing rung from its start; 0 when it has none."""
+    """Read on the judged line, a ladder's from the exposures that count on its standing rung; 0
+    when it has none."""
     if judged_line is None:
         return 0
     session_id, line = judged_line
-    return len(stall_streak(*standing_line(line, session_id, rungs, history)))
+    return len(stall_streak(*standing_line(line, session_id, rungs, history, adopted=adopted)))
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:

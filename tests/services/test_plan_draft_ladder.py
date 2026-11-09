@@ -85,15 +85,20 @@ def test_the_opening_rungs_criterion_reads_exposures_from_the_versions_adoption(
     assert climb_codes(ladder_line(since_adoption)) == ["rung_met"]
 
 
-def test_a_recorded_rungs_criterion_reads_exposures_from_the_decisions_date() -> None:
+def test_a_recorded_rungs_criterion_counts_exposures_from_the_day_after_the_decision() -> None:
     before_decision = a_ladder_program()
     ladder_rung(before_decision, 2)
     logged(before_decision, "ab_wheel", "2026-10-29", 8)
     logged(before_decision, "ab_wheel", "2026-10-31", 8)
-    since_decision = a_ladder_program()
-    ladder_rung(since_decision, 2)
-    logged(since_decision, "ab_wheel", "2026-10-30", 8)
-    logged(since_decision, "ab_wheel", "2026-10-31", 8)
+    on_decision = a_ladder_program()
+    ladder_rung(on_decision, 2)
+    logged(on_decision, "ab_wheel", "2026-10-30", 8)
+    logged(on_decision, "ab_wheel", "2026-10-31", 8)
+    after_decision = a_ladder_program()
+    ladder_rung(after_decision, 2)
+    logged(after_decision, "ab_wheel", "2026-10-31", 8)
+    logged(after_decision, "ab_wheel", "2026-11-01", 8)
 
     assert climb_codes(ladder_line(before_decision)) == []
-    assert climb_codes(ladder_line(since_decision)) == ["rung_met"]
+    assert climb_codes(ladder_line(on_decision)) == []
+    assert climb_codes(ladder_line(after_decision)) == ["rung_met"]

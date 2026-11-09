@@ -109,7 +109,7 @@ def test_a_line_stands_on_the_decision_that_names_its_session_and_its_key() -> N
         decisions, LADDER, line=LineRef("lower", "negative_pull_up"), adopted=None
     )
 
-    assert standing == StandingRung(2, datetime.date(2026, 11, 2))
+    assert standing == StandingRung(2, datetime.date(2026, 11, 3))
 
 
 def test_a_line_no_decision_names_stands_on_the_opening_rung_from_its_adoption() -> None:

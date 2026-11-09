@@ -152,10 +152,17 @@ def test_a_shared_exercises_log_on_the_rungs_start_date_belongs_to_the_previous_
     assert line.change == "first prescription"
 
 
-def test_a_log_on_the_rungs_start_date_still_counts_toward_its_criterion() -> None:
+def test_a_log_on_the_decisions_date_does_not_count_toward_the_rungs_criterion() -> None:
     line = derive(WITH_A_TOP, logged("2026-10-25", 5), logged("2026-10-27", 5))
 
-    assert "rung_met" in codes(line)
+    assert "rung_met" not in codes(line)
+
+
+def test_a_log_the_day_after_the_decision_anchors_the_rungs_load() -> None:
+    line = derive(LADDER, logged("2026-10-26", 10))
+
+    assert working_load(line) == 10
+    assert line.derived_from == "exposure:w-2026-10-26-lower/weighted_negative"
 
 
 def test_another_sessions_exposures_since_the_rungs_start_do_not_anchor_it() -> None:

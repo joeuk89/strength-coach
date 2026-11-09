@@ -394,6 +394,73 @@ def test_one_exposure_since_a_climb_on_a_shared_exercise_is_not_the_run() -> Non
     assert ladder_flags(line) == []
 
 
+def test_the_workout_that_earned_a_tempo_climb_is_not_the_new_rungs_first_exposure() -> None:
+    climbed = (ladder_rung(2, "2026-10-20"),)
+    earned = tempo_logs("2026-10-20")
+
+    one_after = derive(TEMPO_LADDER, earned, tempo_logs("2026-10-22"), decisions=climbed)
+    two_after = derive(
+        TEMPO_LADDER,
+        earned,
+        tempo_logs("2026-10-22"),
+        tempo_logs("2026-10-29"),
+        decisions=climbed,
+    )
+
+    assert ladder_flags(one_after) == []
+    assert ladder_flags(two_after) == [
+        (
+            "rung_met",
+            {
+                "rung": 2,
+                "next": "negative_pull_up",
+                "next_rung": 3,
+                "exposures": [
+                    "exposure:w-2026-10-22/negative_pull_up",
+                    "exposure:w-2026-10-29/negative_pull_up",
+                ],
+            },
+        )
+    ]
+
+
+def test_a_log_the_day_after_the_decision_counts_toward_the_criterion() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-21"),
+        tempo_logs("2026-10-22"),
+        decisions=(ladder_rung(2, "2026-10-20"),),
+    )
+
+    assert [code for code, _ in ladder_flags(line)] == ["rung_met"]
+
+
+def test_a_first_rung_log_on_the_adoption_date_counts_toward_the_criterion() -> None:
+    line = derive(TEMPO_LADDER, tempo_logs(ADOPTED.isoformat()), tempo_logs("2026-10-08"))
+
+    assert ladder_flags(line)[0][1]["exposures"] == [
+        "exposure:w-2026-10-01/negative_pull_up",
+        "exposure:w-2026-10-08/negative_pull_up",
+    ]
+
+
+def test_a_first_rung_log_before_the_adoption_date_does_not_count() -> None:
+    line = derive(TEMPO_LADDER, tempo_logs("2026-09-30"), tempo_logs("2026-10-08"))
+
+    assert ladder_flags(line) == []
+
+
+def test_a_decision_back_to_the_first_rung_counts_from_the_day_after_it() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-20"),
+        tempo_logs("2026-10-22"),
+        decisions=(ladder_rung(1, "2026-10-20"),),
+    )
+
+    assert ladder_flags(line) == []
+
+
 def test_on_a_shared_exercise_rung_met_fires_on_the_criterion_from_the_rungs_start() -> None:
     line = derive(
         TEMPO_LADDER,
@@ -438,6 +505,38 @@ def test_stall_streak_on_a_shared_exercise_reads_only_since_the_rungs_start() ->
 
     assert [f.code for f in since_before.flags] == ["stall_streak"]
     assert [f.code for f in since_between.flags] == []
+
+
+def test_stall_streak_leaves_out_a_log_on_the_decisions_date() -> None:
+    flat = (tempo_logs("2026-10-20", 3), tempo_logs("2026-10-22", 3), tempo_logs("2026-10-29", 3))
+
+    line = derive(TEMPO_LADDER, *flat, decisions=(ladder_rung(2, "2026-10-20"),))
+
+    assert [f.code for f in line.flags] == []
+
+
+def test_stall_streak_counts_a_log_the_day_after_the_decision() -> None:
+    flat = (tempo_logs("2026-10-21", 3), tempo_logs("2026-10-22", 3), tempo_logs("2026-10-29", 3))
+
+    line = derive(TEMPO_LADDER, *flat, decisions=(ladder_rung(2, "2026-10-20"),))
+
+    assert [f.code for f in line.flags] == ["stall_streak"]
+
+
+def test_stall_streak_on_a_first_rung_counts_a_log_on_the_adoption_date_only_from_it() -> None:
+    from_adoption = (
+        tempo_logs(ADOPTED.isoformat(), 3),
+        tempo_logs("2026-10-08", 3),
+        tempo_logs("2026-10-15", 3),
+    )
+    from_before = (
+        tempo_logs("2026-09-30", 3),
+        tempo_logs("2026-10-08", 3),
+        tempo_logs("2026-10-15", 3),
+    )
+
+    assert [f.code for f in derive(TEMPO_LADDER, *from_adoption).flags] == ["stall_streak"]
+    assert [f.code for f in derive(TEMPO_LADDER, *from_before).flags] == []
 
 
 def test_a_return_band_steps_back_by_rungs_on_a_shared_exercise() -> None:

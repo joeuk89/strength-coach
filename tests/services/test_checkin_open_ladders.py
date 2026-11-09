@@ -150,8 +150,8 @@ def test_a_leave_warning_holds_ladder_top_on_the_last_rung() -> None:
     conn = a_ladder_program()
     squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
     record(conn, ladder_rung_decision(3).encode(), file="d.toml", clock=FixedClock())
-    logged(conn, "hanging_leg_raise", "2026-10-30", 6)
     logged(conn, "hanging_leg_raise", "2026-10-31", 6)
+    logged(conn, "hanging_leg_raise", "2026-11-01", 6)
     [before] = ladder_rows(conn)
 
     leave_warning(conn, the_prompts_flag(conn, "ladder_top"))

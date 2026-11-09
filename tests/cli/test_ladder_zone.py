@@ -1,5 +1,5 @@
 """`progress` and `publish` take the zone from the clock: a rung recorded at 23:30 UTC on Monday
-starts on Tuesday in Tokyo, so Monday's exposure counts toward it only in UTC."""
+starts on Tuesday in Tokyo, so Tuesday's exposure counts toward it only in UTC."""
 
 import datetime
 import shutil
@@ -41,7 +41,7 @@ def initialised(tmp_path_factory: pytest.TempPathFactory) -> Path:
         )
     built = a_ladder_program()
     record(built, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock(LATE_MONDAY))
-    logged(built, "ab_wheel", "2026-11-02", 8)
+    logged(built, "ab_wheel", "2026-11-03", 8)
     on_disk = connect(root / ".coach" / "coach.db")
     built.backup(on_disk)
     on_disk.close()
