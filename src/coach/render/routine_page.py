@@ -54,4 +54,4 @@ def _climb(criterion: Mapping[str, object]) -> str:
     if isinstance(rpe, int | float):
         head.append(f"RPE {number(rpe)} or under")
     exposures = f"{criterion.get('exposures')} exposures running"
-    return f"on {' at '.join(head)}, {exposures}" if head else f"on {exposures}"
+    return "on " + (f"{' at '.join(head)}, {exposures}" if head else exposures)
