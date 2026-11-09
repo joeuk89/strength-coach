@@ -203,7 +203,7 @@ def test_the_flags_registry_names_the_params_rung_mets_hash_covers() -> None:
         "severity": "warning",
         "left_by": ["weekplan", "decision"],
         "scope": ["line"],
-        "params": ["rung", "next", "exposures"],
+        "params": ["rung", "next", "next_rung", "exposures"],
         "rn": "rn:bodyweight-skill-progression.3",
         "hashed": ["rung", "next"],
     }

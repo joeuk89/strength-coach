@@ -67,7 +67,10 @@ def _session(group: list[SummarySession], units: Units) -> list[str]:
 
 def _line(line: SummaryLine, units: Units) -> str:
     shown = f"{line.exercise_id} {dose(line.set_groups, units)} · {line.change}"
-    return shown if line.next_rung is None else f"{shown} · Next: {line.next_rung}"
+    labels = line.rung_labels
+    if labels is None:
+        return shown
+    return f"{shown} · {labels.own}" + ("" if labels.next is None else f" · Next: {labels.next}")
 
 
 def _override(override: PlanOverride) -> str:

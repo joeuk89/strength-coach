@@ -58,6 +58,8 @@ def test_the_ladders_field_follows_lifts_with_the_standing_rung_and_its_exposure
             "met": False,
             "held": False,
             "next": "ab_wheel",
+            "label": "rung 1 · 3×10 @8 · first cues",
+            "next_label": "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues",
         }
     ]
     assert field_of(card, "ladders").asks == ()
@@ -203,6 +205,8 @@ def test_a_ladder_rung_in_the_check_in_draft_moves_the_next_card_to_the_new_rung
         "met": False,
         "held": False,
         "next": "hanging_leg_raise",
+        "label": "rung 2 · 3×8 @8 · ab_wheel cues",
+        "next_label": "rung 3 · Hanging Leg Raise · 3×6 @8 · hanging_leg_raise cues",
     }
 
 
@@ -235,5 +239,7 @@ def test_the_cards_ladders_row_on_a_practice_ladder_on_its_last_rung_says_met() 
             "met": True,
             "held": False,
             "next": None,
+            "label": "rung 3 · 3×6 @8 · hanging_leg_raise cues",
+            "next_label": None,
         }
     ]

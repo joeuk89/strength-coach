@@ -20,6 +20,11 @@ from coach.services.record import record
 from coach.store.connection import Connection
 
 FIRST_SUNDAY = datetime.date(2026, 11, 8)
+RUNGS_ON_THE_FIRST = (
+    "**rung 1 · 3×10 @8 · first cues** (standing)<br>"
+    "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues<br>"
+    "rung 3 · Hanging Leg Raise · 3×6 @8 · hanging_leg_raise cues"
+)
 
 
 def test_the_progress_view_carries_the_ladder_rows_the_check_in_card_shows() -> None:
@@ -41,6 +46,8 @@ def test_the_progress_view_carries_the_ladder_rows_the_check_in_card_shows() -> 
             "met": True,
             "held": False,
             "next": "ab_wheel",
+            "label": "rung 1 · 3×10 @8 · first cues",
+            "next_label": "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues",
         }
     ]
     assert [ladder_row(r) for r in report.ladders] == field_of(opened(conn), "ladders").facts[
@@ -56,9 +63,20 @@ def test_the_progress_page_prints_a_ladders_table() -> None:
 
     assert (
         "## Ladders\n\n"
-        "| line | standing rung | exposures toward the criterion | met | held |\n"
-        "| --- | --- | --- | --- | --- |\n"
-        "| Lower: Dead Bug | 1 of 3, Dead Bug | 1 of 2 | no | no |"
+        "| line | standing exercise | rungs | exposures toward the criterion | met | held |\n"
+        "| --- | --- | --- | --- | --- | --- |\n"
+        f"| Lower: Dead Bug | Dead Bug | {RUNGS_ON_THE_FIRST} | 1 of 2 | no | no |"
+    ) in page
+
+
+def test_a_shared_exercise_ladder_names_no_rung_on_the_standing_rungs_exercise() -> None:
+    conn = a_ladder_program(TEMPO_LADDER)
+
+    page = the_pages(conn)["pages/progress.md"]
+
+    assert (
+        "| Lower: Dead Bug | Dead Bug | **rung 1 · 3×10 @8 · lower for 4 s** (standing)<br>"
+        "rung 2 · 3×10 @8 · lower for 6 s<br>rung 3 · 3×10 @8 · lower for 8 s |"
     ) in page
 
 
@@ -68,7 +86,11 @@ def test_a_climbed_line_keeps_its_first_rungs_name_beside_the_standing_rungs() -
 
     page = the_pages(conn)["pages/progress.md"]
 
-    assert "| Lower: Dead Bug | 2 of 3, Ab Wheel Rollout |" in page
+    assert (
+        "| Lower: Dead Bug | Ab Wheel Rollout | rung 1 · Dead Bug · 3×10 @8 · first cues<br>"
+        "**rung 2 · 3×8 @8 · ab_wheel cues** (standing)<br>"
+        "rung 3 · Hanging Leg Raise · 3×6 @8 · hanging_leg_raise cues |"
+    ) in page
 
 
 def test_a_manual_rung_on_the_progress_page_reads_in_plain_words() -> None:
@@ -81,7 +103,11 @@ def test_a_manual_rung_on_the_progress_page_reads_in_plain_words() -> None:
 
     page = the_pages(conn)["pages/progress.md"]
 
-    assert "| Lower: Dead Bug | 1 of 2, Dead Bug | when you and the coach agree | no | no |" in page
+    assert (
+        "| Lower: Dead Bug | Dead Bug | **rung 1 · 3×10 @8 · first cues** (standing)<br>"
+        "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues | "
+        "when you and the coach agree | no | no |"
+    ) in page
 
 
 def test_a_progress_page_with_no_ladder_line_prints_no_ladders_table() -> None:
@@ -138,7 +164,7 @@ def test_the_progress_page_tells_a_met_rung_that_is_not_held_from_a_held_one() -
 
     page = the_pages(conn)["pages/progress.md"]
 
-    assert "| Lower: Dead Bug | 1 of 3, Dead Bug | 2 of 2 | yes | no |" in page
+    assert f"| Lower: Dead Bug | Dead Bug | {RUNGS_ON_THE_FIRST} | 2 of 2 | yes | no |" in page
 
 
 def test_the_progress_page_shows_a_rung_held_by_a_leave_warning() -> None:
@@ -147,4 +173,4 @@ def test_the_progress_page_shows_a_rung_held_by_a_leave_warning() -> None:
 
     page = the_pages(conn)["pages/progress.md"]
 
-    assert "| Lower: Dead Bug | 1 of 3, Dead Bug | 2 of 2 | yes | yes |" in page
+    assert f"| Lower: Dead Bug | Dead Bug | {RUNGS_ON_THE_FIRST} | 2 of 2 | yes | yes |" in page

@@ -254,8 +254,8 @@ def the_ladder_note(frozen: FrozenLine) -> list[str]:
 @pytest.mark.parametrize(
     ("rung", "cues", "following"),
     [
-        (1, "lower for 4 s", "Negative"),
-        (2, "lower for 6 s", "Weighted"),
+        (1, "lower for 4 s", "rung 2 · 3×4 @8 · lower for 6 s"),
+        (2, "lower for 6 s", "rung 3 · Weighted · 3×4 @8 · lower for 6 s, loaded"),
     ],
 )
 def test_a_note_on_a_shared_exercise_reads_the_rung_the_row_froze(
@@ -276,10 +276,48 @@ def test_a_swapped_rung_keeps_the_cues_of_the_rung_the_row_froze() -> None:
     swap = [{"step": "swap", "from": "pull_up_negative", "to": "x", "cause": "swap_exercise"}]
     frozen = FrozenLine("weighted_negative", TEMPO_GROUPS, swap, rung=1)
 
-    assert the_ladder_note(frozen) == ["Cues: lower for 4 s", "Next: Negative"]
+    assert the_ladder_note(frozen) == [
+        "Cues: lower for 4 s",
+        "Next: rung 2 · 3×4 @8 · lower for 6 s",
+    ]
 
 
 def test_a_row_frozen_before_rungs_were_recorded_finds_its_rung_by_exercise() -> None:
     frozen = FrozenLine("weighted_negative", TEMPO_GROUPS)
 
     assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]
+
+
+def test_the_balance_ladder_note_names_the_next_rungs_exercise() -> None:
+    stand = (SetGroup(2, duration_s=45, rpe=6),)
+    tilts = (SetGroup(2, duration_s=60, rpe=6),)
+    board = Line(
+        "board_stand",
+        (),
+        60,
+        SchemeRef(
+            "exercise_ladder",
+            {},
+            ExerciseLadder(
+                (Rung("board_stand", stand, "feet apart"), Rung("board_tilts", tilts, "slowly"))
+            ),
+        ),
+    )
+    session = SessionRoutine(
+        title="Balance",
+        folder_id="9000",
+        week_line="Week of 2026-11-02, rotation week A",
+        authored=(board,),
+        lines=(
+            FrozenLine(
+                "board_stand", [{"type": "working", "count": 2, "duration_s": 45, "rpe": 6}], rung=1
+            ),
+        ),
+        names={"board_stand": "Balance board: stand", "board_tilts": "Balance board: tilts"},
+    )
+
+    body = cast(dict[str, Any], project_routine(session, {"board_stand": "B-1"}, "lb"))
+
+    assert body["exercises"][0]["notes"].splitlines()[-1] == (
+        "Next: rung 2 · Balance board: tilts · 2×60 s @6 · slowly"
+    )

@@ -219,6 +219,8 @@ DECLARATION = Declaration(
                             "type": "boolean",
                         },
                         "next": {"type": ["string", "null"]},
+                        "label": {"type": "string"},
+                        "next_label": {"type": ["string", "null"]},
                     },
                 },
             },

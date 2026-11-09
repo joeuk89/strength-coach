@@ -470,6 +470,10 @@ def test_program_show_prints_every_rung_of_the_balance_board_ladder(instance: Pa
     assert ladder["rungs"][0] == {
         "rung": 1,
         "exercise": "custom_balance_board_stand",
+        "label": (
+            "rung 1 · 2×30 s @5 · both feet, still, near a wall · soft knees · "
+            "eyes on a point ahead"
+        ),
         "cues": "both feet, still, near a wall · soft knees · eyes on a point ahead",
         "sets": [{"count": 2, "duration_s": 30, "rpe": 5}],
         "criterion": {"duration_s": 30, "rpe_at_most": 5, "exposures": 2},
@@ -482,6 +486,10 @@ def test_program_show_prints_every_rung_of_the_balance_board_ladder(instance: Pa
         (4, "custom_balance_board_one_foot", False),
         (5, "custom_balance_board_one_foot_eyes_closed", False),
     ]
+    assert ladder["rungs"][1]["label"] == (
+        "rung 2 · Balance board: two feet, tilting · 2×60 s @6 · "
+        "slow tilts front to back, then side to side · rim off the floor"
+    )
     assert ladder["rungs"][2]["criterion"] == {"duration_s": 45, "rpe_at_most": 6, "exposures": 3}
 
 
@@ -523,5 +531,13 @@ def test_progress_carries_each_ladder_line_on_its_standing_rung(instance: Path) 
             "met": False,
             "held": False,
             "next": "custom_balance_board_tilt",
+            "label": (
+                "rung 1 · 2×30 s @5 · both feet, still, near a wall · soft knees · "
+                "eyes on a point ahead"
+            ),
+            "next_label": (
+                "rung 2 · Balance board: two feet, tilting · 2×60 s @6 · "
+                "slow tilts front to back, then side to side · rim off the floor"
+            ),
         }
     ]

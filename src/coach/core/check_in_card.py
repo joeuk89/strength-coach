@@ -318,6 +318,8 @@ def ladder_row(read: LadderRead) -> Facts:
         "met": read.met,
         "held": read.held,
         "next": read.next,
+        "label": read.label,
+        "next_label": read.next_label,
     }
 
 

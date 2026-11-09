@@ -8,13 +8,15 @@ from typing import cast
 from coach.core.config import Units
 from coach.core.hevy_actions import STANDING_CADENCES
 from coach.core.mirror import FolderRole
+from coach.core.prescription import RungNaming
 from coach.core.program.form import Session
 from coach.core.routine_projection import (
     FrozenLine,
     RungKey,
+    RungLabels,
     SessionRoutine,
-    next_rung_names,
     project_routine,
+    rung_labels,
 )
 from coach.store import exercises, mirrors, niggles, programs, week_plans
 from coach.store.connection import Connection
@@ -39,11 +41,13 @@ def session_facts(conn: Connection, plan: Mapping[str, object]) -> dict[str, Ses
     return _facts(conn, programs.in_force_at(conn, str(plan["approved_at"])))
 
 
-def next_rungs(conn: Connection, version: VersionRow | None) -> dict[str, dict[RungKey, str]]:
-    """Each session's next rung names under `version`, read as the routine's note reads them."""
-    names = _library_names(exercises.every(conn))
+def session_rung_labels(
+    conn: Connection, version: VersionRow | None, units: Units
+) -> dict[str, dict[RungKey, RungLabels]]:
+    """Each session's rung labels under `version`, read as the routine's note reads them."""
+    naming = rung_naming(conn, units)
     return {
-        session_id: next_rung_names(found.session.lines, names)
+        session_id: rung_labels(found.session.lines, naming)
         for session_id, found in _facts(conn, version).items()
     }
 
@@ -84,6 +88,10 @@ def projection(
         str(row["id"]): str(row["hevy_template_id"]) for row in library if row["hevy_template_id"]
     }
     return project_routine(session, templates, units)
+
+
+def rung_naming(conn: Connection, units: Units) -> RungNaming:
+    return RungNaming(units, _library_names(exercises.every(conn)))
 
 
 def _library_names(library: Sequence[Row]) -> dict[str, str]:

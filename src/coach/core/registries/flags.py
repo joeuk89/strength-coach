@@ -312,7 +312,7 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "rung_met",
         ("line",),
-        ("rung", "next", "exposures"),
+        ("rung", "next", "next_rung", "exposures"),
         ("rn:bodyweight-skill-progression.3",),
         hashed=("rung", "next"),
     ),

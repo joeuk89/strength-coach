@@ -160,6 +160,7 @@ def test_two_exposures_meeting_the_criterion_raise_rung_met_naming_the_next_rung
             {
                 "rung": 1,
                 "next": "band_pull_up",
+                "next_rung": 2,
                 "exposures": [
                     "exposure:w-2026-10-19/negative_pull_up",
                     "exposure:w-2026-10-26/negative_pull_up",
@@ -408,6 +409,7 @@ def test_on_a_shared_exercise_rung_met_fires_on_the_criterion_from_the_rungs_sta
             {
                 "rung": 2,
                 "next": "negative_pull_up",
+                "next_rung": 3,
                 "exposures": [
                     "exposure:w-2026-10-22/negative_pull_up",
                     "exposure:w-2026-10-29/negative_pull_up",

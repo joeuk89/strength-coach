@@ -48,6 +48,7 @@ from coach.services.closed_weeks import (
 from coach.services.fatigue import Fatigue
 from coach.services.history import read_history
 from coach.services.previous_plans import second_week_flags
+from coach.services.projections import rung_naming
 from coach.services.racks import racks_by_location
 from coach.services.rotation import default_week, rotation_position
 from coach.store import (
@@ -116,6 +117,7 @@ def plan_draft(
     history = read_history(conn, config.athlete.units, log)
     program = ProgramVersion(version.form, _exercise_facts(conn))
     constraints = niggles.open_constraints(conn)
+    naming = rung_naming(conn, config.athlete.units)
     opened = programs.block_opened(conn)
     redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     sessions = tuple(
@@ -125,6 +127,7 @@ def plan_draft(
                 exposures=history.exposures,
                 racks=racks,
                 planned=session,
+                rung_naming=naming,
                 trained=history.trained,
                 overrides=tuple(overrides),
                 decisions=_decisions(conn, session, clock),

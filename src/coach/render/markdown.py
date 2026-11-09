@@ -84,6 +84,10 @@ def group_text(group: Mapping[str, object], units: Units) -> str:
     return f"warm-up {shape}" if group.get("type") == "warm_up" else shape
 
 
+def marked_rung(label: str, *, standing: bool) -> str:
+    return f"**{label}** (standing)" if standing else label
+
+
 def rn_link(rn: str, pin: str) -> str:
     """The note a flag cites, at the pinned engine tag (validation.md, "One Flag shape
     everywhere")."""

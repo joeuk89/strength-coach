@@ -10,8 +10,8 @@ from coach.core.exercise_ladder import (
     standing_rung,
 )
 from coach.core.flag import Scope
-from coach.core.prescription import DecisionInForce
-from coach.core.program.form import Advance, ExerciseLadder, Rung, SetGroup
+from coach.core.prescription import DecisionInForce, RungNaming
+from coach.core.program.form import Advance, ExerciseLadder, Line, Rung, SchemeRef, SetGroup
 
 LADDER = ExerciseLadder(
     (
@@ -21,6 +21,13 @@ LADDER = ExerciseLadder(
     ),
     Advance(exposures=3),
 )
+
+
+NAMING = RungNaming("kg", {"negative_pull_up": "Negatives", "pull_up": "Pull-up"})
+
+
+def a_ladder_line(ladder: ExerciseLadder) -> Line:
+    return Line(ladder.rungs[0].exercise, (), 120, SchemeRef("exercise_ladder", {}, ladder))
 
 
 def test_a_reps_rung_reads_the_top_of_its_range_at_its_rpe() -> None:
@@ -48,22 +55,21 @@ def test_an_open_top_rep_out_reads_its_number() -> None:
 
 
 def test_every_rung_takes_the_shape_program_show_and_the_pages_read() -> None:
-    shapes = rung_shapes(
-        ExerciseLadder(
-            (
-                Rung("negative_pull_up", (SetGroup(3, reps=(3, 5), rpe=8),), cues="slow"),
-                Rung("pull_up", (SetGroup(3, reps=3, rpe=9),), advance=Advance(manual=True)),
-            ),
-            Advance(exposures=3),
+    ladder = ExerciseLadder(
+        (
+            Rung("negative_pull_up", (SetGroup(3, reps=(3, 5), rpe=8),), cues="slow"),
+            Rung("pull_up", (SetGroup(3, reps=3, rpe=9),), advance=Advance(manual=True)),
         ),
-        standing=2,
+        Advance(exposures=3),
     )
+
+    shapes = rung_shapes(a_ladder_line(ladder), ladder, 2, naming=NAMING)
 
     assert shapes == (
         RungShape(
             rung=1,
             exercise="negative_pull_up",
-            name="negative_pull_up",
+            label="rung 1 · Negatives · 3×3–5 @8 · slow",
             cues="slow",
             set_groups=({"count": 3, "reps": [3, 5], "rpe": 8},),
             criterion={"reps": 5, "rpe_at_most": 8, "exposures": 3},
@@ -72,21 +78,13 @@ def test_every_rung_takes_the_shape_program_show_and_the_pages_read() -> None:
         RungShape(
             rung=2,
             exercise="pull_up",
-            name="pull_up",
+            label="rung 2 · 3×3 @9",
             cues=None,
             set_groups=({"count": 3, "reps": 3, "rpe": 9},),
             criterion={"manual": True},
             standing=True,
         ),
     )
-
-
-def test_a_rung_shape_says_its_exercise_by_the_name_it_is_given() -> None:
-    names = {"negative_pull_up": "Negatives", "band_pull_up": "Band", "pull_up": "Pull-up"}
-
-    [first, *_] = rung_shapes(LADDER, standing=1, name_of=names.__getitem__)
-
-    assert (first.exercise, first.name) == ("negative_pull_up", "Negatives")
 
 
 def a_rung_decision(session_id: str, line_key: str, rung: int) -> DecisionInForce:
@@ -127,12 +125,14 @@ def test_a_line_no_decision_names_stands_on_the_opening_rung_from_its_adoption()
 
 def test_a_ladder_read_names_the_line_its_scope_names() -> None:
     read = ladder_read(
+        a_ladder_line(LADDER),
         LADDER,
         StandingRung(1, None),
         (),
         scope=Scope("line", session_id="lower", exercise_id="negative_pull_up"),
         before=datetime.date(2026, 11, 2),
         acknowledgements=(),
+        naming=NAMING,
     )
 
     assert read.line == LineRef("lower", "negative_pull_up")

@@ -6,8 +6,10 @@ from dataclasses import dataclass, field
 from typing import Literal, cast
 
 from coach.core.config import Units
-from coach.core.exercise_ladder import rung_line
+from coach.core.exercise_ladder import rung_label, rung_line
 from coach.core.mirror import Routine, RoutineSet
+from coach.core.note_dose import working_rpe, working_shape
+from coach.core.prescription import RungNaming
 from coach.core.program.form import Line
 
 type Json = dict[str, object]
@@ -43,7 +45,8 @@ def _origin(frozen: FrozenLine) -> RungKey:
 
 @dataclass(frozen=True)
 class SessionRoutine:
-    """`names` are the library's exercise names, for the next rung a ladder line's note names."""
+    """`names` are the library's exercise names, for the next rung's label on a ladder line's
+    note."""
 
     title: str
     folder_id: str
@@ -54,16 +57,25 @@ class SessionRoutine:
 
 
 @dataclass(frozen=True)
+class RungLabels:
+    """A frozen rung's own label and the next rung's, if any. A frozen row records only the rung
+    its week prescribed, so that rung is the standing rung of both."""
+
+    own: str
+    next: str | None
+
+
+@dataclass(frozen=True)
 class _Authored:
     """The authored line a frozen line projects from: on a ladder, the line as the frozen rung
-    prescribes it, with the next rung's exercise."""
+    prescribes it, with its labels."""
 
     position: int
     line: Line
-    next_rung: str | None = None
+    labels: RungLabels | None = None
 
 
-def _authored(lines: Sequence[Line]) -> dict[RungKey, _Authored]:
+def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Authored]:
     """Every authored line keyed on its exercise and no rung, and a ladder line on each rung's
     exercise and index too. A row frozen before rungs were recorded has no rung, and finds its
     ladder rung by exercise: adopt then refused two rungs on one exercise."""
@@ -74,27 +86,32 @@ def _authored(lines: Sequence[Line]) -> dict[RungKey, _Authored]:
         if ladder is None:
             continue
         for index, rung in enumerate(ladder.rungs, start=1):
-            following = ladder.rungs[index].exercise if index < len(ladder.rungs) else None
-            shaped = _Authored(position, rung_line(line, ladder, index), following)
+            labels = RungLabels(
+                own=rung_label(line, ladder, index, standing=index, naming=naming),
+                next=(
+                    rung_label(line, ladder, index + 1, standing=index, naming=naming)
+                    if index < len(ladder.rungs)
+                    else None
+                ),
+            )
+            shaped = _Authored(position, rung_line(line, ladder, index), labels)
             found[rung.exercise, index] = shaped
             found[rung.exercise, None] = shaped
     return found
 
 
-def next_rung_names(lines: Sequence[Line], names: Mapping[str, str]) -> dict[RungKey, str]:
-    """The next rung's display name, keyed on each authored exercise and rung that has one. `names`
-    are the library's exercise names; an exercise missing from them shows its id."""
+def rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, RungLabels]:
+    """The labels of every ladder rung, keyed on the authored exercise and rung."""
     return {
-        key: names.get(found.next_rung, found.next_rung)
-        for key, found in _authored(lines).items()
-        if found.next_rung is not None
+        key: found.labels
+        for key, found in _authored(lines, naming).items()
+        if found.labels is not None
     }
 
 
 def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], units: Units) -> Json:
     """The routine body: no null keys and no routine-level note, since Hevy drops it on PUT."""
-    authored = _authored(session.authored)
-    following = next_rung_names(session.authored, session.names)
+    authored = _authored(session.authored, RungNaming(units, session.names))
     last = len(session.authored)
     lines = sorted(
         session.lines,
@@ -103,13 +120,11 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
     supersets: dict[str, int] = {}
     exercises: list[Json] = []
     for position, frozen in enumerate(lines):
-        origin = _origin(frozen)
-        found = authored.get(origin)
+        found = authored.get(_origin(frozen))
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
-        next_rung = following.get(origin)
-        if next_rung is not None:
-            notes.append(f"Next: {next_rung}")
+        if found is not None and found.labels is not None and found.labels.next is not None:
+            notes.append(f"Next: {found.labels.next}")
         if position == 0:
             notes = [session.week_line, *notes]
         exercise: Json = {
@@ -194,32 +209,14 @@ def _target(groups: Sequence[Mapping[str, object]], units: Units) -> str:
     """`2×5 + 5+ (stop at RPE 9) at 225 lb @8`; a line with no working load says
     `choose the load` once."""
     working = [g for g in groups if g.get("type") != "warm_up"]
-    target = " + ".join(_shape(g) for g in working) or "no working set"
+    target = working_shape(working)
     loads = [float(str(g["load"])) for g in working if g.get("load") is not None]
     if loads:
         target += f" at {max(loads):g} {units}"
-    rpes = {g.get("rpe") for g in working} - {None}
-    if len(rpes) == 1:
-        target += f" @{float(cast(float, rpes.pop())):g}"
+    target += working_rpe(working)
     if not loads and any(g.get("reps") is not None or g.get("range") for g in working):
         target += ", choose the load"
     return target
-
-
-def _shape(group: Mapping[str, object]) -> str:
-    count = group["count"]
-    reps = group.get("reps")
-    rep_range = group.get("range")
-    if isinstance(rep_range, list):
-        low, high = cast(list[int], rep_range)
-        return f"{count}×{low}–{high}"
-    if isinstance(reps, str):
-        shape = reps if count == 1 else f"{count}×{reps}"
-        cap = group.get("rpe_cap")
-        return shape if cap is None else f"{shape} (stop at RPE {float(cast(float, cap)):g})"
-    if reps is not None:
-        return f"{count}×{reps}"
-    return f"{count}×{group.get('duration_s')} s"
 
 
 def _sets(group: Mapping[str, object]) -> list[Json]:

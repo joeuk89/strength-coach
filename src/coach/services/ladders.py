@@ -13,6 +13,7 @@ from coach.core.prescription import DecisionInForce
 from coach.core.program.form import Line, ProgramForm
 from coach.services.history import read_history
 from coach.services.leave_warning import leave_warning_decisions, plan_acknowledgements
+from coach.services.projections import rung_naming
 from coach.store import decisions, programs, week_plans
 from coach.store.connection import Connection
 
@@ -72,14 +73,17 @@ def ladder_reads(
     monday = None if plan is None else datetime.date.fromisoformat(str(plan["week"]))
     frozen = () if plan is None else plan_acknowledgements(conn, str(plan["id"]))
     acknowledgements = (*frozen, *leave_warning_decisions(conn, on))
+    naming = rung_naming(conn, units)
     return tuple(
         ladder_read(
+            line,
             ladder,
             standing_rung(found, ladder, line=LineRef(session.id, line.exercise), adopted=adopted),
             exposures,
             scope=Scope("line", monday, session_id=session.id, exercise_id=line.exercise),
             before=on + _DAY,
             acknowledgements=acknowledgements,
+            naming=naming,
         )
         for session in version.form.sessions
         for line in session.lines
