@@ -11,7 +11,7 @@ from support.kit_fixtures import kit_files
 from support.ladders import a_ladder_program, ladder_rung_decision
 from support.plans import a_mapped_routine
 from support.program_drafts import (
-    BALANCE_BOARD_DRAFT,
+    BALANCE_STANCES_DRAFT,
     WORKED_DRAFT_COMPLETE,
     a_draft,
     a_line,
@@ -830,7 +830,7 @@ def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts
 ):
     conn = the_worked_store()
 
-    adopted = run(conn, BALANCE_BOARD_DRAFT)
+    adopted = run(conn, BALANCE_STANCES_DRAFT)
     text = show_draft(conn).text
     dry = run(conn, text, dry_run=True)
 
