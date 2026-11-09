@@ -2,7 +2,7 @@
 
 # Core-B
 
-Session `core-b` at gym as written for the week of 2026-10-26.
+Session Core-B at gym as written for the week of 2026-10-26.
 
 ## Farmers Walk (Dumbbell)
 

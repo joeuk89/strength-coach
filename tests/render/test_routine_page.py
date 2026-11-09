@@ -235,3 +235,10 @@ def test_a_rung_criterion_with_neither_reps_nor_duration_names_only_what_it_hold
 
     assert "None" not in text
     assert "Climb on RPE 8 or under, 2 exposures running." in text
+
+
+def test_a_routine_page_says_the_sessions_name_and_not_its_id() -> None:
+    text = routine_page(a_page(), units="lb")
+
+    assert "Session Lower A at home as written for the week of 2026-11-02." in text
+    assert "lower" not in text

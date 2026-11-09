@@ -2,7 +2,7 @@
 
 # Arms
 
-Session `arms` at gym as written for the week of 2026-10-26.
+Session Arms at gym as written for the week of 2026-10-26.
 
 ## Bicep Curl (EZ Bar)
 

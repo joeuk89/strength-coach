@@ -2,7 +2,7 @@
 
 # Upper-B
 
-Session `upper-b` at gym as written for the week of 2026-10-26.
+Session Upper-B at gym as written for the week of 2026-10-26.
 
 ## Overhead Press (Barbell)
 

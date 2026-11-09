@@ -2,7 +2,7 @@
 
 # Calves
 
-Session `calves` at gym as written for the week of 2026-10-26.
+Session Calves at gym as written for the week of 2026-10-26.
 
 ## Calf Raise (Dumbbell)
 

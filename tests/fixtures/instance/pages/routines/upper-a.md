@@ -2,7 +2,7 @@
 
 # Upper-A
 
-Session `upper-a` at gym as written for the week of 2026-10-26.
+Session Upper-A at gym as written for the week of 2026-10-26.
 
 ## Bench Press (Barbell)
 

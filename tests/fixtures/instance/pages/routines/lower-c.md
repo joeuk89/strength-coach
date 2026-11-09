@@ -2,7 +2,7 @@
 
 # Lower-C
 
-Session `lower-c` at gym as written for the week of 2026-10-26.
+Session Lower-C at gym as written for the week of 2026-10-26.
 
 ## Front Squat (Barbell)
 
