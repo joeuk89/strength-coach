@@ -55,16 +55,23 @@ class AdoptResult:
 
 
 @dataclass(frozen=True)
-class ShowResult:
-    """`ladders` holds each `exercise_ladder` line with its session and standing rung."""
+class ShownLadder:
+    """An `exercise_ladder` line with its session and standing rung."""
 
+    session_id: str
+    line: Line
+    standing: int
+
+
+@dataclass(frozen=True)
+class ShowResult:
     version_id: str
     kind: str
     emphasis: str
     adopted: str
     because: str
     sessions: tuple[tuple[str, int], ...]
-    ladders: tuple[tuple[str, Line, int], ...] = ()
+    ladders: tuple[ShownLadder, ...] = ()
 
 
 def adopt(
@@ -185,7 +192,7 @@ def show(conn: Connection, *, zone: datetime.tzinfo) -> ShowResult:
         because=version.form.because,
         sessions=tuple(programs.line_counts(conn, version.id)),
         ladders=tuple(
-            (session.id, line, standing[LineRef(session.id, line.exercise)])
+            ShownLadder(session.id, line, standing[LineRef(session.id, line.exercise)])
             for session in version.form.sessions
             for line in session.lines
             if line.ladder is not None

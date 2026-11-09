@@ -8,6 +8,7 @@ import pytest
 from support.clock import FixedClock
 from support.history import a_logged_workout, an_annotation
 from support.kit_fixtures import kit_files
+from support.ladders import a_ladder_program, ladder_rung_decision
 from support.plans import a_mapped_routine
 from support.program_drafts import (
     BALANCE_BOARD_DRAFT,
@@ -23,6 +24,7 @@ from coach.core.errors import Invalid, Setup
 from coach.core.kit import KitFiles
 from coach.core.program.form import AcknowledgeEntry
 from coach.services.program import AdoptResult, adopt, show, show_draft
+from coach.services.record import record
 from coach.store import exercises, programs
 from coach.store.connection import Connection
 
@@ -813,6 +815,15 @@ def test_two_stale_acknowledgements_are_refused_as_one_violation_naming_both() -
     ]
 
 
+def test_show_holds_each_ladder_line_with_its_session_and_its_standing_rung() -> None:
+    conn = a_ladder_program()
+    record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock())
+
+    [shown] = show(conn, zone=datetime.UTC).ladders
+
+    assert (shown.session_id, shown.line.exercise, shown.standing) == ("lower", "dead_bug", 2)
+
+
 def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts_unchanged() -> (
     None
 ):
@@ -824,7 +835,8 @@ def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts
 
     assert adopted.version_id == "pv-1"
     assert exercises.get(conn, "custom_balance_board_one_foot_eyes_closed") is not None
-    [(session, line, standing)] = show(conn, zone=datetime.UTC).ladders
+    [shown] = show(conn, zone=datetime.UTC).ladders
+    session, line, standing = shown.session_id, shown.line, shown.standing
     assert (session, standing) == ("daily-balance", 1) and line.scheme.ladder is not None
     assert len(line.scheme.ladder.rungs) == 5
     assert dry.diff.empty

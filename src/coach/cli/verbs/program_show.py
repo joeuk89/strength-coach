@@ -15,8 +15,8 @@ from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.core.errors import Invalid
 from coach.core.exercise_ladder import rung_shapes
-from coach.core.program.form import ExerciseLadder, Line
-from coach.services.program import ShowResult, show, show_draft
+from coach.core.program.form import ExerciseLadder
+from coach.services.program import ShownLadder, ShowResult, show, show_draft
 
 
 def run(call: InstanceCall) -> Outcome:
@@ -71,15 +71,15 @@ def _summary(shown: ShowResult, last: int | None) -> Json:
         "sessions": kept,
         "count": len(sessions),
         "truncated": len(kept) < len(sessions),
-        "ladders": [_ladder(*ladder) for ladder in shown.ladders],
+        "ladders": [_ladder(ladder) for ladder in shown.ladders],
     }
 
 
-def _ladder(session_id: str, line: Line, standing: int) -> Json:
-    ladder = cast(ExerciseLadder, line.ladder)
+def _ladder(shown: ShownLadder) -> Json:
+    ladder = cast(ExerciseLadder, shown.line.ladder)
     return {
-        "session": session_id,
-        "exercise": line.exercise,
+        "session": shown.session_id,
+        "exercise": shown.line.exercise,
         "rungs": [
             {
                 "rung": rung.rung,
@@ -89,7 +89,7 @@ def _ladder(session_id: str, line: Line, standing: int) -> Json:
                 "criterion": rung.criterion,
                 "standing": rung.standing,
             }
-            for rung in rung_shapes(ladder, standing)
+            for rung in rung_shapes(ladder, shown.standing)
         ],
     }
 
