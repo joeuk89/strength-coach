@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-07
-amended: 2026-11-08 by the review of PR #271 (nine catalogue rows changed, not seven; seeded rows are migrated by `m0003`, instance-added rows are not)
+amended: 2026-11-08 by the review of PR #271 (nine catalogue rows changed, not seven; seeded rows are migrated by `m0003`, instance-added rows are not); 2026-11-09 by the owner's review of PR #305 (athlete-edited rows are not migrated either)
 ---
 
 # Pattern and muscle are closed registries whose entries carry the rule flags, checked at adopt and not in the DDL

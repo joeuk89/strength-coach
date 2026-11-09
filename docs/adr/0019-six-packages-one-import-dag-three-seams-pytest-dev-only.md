@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
-amended: 2026-11-08 by the review of PR #271 (pyyaml joins the dev group, added by #249), 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
+amended: 2026-11-09 by the owner's review of PR #305 (`Clock` also has `zone`), 2026-11-08 by the review of PR #271 (pyyaml joins the dev group, added by #249), 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
 ---
 
 # The engine is seven packages on one import DAG, with four injected seams; the suite is pytest, dev-only, under thirty seconds
@@ -76,7 +76,8 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
 - **Seams.** `HevyClient` is a `typing.Protocol` of the four allow-listed writes, the GETs
   `import` and `plan apply` need, and `open_audit()`; `hevy/client.py` and the test fake both
   satisfy it. Each write method takes a `WriteContext` value (WeekPlan id, Write plan hash,
-  routine id) beside its body. `Clock` has `today()` and `now()`, in the athlete's timezone:
+  routine id) beside its body. `Clock` has `zone`, the athlete's timezone, and `today()` and
+  `now()` in it:
   `cli` builds it from `[athlete].timezone` and passes it to every service and to the real
   client. Services take connection, client and clock as parameters from `cli`; `core` takes
   none of them. What the real client is built with (the API key, the audit path, the clock, a

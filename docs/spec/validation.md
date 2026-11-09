@@ -53,8 +53,11 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 | `exercise` | exercise id | one exercise across blocks, for cadence signals and milestones (ADR 0014) |
 
 Two flags with the same code on the same scope cannot exist: a code states one condition per
-scope, so the key is a key. The one exception is `hevy_template_value_unknown`: one scope holds
-one flag per bad column, each with the same key, and the params name the column. The message is
+scope, so the key is a key. The exceptions are `program adopt`'s, since a ladder line's rungs share
+its scope: one scope holds `hevy_template_missing` once per exercise, `hevy_template_value_unknown`
+once per exercise and bad column, `equipment_unsupplied` once per equipment kind, and
+`start_load_missing` and `start_load_off_rack` once per rung. Each carries the same key, and the
+params tell them apart. The message is
 display only and is never stored. The params (the facts of the condition: a streak length, a
 ceiling and its kind, a drift class) ride alongside the key and are hashed separately; they are
 condition facts only, never derived display numbers that move with rounding.
