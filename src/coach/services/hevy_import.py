@@ -58,9 +58,7 @@ def import_hevy(
     """Pull Hevy append-only into the store (ADR 0011, "Import"). Every GET runs before the one
     write transaction, so an unreachable Hevy leaves the store as it was."""
     now = clock.now()
-    zone = now.tzinfo
-    if zone is None:
-        raise ValueError("the clock must tell the athlete's timezone")
+    zone = clock.zone
     last = last_import_at(conn)
     stored = hevy_presence(conn)
     kind, since = ("full", None) if full or last is None else ("event", event_since(last))

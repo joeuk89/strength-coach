@@ -16,7 +16,7 @@ def test_the_progress_view_carries_the_ladder_rows_the_check_in_card_shows() -> 
     logged(conn, "dead_bug", "2026-11-02", 10)
     logged(conn, "dead_bug", "2026-11-05", 10)
 
-    report = progress(conn, on=FIRST_SUNDAY, units="lb", bodyweight_units="kg")
+    report = progress(conn, on=FIRST_SUNDAY, units="lb", bodyweight_units="kg", zone=datetime.UTC)
 
     assert [ladder_row(r) for r in report.ladders] == [
         {

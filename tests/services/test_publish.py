@@ -1,3 +1,5 @@
+import datetime
+
 from support.closed_weeks import a_planned_squat_week, monday
 from support.plans import SQUAT_LINE, a_squat_program
 from support.program_drafts import a_session as a_session_draft
@@ -12,7 +14,7 @@ def test_publish_returns_the_export_files_and_the_rows_per_table() -> None:
     conn = open_store(":memory:")
     a_session(conn, "push_a")
 
-    publication = publish(conn, engine_version="0.4.0", config=a_config())
+    publication = publish(conn, engine_version="0.4.0", config=a_config(), zone=datetime.UTC)
 
     exported = publication.export
     assert exported.rows["session"] == 1
@@ -22,7 +24,9 @@ def test_publish_returns_the_export_files_and_the_rows_per_table() -> None:
 
 
 def test_publish_renders_every_page_beside_the_export() -> None:
-    publication = publish(open_store(":memory:"), engine_version="0.4.0", config=a_config())
+    publication = publish(
+        open_store(":memory:"), engine_version="0.4.0", config=a_config(), zone=datetime.UTC
+    )
 
     assert set(publication.pages) == {
         "README.md",
@@ -46,7 +50,9 @@ def test_publish_heads_a_coach_led_session_on_the_week_page() -> None:
     )
     a_planned_squat_week(conn, monday(0))
 
-    page = publish(conn, engine_version="0.4.0", config=a_config()).pages["pages/week.md"]
+    page = publish(conn, engine_version="0.4.0", config=a_config(), zone=datetime.UTC).pages[
+        "pages/week.md"
+    ]
 
     assert (
         "## Tue 2026-11-03: PT · chest and back\n\nCoach-led · estimated sets: chest 4, lats 4\n"

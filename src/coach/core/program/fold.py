@@ -44,7 +44,7 @@ def fold_overrides(form: ProgramForm, overrides: Sequence[PlanOverride]) -> Fold
                 o
                 for o in folding
                 if (o.session_id, o.exercise_id) == (session.id, line.exercise)
-                and not (line.scheme.ladder and o.kind in RUNGS_CARRY)
+                and not (line.ladder and o.kind in RUNGS_CARRY)
             ]
             folded.extend(Folded(session.id, line.exercise, o.kind) for o in on_line)
             applied.extend(on_line)

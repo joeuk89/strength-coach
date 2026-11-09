@@ -104,7 +104,12 @@ def next_week_line(conn: Connection, session_id: str) -> LinePrescription:
 def swings_progress(conn: Connection) -> LiftProgress:
     closed_through(conn, 1)
     found = progress(
-        conn, on=datetime.date(2026, 11, 8), units="lb", bodyweight_units="kg", full=True
+        conn,
+        on=datetime.date(2026, 11, 8),
+        units="lb",
+        bodyweight_units="kg",
+        full=True,
+        zone=datetime.UTC,
     )
     [lift] = found.lifts
     return lift

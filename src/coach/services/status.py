@@ -178,7 +178,7 @@ def status(
                 on=today,
                 bodyweight_units=bodyweight_units or units,
             ),
-            *cadence_signals(conn, closed, units=units, on=today),
+            *cadence_signals(conn, closed, units=units, on=today, zone=clock.zone),
             *plan_behind(conn, today),
         ),
         plan=_plan_in_force(conn, monday),

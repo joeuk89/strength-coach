@@ -44,7 +44,7 @@ def in_force_dated(
     conn: Connection,
     on: datetime.date | None,
     kinds: tuple[str, ...],
-    zone: datetime.tzinfo | None,
+    zone: datetime.tzinfo,
 ) -> tuple[DecisionInForce, ...]:
     """The Decisions of `kinds` in force, each dated by the day it was recorded on in `zone`."""
     return tuple(

@@ -44,8 +44,8 @@ def progress(
     on: datetime.date,
     units: Units,
     bodyweight_units: Units,
+    zone: datetime.tzinfo,
     full: bool = False,
-    zone: datetime.tzinfo = datetime.UTC,
 ) -> Progress:
     closed = closed_weeks(conn, units)
     spans = closed_spans(closed)
@@ -56,7 +56,7 @@ def progress(
     form = versions[0].form if versions else None
     stored = _goal(conn)
     priority = stored.goal.priority_lifts if stored else ()
-    signals = cadence_signals(conn, closed, units=units, on=on)
+    signals = cadence_signals(conn, closed, units=units, on=on, zone=zone)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
     opened = programs.block_opened(conn)
     redesigned = None if opened is None else datetime.date.fromisoformat(opened)

@@ -7,6 +7,10 @@ class FixedClock:
     def __init__(self, now: datetime.datetime = NOON) -> None:
         self.moment = now
 
+    @property
+    def zone(self) -> datetime.tzinfo:
+        return self.moment.tzinfo or datetime.UTC
+
     def today(self) -> datetime.date:
         return self.moment.date()
 

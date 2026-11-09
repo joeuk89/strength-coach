@@ -91,7 +91,7 @@ def ladder_of(form: ProgramForm, session_id: str, exercise_id: str) -> ExerciseL
     session = form.session(session_id)
     lines = () if session is None else session.lines
     line = next((line for line in lines if line.exercise == exercise_id), None)
-    return None if line is None else line.scheme.ladder
+    return None if line is None else line.ladder
 
 
 def standing_rung(
