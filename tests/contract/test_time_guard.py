@@ -204,3 +204,26 @@ def test_on_ci_a_test_over_six_seconds_fails(
 
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*6.50 s*over the 6.0 s budget*"])
+
+
+def test_time_spent_sleeping_does_not_count(pytester: pytest.Pytester) -> None:
+    pytester.makepyfile(
+        """
+        import time
+
+        import pytest
+
+        from support import time_guard
+
+        @pytest.fixture(autouse=True)
+        def tight_budget(monkeypatch):
+            monkeypatch.setattr(time_guard, "LIMIT_S", 0.2)
+
+        def test_sleeps():
+            time.sleep(0.3)
+        """
+    )
+
+    result = pytester.runpytest("-p", "support.time_guard")
+
+    result.assert_outcomes(passed=1)

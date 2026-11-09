@@ -19,7 +19,7 @@ def limit_s() -> float:
 
 
 def _timed(item: pytest.Item) -> Generator[None]:
-    clock = item.config.stash.get(clock_key, time.perf_counter)
+    clock = item.config.stash.get(clock_key, time.process_time)
     start = clock()
     shared_before = item.config.stash.get(_shared_key, 0.0)
     yield
@@ -39,7 +39,7 @@ def pytest_fixture_setup(
     """A module- or session-scoped fixture is setup every test shares, not the cost of the first."""
     if fixturedef.scope == "function":
         return (yield)
-    clock = request.config.stash.get(clock_key, time.perf_counter)
+    clock = request.config.stash.get(clock_key, time.process_time)
     start = clock()
     try:
         return (yield)

@@ -206,7 +206,7 @@ in strict mode run in the same `uv run` step. One GitHub Actions workflow runs t
 every push and pull request. No pre-commit framework.
 
 The whole suite aims to run in under thirty seconds on an idle laptop; no test enforces it, and a change that adds noticeably to it says why. A guard fails any single test that
-takes longer than two seconds (six on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated. A test is never cut or weakened to save time. A
+takes longer than two seconds of CPU time (six on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated, and host load cannot fail it. The cost: a test slowed by `time.sleep`, I/O or a subprocess no longer trips the guard. A test is never cut or weakened to save time. A
 module- or session-scoped fixture is setup the tests share, so the guard does not charge it to
 whichever test asks for it first. The
 old suite's eleven minutes against on-disk instances is the anti-pattern this budget rules out.
