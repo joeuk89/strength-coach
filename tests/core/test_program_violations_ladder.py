@@ -131,10 +131,12 @@ def test_a_rung_exercise_another_line_of_the_session_names_is_a_duplicate() -> N
     assert flag.params == {"session_id": "core", "exercise_id": "side_plank"}
 
 
-def test_a_rung_repeating_an_earlier_rung_exercise_is_a_duplicate() -> None:
+def test_two_rungs_naming_one_exercise_with_equal_sets_and_cues_are_repeated_not_duplicate() -> (
+    None
+):
     line = a_ladder_line("plank", a_rung(), a_rung("side_plank"), a_rung("side_plank"))
 
-    assert keyed(line) == ["duplicate_id@version:pv-1"]
+    assert keyed(line) == ["rung_repeated@line:core/plank"]
 
 
 def test_a_rung_exercise_in_another_session_is_no_duplicate() -> None:
@@ -254,3 +256,159 @@ def test_a_rung_exercise_that_is_also_a_line_raises_one_flag_for_it() -> None:
     assert [f.key for f in found if f.code == "unknown_pattern"] == [
         "unknown_pattern@exercise:side_plank"
     ]
+
+
+def a_tempo_rung(cues: str, **fields: Any) -> dict[str, Any]:
+    return a_rung(cues=cues, sets=REPS, **fields)
+
+
+def test_three_rungs_on_one_exercise_differing_only_in_cues_raise_nothing() -> None:
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("lower for 4 s"),
+        a_tempo_rung("lower for 6 s", exercise="push_up"),
+        a_tempo_rung("lower for 8 s", exercise="push_up"),
+    )
+
+    assert keyed(line) == []
+
+
+def test_two_rungs_on_one_exercise_differing_only_in_sets_raise_nothing() -> None:
+    line = a_ladder_line(
+        "plank",
+        a_rung(cues="hold", sets=[{"count": 2, "duration_s": 30, "rpe": 6}]),
+        a_rung("plank", cues="hold", sets=[{"count": 2, "duration_s": 40, "rpe": 6}]),
+    )
+
+    assert keyed(line) == []
+
+
+def test_one_exercise_on_two_lines_of_a_session_is_still_duplicate_id() -> None:
+    [flag] = flags_of(
+        a_line("push_up", sets=REPS, start_load=None),
+        a_line("push_up", sets=REPS, start_load=None),
+    )
+
+    assert flag.key == "duplicate_id@version:pv-1"
+    assert flag.params == {"session_id": "core", "exercise_id": "push_up"}
+
+
+def test_a_shared_rung_exercise_on_another_line_of_the_session_is_still_duplicate_id() -> None:
+    ladder = a_ladder_line(
+        "plank",
+        a_rung(cues="short"),
+        a_rung("side_plank", cues="short"),
+        a_rung("side_plank", cues="long"),
+    )
+
+    [flag] = flags_of(ladder, a_line("side_plank", sets=REPS, start_load=None))
+
+    assert flag.key == "duplicate_id@version:pv-1"
+    assert flag.params == {"session_id": "core", "exercise_id": "side_plank"}
+
+
+def test_two_rungs_equal_in_exercise_sets_and_cues_raise_rung_repeated_naming_both() -> None:
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("lower for 4 s"),
+        a_tempo_rung("lower for 6 s", exercise="push_up"),
+        a_tempo_rung("lower for 6 s", exercise="push_up"),
+    )
+
+    [flag] = flags_of(line)
+
+    assert flag.key == "rung_repeated@line:core/push_up"
+    assert flag.params == {"rung": 3, "previous_rung": 2}
+
+
+def test_a_first_rung_leaving_its_exercise_unsaid_still_compares_as_the_lines() -> None:
+    line = a_ladder_line("push_up", a_tempo_rung("slow"), a_tempo_rung("slow", exercise="push_up"))
+
+    [flag] = flags_of(line)
+
+    assert flag.params == {"rung": 2, "previous_rung": 1}
+
+
+def test_a_ladder_may_return_to_an_earlier_shape_since_only_neighbours_compare() -> None:
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("lower for 4 s"),
+        a_tempo_rung("lower for 6 s", exercise="push_up"),
+        a_tempo_rung("lower for 4 s", exercise="push_up"),
+    )
+
+    assert keyed(line) == []
+
+
+def test_three_identical_rungs_raise_one_rung_repeated_naming_the_first_pair() -> None:
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("slow"),
+        a_tempo_rung("slow", exercise="push_up"),
+        a_tempo_rung("slow", exercise="push_up"),
+    )
+
+    [flag] = flags_of(line)
+
+    assert flag.params == {"rung": 2, "previous_rung": 1}
+
+
+def test_equal_sets_and_cues_on_another_exercise_are_not_repeated() -> None:
+    line = a_ladder_line("plank", a_rung(cues="hold"), a_rung("side_plank", cues="hold"))
+
+    assert keyed(line) == []
+
+
+def test_rungs_differing_only_in_their_criterion_are_repeated() -> None:
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("slow"),
+        a_tempo_rung("slow", exercise="push_up", advance={"exposures": 3}),
+    )
+
+    [flag] = flags_of(line)
+
+    assert flag.code == "rung_repeated"
+
+
+def test_a_rung_differing_only_in_warm_ups_is_refused_as_a_set_type() -> None:
+    warmed = [{"type": "warm_up", "count": 1, "reps": 5}, *REPS]
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("slow"),
+        a_rung("push_up", cues="slow", sets=warmed),
+    )
+
+    assert [flag.code for flag in flags_of(line)] == ["set_type_not_allowed"]
+
+
+def test_a_shared_declared_exercise_with_no_template_raises_one_flag_for_the_line() -> None:
+    parsed = parse_program_draft(
+        toml(
+            a_draft(
+                a_session(
+                    "core",
+                    a_ladder_line(
+                        "board",
+                        a_rung(cues="short"),
+                        a_rung("board", cues="long"),
+                        a_rung("board", cues="longest"),
+                    ),
+                ),
+                exercise={"board": {"name": "Board", **DURATION}},
+            )
+        ),
+        file="d.toml",
+    )
+
+    found = violations(parsed.form, replace(CONTEXT, hevy_on=True), parsed.unknown_keys)
+
+    assert [flag.code for flag in found] == ["hevy_template_missing"]
+
+
+def test_a_shared_unknown_rung_exercise_raises_one_flag() -> None:
+    line = a_ladder_line(
+        "plank", a_rung(), a_rung("board", cues="short"), a_rung("board", cues="long")
+    )
+
+    assert [flag.code for flag in flags_of(line)] == ["rung_exercise_unknown"]
