@@ -256,3 +256,35 @@ def test_a_lighter_practice_exposure_is_no_reset_of_a_lifting_line_on_linear() -
     bench_in_drill(conn, 90)
 
     assert bench_in(report(conn)).resets == 0
+
+
+def amended_on(conn: Connection, on: datetime.date) -> None:
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, TEMPO_LADDER), kind="amend", because="tempo")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(on)),
+    )
+
+
+def test_flat_pull_ups_on_a_first_rung_before_its_adoption_show_no_stall_streak() -> None:
+    conn = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+    assert pull_up_in(report(conn)).stall_streak == 3
+
+    amended_on(conn, BOUNDARY)
+
+    assert pull_up_in(report(conn)).stall_streak == 0
+
+
+def test_a_flat_pull_up_logged_on_a_first_rungs_adoption_date_counts_in_the_stall_streak() -> None:
+    logged_on_a_monday = datetime.date(2026, 11, 9)
+    on_the_date = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+    the_day_after = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+
+    amended_on(on_the_date, logged_on_a_monday)
+    amended_on(the_day_after, logged_on_a_monday + datetime.timedelta(days=1))
+
+    assert pull_up_in(report(on_the_date)).stall_streak == 3
+    assert pull_up_in(report(the_day_after)).stall_streak == 0

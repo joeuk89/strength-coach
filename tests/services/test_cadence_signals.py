@@ -1,3 +1,5 @@
+import datetime
+
 from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, two_closed_blocks
 from support.check_in_cards import opened
 from support.clock import FixedClock, at
@@ -205,3 +207,17 @@ def test_a_practice_line_listed_first_on_another_scheme_leaves_a_lifting_lines_s
         "cadence_slow",
         "double_progression",
     )
+
+
+def test_first_rung_exposures_before_its_adoption_raise_no_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, pull_up_line=TEMPO_LADDER)
+    adopt(
+        conn,
+        toml(a_draft(a_session("push", BENCH_LINE, TEMPO_LADDER), kind="amend", because="tempo")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY - datetime.timedelta(days=1))),
+    )
+
+    assert "pull_up" not in signals_at_check_in(conn)

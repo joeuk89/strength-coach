@@ -45,13 +45,18 @@ def standing_line(
     session_id: str,
     found: Sequence[DecisionInForce],
     exposures: Sequence[Exposure],
+    *,
+    adopted: datetime.date | None,
 ) -> tuple[Line, Sequence[Exposure]]:
     """The line as its standing rung prescribes it and those of `exposures` that count on it: a
-    rung's exercise can be an earlier rung's too, so only its start tells their histories apart."""
+    rung's exercise can be an earlier rung's too, so only its start tells their histories apart.
+    `adopted` is the version's adoption date, the opening rung's start."""
     ladder = line.ladder
     if ladder is None:
         return line, exposures
-    standing = standing_rung(found, ladder, line=LineRef(session_id, line.exercise), adopted=None)
+    standing = standing_rung(
+        found, ladder, line=LineRef(session_id, line.exercise), adopted=adopted
+    )
     return rung_line(line, ladder, standing.index), standing.counted(exposures)
 
 

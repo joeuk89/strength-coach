@@ -39,7 +39,7 @@ class BlockSpan:
 @dataclass(frozen=True)
 class CadenceRead:
     """`blocks` are the Block before and the closed one. `exposures` are the exercise's, on a
-    ladder only those from the standing rung's start. `adherence` is trained over planned core
+    ladder only those that count on the standing rung. `adherence` is trained over planned core
     sessions across both Blocks' ordinary weeks.
     `capped` is, per Prescription frozen in the closed Block, whether the one-row cap bound.
     `session_id` is the line's session: per-line reads skip Exposures matched to another.
