@@ -10,6 +10,7 @@ from coach.core.clock import Clock
 from coach.core.closed_week.adherence import adherence
 from coach.core.config import Config
 from coach.core.errors import Invalid
+from coach.core.exercise_ladder import LineRef
 from coach.core.exposure import Exposure
 from coach.core.flag import REFS, Flag, FlagKey
 from coach.core.goal import Goal
@@ -184,7 +185,7 @@ def show(conn: Connection, *, zone: datetime.tzinfo) -> ShowResult:
         because=version.form.because,
         sessions=tuple(programs.line_counts(conn, version.id)),
         ladders=tuple(
-            (session.id, line, standing[(session.id, line.exercise)])
+            (session.id, line, standing[LineRef(session.id, line.exercise)])
             for session in version.form.sessions
             for line in session.lines
             if line.ladder is not None

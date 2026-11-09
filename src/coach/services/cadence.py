@@ -6,7 +6,7 @@ from typing import cast
 
 from coach.core.cadence import BlockSpan, CadenceRead, cadence_signal
 from coach.core.config import Units
-from coach.core.exercise_ladder import rung_line, standing_rung
+from coach.core.exercise_ladder import LineRef, rung_line, standing_rung
 from coach.core.flag import Flag, leave
 from coach.core.planned_week import week_monday
 from coach.core.prescription import DecisionInForce
@@ -87,9 +87,7 @@ def _standing(line: Line, session_id: str, rungs: tuple[DecisionInForce, ...]) -
     ladder = line.ladder
     if ladder is None:
         return None
-    standing = standing_rung(
-        rungs, ladder, session_id=session_id, line_key=line.exercise, adopted=None
-    )
+    standing = standing_rung(rungs, ladder, line=LineRef(session_id, line.exercise), adopted=None)
     return rung_line(line, ladder, standing.index)
 
 

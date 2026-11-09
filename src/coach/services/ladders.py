@@ -5,7 +5,7 @@ import datetime
 from collections.abc import Sequence
 
 from coach.core.config import Units
-from coach.core.exercise_ladder import LadderRead, ladder_read, standing_rung
+from coach.core.exercise_ladder import LadderRead, LineRef, ladder_read, standing_rung
 from coach.core.flag import Scope
 from coach.core.planned_week import week_monday
 from coach.core.prescription import DecisionInForce
@@ -26,13 +26,11 @@ def rung_decisions(
     return decisions.in_force_dated(conn, on, ("ladder_rung",), zone)
 
 
-def standing_rungs(
-    form: ProgramForm, found: Sequence[DecisionInForce]
-) -> dict[tuple[str, str], int]:
-    """Each ladder line's standing rung, keyed on (session, the line's key)."""
+def standing_rungs(form: ProgramForm, found: Sequence[DecisionInForce]) -> dict[LineRef, int]:
+    """Each ladder line's standing rung."""
     return {
-        (session.id, line.exercise): standing_rung(
-            found, ladder, session_id=session.id, line_key=line.exercise, adopted=None
+        (ref := LineRef(session.id, line.exercise)): standing_rung(
+            found, ladder, line=ref, adopted=None
         ).index
         for session in form.sessions
         for line in session.lines
@@ -57,9 +55,7 @@ def ladder_reads(
     return tuple(
         ladder_read(
             ladder,
-            standing_rung(
-                found, ladder, session_id=session.id, line_key=line.exercise, adopted=adopted
-            ),
+            standing_rung(found, ladder, line=LineRef(session.id, line.exercise), adopted=adopted),
             exposures,
             scope=Scope("line", monday, session_id=session.id, exercise_id=line.exercise),
             before=on + _DAY,
