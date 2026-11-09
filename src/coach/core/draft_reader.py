@@ -1,5 +1,6 @@
-"""One table of a Draft read by type. Under a recording (`draft_schema`) every read notes its key
-and shape; `_typed` and `raw` are the only ways to a value, so no accessor can skip the note."""
+"""One table of a Draft read by type. Under a recording (`draft_schema`) every accessor notes its
+key and shape, since each reaches a value through `_typed` or `raw`. Reading `values` directly
+skips the note."""
 
 import datetime
 from abc import ABC, abstractmethod
