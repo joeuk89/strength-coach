@@ -305,6 +305,43 @@ def test_after_the_return_week_the_line_stands_on_its_rung_again() -> None:
     assert shape(line) == [(4, 3, 8)]
 
 
+def test_a_stepped_back_week_offers_no_climb_on_a_rung_that_met_its_criterion() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        bands("2026-09-20"),
+        bands("2026-09-27"),
+        decisions=(ladder_rung(2, "2026-09-01"),),
+    )
+
+    assert line.steps[0].to == "rung 1"
+    assert ladder_flags(line) == []
+
+
+def test_a_stepped_back_week_raises_no_ladder_top() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        pull_ups("2026-09-20"),
+        pull_ups("2026-09-27"),
+        decisions=(ladder_rung(3, "2026-09-01"),),
+    )
+
+    assert line.steps[0].to == "rung 1"
+    assert ladder_flags(line) == []
+
+
+def test_the_climb_is_offered_again_once_the_line_is_back_on_its_rung() -> None:
+    line = derive(
+        PULL_UP_LADDER,
+        bands("2026-09-20"),
+        bands("2026-09-27"),
+        negatives("2026-10-26"),
+        decisions=(ladder_rung(2, "2026-09-01"),),
+    )
+
+    assert line.exercise_id == "band_pull_up"
+    assert [code for code, _ in ladder_flags(line)] == ["rung_met"]
+
+
 def test_a_light_week_holds_the_rung_and_cuts_its_sets() -> None:
     line = derive(
         PULL_UP_LADDER,
@@ -427,9 +464,9 @@ def test_the_workout_that_earned_a_tempo_climb_is_not_the_new_rungs_first_exposu
 def test_a_log_the_day_after_the_decision_counts_toward_the_criterion() -> None:
     line = derive(
         TEMPO_LADDER,
-        tempo_logs("2026-10-21"),
-        tempo_logs("2026-10-22"),
-        decisions=(ladder_rung(2, "2026-10-20"),),
+        tempo_logs("2026-10-26"),
+        tempo_logs("2026-10-27"),
+        decisions=(ladder_rung(2, "2026-10-25"),),
     )
 
     assert [code for code, _ in ladder_flags(line)] == ["rung_met"]

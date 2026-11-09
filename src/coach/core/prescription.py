@@ -156,12 +156,13 @@ def rung_step_back(standing: int, week: int, cause: str) -> Step:
     return Step("cut", f"rung {standing}", f"rung {week}", cause)
 
 
-def stepped_back_a_rung(steps: Iterable[Mapping[str, object]]) -> bool:
-    """A step frozen when it named exercises reads False, so its WeekPlan keeps projecting the note
-    it pushed and raises no false drift."""
-    return any(
-        step.get("step") == "cut" and str(step.get("from")).startswith("rung ") for step in steps
-    )
+def stepped_back_to(steps: Iterable[Mapping[str, object]]) -> str | None:
+    """The rung a return band stepped this week back to. A step frozen when it named exercises reads
+    None, so its WeekPlan keeps projecting the note it pushed and raises no false drift."""
+    for step in steps:
+        if step.get("step") == "cut" and str(step.get("from")).startswith("rung "):
+            return str(step.get("to"))
+    return None
 
 
 @dataclass(frozen=True)
