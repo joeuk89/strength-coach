@@ -52,11 +52,7 @@ def standing_line(
     if ladder is None:
         return line, exposures
     standing = standing_rung(found, ladder, line=LineRef(session_id, line.exercise), adopted=None)
-    since = standing.since
-    return (
-        rung_line(line, ladder, standing.index),
-        [e for e in exposures if since is None or since <= e.date],
-    )
+    return rung_line(line, ladder, standing.index), standing.counted(exposures)
 
 
 def ladder_reads(

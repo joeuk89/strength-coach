@@ -151,7 +151,7 @@ class _Derivation:
                 rack,
                 self.scope,
                 read,
-                since=None if self.standing is None else self.standing.since,
+                standing=self.standing,
             ),
             self.steps,
             self.flags,

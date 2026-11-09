@@ -26,6 +26,7 @@ from coach.core.registries.schemes import DEFAULT_EXPOSURES
 
 # The scheme's opening position; the line stands here until a rung is a recorded choice.
 OPENING_RUNG = 1
+_DAY = datetime.timedelta(days=1)
 
 
 @dataclass(frozen=True)
@@ -38,11 +39,15 @@ class LineRef:
 
 @dataclass(frozen=True)
 class StandingRung:
-    """The rung a line stands on (from 1) and its start: the Decision's date, or the version's
-    adoption for the opening rung. The criterion counts only exposures on or after the start."""
+    """The rung a line stands on (from 1) and the first date an exposure counts on it."""
 
     index: int
-    since: datetime.date | None
+    counts_from: datetime.date | None
+
+    def counted(self, exposures: Iterable[Exposure]) -> tuple[Exposure, ...]:
+        """Those of `exposures` the rung's load, criterion and `stall_streak` may read."""
+        since = self.counts_from
+        return tuple(e for e in exposures if since is None or since <= e.date)
 
 
 def full_criterion(ladder: ExerciseLadder, index: int) -> Advance:
@@ -110,7 +115,9 @@ def standing_rung(
     adopted: datetime.date | None,
 ) -> StandingRung:
     """The `ladder_rung` Decision in force on the line, or the opening rung. A rung past a
-    ladder an amend has since shortened stands on the top."""
+    ladder an amend has since shortened stands on the top. Exposures count from the day after
+    the Decision, since neither carries a time and the workout that earned the climb is often
+    logged that day; the opening rung counts from adoption itself, since no rung earned it."""
     found = [
         d
         for d in decisions
@@ -121,7 +128,10 @@ def standing_rung(
     decision = found[-1]
     rung = decision.params["rung"]
     index = rung if isinstance(rung, int) else OPENING_RUNG
-    return StandingRung(min(max(index, OPENING_RUNG), len(ladder.rungs)), decision.on)
+    return StandingRung(
+        min(max(index, OPENING_RUNG), len(ladder.rungs)),
+        None if decision.on is None else decision.on + _DAY,
+    )
 
 
 def rung_line(line: Line, ladder: ExerciseLadder, index: int) -> Line:
@@ -169,15 +179,11 @@ def _rung_dose(rung: Rung, naming: RungNaming) -> str:
 def rung_anchors(
     exposures: Iterable[Exposure], standing: StandingRung, week: int, session_id: str
 ) -> tuple[Exposure, ...]:
-    """What may anchor a later rung carrying its own start load this `week`: its exposures after
-    the rung's start date. A log on that date is the previous rung's, since the workout that
-    earned the climb is often logged that day and neither carries a time. A rung a return band
+    """What may anchor a later rung carrying its own start load this `week`. A rung a return band
     stepped back to has none: the standing rung's start says nothing of that rung's history."""
     if week != standing.index:
         return ()
-    return tuple(
-        e for e in _since_start(exposures, standing, session_id) if e.date != standing.since
-    )
+    return _counted_in_session(exposures, standing, session_id)
 
 
 def climb_offer(
@@ -308,7 +314,7 @@ def _qualifying_run(
     history = ordinary(
         newest_first(
             e
-            for e in _since_start(exposures, standing, session_id)
+            for e in _counted_in_session(exposures, standing, session_id)
             if e.exercise_id == rung.exercise and e.date < before
         )
     )
@@ -320,15 +326,10 @@ def _qualifying_run(
     return run
 
 
-def _since_start(
+def _counted_in_session(
     exposures: Iterable[Exposure], standing: StandingRung, session_id: str
-) -> Iterable[Exposure]:
-    since = standing.since
-    return (
-        e
-        for e in exposures
-        if e.session_id in (None, session_id) and (since is None or since <= e.date)
-    )
+) -> tuple[Exposure, ...]:
+    return standing.counted(e for e in exposures if e.session_id in (None, session_id))
 
 
 def _meets(sets: Sequence[SetGroup], criterion: Advance, exposure: Exposure) -> bool:
