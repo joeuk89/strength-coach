@@ -140,15 +140,13 @@ def rung_anchors(
     exposures: Iterable[Exposure], standing: StandingRung, week: int, session_id: str
 ) -> tuple[Exposure, ...]:
     """What may anchor a later rung carrying its own start load this `week`: its exposures after
-    the rung's start date, which the load opens until there is one. A log on that date is taken
-    as the previous rung's, since the workout that earned the climb is often logged on the day of
-    the Decision and neither carries a time. A rung a return band stepped back to has none, since
-    the standing rung's start says nothing of that earlier rung's history."""
+    the rung's start date. A log on that date is the previous rung's, since the workout that
+    earned the climb is often logged that day and neither carries a time. A rung a return band
+    stepped back to has none: the standing rung's start says nothing of that rung's history."""
     if week != standing.index:
         return ()
-    since = standing.since
     return tuple(
-        e for e in _since_start(exposures, standing, session_id) if since is None or since < e.date
+        e for e in _since_start(exposures, standing, session_id) if e.date != standing.since
     )
 
 

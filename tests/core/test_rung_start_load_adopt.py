@@ -10,7 +10,7 @@ from coach.core.flag import Flag
 from coach.core.goal import Goal
 from coach.core.load import Load
 from coach.core.program.checks import AdoptContext, violations
-from coach.core.program.parse import parse_program_draft
+from coach.core.program.parse import ParsedDraft, parse_program_draft
 from coach.core.program.warnings import adopt_warnings
 from coach.core.rack import ListedRack, RackRow
 
@@ -43,18 +43,29 @@ def weighted(start_load: float | None = 5, exercise: str = "weighted_negative") 
     return a_rung(exercise, sets=REPS, start_load=start_load)
 
 
-def flags_of(*lines: dict[str, Any], context: AdoptContext = CONTEXT) -> list[Flag]:
-    parsed = parse_program_draft(toml(a_draft(a_session("pull", *lines))), file="d.toml")
+LOGGED_CONTEXT = replace(
+    CONTEXT,
+    last_exposures={
+        "weighted_negative": Exposure(
+            workout_id="w-1",
+            exercise_id="weighted_negative",
+            date=datetime.date(2026, 10, 1),
+            sets=(ExposureSet(0, "working", Load(15, "total"), 4, 8),),
+        )
+    },
+)
+
+
+def parsed_form(*lines: dict[str, Any], location: str | None = None) -> ParsedDraft:
+    draft = a_draft(a_session("pull", *lines, location=location))
+    return parse_program_draft(toml(draft), file="d.toml")
+
+
+def flags_of(
+    *lines: dict[str, Any], context: AdoptContext = CONTEXT, location: str | None = None
+) -> list[Flag]:
+    parsed = parsed_form(*lines, location=location)
     return list(violations(parsed.form, context, parsed.unknown_keys))
-
-
-def an_exposure_of(exercise: str) -> Exposure:
-    return Exposure(
-        workout_id="w-1",
-        exercise_id=exercise,
-        date=datetime.date(2026, 10, 1),
-        sets=(ExposureSet(0, "working", Load(15, "total"), 4, 8),),
-    )
 
 
 def test_a_load_bearing_later_rung_with_a_start_load_adopts() -> None:
@@ -69,11 +80,7 @@ def test_a_load_bearing_later_rung_with_no_start_load_is_start_load_missing() ->
 
 
 def test_a_rungs_earlier_exposures_do_not_waive_its_start_load() -> None:
-    context = replace(
-        CONTEXT, last_exposures={"weighted_negative": an_exposure_of("weighted_negative")}
-    )
-
-    [flag] = flags_of(a_ladder(weighted(None)), context=context)
+    [flag] = flags_of(a_ladder(weighted(None)), context=LOGGED_CONTEXT)
 
     assert flag.code == "start_load_missing"
 
@@ -134,12 +141,8 @@ def test_a_rung_start_load_off_the_rack_is_start_load_off_rack() -> None:
 def test_the_rack_is_read_in_the_rungs_exercise_and_the_sessions_location() -> None:
     gym = {"dumbbell": ListedRack((RackRow(30),))}
     context = replace(CONTEXT, racks={**CONTEXT.racks, "gym": gym})
-    line = a_ladder(weighted(10, "db_negative"))
-    parsed = parse_program_draft(
-        toml(a_draft(a_session("pull", line, location="gym"))), file="d.toml"
-    )
 
-    [flag] = violations(parsed.form, context, parsed.unknown_keys)
+    [flag] = flags_of(a_ladder(weighted(10, "db_negative")), context=context, location="gym")
 
     assert flag.code == "start_load_off_rack"
     assert flag.params["location"] == "gym"
@@ -171,13 +174,6 @@ def test_the_lines_own_start_load_rule_is_unchanged_on_a_ladder() -> None:
 
 
 def test_a_rung_start_load_beside_logged_history_warns_no_start_load_ignored() -> None:
-    context = replace(
-        CONTEXT, last_exposures={"weighted_negative": an_exposure_of("weighted_negative")}
-    )
-    form = parse_program_draft(
-        toml(a_draft(a_session("pull", a_ladder(weighted())))), file="d.toml"
-    )
+    warnings = adopt_warnings(parsed_form(a_ladder(weighted())).form, LOGGED_CONTEXT)
 
-    assert [
-        f.code for f in adopt_warnings(form.form, context) if f.code == "start_load_ignored"
-    ] == []
+    assert "start_load_ignored" not in [f.code for f in warnings]

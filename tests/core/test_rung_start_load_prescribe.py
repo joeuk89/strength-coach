@@ -5,7 +5,7 @@ from typing import Any
 from support.prescribe import a_rack, a_request
 
 from coach.core.exposure import Exposure, ExposureSet, Matched
-from coach.core.load import Load
+from coach.core.load import Load, LoadMode
 from coach.core.prescribe import prescribe
 from coach.core.prescription import (
     DecisionInForce,
@@ -44,6 +44,18 @@ LADDER = a_ladder(
 )
 
 
+SHARED = a_ladder(
+    Rung("db_negative", SETS, "lower for 4 s"),
+    Rung("db_negative", SETS, "lower for 8 s", start_load=20),
+    start_load=10,
+)
+WITH_A_TOP = a_ladder(
+    Rung("negative_pull_up", SETS),
+    Rung("weighted_negative", SETS, start_load=5),
+    Rung("chin_up", SETS),
+)
+
+
 def standing_on(rung: int, on: datetime.date = RUNG_START) -> DecisionInForce:
     return DecisionInForce(
         id=f"d-{on}",
@@ -55,17 +67,21 @@ def standing_on(rung: int, on: datetime.date = RUNG_START) -> DecisionInForce:
     )
 
 
+ON_THE_SHARED_RUNG = (replace(standing_on(2), exercise_id="db_negative"),)
+
+
 def logged(
     on: str,
     load: float,
     exercise: str = "weighted_negative",
     session: str | None = "lower",
+    mode: LoadMode = "total",
 ) -> Exposure:
     return Exposure(
         workout_id=f"w-{on}-{session}",
         exercise_id=exercise,
         date=datetime.date.fromisoformat(on),
-        sets=tuple(ExposureSet(i, "working", Load(load, "total"), 4, 8) for i in range(3)),
+        sets=tuple(ExposureSet(i, "working", Load(load, mode), 4, 8) for i in range(3)),
         match=None if session is None else Matched(session),
     )
 
@@ -117,24 +133,9 @@ def test_exposures_before_the_rungs_start_do_not_anchor_it() -> None:
 
 
 def test_a_shared_exercises_earlier_exposures_at_another_load_do_not_anchor_the_rung() -> None:
-    shared = a_ladder(
-        Rung("db_negative", SETS, "lower for 4 s"),
-        Rung("db_negative", SETS, "lower for 8 s", start_load=20),
-        start_load=10,
-    )
-    earlier = Exposure(
-        workout_id="w-1",
-        exercise_id="db_negative",
-        date=datetime.date(2026, 10, 23),
-        sets=tuple(ExposureSet(i, "working", Load(30, "per_hand_x2"), 4, 8) for i in range(3)),
-        match=Matched("lower"),
-    )
+    earlier = logged("2026-10-23", 30, "db_negative", mode="per_hand_x2")
 
-    line = derive(
-        shared,
-        earlier,
-        decisions=(replace(standing_on(2), exercise_id="db_negative"),),
-    )
+    line = derive(SHARED, earlier, decisions=ON_THE_SHARED_RUNG)
 
     assert working_load(line) == 20
     assert line.derived_from == "start_load"
@@ -142,24 +143,9 @@ def test_a_shared_exercises_earlier_exposures_at_another_load_do_not_anchor_the_
 
 
 def test_a_shared_exercises_log_on_the_rungs_start_date_belongs_to_the_previous_rung() -> None:
-    shared = a_ladder(
-        Rung("db_negative", SETS, "lower for 4 s"),
-        Rung("db_negative", SETS, "lower for 8 s", start_load=20),
-        start_load=10,
-    )
-    earned_the_climb = Exposure(
-        workout_id="w-1",
-        exercise_id="db_negative",
-        date=RUNG_START,
-        sets=tuple(ExposureSet(i, "working", Load(10, "per_hand_x2"), 4, 8) for i in range(3)),
-        match=Matched("lower"),
-    )
+    earned_the_climb = logged(RUNG_START.isoformat(), 10, "db_negative", mode="per_hand_x2")
 
-    line = derive(
-        shared,
-        earned_the_climb,
-        decisions=(replace(standing_on(2), exercise_id="db_negative"),),
-    )
+    line = derive(SHARED, earned_the_climb, decisions=ON_THE_SHARED_RUNG)
 
     assert line.groups[0].load == Load(20, "per_hand_x2")
     assert line.derived_from == "start_load"
@@ -167,13 +153,7 @@ def test_a_shared_exercises_log_on_the_rungs_start_date_belongs_to_the_previous_
 
 
 def test_a_log_on_the_rungs_start_date_still_counts_toward_its_criterion() -> None:
-    top = a_ladder(
-        Rung("negative_pull_up", SETS),
-        Rung("weighted_negative", SETS, start_load=5),
-        Rung("chin_up", SETS),
-    )
-
-    line = derive(top, logged("2026-10-25", 5), logged("2026-10-27", 5))
+    line = derive(WITH_A_TOP, logged("2026-10-25", 5), logged("2026-10-27", 5))
 
     assert "rung_met" in codes(line)
 
@@ -193,13 +173,7 @@ def test_a_second_exposure_holds_the_load_logged_on_the_first() -> None:
 
 
 def test_a_met_rung_never_steps_its_load_up() -> None:
-    top = a_ladder(
-        Rung("negative_pull_up", SETS),
-        Rung("weighted_negative", SETS, start_load=5),
-        Rung("chin_up", SETS),
-    )
-
-    line = derive(top, logged("2026-10-27", 5), logged("2026-10-30", 5))
+    line = derive(WITH_A_TOP, logged("2026-10-27", 5), logged("2026-10-30", 5))
 
     assert working_load(line) == 5
     assert "rung_met" in codes(line)
@@ -244,18 +218,12 @@ def test_a_swap_reads_the_swapped_exercises_own_history_and_load() -> None:
         "negative_pull_up",
         params={"to": "goblet_squat", "start_load": 20},
     )
-    history = Exposure(
-        workout_id="w-1",
-        exercise_id="goblet_squat",
-        date=datetime.date(2026, 10, 30),
-        sets=tuple(ExposureSet(i, "working", Load(30, "single_implement"), 4, 8) for i in range(3)),
-        match=Matched("lower"),
-    )
+    history = logged("2026-10-30", 30, "goblet_squat", mode="single_implement")
 
     line = derive(LADDER, history, overrides=(swap,))
 
     assert line.exercise_id == "goblet_squat"
-    assert line.derived_from == "exposure:w-1/goblet_squat"
+    assert line.derived_from == "exposure:w-2026-10-30-lower/goblet_squat"
 
 
 def test_a_loaded_rung_from_an_older_version_with_no_load_keeps_the_old_search() -> None:

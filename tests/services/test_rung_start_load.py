@@ -16,7 +16,7 @@ from coach.core.errors import Invalid
 from coach.core.prescription import LinePrescription
 from coach.core.units import KG_PER_LB
 from coach.services.plan_apply import apply, dry_run
-from coach.services.plan_draft import plan_draft
+from coach.services.plan_draft import PlanDraftResult, plan_draft
 from coach.services.program import AdoptResult, adopt, show_draft
 from coach.services.record import record
 from coach.store import exercises
@@ -72,33 +72,40 @@ def adopted(conn: Connection, draft: bytes, *, dry: bool = False) -> AdoptResult
     )
 
 
+def climbed_to_rung_2(conn: Connection, line_key: str) -> None:
+    record(
+        conn,
+        f'[[decision]]\nkind = "ladder_rung"\nsession = "pull"\nexercise = "{line_key}"\n'
+        'rung = 2\nbecause = "progress"\ntext = "Clean sets; the athlete said yes."\n'.encode(),
+        file="decision.toml",
+        clock=FixedClock(),
+    )
+
+
 def standing_on_the_weighted_rung(**rung: Any) -> Connection:
     conn, draft = adopting(**rung)
     adopted(conn, draft)
     with conn:
         exercises.update(conn, "weighted_negative", {"hevy_template_id": VEST_TEMPLATE})
-    record(
-        conn,
-        b'[[decision]]\nkind = "ladder_rung"\nsession = "pull"\nexercise = "pull_up"\n'
-        b'rung = 2\nbecause = "progress"\ntext = "Clean sets; the athlete said yes."\n',
-        file="decision.toml",
-        clock=FixedClock(),
-    )
+    climbed_to_rung_2(conn, "pull_up")
     return conn
 
 
-def the_plan(conn: Connection, *, hevy: bool = False) -> str:
+def next_weeks_plan(conn: Connection, *, hevy: bool = False) -> PlanDraftResult:
     return plan_draft(
         conn, config=a_config(hevy=hevy), kits=(kit_files(),), clock=FixedClock(), week=NEXT_MONDAY
-    ).text
+    )
 
 
 def the_line(conn: Connection) -> LinePrescription:
-    draft = plan_draft(
-        conn, config=a_config(), kits=(kit_files(),), clock=FixedClock(), week=NEXT_MONDAY
-    ).draft
-    [line] = draft.sessions[0].lines
+    [line] = next_weeks_plan(conn).draft.sessions[0].lines
     return line
+
+
+def working_load(line: LinePrescription) -> float:
+    [group] = line.groups
+    assert group.load is not None
+    return group.load.amount
 
 
 def test_a_weighted_last_rung_with_its_start_load_adopts() -> None:
@@ -155,9 +162,7 @@ def test_standing_on_the_weighted_rung_plan_draft_prescribes_its_load_and_raises
     line = the_line(standing_on_the_weighted_rung())
 
     assert line.exercise_id == "weighted_negative"
-    [group] = line.groups
-    assert group.load is not None
-    assert group.load.amount == 5
+    assert working_load(line) == 5
     assert line.flags == ()
 
 
@@ -168,9 +173,7 @@ def test_older_logs_of_the_rungs_exercise_at_another_load_do_not_anchor_it() -> 
 
     line = the_line(conn)
 
-    [group] = line.groups
-    assert group.load is not None
-    assert group.load.amount == 5
+    assert working_load(line) == 5
     assert line.derived_from == "start_load"
 
 
@@ -189,26 +192,19 @@ def test_a_shared_rung_opens_on_its_own_load_after_a_workout_on_the_decisions_da
     a_logged_workout(
         conn, "h-climb", FixedClock().today().isoformat(), (VEST_TEMPLATE, earned_the_climb)
     )
-    record(
-        conn,
-        b'[[decision]]\nkind = "ladder_rung"\nsession = "pull"\nexercise = "weighted_negative"\n'
-        b'rung = 2\nbecause = "progress"\ntext = "Clean sets; the athlete said yes."\n',
-        file="decision.toml",
-        clock=FixedClock(),
-    )
+    climbed_to_rung_2(conn, "weighted_negative")
 
     line = the_line(conn)
 
-    [group] = line.groups
-    assert group.load is not None
-    assert group.load.amount == 15
+    assert working_load(line) == 15
     assert line.derived_from == "start_load"
 
 
 def test_the_hevy_routine_for_the_weighted_rung_carries_the_load() -> None:
     conn = standing_on_the_weighted_rung()
     hevy = FakeHevy(FixedClock())
-    data = the_plan(conn, hevy=True).encode().replace(b"confirmed = false", b"confirmed = true")
+    plan = next_weeks_plan(conn, hevy=True).text.encode()
+    data = plan.replace(b"confirmed = false", b"confirmed = true")
     dry = dry_run(
         conn,
         data,

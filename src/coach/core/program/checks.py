@@ -55,8 +55,7 @@ class _Loaded:
     mode: str
     start_load: Number | None
     key_path: str
-    needed: bool
-    needed_because: str
+    missing_because: str | None
     rung: int | None = None
 
     @property
@@ -513,9 +512,10 @@ class _Checks:
                 mode=line.load_mode or str(exercise.get("load_mode")),
                 start_load=line.start_load,
                 key_path=f"session.{session.id}.line.{line.exercise}.start_load",
-                needed=line.exercise not in self.context.last_exposures,
-                needed_because=(
-                    f"{line.exercise} has no Exposure yet, so the line needs a start_load"
+                missing_because=(
+                    None
+                    if line.exercise in self.context.last_exposures
+                    else f"{line.exercise} has no Exposure yet, so the line needs a start_load"
                 ),
             ),
             scope,
@@ -547,8 +547,7 @@ class _Checks:
                 mode=str(exercise.get("load_mode")),
                 start_load=rung.start_load,
                 key_path=key_path,
-                needed=True,
-                needed_because=(
+                missing_because=(
                     f"rung {index} of {line.exercise} bears a load, so it needs its own start_load"
                 ),
                 rung=index,
@@ -563,12 +562,12 @@ class _Checks:
             return
         if loaded.mode not in LOAD_BEARING_MODES:
             return
-        if loaded.start_load is None and loaded.needed:
+        if loaded.start_load is None and loaded.missing_because is not None:
             self.raise_(
                 "start_load_missing",
                 scope,
                 {"exercise_id": loaded.exercise_id, **loaded.rung_param},
-                loaded.needed_because,
+                loaded.missing_because,
                 distinct=loaded.distinct,
             )
         location = session.location or self.form.location
