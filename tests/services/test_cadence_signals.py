@@ -191,3 +191,17 @@ def test_exposures_before_a_climb_on_a_shared_exercise_raise_no_cadence_slow() -
     record(conn, CLIMBED_TO_RUNG_2, file="d.toml", clock=FixedClock(at(BOUNDARY)))
 
     assert "pull_up" not in signals_at_check_in(conn)
+
+
+def test_a_practice_line_listed_first_on_another_scheme_leaves_a_lifting_lines_signal() -> None:
+    drill = a_line(
+        "pull_up", sets=[{"count": 3, "reps": 5}], scheme={"name": "hold"}, start_load=None
+    )
+    conn = two_closed_blocks(thursday_pull_ups=True, drill_line=drill)
+
+    found = signals_at_check_in(conn)
+
+    assert (found["pull_up"].code, found["pull_up"].params["scheme"]) == (
+        "cadence_slow",
+        "double_progression",
+    )

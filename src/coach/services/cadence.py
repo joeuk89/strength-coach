@@ -49,7 +49,8 @@ def cadence_signals(
     found: list[Flag] = []
     for session_id, line in _lines(version.form):
         if any(
-            form is None or _scheme_of(form, line.exercise) != line.scheme.name for form in forms
+            form is None or _scheme_of(form, session_id, line.exercise) != line.scheme.name
+            for form in forms
         ):
             continue
         standing, counted = standing_line(line, session_id, rungs, exposures)
@@ -84,9 +85,10 @@ def _form_at(conn: Connection, span: BlockSpan) -> ProgramForm | None:
     return None if version is None else version.form
 
 
-def _scheme_of(form: ProgramForm, exercise_id: str) -> str | None:
-    line = form.first_line(exercise_id)
-    return None if line is None else line.scheme.name
+def _scheme_of(form: ProgramForm, session_id: str, exercise_id: str) -> str | None:
+    session = form.session(session_id)
+    lines = session.lines if session else ()
+    return next((line.scheme.name for line in lines if line.exercise == exercise_id), None)
 
 
 def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:
