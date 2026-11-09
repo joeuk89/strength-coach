@@ -286,6 +286,7 @@ def _rung(reader: "_Reader", line_exercise: str | None) -> Rung:
         sets=tuple(_group(r) for r in reader.tables("sets", required=True, at_least_one=True)),
         cues=reader.text("cues"),
         advance=_advance(reader.table("advance")),
+        start_load=reader.load("start_load"),
     )
     reader.finish()
     return rung

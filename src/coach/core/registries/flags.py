@@ -213,11 +213,13 @@ VIOLATIONS = (
     violation("rehab_in_version", ("session",), ("session_id",), ("program adopt",)),
     violation("practice_not_optional", ("session",), ("session_id",), ("program adopt",)),
     violation("coach_led_has_lines", ("session",), ("session_id",), ("program adopt",)),
-    violation("start_load_missing", ("line",), ("exercise_id",), ("program adopt", "plan apply")),
+    violation(
+        "start_load_missing", ("line",), ("exercise_id", "rung"), ("program adopt", "plan apply")
+    ),
     violation(
         "start_load_off_rack",
         ("line",),
-        ("start_load", "location", "nearest_rows"),
+        ("start_load", "location", "nearest_rows", "rung"),
         ("program adopt",),
     ),
     violation("no_working_sets", ("line",), ("scheme",), ("program adopt",)),

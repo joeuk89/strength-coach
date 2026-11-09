@@ -149,7 +149,7 @@ def test_the_exercise_ladder_scheme_carries_its_rung_table_and_criterion_keys() 
     ladder = scheme_branch(line["line"]["items"]["properties"]["scheme"], "exercise_ladder")
     rung = ladder["properties"]["rungs"]["items"]
 
-    assert set(rung["properties"]) == {"exercise", "sets", "cues", "advance"}
+    assert set(rung["properties"]) == {"exercise", "sets", "cues", "advance", "start_load"}
     assert rung["required"] == ["sets"]
     assert tuple(rung["properties"]["advance"]["properties"]) == CRITERION_KEYS
     assert tuple(ladder["properties"]["advance"]["properties"]) == CRITERION_KEYS

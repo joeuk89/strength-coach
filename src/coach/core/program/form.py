@@ -50,6 +50,7 @@ class Rung:
     sets: tuple[SetGroup, ...]
     cues: str | None = None
     advance: Advance = Advance()
+    start_load: Number | None = None
 
 
 @dataclass(frozen=True)
