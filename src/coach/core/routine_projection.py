@@ -8,7 +8,7 @@ from typing import Literal, cast
 from coach.core.config import Units
 from coach.core.exercise_ladder import rung_label, rung_line
 from coach.core.mirror import Routine, RoutineSet
-from coach.core.note_dose import working_groups, working_rpe, working_shape
+from coach.core.note_dose import working_rpe, working_shape
 from coach.core.prescription import RungNaming
 from coach.core.program.form import Line
 
@@ -208,7 +208,7 @@ def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
 def _target(groups: Sequence[Mapping[str, object]], units: Units) -> str:
     """`2×5 + 5+ (stop at RPE 9) at 225 lb @8`; a line with no working load says
     `choose the load` once."""
-    working = working_groups(groups)
+    working = [g for g in groups if g.get("type") != "warm_up"]
     target = working_shape(working)
     loads = [float(str(g["load"])) for g in working if g.get("load") is not None]
     if loads:

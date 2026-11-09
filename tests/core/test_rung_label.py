@@ -158,7 +158,6 @@ def test_rung_mets_message_offers_the_next_rung_by_its_label() -> None:
     )
 
 
-# Computed before `next_rung` existed: a changed value strands every stored acknowledgement.
 def test_rung_met_keeps_the_hash_a_stored_acknowledgement_holds() -> None:
     assert offer(CORE, 1, "dead_bug", 10).params_hash == (
         "sha256:d7d9f74205c5b13012ac4d2bcf56fca26cb7037186bdd2d773018657d2f0523d"

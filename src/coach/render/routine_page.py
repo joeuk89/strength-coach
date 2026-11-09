@@ -46,8 +46,7 @@ def _line(line: PageLine, routine: RoutinePage, units: Units) -> str:
 
 
 def _rung(rung: RungShape) -> str:
-    shown = marked_rung(rung.label, standing=rung.standing)
-    return f"{shown}. Climb {_climb(rung.criterion)}."
+    return f"{marked_rung(rung.label, standing=rung.standing)}. Climb {_climb(rung.criterion)}."
 
 
 def _climb(criterion: Mapping[str, object]) -> str:

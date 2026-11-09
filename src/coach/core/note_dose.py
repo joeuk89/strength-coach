@@ -4,10 +4,6 @@ from collections.abc import Mapping, Sequence
 from typing import cast
 
 
-def working_groups(groups: Sequence[Mapping[str, object]]) -> list[Mapping[str, object]]:
-    return [g for g in groups if g.get("type") != "warm_up"]
-
-
 def working_shape(working: Sequence[Mapping[str, object]]) -> str:
     """`2×5 + 5+ (stop at RPE 9)`."""
     return " + ".join(_shape(g) for g in working) or "no working set"
