@@ -167,3 +167,27 @@ def test_a_practice_line_stalled_across_two_blocks_raises_no_cadence_slow() -> N
     conn = two_closed_blocks(thursday_pull_ups=True, practice_pull_ups=True)
 
     assert "pull_up" not in signals_at_check_in(conn)
+
+
+TEMPO_LADDER = a_ladder_line(
+    "pull_up",
+    a_rung(sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 4 s"),
+    a_rung("pull_up", sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 6 s"),
+)
+CLIMBED_TO_RUNG_2 = (
+    b'[[decision]]\nkind = "ladder_rung"\nsession = "push"\nexercise = "pull_up"\n'
+    b'rung = 2\nbecause = "progress"\ntext = "on to 6 s lowers"\n'
+)
+
+
+def test_a_shared_exercise_ladder_stalled_on_its_first_rung_raises_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, pull_up_line=TEMPO_LADDER)
+
+    assert signals_at_check_in(conn)["pull_up"].code == "cadence_slow"
+
+
+def test_exposures_before_a_climb_on_a_shared_exercise_raise_no_cadence_slow() -> None:
+    conn = two_closed_blocks(thursday_pull_ups=True, pull_up_line=TEMPO_LADDER)
+    record(conn, CLIMBED_TO_RUNG_2, file="d.toml", clock=FixedClock(at(BOUNDARY)))
+
+    assert "pull_up" not in signals_at_check_in(conn)

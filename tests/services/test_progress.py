@@ -4,12 +4,13 @@ from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, WHY, a_drill, two
 from support.clock import FixedClock, at
 from support.kit_fixtures import kit_files
 from support.ledger import a_weigh_in
-from support.program_drafts import a_draft, a_line, a_session, toml
+from support.program_drafts import a_draft, a_ladder_line, a_line, a_rung, a_session, toml
 from support.programs import a_config
 
 from coach.core.progress import LiftProgress, Progress
 from coach.services.program import adopt
 from coach.services.progress import progress
+from coach.services.record import record
 from coach.store.connection import Connection
 
 RISING = (100, 105, 105, 110, 115, 115)
@@ -160,6 +161,27 @@ def test_flat_pull_ups_that_predate_the_latest_redesign_show_no_stall_streak() -
         file="d.toml",
         config=a_config(),
         kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    assert pull_up_in(report(conn)).stall_streak == 0
+
+
+TEMPO_LADDER = a_ladder_line(
+    "pull_up",
+    a_rung(sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 4 s"),
+    a_rung("pull_up", sets=[{"count": 3, "reps": 6, "rpe": 8}], cues="lower for 6 s"),
+)
+
+
+def test_flat_pull_ups_before_a_climb_on_a_shared_exercise_show_no_stall_streak() -> None:
+    conn = two_closed_blocks(pull_up_line=TEMPO_LADDER)
+    assert pull_up_in(report(conn)).stall_streak == 3
+    record(
+        conn,
+        b'[[decision]]\nkind = "ladder_rung"\nsession = "push"\nexercise = "pull_up"\n'
+        b'rung = 2\nbecause = "progress"\ntext = "on to 6 s lowers"\n',
+        file="d.toml",
         clock=FixedClock(at(BOUNDARY)),
     )
 

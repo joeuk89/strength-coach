@@ -252,3 +252,21 @@ def test_a_program_adopted_after_approval_leaves_the_resumed_prompts_rung_alone(
 
     assert resumed.resumes == "wp-2026-11-02"
     assert "  ab_wheel 3×8 · first prescription · Next: Hanging Leg Raise" in prompt_lines(resumed)
+
+
+def test_a_ladder_on_one_exercise_pushes_the_standing_rungs_sets_and_verifies() -> None:
+    climbing = a_ladder_line(
+        "dead_bug",
+        a_rung(sets=[{"count": 3, "reps": 10, "rpe": 8}]),
+        a_rung("dead_bug", sets=[{"count": 3, "reps": 12, "rpe": 8}]),
+    )
+    conn = a_ladder_program(climbing)
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    record(conn, ladder_rung_decision(2).encode(), file="d.toml", clock=FixedClock())
+    hevy = FakeHevy(FixedClock())
+
+    result = pushed(conn, hevy)
+
+    exercise = the_ladder_exercise(hevy, DEAD_BUG)
+    assert [s.reps for s in exercise.sets] == [12, 12, 12]
+    assert [(o.session_id, o.outcome) for o in result.routines] == [("lower", "verified")]

@@ -5,11 +5,17 @@ import datetime
 from collections.abc import Sequence
 
 from coach.core.config import Units
-from coach.core.exercise_ladder import LadderRead, LineRef, ladder_read, standing_rung
+from coach.core.exercise_ladder import (
+    LadderRead,
+    LineRef,
+    ladder_read,
+    rung_line,
+    standing_rung,
+)
 from coach.core.flag import Scope
 from coach.core.planned_week import week_monday
 from coach.core.prescription import DecisionInForce
-from coach.core.program.form import ProgramForm
+from coach.core.program.form import Line, ProgramForm
 from coach.services.history import read_history
 from coach.services.leave_warning import leave_warning_decisions, plan_acknowledgements
 from coach.store import decisions, programs, week_plans
@@ -36,6 +42,18 @@ def standing_rungs(form: ProgramForm, found: Sequence[DecisionInForce]) -> dict[
         for line in session.lines
         if (ladder := line.ladder) is not None
     }
+
+
+def standing_line(
+    line: Line, session_id: str, found: Sequence[DecisionInForce]
+) -> tuple[Line, datetime.date | None]:
+    """The line as its standing rung prescribes it and the date its exposures count from: a
+    rung's exercise can be an earlier rung's too, so only its start tells their histories apart."""
+    ladder = line.ladder
+    if ladder is None:
+        return line, None
+    standing = standing_rung(found, ladder, line=LineRef(session_id, line.exercise), adopted=None)
+    return rung_line(line, ladder, standing.index), standing.since
 
 
 def ladder_reads(
