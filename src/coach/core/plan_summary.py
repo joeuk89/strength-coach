@@ -13,10 +13,10 @@ from coach.core.frozen_prescription import frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import RotationPosition
 from coach.core.prescription import PlanOverride
-from coach.core.routine_projection import authored_exercise
+from coach.core.routine_projection import RungKey, authored_exercise
 
 type Json = Mapping[str, object]
-type NextRungs = Mapping[str, Mapping[str, str]]
+type NextRungs = Mapping[str, Mapping[RungKey, str]]
 
 
 @dataclass(frozen=True)
@@ -46,7 +46,8 @@ class PlanSummary:
 
 
 def fresh_summary(checked: CheckedPlan, units: Units, next_rungs: NextRungs) -> PlanSummary:
-    """`next_rungs` are each session's next rung names, keyed on the authored exercise."""
+    """`next_rungs` are each session's next rung names, keyed on the authored exercise
+    and rung."""
     draft = checked.draft
     return PlanSummary(
         week=draft.week,
@@ -67,6 +68,7 @@ def fresh_summary(checked: CheckedPlan, units: Units, next_rungs: NextRungs) -> 
                             prescribed.session.session_id,
                             line.exercise_id,
                             [step.to_json() for step in line.steps],
+                            line.rung,
                         ),
                     )
                     for line in prescribed.lines
@@ -127,14 +129,24 @@ def _line(row: Json, next_rungs: NextRungs) -> SummaryLine:
         exercise_id,
         cast(list[Json], row["set_groups"]),
         str(row["change"]),
-        _next_rung(next_rungs, str(row["session_id"]), exercise_id, cast(list[Json], row["steps"])),
+        _next_rung(
+            next_rungs,
+            str(row["session_id"]),
+            exercise_id,
+            cast(list[Json], row["steps"]),
+            cast(int | None, row["rung"]),
+        ),
     )
 
 
 def _next_rung(
-    next_rungs: NextRungs, session_id: str, exercise_id: str, steps: Sequence[Json]
+    next_rungs: NextRungs,
+    session_id: str,
+    exercise_id: str,
+    steps: Sequence[Json],
+    rung: int | None,
 ) -> str | None:
-    return next_rungs.get(session_id, {}).get(authored_exercise(exercise_id, steps))
+    return next_rungs.get(session_id, {}).get((authored_exercise(exercise_id, steps), rung))
 
 
 def _location(

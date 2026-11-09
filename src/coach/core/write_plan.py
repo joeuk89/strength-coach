@@ -40,6 +40,7 @@ def write_plan_hash(
                 "exercise": line.exercise_id,
                 "derived_from": line.derived_from,
                 "set_groups": frozen_groups(line.groups, units),
+                **({} if line.rung is None else {"rung": line.rung}),
             }
             for prescribed in draft.sessions
             for line in prescribed.lines

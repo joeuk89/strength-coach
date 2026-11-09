@@ -1,7 +1,7 @@
 import datetime
 from typing import Any
 
-from support.prescribe import a_request
+from support.prescribe import a_line, a_request
 
 from coach.core.exposure import Exposure, ExposureSet, Matched
 from coach.core.flag import Flag
@@ -462,3 +462,22 @@ def test_rung_mets_hash_moves_with_the_rung_on_a_shared_exercise() -> None:
     )
 
     assert flag(on_rung_1, "rung_met").params_hash != flag(on_rung_2, "rung_met").params_hash
+
+
+def test_a_line_records_the_rung_it_prescribes_and_a_plain_line_records_none() -> None:
+    standing = derive(TEMPO_LADDER, decisions=(ladder_rung(2, "2026-10-20"),))
+    plain = derive(a_line("negative_pull_up", SetGroup(3, reps=5, rpe=8)))
+
+    assert derive(TEMPO_LADDER).rung == 1
+    assert standing.rung == 2
+    assert plain.rung is None
+
+
+def test_a_return_band_records_the_rung_it_steps_back_to() -> None:
+    line = derive(
+        TEMPO_LADDER,
+        tempo_logs("2026-10-08"),
+        decisions=(ladder_rung(3, "2026-10-01"),),
+    )
+
+    assert line.rung == 1

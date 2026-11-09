@@ -85,7 +85,22 @@ def m0003(conn: sqlite3.Connection) -> None:
             conn.execute("UPDATE exercise SET muscles = ? WHERE id = ?", (after, id_))
 
 
-MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003)
+PRESCRIPTION_V5 = PRESCRIPTION_V3.replace(
+    "-- order within the plan\n",
+    "-- order within the plan\n"
+    "  rung         INTEGER,                    "
+    "-- the ladder rung this row prescribes, from 1; NULL off a ladder and on rows frozen before "
+    "m0004\n",
+)
+
+
+def m0004(conn: sqlite3.Connection) -> None:
+    """The rung a prescription line prescribes (ADR 0025). Rows already frozen keep no rung: adopt
+    refused two rungs on one exercise when they froze, so their exercise still finds the rung."""
+    rebuild_table(conn, "prescription", PRESCRIPTION_V5)
+
+
+MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003, m0004)
 
 
 def widen_checks(

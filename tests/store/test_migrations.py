@@ -224,7 +224,7 @@ def test_m0002_numbers_a_v2_stores_rows_across_each_plan_in_the_order_readers_sh
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0002", "m0003")
+    assert migrated.steps == ("m0002", "m0003", "m0004")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
 
@@ -234,7 +234,7 @@ def test_a_v1_store_with_prescriptions_migrates_through_every_step() -> None:
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0001", "m0002", "m0003")
+    assert migrated.steps == ("m0001", "m0002", "m0003", "m0004")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
 
 
@@ -263,6 +263,35 @@ def test_an_export_written_at_v2_rebuilds_with_its_prescriptions_numbered(tmp_pa
     assert list(first)[:5] == ["plan_id", "session_id", "date", "exercise_id", "position"]
 
 
+def a_v4_store_with_prescriptions() -> sqlite3.Connection:
+    conn = with_unpositioned_prescriptions(at_version(ENGINE, 2))
+    migrate(conn, Chain(current=ENGINE.ddl(4), frozen=ENGINE.frozen, steps=ENGINE.steps[:3]))
+    return conn
+
+
+def test_m0004_gives_a_v4_stores_rows_no_rung_and_keeps_the_rest() -> None:
+    conn = a_v4_store_with_prescriptions()
+
+    migrated = migrate(conn)
+
+    assert migrated.steps == ("m0004",)
+    assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
+    assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02")} == {None}
+
+
+def test_an_export_written_at_v4_rebuilds_with_no_rung_on_its_rows(tmp_path: Path) -> None:
+    files = export(a_v4_store_with_prescriptions(), "0.7.0").files
+    database = tmp_path / "coach.db"
+
+    rebuilt = rebuild_missing(database, an_export_dir(tmp_path, files))
+
+    assert rebuilt == Rebuilt(schema_version=4)
+    conn = connect(database)
+    assert schema_version(conn) == ENGINE.version
+    assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
+    assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02")} == {None}
+
+
 def a_fresh_catalogue() -> sqlite3.Connection:
     conn = at_version(ENGINE, ENGINE.version)
     with conn:
@@ -287,7 +316,7 @@ def test_m0003_gives_a_v3_stores_seeded_rows_the_muscles_the_catalogue_now_holds
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0003",)
+    assert migrated.steps == ("m0003", "m0004")
     assert stored_muscles(conn, "burpee") == '{"primary":[],"secondary":[]}'
     assert stored_muscles(conn, "jump_rope") == '{"primary":[],"secondary":["calves"]}'
     assert (
@@ -361,10 +390,10 @@ def test_m0003_leaves_a_row_the_catalogue_did_not_seed_alone(source: str) -> Non
 
 @pytest.mark.parametrize(
     ("version", "steps"),
-    [(1, ("m0001", "m0002", "m0003")), (2, ("m0002", "m0003"))],
+    [(1, ("m0001", "m0002", "m0003", "m0004")), (2, ("m0002", "m0003", "m0004"))],
     ids=["v1", "v2"],
 )
-def test_a_seeded_store_below_v3_reaches_version_4_with_the_new_muscles(
+def test_a_seeded_store_below_v3_reaches_the_current_version_with_the_new_muscles(
     version: int, steps: tuple[str, ...]
 ) -> None:
     conn = a_store_seeded_at(version)
@@ -372,5 +401,5 @@ def test_a_seeded_store_below_v3_reaches_version_4_with_the_new_muscles(
     migrated = migrate(conn)
 
     assert migrated.steps == steps
-    assert schema_version(conn) == 4
+    assert schema_version(conn) == ENGINE.version
     assert stored_muscles(conn, "cycling") == '{"primary":[],"secondary":[]}'

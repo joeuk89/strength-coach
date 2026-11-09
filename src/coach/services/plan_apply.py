@@ -384,6 +384,7 @@ def _prescription_rows(checked: CheckedPlan, units: Units) -> list[dict[str, obj
             "date": prescribed.session.date.isoformat(),
             "exercise_id": line.exercise_id,
             "position": position,
+            "rung": line.rung,
             "set_groups": _json(frozen_groups(line.groups, units)),
             "derived_from": line.derived_from or "start_load",
             "steps": _json([step.to_json() for step in line.steps]),
