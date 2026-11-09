@@ -836,7 +836,7 @@ def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts
     assert adopted.version_id == "pv-1"
     assert exercises.get(conn, "custom_balance_board_one_foot_eyes_closed") is not None
     [shown] = show(conn, zone=datetime.UTC).ladders
-    session, line, standing = shown.session_id, shown.line, shown.standing
-    assert (session, standing) == ("daily-balance", 1) and line.scheme.ladder is not None
-    assert len(line.scheme.ladder.rungs) == 5
+    assert (shown.session_id, shown.standing) == ("daily-balance", 1)
+    assert shown.line.scheme.ladder is not None
+    assert len(shown.line.scheme.ladder.rungs) == 5
     assert dry.diff.empty
