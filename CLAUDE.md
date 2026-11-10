@@ -8,6 +8,10 @@ The engine is in `src/coach/`, the plugin's skills in `skills/` and its hooks in
 
 This file is for working on the engine. Each athlete's instance gets its own generated `CLAUDE.md` from `src/coach/cli/generated.py`; change that one there, not here.
 
+## Commit exception
+
+The `build-strength-coach-v7` workflow (`.agent/workflows/build-v7.js`) commits and pushes to `ticket/*` and `fix/*` branches, opens PRs into `build/v7` and squash-merges them, unattended; it never touches `main` and makes no live Hevy call and no `coach report` call. Its review and fix stages are the review (approved 2026-11-08).
+
 ## Agent skills
 
 ### Issue tracker
