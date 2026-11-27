@@ -6,7 +6,7 @@ from typing import cast
 import yaml
 
 # docs/spec/skills.md, "Budgets": characters divided by four, frontmatter included.
-TOKEN_BUDGET = 1500
+TOKEN_BUDGET = 3000
 
 CODE_SPAN = re.compile(r"`([^`]*)`")
 FRONTMATTER = re.compile(r"\A---\n(.*?)^---$", re.MULTILINE | re.DOTALL)

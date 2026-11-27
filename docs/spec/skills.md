@@ -5,9 +5,10 @@ each verb is one transaction, self-described by `--help` and `coach schema`); th
 to ask the athlete, what to judge and how to explain, and names the verbs it uses in no order.
 
 Decided on wayfinder ticket [Shape of the thin skills](https://github.com/joeuk89/strength-coach/issues/18),
-2026-10-27. The budgets answer the benchmark's target of under 8k instruction tokens per check-in
-plus programming pass (`benchmark.md`); the old check-in and program-week skills alone were about
-101k characters across seventeen files.
+2026-10-27. The old check-in and program-week skills alone were about 101k characters across
+seventeen files. The per-skill budget is a guard against a runaway skill, not a target: the owner
+raised it to 3,000 tokens on 2026-11-27 rather than cut lines a skill needs. The benchmark's
+under-8k pass (`benchmark.md`) stays a measure, not what sizes a skill.
 
 ## The set
 
@@ -142,7 +143,7 @@ instruction tokens.
 
 | Budget | Limit | Held by |
 | --- | --- | --- |
-| One skill | 1,500 tokens (about 6k characters, roughly 80 lines of prose) | One test per skill |
+| One skill | 3,000 tokens (about 12k characters), a guard against a runaway skill | One test per skill |
 | Check-in plus plan pass | Under 8k: CLAUDE.md plus `check-in` plus `plan-week` | The benchmark script, re-run at each milestone |
 
 The old caps were line counts (120 per `SKILL.md`, 150 per step file) and every file filled them.
