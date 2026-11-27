@@ -151,7 +151,6 @@ DECLARATION = Declaration(
                                 "required": ["key", "params_hash"],
                             },
                         },
-                        "keys_truncated": {"type": "boolean"},
                     },
                     "required": ["code", "severity", "count", "keys"],
                 },
