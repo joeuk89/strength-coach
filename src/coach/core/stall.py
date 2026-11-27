@@ -2,11 +2,12 @@
 with no gain on the scheme's metric."""
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from coach.core.e1rm import point
 from coach.core.exposure import Exposure
 from coach.core.linear import missed
-from coach.core.program.form import Line
+from coach.core.program.form import Line, ProgramForm
 
 STREAK = 3
 
@@ -16,6 +17,28 @@ type Metric = Callable[[Line, Exposure], tuple[float, ...]]
 def judged(session_kind: str) -> bool:
     """A practice is never judged: no line in one raises a stall or a slow cadence."""
     return session_kind != "practice"
+
+
+@dataclass(frozen=True)
+class JudgedLine:
+    """The line a lift's stalls, resets and scheme are read on, and the session it is in."""
+
+    session_id: str
+    line: Line
+
+
+def judged_line(form: ProgramForm | None, exercise: str) -> JudgedLine | None:
+    """The exercise's first line in a judged session."""
+    return next(
+        (
+            JudgedLine(session.id, line)
+            for session in (form.sessions if form else ())
+            if judged(session.kind)
+            for line in session.lines
+            if line.exercise == exercise
+        ),
+        None,
+    )
 
 
 def stall_streak(line: Line, history: Sequence[Exposure]) -> tuple[Exposure, ...]:
