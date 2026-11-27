@@ -8,10 +8,12 @@ from dataclasses import dataclass, field
 
 from coach.core.check_in import Window
 from coach.core.closed_week.adherence import Adherence
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.dose import lift_trailing_mean, trailing_mean
 from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.exercise_ladder import LadderRead
+from coach.core.exposure import ExposureSet
 from coach.core.fatigue import (
     SHORT_NIGHT_HOURS,
     Proposal,
@@ -21,7 +23,13 @@ from coach.core.fatigue import (
     short_sleep_week,
 )
 from coach.core.flag import Flag
-from coach.core.lift_doubts import EXPOSURES_DISAGREE, LiftDoubt, LoggedLine, lift_doubts
+from coach.core.lift_doubts import (
+    EFFORT_MISSING,
+    EXPOSURES_DISAGREE,
+    LiftDoubt,
+    LoggedLine,
+    lift_doubts,
+)
 from coach.core.phase_trend import RATE_UNITS
 
 FIELDS = (
@@ -328,35 +336,51 @@ def lifts(
 
 
 def _doubt_ask(doubt: LiftDoubt) -> Ask:
+    quote = _timed_quoted if doubt.reason == EFFORT_MISSING else _quoted
     return Ask(
         "lift_doubt",
         f"exercise:{doubt.exercise}",
         reason=doubt.reason,
         params={
             "exposures": [
-                _quoted(line, with_e1rm=doubt.reason == EXPOSURES_DISAGREE) for line in doubt.lines
+                quote(line, with_e1rm=doubt.reason == EXPOSURES_DISAGREE) for line in doubt.lines
             ]
         },
     )
+
+
+def _timed_quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
+    """The quote with each set's seconds, and the positions and workout the answer is repaired
+    onto as each set's `rpe`."""
+    return _quoted(line, with_e1rm=with_e1rm) | {
+        "repair": f"workout:{line.workout_id}/{line.exercise}",
+        "logged": [
+            {"position": s.position, **_logged_row(s), "seconds": s.duration_s}
+            for s in line.line.logged
+        ],
+        "prescribed": [_prescribed_row(t) | {"seconds": t.seconds} for t in line.line.targets],
+    }
 
 
 def _quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
     quote: dict[str, object] = {
         "session": line.session_id,
         "date": line.date.isoformat(),
-        "logged": [
-            {"load": None if s.load is None else s.load.amount, "reps": s.reps, "rpe": s.rpe}
-            for s in line.line.logged
-        ],
-        "prescribed": [
-            {"reps": t.reps, "reps_top": t.top, "rpe": t.rpe, "load": t.load}
-            for t in line.line.targets
-        ],
+        "logged": [_logged_row(s) for s in line.line.logged],
+        "prescribed": [_prescribed_row(t) for t in line.line.targets],
     }
     if with_e1rm:
         e1rm = line.e1rm
         quote["e1rm"] = None if e1rm is None else e1rm.amount
     return quote
+
+
+def _logged_row(s: ExposureSet) -> dict[str, object]:
+    return {"load": None if s.load is None else s.load.amount, "reps": s.reps, "rpe": s.rpe}
+
+
+def _prescribed_row(t: TargetSet) -> dict[str, object]:
+    return {"reps": t.reps, "reps_top": t.top, "rpe": t.rpe, "load": t.load}
 
 
 def _lift_row(read: LiftRead, under_authored: Sequence[Facts]) -> Facts:

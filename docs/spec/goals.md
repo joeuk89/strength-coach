@@ -182,7 +182,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `goal_missing` | violation | version | none | `goal adopt` |
 | `priority_lifts_required` | violation | version | emphasis | a Goal with priority lifts, or a different emphasis |
 | `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
-| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `exercise_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, `exercise_ladder`, or `double_progression` with a rep range inside 3–6 |
+| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `exercise_ladder`, `hold`, `timed_load`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, `exercise_ladder`, or `double_progression` with a rep range inside 3–6 |
 | `priority_lift_absent` | warning | priority_lift | exercise id | Acknowledgement, or a line for it |
 | `priority_lift_not_first` | warning | session | exercise id, position among the session's lines that carry a working group (an activation-only or warm-up line never counts) | Acknowledgement, or reordering |
 | `dose_off_band` | warning | dose | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
@@ -250,7 +250,7 @@ Every row requires adherence at or above the floor (`week.md`) over the blocks i
 | `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks; never in a `practice` session |
 | `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
 | `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
-| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
+| `cadence_fast` | `linear`, `hold`, `timed_load`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay

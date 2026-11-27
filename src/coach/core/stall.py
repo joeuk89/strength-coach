@@ -76,6 +76,15 @@ def _reps_at_target(line: Line, exposure: Exposure) -> tuple[float, ...]:
     return (top.amount, reps)
 
 
+def _seconds_at_load(_line: Line, exposure: Exposure) -> tuple[float, ...]:
+    """The top load, then the seconds held at it: a heavier load is a gain whatever the
+    seconds."""
+    top = exposure.top_load
+    if top is None:
+        return (0, 0)
+    return (top.amount, sum(s.duration_s or 0 for s in exposure.working if s.load == top))
+
+
 def _dose_at_target(line: Line, exposure: Exposure) -> tuple[float, ...]:
     """Total reps, or seconds on a duration rung, at or under the authored RPE."""
     authored = [g for g in line.working_groups() for _ in range(g.count)]
@@ -109,6 +118,7 @@ def _e1rm(exposure: Exposure, index: int) -> float:
 
 _METRICS: dict[str, Metric] = {
     "double_progression": _reps_at_target,
+    "timed_load": _seconds_at_load,
     "assistance_ladder": _rung,
     "exercise_ladder": _dose_at_target,
     "top_backoff": _best_e1rm,

@@ -226,6 +226,12 @@ VIOLATIONS = (
     violation("set_type_not_allowed", ("line",), ("set_type", "scheme"), ("program adopt",)),
     violation("set_groups_off_scheme", ("line",), ("scheme", "expected_shape"), ("program adopt",)),
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
+    violation(
+        "template_untimed",
+        ("line",),
+        ("exercise_id", "hevy_exercise_type", "needs"),
+        ("program adopt",),
+    ),
     violation("rung_exercise_unknown", ("version",), ("rung", "exercise_id"), ("program adopt",)),
     violation("ladder_too_short", ("line",), ("rungs",), ("program adopt",)),
     violation("rung_repeated", ("line",), ("rung", "previous_rung"), ("program adopt",)),
@@ -337,6 +343,7 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.3",)
     ),
+    acknowledgeable_warning("held_without_effort", ("line",), ("weeks", "load", "exposures")),
     acknowledgeable_warning(
         "rpe_ceiling_unchecked",
         ("line",),

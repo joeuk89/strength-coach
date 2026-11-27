@@ -266,6 +266,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on, a rung's included | `null` |
+| `template_untimed` | line | exercise id, its `hevy_exercise_type` (null when unknown), the type the scheme needs (`weight_duration`) | an exercise on a `weight_duration` template, or another scheme (`program.md`, ADR 0026) | `null` |
 | `rung_exercise_unknown` | version | rung index, exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id (`program.md`, "Schemes") | `null` |
 | `ladder_too_short` | line | rung count | a second rung, or another scheme | `null` |
 | `rung_repeated` | line | rung index, the previous rung's index | a rung that differs from the one before it in `sets` or `cues`; only neighbours are compared (ADR 0025) | `null` |
@@ -297,6 +298,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
 | `rung_met` | line | `rung` the standing rung (from 1), `next` the next rung's exercise id, `next_rung` its index, `exposures` the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the message names the next rung by its label (ADR 0025); the params hash covers `rung` and `next` only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
 | `ladder_top` | line | the standing rung, the ladder's last; raised instead of `rung_met` when the last rung's criterion holds | rn:bodyweight-skill-progression.3 |
+| `held_without_effort` | line | weeks, the held load, the exposure refs (`prescription.md`, **A load held unread**) | `null` |
 | `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref; the params hash covers the cap only | rn:autoregulation.6 |
 | `pin_load_capped` | line | the pinned load, the prescribed load (as the rack step leaves it), ceiling kind (illness, light week, niggle: the RPE ceiling that lowered the pin; a return band's is `return_band_disagrees`), RPE cap, ref (the niggle, else none), outcome (`no_effect` when the line prescribes what it would without the pin, else `reduced`); the params hash covers every param but the prescribed load | `null` |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
