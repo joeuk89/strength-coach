@@ -2,6 +2,7 @@ from coach.cli.declaration import Declaration, Example, InInstance, InstanceCall
 from coach.cli.instance import open_instance_store
 from coach.cli.pull import PULL_SCHEMA
 from coach.core.check_in_card import ladder_row
+from coach.core.phase_trend import RATE_UNITS
 from coach.core.progress import (
     AdherenceRead,
     BestSet,
@@ -99,6 +100,7 @@ def _phase(read: PhaseRead | None) -> Json | None:
         "kind": read.kind,
         "target_rate": read.target_rate,
         "observed_rate": read.observed_rate,
+        "rate_units": RATE_UNITS,
         "until": dict(read.until),
         "met": read.met,
     }
@@ -232,7 +234,17 @@ DECLARATION = Declaration(
                 },
             },
             "adherence": {"type": ["object", "null"]},
-            "phase": {"type": ["object", "null"]},
+            "phase": {
+                "type": ["object", "null"],
+                "properties": {
+                    "kind": {"type": "string"},
+                    "target_rate": {"type": "number"},
+                    "observed_rate": NULLABLE_NUMBER,
+                    "rate_units": {"const": RATE_UNITS},
+                    "until": {"type": "object"},
+                    "met": {"type": "boolean"},
+                },
+            },
             "goal": {
                 "type": ["object", "null"],
                 "properties": {
