@@ -340,7 +340,7 @@ class _Derivation:
                 )
             )
         line = rung_line(self.line, ladder, week)
-        if week != OPENING_RUNG and line.start_load is not None:
+        if line.start_load is not None:
             self.rung_anchors = rung_anchors(request.exposures, standing, week, planned.session_id)
         return line
 
