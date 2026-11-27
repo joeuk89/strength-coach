@@ -59,7 +59,8 @@ its reason. A load the engine derived is never retyped.
   Lower the pin to the prescribed load, remove it, or acknowledge the warning with the reason.
 - **Rack.** `frozen_load_off_rack`: a load in the plan in force is gone from the location's
   rack. Say which planned loads move and to what, each load from the Draft.
-- **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Keep the change with the
+- **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Its changes name the
+  session, the exercise, the set and the planned and found values. Keep the change with the
   athlete's reason, or let this week's plan replace it; ask them which, in those words, when
   the reason is not plain.
 
