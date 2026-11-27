@@ -75,8 +75,9 @@ This directory is one athlete's coach instance, run by coach engine {engine_vers
 data only; the engine, its skills and its hooks come from the installed package and plugin.
 
 - `coach status` opens a session: where things stand and what needs attention.
-- `coach --help` lists the verbs; `coach schema <verb>` gives one verb's arguments and output.
-  `coach schema` alone gives every verb and the registry names, and
+- `coach --help` lists the verbs; `coach schema <verb>` gives one verb's arguments and output,
+  and a Draft verb's file shape under `draft`. A two-word verb is two words:
+  `coach schema checkin open`. `coach schema` alone gives every verb and the registry names, and
   `coach schema --registry <name>` reads one registry.
 - A list stops at 10 rows and a result at the size budget, and each says when it was cut:
   `--last <n>` keeps n rows, `--full` keeps everything.

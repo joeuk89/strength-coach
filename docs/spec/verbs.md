@@ -31,7 +31,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | Leaf | Kind | Does |
 | --- | --- | --- |
 | `status` | read | where we stand and what needs attention; what the SessionStart hook shows |
-| `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
+| `schema [verb ...] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data; a two-word verb is given as two words or quoted as one |
 | `import [--full]` | store write | Hevy workouts append-only with tombstones (ADR 0011); kit is a committed file, never imported (ADR 0021); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
 | `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | store write (the pull) | the check-in card (`check-in.md`) |
 | `checkin record <draft> [--dry-run]` | store write | the Check-in row plus every record the file carries |
@@ -70,8 +70,11 @@ A Draft verb's declaration names the Draft it reads, so `coach <verb> --help` an
 Schema recorded from the verb's own parser over a minimal example and coverage Drafts (so it
 cannot drift from what the parser reads), and the example. A scheme's params come from the
 `schemes` registry and the record tables from `record-kinds`, `check_in_only` kinds in the
-check-in file's schema alone. The schema states shape, not the cross-field rules the checks and
-the dry run report.
+check-in file's schema alone, and an annotation's params from `annotation-kinds`, which names
+each kind's target and params; the parser refuses a param its kind does not declare or a
+required one left out. The plan Draft's schema marks the keys `plan draft` writes and `plan
+apply` ignores on read (`supersedes`, `note`, `[[session]]`, `[[flag]]`). The schema states
+shape, not the cross-field rules the checks and the dry run report.
 
 **The pull.** A verb whose result derives from workouts pulls Hevy first, through the same
 service function `import` runs, when `[hevy]` is on: `checkin open`, `plan draft`, `progress`,
@@ -162,7 +165,7 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | Leaf | Default `result` |
 | --- | --- |
 | `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified` against the newest approved WeekPlan, which it names: next week's once `plan apply` has pushed it); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`), `plan_behind_program` among them while this week's plan in force was approved under an older version and no plan for next week was approved under the version in force; whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
-| `schema` | the declaration(s), or the registry rows. A Draft verb's declaration carries `draft`: the Draft `kind` (`program`, `plan`, `ledger`, `check-in`, `goal`, `report`), a JSON Schema 2020-12 `schema` of the TOML file recorded from the verb's own parser, and one minimal `example` the parser accepts. The verb-less listing leaves `draft` out of each row |
+| `schema` | the declaration(s), or the registry rows. A Draft verb's declaration carries `draft`: the Draft `kind` (`program`, `plan`, `ledger`, `check-in`, `goal`, `report`), a JSON Schema 2020-12 `schema` of the TOML file recorded from the verb's own parser, and one minimal `example` the parser accepts. The verb-less listing keeps only the Draft `kind` in each Draft verb's row, never the schema or example. `query --draft` reads a plan Draft too and points to `schema plan apply` for its shape. With `--registry`, a registry whose rows need a pointer carries a `note`: `errors` names `--registry flags` for the codes a Draft violation is refused with |
 | `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
 | `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
