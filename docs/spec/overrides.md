@@ -185,6 +185,7 @@ Every override and Decision carries `because`, `text` and `evidence`:
 - No override waives a return band (ADR 0005): the band moves only with days off.
 - `drop_session` and `drop_line` beat every other override on their scope.
 - `pin_load` obeys every recovery ceiling: it can lower a load, never lift one above the ceiling.
+  A pin an RPE ceiling lowers warns `pin_load_capped` (`prescription.md`, **RPE ceilings**).
 - The plan's override beats an override Decision of the same kind on the same line.
 - Anything else is the violation `override_conflict`, params the two kinds.
 - A superseding midweek plan inherits nothing: the agent restates overrides from

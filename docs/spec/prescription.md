@@ -342,7 +342,9 @@ its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down (the
 limits, rn:autoregulation.5 and .6). A set whose implied reps to failure would exceed 12 has its
 reps cut to fit the model. With no usable e1RM the load
 is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`, quoting the
-load as the rack step leaves it.
+load as the rack step leaves it. No `pin_load` lifts a line above an RPE ceiling: a pin the
+illness, light-week or niggle cap lowers warns `pin_load_capped`, saying whether the pin was
+reduced or had no effect, and the approval prompt marks the pin the same way.
 
 ### The test set
 
