@@ -16,6 +16,7 @@ from coach.cli.instance import open_instance_store
 from coach.cli.pull import PULL_SCHEMA
 from coach.core.check_in_card import CardField
 from coach.core.errors import Invalid
+from coach.core.phase_trend import RATE_UNITS
 from coach.core.registries.ledger import READINESS
 from coach.services.checkin_open import checkin_open
 
@@ -149,6 +150,18 @@ DECLARATION = Declaration(
                                     "give": {"type": "string"},
                                 },
                                 "required": ["ask"],
+                            },
+                        },
+                        "phase": {
+                            "type": "object",
+                            "description": "weight_phase only, with an open Phase",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "kind": {"type": "string"},
+                                "target_rate": {"type": "number"},
+                                "observed_rate": {"type": ["number", "null"]},
+                                "rate_units": {"const": RATE_UNITS},
+                                "until": {"type": "object"},
                             },
                         },
                     },

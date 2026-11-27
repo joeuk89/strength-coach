@@ -1,11 +1,15 @@
+from contextlib import closing
 from pathlib import Path
 
 import pytest
 from support.cli import Run, run_coach
 from support.clock import FixedClock
+from support.goals import WORKED
 from support.instances import an_instance
 
 from coach.cli import app
+from coach.store.catalogue import seed_catalogue
+from coach.store.connection import open_store
 
 ENGINE = "0.3.0"
 NIGGLE = """
@@ -89,3 +93,30 @@ def test_the_sleep_ask_carries_its_threshold_and_the_nights_it_wants(instance: P
             "give": "night and hours for every night under 7 hours; other nights optional",
         }
     ]
+
+
+def test_the_phase_line_names_its_rate_units(instance: Path) -> None:
+    (instance / ".coach").mkdir()
+    with closing(open_store(instance / ".coach" / "coach.db")) as conn, conn:
+        seed_catalogue(conn)
+    (instance / "goal.toml").write_text(WORKED, encoding="utf-8")
+    assert coach("goal", "adopt", "goal.toml").code == 0
+
+    run = coach("checkin", "open", "--date", "2026-10-30")
+
+    weight = next(f for f in run.envelope["result"]["card"] if f["field"] == "weight_phase")
+    assert weight["phase"] == {
+        "id": "ph-0001",
+        "kind": "maintenance",
+        "target_rate": 0.0,
+        "observed_rate": None,
+        "rate_units": "pct_bw_per_week",
+        "until": {"kind": "coachs_call", "value": None},
+    }
+
+
+def test_the_schema_lists_the_phase_rate_units(instance: Path) -> None:
+    output = coach("schema", "checkin open").envelope["result"]["output"]
+
+    phase = output["properties"]["card"]["items"]["properties"]["phase"]
+    assert phase["properties"]["rate_units"] == {"const": "pct_bw_per_week"}
