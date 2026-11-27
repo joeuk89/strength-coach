@@ -304,14 +304,14 @@ niggle, answered by a swap or a Niggle, never a scheme.
 ## What the skills ask, judge and explain
 
 One table so the four moments are seen together; nothing reads it at runtime (ADR 0020). The
-`check-in` asks row is the card builder's: `checkin open` reads the version's emphasis and
-priority lifts and asks accordingly (`check-in.md`). The other rows are each skill's own Judge,
-which carries its column in its own words inside its budget (`skills.md`). Each cell is the whole
-of what the emphasis changes.
+`check-in` asks row is the card builder's: a logged RPE answers how a lift went on every
+emphasis, so `checkin open` asks the same whatever the emphasis (`check-in.md`). The other rows
+are each skill's own Judge, which carries its column in its own words inside its budget
+(`skills.md`). Each cell is the whole of what the emphasis changes.
 
 | Moment | `hypertrophy` | priority lifts and `strength` | `maintenance` |
 | --- | --- | --- | --- |
-| `check-in` asks | reps and RIR on the lines that moved; pump and soreness as a dose read | the priority lifts first: did the top set move, how did it feel, any grind | whether the kept lifts held |
+| `check-in` asks | nothing the log answers: a lift only where its log cannot answer or does not add up (`check-in.md`, the Lifts row); soreness and niggles | as `hypertrophy`, the priority lifts leading the rows | as `hypertrophy` |
 | `plan-week` judges | dose attainment against target; a flat line early in a block wants sets (`restate_sets`), late wants the deload | e1RM trend on each priority lift; fatigue against the RIR cap; a flat block is normal, not a crisis | nothing weekly beyond the recovery ceilings |
 | `plan-week` explains a line as | last week's reps at the authored RPE, from the derivation steps | e1RM times the scheme | held |
 | `program` at the boundary | reads `coach progress`: dose achieved, muscles behind target, cadence signals; proposes next block's sets and any swap, never a scheme change on a stalled `double_progression` line | reads `coach progress`: e1RM over three blocks, milestones, cadence signals; proposes scheme changes on signalled lifts per **Response to a cadence signal**, a test week result as the training max | whether to return to the Goal's emphasis |

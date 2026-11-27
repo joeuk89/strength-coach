@@ -166,7 +166,7 @@ asserted skill or CLAUDE.md wording have no successor.
 
 ## Worked example: `check-in`
 
-The reference for register and length. Under budget (about 2.5k characters). The card and its
+The reference for register and length. Under budget (about 3.3k characters). The card and its
 fields are the check-in spec (`check-in.md`); the verb names follow the Verb set ticket and the
 contract test holds them to it. The per-emphasis asks of `goals.md`'s table are the card's Lifts
 field, so the skill cites no table: it judges what the card shows (ADR 0020). Every bullet in its
@@ -187,9 +187,12 @@ asks only what it cannot. Never change its figures or the order of its fields.
 
 ## Ask
 Send the card as one message in the coach's voice; the athlete answers by number. A fact the log
-already answers is stated for confirmation, not asked. Follow up only for a gap that blocks the
-read or next week's plan. On a deep tier, settle every open niggle and follow-up with the athlete
-rather than carrying them.
+already answers is stated for confirmation, not asked. Logged RPE is trusted: never ask how a lift
+felt or how many reps were left when its sets carry an RPE. Ask about a lift only for the card's
+`lift_doubt` or a specific point you must settle, and make each such question answerable without
+opening Hevy: name the session and day, quote what was logged (load, reps and RPE per set) and
+state the exact doubt. Follow up only for a gap that blocks the read or next week's plan. On a
+deep tier, settle every open niggle and follow-up with the athlete rather than carrying them.
 
 ## Judge
 - **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's

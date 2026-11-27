@@ -13,9 +13,12 @@ Where a session's figures against the prescription need their lines, read them w
 
 ## Ask
 Send the card as one message in the coach's voice; the athlete answers by number. A fact the log
-already answers is stated for confirmation, not asked. Follow up only for a gap that blocks the
-read or next week's plan. On a deep tier, settle every open niggle and follow-up with the athlete
-rather than carrying them.
+already answers is stated for confirmation, not asked. Logged RPE is trusted: never ask how a lift
+felt or how many reps were left when its sets carry an RPE. Ask about a lift only for the card's
+`lift_doubt` or a specific point you must settle, and make each such question answerable without
+opening Hevy: name the session and day, quote what was logged (load, reps and RPE per set) and
+state the exact doubt. Follow up only for a gap that blocks the read or next week's plan. On a
+deep tier, settle every open niggle and follow-up with the athlete rather than carrying them.
 
 ## Judge
 - **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's
