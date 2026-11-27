@@ -318,7 +318,15 @@ from the last matched Activity; their lines use `hold`.
   a rung that bears no load is `unknown_key`. The rung's load opens the line while it stands on
   the rung with no Exposure of the rung's exercise that counts on it (`prescription.md`), in the
   session or unmatched; after that the newest such Exposure's load holds, and the load never
-  steps up. An Exposure on a `ladder_rung` Decision's own date belongs to the previous rung.
+  steps up. An Exposure on a `ladder_rung` Decision's own date belongs to the previous rung, and
+  a light-week or return-band Exposure counts on no rung, so a week a return band stepped the
+  line back never sets the standing rung's load: back on its rung, the line takes the load it
+  held before the layoff, or the rung's `start_load` with no Exposure that counts. The same
+  rule holds on a first rung a `ladder_rung` Decision chose, so a log from before the move never
+  sets its load; only a first rung the line never left reads the exercise's whole history,
+  where history wins. A rung a return band steps back to reads no Exposure: it opens on its own
+  `start_load`, the line's for the first rung. A later rung on the line's own exercise keeps the
+  line's `load_mode`, so one exercise reads one mode.
 
 ## Adopt
 
