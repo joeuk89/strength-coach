@@ -2,6 +2,7 @@ import datetime
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from itertools import groupby
 from typing import cast, get_args
 
 from coach.core.closed_week.against import LineAgainst, TargetSet
@@ -399,21 +400,15 @@ def _against_row(outcome: SessionOutcome, line: LineAgainst) -> Row:
 
 def _prescribed_groups(targets: Sequence[TargetSet]) -> list[Row]:
     """Runs of identical prescribed sets, each as one group with its count."""
-    groups: list[tuple[TargetSet, int]] = []
-    for target in targets:
-        if groups and groups[-1][0] == target:
-            groups[-1] = (target, groups[-1][1] + 1)
-        else:
-            groups.append((target, 1))
     return [
         {
-            "sets": count,
+            "sets": len(list(run)),
             "reps": target.reps if target.top in (None, target.reps) else [target.reps, target.top],
             "seconds": target.seconds,
             "load": target.load,
             "rpe": target.rpe,
         }
-        for target, count in groups
+        for target, run in groupby(targets)
     ]
 
 

@@ -94,7 +94,7 @@ class LineAgainst:
         )
 
     def _paired_or_none(self) -> Iterable[tuple[ExposureSet, TargetSet | None]]:
-        targets: list[TargetSet | None] = list(self.targets)
+        targets = self.targets
         return ((s, targets[i] if i < len(targets) else None) for i, s in enumerate(self.logged))
 
 
