@@ -11,6 +11,7 @@ from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
 from coach.core.frozen_prescription import frozen_groups
 from coach.core.line_history import newest_first, ordinary
+from coach.core.names import named
 from coach.core.note_dose import working_rpe, working_shape
 from coach.core.prescription import DecisionInForce, PrescribedGroup, RungNaming
 from coach.core.program.form import (
@@ -155,11 +156,11 @@ def rung_label(
     """`rung <n> · [<exercise name> · ]<dose>[ · <load>][ · <cues>]`: the name only when the
     rung's exercise differs from the standing rung's, and an empty segment left out."""
     rung = ladder.rungs[index - 1]
-    named = rung.exercise != ladder.rungs[standing - 1].exercise
+    other_exercise = rung.exercise != ladder.rungs[standing - 1].exercise
     load = rung_line(line, ladder, index).start_load
     segments = (
         f"rung {index}",
-        naming.name(rung.exercise) if named else None,
+        named(naming.names, rung.exercise) if other_exercise else None,
         _rung_dose(rung, naming),
         None if load is None else f"{load:g} {naming.units}",
         rung.cues,

@@ -34,13 +34,10 @@ class ProgramVersion:
 @dataclass(frozen=True)
 class RungNaming:
     """What a rung's label reads beyond its ladder: the athlete's units for a load and the
-    library's exercise names. An exercise missing from `names` shows its id."""
+    library's exercise names."""
 
     units: Units
     names: Mapping[str, str]
-
-    def name(self, exercise_id: str) -> str:
-        return self.names.get(exercise_id, exercise_id)
 
 
 @dataclass(frozen=True)
