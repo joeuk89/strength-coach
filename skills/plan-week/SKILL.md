@@ -11,6 +11,8 @@ prescription, the steps that derived it and its change from last week. Judge the
 carry a flag or an override; show the rest as they stand. The summary lists each flag code
 with its count and keys; to read one code's flags with their messages, run
 `coach query flags --draft <path> --code <code>`, or `--full` for every flag.
+Last week's lines beside what was logged, sets and RPE against the prescription, come from
+`coach query against --week <a date in last week> --off`.
 
 ## Ask
 State the week for confirmation: the rotation position, the day each session falls on, where

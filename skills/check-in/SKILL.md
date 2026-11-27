@@ -8,6 +8,8 @@ description: The weekly review. Use when a check-in is due, when the athlete rep
 The profile, once. Ask the athlete's readiness (`poor`, `ok`, `good`) first and pass it to
 `coach checkin open --readiness`. The card it returns states what the store already knows and
 asks only what it cannot. Never change its figures or the order of its fields.
+Where a session's figures against the prescription need their lines, read them with
+`coach query against --week <its date> --session <id> --off`: each line beside its logged sets.
 
 ## Ask
 Send the card as one message in the coach's voice; the athlete answers by number. A fact the log
