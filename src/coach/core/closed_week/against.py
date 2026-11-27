@@ -11,9 +11,10 @@ from coach.core.exposure import ExposureSet
 
 type LineState = Literal["logged", "not_logged", "not_prescribed"]
 
-# rn:deloads.11: a logged RPE this far from the authored one counts as effort off.
+# rn:deloads.11: a logged RPE this far from the authored one counts as effort off, and the
+# session gate allows a mean RPE this far under.
 EFFORT_OFF_RPE = 1.5
-# The tolerance a difference of tenths carries.
+# The tolerance a difference or mean of tenths carries.
 ROUNDING = 1e-9
 
 
@@ -68,6 +69,11 @@ class LineAgainst:
         return sum(1 for s, _ in self.pairs if s.rpe is None)
 
     @property
+    def rpe_unrated(self) -> int:
+        """Logged sets with no RPE against a prescribed set that authored one."""
+        return sum(1 for s, t in self.pairs if s.rpe is None and t.rpe is not None)
+
+    @property
     def reps_missed(self) -> int:
         return sum(1 for short in self.reps_short if short)
 
@@ -83,7 +89,7 @@ class LineAgainst:
             self.state != "logged"
             or self.sets_missing > 0
             or self.reps_missed > 0
-            or self.rpe_missing > 0
+            or self.rpe_unrated > 0
             or self.effort_off > 0
         )
 

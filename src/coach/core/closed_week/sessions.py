@@ -6,6 +6,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from coach.core.closed_week.against import (
+    EFFORT_OFF_RPE,
+    ROUNDING,
     AgainstPrescription,
     LineAgainst,
     TargetSet,
@@ -19,9 +21,6 @@ from coach.core.prescription import PlannedSession, StatusSpan
 GATE_KINDS = ("lifting", "coach_led")
 # rn:deloads.11: two thirds of the prescribed working sets, mean RPE no more than 1.5 under.
 GATE_SET_SHARE = 2 / 3
-GATE_RPE_SLACK = 1.5
-# The tolerance a mean of tenths carries; a mean exactly 1.5 under still passes.
-ROUNDING = 1e-9
 
 
 @dataclass(frozen=True)
@@ -117,4 +116,4 @@ def _passes(work: PlannedWork, pairs: list[tuple[ExposureSet, TargetSet]]) -> bo
     if not prescribed or not rated:
         return True
     shortfall = sum(prescribed) / len(prescribed) - sum(rated) / len(rated)
-    return shortfall <= GATE_RPE_SLACK + ROUNDING
+    return shortfall <= EFFORT_OFF_RPE + ROUNDING

@@ -199,6 +199,17 @@ def test_a_hold_line_with_timed_sets_shows_its_logged_seconds() -> None:
     assert (plank["seconds"], plank["reps"]) == ([30, 25], [None, None])
 
 
+def test_a_hold_line_logged_as_prescribed_without_an_rpe_is_not_off() -> None:
+    conn = a_lower_program()
+    a_planned_lower_week(conn, monday(0))
+    lower_logged(conn, "h-1", monday(0), [(120, 8, 8)] * 4, plank=(30, 30))
+
+    plank = by_exercise(read(conn))["plank"]
+
+    assert (plank["rpe_missing"], plank["off"]) == (2, False)
+    assert "plank" not in by_exercise(read(conn, off=True))
+
+
 def test_the_off_filter_keeps_only_rows_off_the_prescription() -> None:
     conn = a_lower_program()
     a_planned_lower_week(conn, monday(0))
