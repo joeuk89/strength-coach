@@ -438,6 +438,7 @@ class _Checks:
                     {"rung": index, "previous_rung": index - 1},
                     f"rung {index} of {line.exercise} repeats rung {index - 1}: "
                     "a rung on one exercise differs from the one before it in sets or cues",
+                    distinct=f"rung {index}",
                 )
 
     def _set_groups(

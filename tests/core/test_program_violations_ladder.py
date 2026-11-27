@@ -360,7 +360,25 @@ def test_a_ladder_may_return_to_an_earlier_shape_since_only_neighbours_compare()
     assert keyed(line) == []
 
 
-def test_three_identical_rungs_raise_one_rung_repeated_naming_the_first_pair() -> None:
+def test_two_repeated_pairs_on_one_ladder_raise_one_rung_repeated_each() -> None:
+    line = a_ladder_line(
+        "push_up",
+        a_tempo_rung("slow"),
+        a_tempo_rung("slow", exercise="push_up"),
+        a_tempo_rung("lower for 6 s", exercise="push_up"),
+        a_tempo_rung("lower for 6 s", exercise="push_up"),
+    )
+
+    flags = flags_of(line)
+
+    assert [flag.key for flag in flags] == ["rung_repeated@line:core/push_up"] * 2
+    assert [flag.params for flag in flags] == [
+        {"rung": 2, "previous_rung": 1},
+        {"rung": 4, "previous_rung": 3},
+    ]
+
+
+def test_three_identical_rungs_raise_rung_repeated_for_each_neighbouring_pair() -> None:
     line = a_ladder_line(
         "push_up",
         a_tempo_rung("slow"),
@@ -368,9 +386,10 @@ def test_three_identical_rungs_raise_one_rung_repeated_naming_the_first_pair() -
         a_tempo_rung("slow", exercise="push_up"),
     )
 
-    [flag] = flags_of(line)
-
-    assert flag.params == {"rung": 2, "previous_rung": 1}
+    assert [flag.params for flag in flags_of(line)] == [
+        {"rung": 2, "previous_rung": 1},
+        {"rung": 3, "previous_rung": 2},
+    ]
 
 
 def test_equal_sets_and_cues_on_another_exercise_are_not_repeated() -> None:
