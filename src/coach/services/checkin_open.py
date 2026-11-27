@@ -16,6 +16,7 @@ from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
+from coach.core.lift_doubts import LoggedLine, logged_lines, unmatched_line
 from coach.core.phase_trend import fourteen_day_average, observed_rate
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.registries.program import COMPOUND_PATTERNS
@@ -134,9 +135,10 @@ def _card(
     weighed = weigh_ins(conn)
     logged = activities(conn, log)
     phase = phases.in_force(conn)
+    session_reads = _session_reads(log, window, closing)
     fields: list[CardField | None] = [
         card.header(window, chosen, None if plan is None else str(plan["id"])),
-        card.sessions(_session_reads(log, window, closing)),
+        card.sessions(session_reads),
         card.week_kind(closing),
         None
         if version is None
@@ -151,6 +153,7 @@ def _card(
         card.lifts(
             _lift_reads(conn, log, window),
             emphasis=version.form.emphasis if version else "hypertrophy",
+            lines=_logged_lines(log, window, session_reads),
         ),
         card.ladders(ladder_reads(conn, units=units, on=on, zone=zone)),
         card.readiness(previous.readiness if previous else None),
@@ -208,6 +211,21 @@ def _session_reads(
             found.append(card.SessionRead(outcome, monday in closes))
         monday += WEEK
     return found
+
+
+def _logged_lines(
+    log: WeekLog, window: Window, reads: Sequence[card.SessionRead]
+) -> list[LoggedLine]:
+    """Each session's lines, then every exposure in the window no session took."""
+    taken = {w for read in reads for w in read.outcome.workout_ids}
+    return [
+        *(line for read in reads for line in logged_lines(read.outcome)),
+        *(
+            unmatched_line(e)
+            for e in log.exposures
+            if window.start <= e.date <= window.end and e.working and e.workout_id not in taken
+        ),
+    ]
 
 
 def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.LiftRead]:

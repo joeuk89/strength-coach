@@ -30,14 +30,19 @@ def reps_to_failure(reps: int, rpe: float | None) -> float:
 
 def point(exposure: Exposure, logged: ExposureSet) -> E1rm | None:
     """The set's e1RM when it qualifies."""
+    found = set_e1rm(logged)
+    return None if found is None else E1rm(found, logged.rpe is None, exposure.ref)
+
+
+def set_e1rm(logged: ExposureSet) -> Load | None:
+    """One set's e1RM, a lower bound with no RPE; none for a set the model cannot read."""
     if not _estimable(logged):
         return None
     assert logged.load is not None and logged.reps is not None
     to_failure = reps_to_failure(logged.reps, logged.rpe)
     if to_failure > MAX_REPS_TO_FAILURE:
         return None
-    amount = round(logged.load.amount * (1 + to_failure / 30), PRECISION)
-    return E1rm(Load(amount, logged.load.mode), logged.rpe is None, exposure.ref)
+    return Load(round(logged.load.amount * (1 + to_failure / 30), PRECISION), logged.load.mode)
 
 
 def e1rm(exposures: Iterable[Exposure], exercise_id: str, on: datetime.date) -> E1rm | None:

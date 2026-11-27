@@ -1,6 +1,8 @@
 import datetime
 from typing import cast
 
+import pytest
+
 from coach.core import check_in_card as card
 from coach.core.check_in_card import Ask
 from coach.core.closed_week.match import WeekWorkout
@@ -85,13 +87,13 @@ BENCH = card.LiftRead("bb_bench_press", True, True, (80, 5, 8), 95, 95)
 CURL = card.LiftRead("db_curl", False, False, (15, 12, 8), 20, 20)
 
 
-def test_priority_lifts_lead_then_compounds_and_are_asked_how_the_top_set_felt() -> None:
+def test_priority_lifts_lead_then_compounds_and_only_soreness_and_niggles_is_asked() -> None:
     found = card.lifts([CURL, SQUAT, BENCH], emphasis="strength")
 
     assert found is not None
     rows = cast(list[dict[str, object]], found.facts["rows"])
     assert [r["exercise"] for r in rows] == ["bb_bench_press", "bb_back_squat", "db_curl"]
-    assert found.asks == (Ask("top_set_feel", "exercise:bb_bench_press"),)
+    assert found.asks == (Ask("soreness_and_niggles"),)
 
 
 def test_a_timed_lift_unmatched_to_a_session_shows_its_seconds_and_no_prescription() -> None:
@@ -104,21 +106,14 @@ def test_a_timed_lift_unmatched_to_a_session_shows_its_seconds_and_no_prescripti
     assert (row["seconds"], row["prescribed_seconds"]) == ([25, 21], None)
 
 
-def test_hypertrophy_asks_reps_and_rir_on_the_lines_that_moved_and_a_pump_read() -> None:
-    found = card.lifts([CURL, SQUAT], emphasis="hypertrophy")
+@pytest.mark.parametrize("emphasis", ["hypertrophy", "strength", "maintenance"])
+def test_every_emphasis_asks_soreness_and_niggles_and_nothing_the_log_answers(
+    emphasis: str,
+) -> None:
+    found = card.lifts([CURL, SQUAT, BENCH], emphasis=emphasis)
 
     assert found is not None
-    assert found.asks == (
-        Ask("reps_and_rir", "exercise:bb_back_squat"),
-        Ask("pump_and_soreness"),
-    )
-
-
-def test_maintenance_asks_whether_the_kept_lifts_held() -> None:
-    found = card.lifts([SQUAT], emphasis="maintenance")
-
-    assert found is not None
-    assert found.asks == (Ask("kept_lifts_held"),)
+    assert found.asks == (Ask("soreness_and_niggles"),)
 
 
 def a_dosed_week(weeks_ago: int, pull_up: int) -> ClosedWeek:

@@ -21,6 +21,7 @@ from coach.core.fatigue import (
     short_sleep_week,
 )
 from coach.core.flag import Flag
+from coach.core.lift_doubts import EXPOSURES_DISAGREE, LiftDoubt, LoggedLine, lift_doubts
 from coach.core.phase_trend import RATE_UNITS
 
 FIELDS = (
@@ -49,11 +50,14 @@ type Facts = Mapping[str, object]
 @dataclass(frozen=True)
 class Ask:
     """A question the card leaves for the athlete, about one record when it names one;
-    `detail` states the form the answer takes where the kind alone does not."""
+    `detail` states the form the answer takes where the kind alone does not. `reason` names the
+    rule that fired it and `params` the evidence the coach quotes."""
 
     kind: str
     about: str | None = None
     detail: Facts = field(default_factory=dict[str, object])
+    reason: str | None = None
+    params: Facts = field(default_factory=dict[str, object])
 
 
 @dataclass(frozen=True)
@@ -286,33 +290,63 @@ class LiftRead:
     def timed(self) -> bool:
         return any(s is not None for s in self.seconds)
 
-    @property
-    def moved(self) -> bool:
-        return self.e1rm != self.e1rm_before
 
-
-def lifts(reads: Sequence[LiftRead], *, emphasis: str) -> CardField | None:
-    """Priority lifts lead and are asked how the top set moved and felt; a `hypertrophy` version
-    asks reps and RIR on the lines that moved and a pump and soreness read; `maintenance` asks
-    whether the kept lifts held (goals.md, "What the skills ask"). e1RM rows compounds first."""
+def lifts(
+    reads: Sequence[LiftRead], *, emphasis: str, lines: Sequence[LoggedLine] = ()
+) -> CardField | None:
+    """Priority lifts lead, then compounds. A logged RPE is the athlete's answer: a lift is
+    asked about only where its `lines` leave a doubt, and soreness and niggles always; a line
+    logged well under its prescribed RPE is stated on the lift's row. e1RM rows compounds
+    first."""
     if not reads:
         return None
     ordered = sorted(reads, key=lambda r: (not r.priority, not r.compound, r.exercise_id))
-    asks = [Ask("top_set_feel", f"exercise:{r.exercise_id}") for r in ordered if r.priority]
-    if emphasis == "hypertrophy":
-        asks.extend(
-            Ask("reps_and_rir", f"exercise:{r.exercise_id}")
-            for r in ordered
-            if r.moved and not r.priority
-        )
-        asks.append(Ask("pump_and_soreness"))
-    elif emphasis == "maintenance":
-        asks.append(Ask("kept_lifts_held"))
-    rows = [_lift_row(r) for r in ordered]
-    return CardField("lifts", {"emphasis": emphasis, "rows": rows}, tuple(asks))
+    shown = {r.exercise_id for r in reads}
+    mine = [line for line in lines if line.exercise in shown]
+    asks = (*(_doubt_ask(d) for d in lift_doubts(mine)), Ask("soreness_and_niggles"))
+    under: dict[str, list[Facts]] = {}
+    for line in mine:
+        if line.under_authored:
+            under.setdefault(line.exercise, []).append(
+                {"session": line.session_id, "date": line.date.isoformat(), "rpe_gap": line.rpe_gap}
+            )
+    rows = [_lift_row(r, under.get(r.exercise_id, [])) for r in ordered]
+    return CardField("lifts", {"emphasis": emphasis, "rows": rows}, asks)
 
 
-def _lift_row(read: LiftRead) -> Facts:
+def _doubt_ask(doubt: LiftDoubt) -> Ask:
+    return Ask(
+        "lift_doubt",
+        f"exercise:{doubt.exercise}",
+        reason=doubt.reason,
+        params={
+            "exposures": [
+                _quoted(line, with_e1rm=doubt.reason == EXPOSURES_DISAGREE) for line in doubt.lines
+            ]
+        },
+    )
+
+
+def _quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
+    quote: dict[str, object] = {
+        "session": line.session_id,
+        "date": line.date.isoformat(),
+        "logged": [
+            {"load": None if s.load is None else s.load.amount, "reps": s.reps, "rpe": s.rpe}
+            for s in line.line.logged
+        ],
+        "prescribed": [
+            {"reps": t.reps, "reps_top": t.top, "rpe": t.rpe, "load": t.load}
+            for t in line.line.targets
+        ],
+    }
+    if with_e1rm:
+        e1rm = line.e1rm
+        quote["e1rm"] = None if e1rm is None else e1rm.amount
+    return quote
+
+
+def _lift_row(read: LiftRead, under_authored: Sequence[Facts] = ()) -> Facts:
     row: dict[str, object] = {
         "exercise": read.exercise_id,
         "priority": read.priority,
@@ -323,6 +357,8 @@ def _lift_row(read: LiftRead) -> Facts:
     if read.timed:
         row["seconds"] = list(read.seconds)
         row["prescribed_seconds"] = read.prescribed_seconds
+    if under_authored:
+        row["under_authored_rpe"] = list(under_authored)
     return row
 
 
