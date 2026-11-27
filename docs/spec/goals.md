@@ -250,7 +250,7 @@ Every row requires adherence at or above the floor (`week.md`) over the blocks i
 | `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks; never in a `practice` session |
 | `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
 | `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
-| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
+| `cadence_fast` | `linear`, `hold`, `timed_load`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay

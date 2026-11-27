@@ -39,8 +39,10 @@ show. One message; follow up only for a gap that blocks the design.
   way of doing the same one gets an `exercise_ladder`; a loaded lift moves through its scheme and
   the cadence signals. Rungs may share an exercise when they differ in `sets` or `cues`: tempo is
   prose in the cues, a longer hold is its own rung. A timed line meant to progress goes on an
-  `exercise_ladder` with duration rungs. A stance gets its own exercise only when the
-  athlete wants it as its own history. A load-bearing rung after the first carries `start_load`.
+  `exercise_ladder` with duration rungs; a loaded carry meant to progress goes on `timed_load`,
+  on a custom `weight_duration` exercise with a `start_load` (a built-in carry logs distance).
+  A stance gets its own exercise only when the athlete wants it as its own history. A
+  load-bearing rung after the first carries `start_load`.
   Never a whole ladder in one rung's `cues`. The line opens on rung 1, and the rung it stands on
   is a `ladder_rung` Decision, never an edit to the version. Answer `ladder_top` at a block
   boundary with an `amend` giving the line a new scheme.

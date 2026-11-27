@@ -191,8 +191,11 @@ already answers is stated for confirmation, not asked. Logged RPE is trusted: ne
 felt or how many reps were left when its sets carry an RPE. Ask about a lift only for the card's
 `lift_doubt` or a specific point you must settle, and make each such question answerable without
 opening Hevy: name the session and day, quote what was logged (load, reps and RPE per set) and
-state the exact doubt. Follow up only for a gap that blocks the read or next week's plan. On a
-deep tier, settle every open niggle and follow-up with the athlete rather than carrying them.
+state the exact doubt. On `effort_missing` (a timed carry Hevy takes no RPE on), ask the
+effort once for the line, quoting its load, sets and seconds, and record the answer as a
+`repair` of `rpe` on each quoted set at the card's `repair` target. Follow up only for a gap
+that blocks the read or next week's plan. On a deep tier, settle every open niggle and
+follow-up with the athlete rather than carrying them.
 
 ## Judge
 - **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's

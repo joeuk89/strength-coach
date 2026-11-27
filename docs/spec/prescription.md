@@ -111,12 +111,13 @@ cut.
 | `double_progression` | reps and RPE per working set | every working set reached the top of its range at or under the authored RPE | load to the next rack row; reps back to the bottom of the range | hold load and range | a set at RPE ≥ authored + 2, or below the bottom of the range: hold and warn `rep_range_missed`. The rule never cuts |
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
+| `timed_load` | seconds per working set at the anchor load, and the stored effort: the highest RPE on those sets, logged or repaired (`check-in.md`) | every authored working set logged at or over the authored `duration_s` at the anchor load, and the stored effort at or under the authored RPE | load to the next rack row | a set short of the seconds, an effort over the target, or no stored effort: hold. A set with no RPE is unread here, not on target, since its template takes none | none: a step down is the coach's |
 | `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
 | `exercise_ladder` | the standing rung (below), its exercise's ordinary exposures from the rung's start, its `start_load` on a load-bearing rung | the rung's advance criterion (`program.md`) on its run of the newest exposures | never moves: warn `rung_met` naming the next rung, or `ladder_top` on the last; a `manual` rung raises neither | hold the rung | hold the rung |
 | `top_backoff` | the exercise's best e1RM in the window, or the carried e1RM while it binds (**The carried e1RM**, below) | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included; while the carried e1RM binds, the pre-layoff heaviest top × the band factor too)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window and no carried e1RM: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
-Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
+Citations: `timed_load` is this framework's (opinion, ADR 0026); `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
 `assistance_ladder` and `exercise_ladder` rn:bodyweight-skill-progression.3; `top_backoff` rn:progression-training-age.6
 and .8, rn:autoregulation.1; `wave_531` rn:progression-training-age.9. The one-row cap, the
 "RPE 2 over" test and `load_for` rounding down are this framework's (opinion). The catalogue
@@ -194,6 +195,15 @@ acknowledgement, of this warning, and raises no `increment_over_step`; a pin abo
 `increment_over_step` as before. The pin is bounded like any other: an RPE ceiling still lowers
 it and warns `pin_load_capped`. The warning recurs each week until neither condition holds.
 
+## A load held unread
+
+A load-bearing line whose newest ordinary exposures (light-week and return-week exposures
+skipped) sit at one top load with no RPE on any working set, across three or more calendar
+weeks, warns `held_without_effort` with the weeks, the load and the exposure refs. Any scheme
+raises it, `hold` included, so a carry or a held accessory with no effort reading cannot sit
+unnoticed. Three weeks is opinion: long enough to be a pattern, short of a Block. The warning
+moves nothing; the coach asks the effort, records it, or changes the line.
+
 ## Stalls
 
 One definition: three consecutive ordinary exposures of the line (light-week and return-week
@@ -215,6 +225,7 @@ and `cadence_slow` relies on it surviving the Block boundary (`goals.md`). The m
 | --- | --- | --- |
 | `double_progression` | total reps at or under the authored RPE at the anchor load | none: hold. Sets, a deload or a swap are the agent's (`goals.md`, the cadence table at the boundary) |
 | `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`, Starting Strength's "the 2nd time in a row", rn:training-level §2) sets the load to `reset_factor` × the anchor load, rounded **down** to the rack. Both are `linear` params (`program.md`); the registry default `reset_factor = 0.9` is the over-40 reset (5 % under 40, 10 % over 40, rn:training-level §2), so a coach names `reset_factor = 0.95` on the line for a younger athlete. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
+| `timed_load` | the top load, then the seconds held at it: a heavier load is a gain whatever the seconds | none: hold |
 | `assistance_ladder` | the rung | hold the rung |
 | `exercise_ladder` | total reps, or seconds on a duration rung, at or under the authored RPE on the standing rung, reading only exposures since the rung's start | hold the rung |
 | `top_backoff` | e1RM | none: the model holds the top set |
