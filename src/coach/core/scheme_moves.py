@@ -9,6 +9,7 @@ from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
 from coach.core.carried_e1rm import E1rmRead
 from coach.core.e1rm import PRECISION, WINDOW_DAYS, E1rm
+from coach.core.effort import held_unread, weeks_spanned
 from coach.core.exercise_ladder import StandingRung
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
@@ -136,6 +137,23 @@ class SchemeMoves:
                 f"{len(streak)} exposures in a row with no gain on the "
                 f"{self.line.scheme.name} metric",
             )
+
+    def unread(self, exposure: Exposure) -> None:
+        """A load-bearing line held three weeks with no effort reading cannot sit unnoticed."""
+        if not self.given.loaded:
+            return
+        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        run = held_unread(history)
+        top = run[-1].top_load if run else None
+        if top is None:
+            return
+        weeks = weeks_spanned(run)
+        load = top.as_mode(self.given.mode).amount
+        self._raise(
+            "held_without_effort",
+            {"weeks": weeks, "load": load, "exposures": [e.ref for e in run]},
+            f"held at {load:g} for {weeks} weeks with no effort reading",
+        )
 
     def held(self, exposure: Exposure, before: Load | None) -> Move:
         """A `hold` override: the anchor's dose repeated with no scheme step."""

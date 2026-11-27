@@ -188,6 +188,7 @@ class _Derivation:
         before = schemes.anchor_top(found.exposure)
         move = self._move_or_hold(schemes, found.exposure, before, overrides)
         schemes.stall(found.exposure)
+        schemes.unread(found.exposure)
         line = replace(line, sets=move.sets)
         moved = _first(move.proposal)
         racked = _racked(moved, rack, move.rounding)

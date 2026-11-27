@@ -343,6 +343,7 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.3",)
     ),
+    acknowledgeable_warning("held_without_effort", ("line",), ("weeks", "load", "exposures")),
     acknowledgeable_warning(
         "rpe_ceiling_unchecked",
         ("line",),

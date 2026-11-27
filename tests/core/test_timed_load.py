@@ -65,6 +65,77 @@ def codes(line: LinePrescription) -> list[str]:
     return [f.code for f in line.flags]
 
 
+def test_three_weeks_held_with_no_effort_reading_warns() -> None:
+    line = derive(
+        carry("2026-10-12", 30, 30, 30), carry("2026-10-19", 30, 30, 30), carry("2026-10-26", 30)
+    )
+
+    [flag] = [f for f in line.flags if f.code == "held_without_effort"]
+    assert dict(flag.params) == {
+        "weeks": 3,
+        "load": 40,
+        "exposures": [
+            "exposure:w-2026-10-12/custom_farmers_carry",
+            "exposure:w-2026-10-19/custom_farmers_carry",
+            "exposure:w-2026-10-26/custom_farmers_carry",
+        ],
+    }
+
+
+def test_two_weeks_held_with_no_effort_reading_raise_nothing() -> None:
+    line = derive(carry("2026-10-19", 30, 30, 30), carry("2026-10-26", 30, 30, 30))
+
+    assert "held_without_effort" not in codes(line)
+
+
+def test_an_effort_reading_inside_the_three_weeks_raises_nothing() -> None:
+    line = derive(
+        carry("2026-10-12", 30, 30, 30),
+        carry("2026-10-19", 30, 30, 30, rpe=9),
+        carry("2026-10-26", 30, 30, 30),
+    )
+
+    assert "held_without_effort" not in codes(line)
+
+
+def test_a_load_change_inside_the_three_weeks_raises_nothing() -> None:
+    line = derive(
+        carry("2026-10-12", 30, 30, 30, load=35),
+        carry("2026-10-19", 30, 30, 30),
+        carry("2026-10-26", 30, 30, 30),
+    )
+
+    assert "held_without_effort" not in codes(line)
+
+
+def test_two_exposures_in_one_week_count_as_one_week() -> None:
+    line = derive(
+        carry("2026-10-19", 30, 30, 30),
+        carry("2026-10-22", 30, 30, 30),
+        carry("2026-10-26", 30, 30, 30),
+    )
+
+    assert "held_without_effort" not in codes(line)
+
+
+def test_a_load_bearing_hold_line_held_three_weeks_unrated_warns() -> None:
+    squat = a_line("bb_back_squat", SetGroup(3, "working", 5), scheme="hold")
+    held = [
+        Exposure(
+            f"w-{on}",
+            "bb_back_squat",
+            datetime.date.fromisoformat(on),
+            (ExposureSet(0, "working", Load(100, "total"), 5, None),),
+            Matched("lower"),
+        )
+        for on in ("2026-10-12", "2026-10-19", "2026-10-26")
+    ]
+
+    line = prescribe(a_request(squat, exposures=tuple(held))).lines[0]
+
+    assert "held_without_effort" in codes(line)
+
+
 def test_three_exposures_at_one_load_and_the_same_seconds_raise_a_stall() -> None:
     line = derive(
         carry("2026-10-12", 30, 30, 25, rpe=9),
