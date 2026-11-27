@@ -43,7 +43,16 @@ def plan_draft(draft: PlanDraft, *, units: Units) -> str:
 
 
 def _at_the_top(draft: PlanDraft) -> tuple[Flag, ...]:
-    beside = (f for f in draft.beside_lines if f.scope.kind != "line")
+    lines = {
+        (prescribed.session.session_id, line.exercise_id)
+        for prescribed in draft.sessions
+        for line in prescribed.lines
+    }
+    beside = (
+        f
+        for f in draft.beside_lines
+        if f.scope.kind != "line" or (f.scope.session_id, f.scope.exercise_id) not in lines
+    )
     return (*draft.week_flags, *draft.conflicts, *draft.week_checks, *beside)
 
 

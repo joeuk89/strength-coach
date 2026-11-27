@@ -246,6 +246,33 @@ def test_override_persisting_has_its_flag_table_under_its_line_and_a_stub() -> N
     )
 
 
+DROP_SQUAT = """
+[[override]]
+kind = "drop_line"
+session = "lower"
+exercise = "bb_back_squat"
+because = "pain"
+text = "Drop the squat while the knee settles."
+"""
+
+
+def test_a_line_flag_whose_line_was_dropped_has_its_flag_table_at_the_top_and_a_stub() -> None:
+    conn = a_squat_week()
+    for week in ("2026-10-26", "2026-10-19"):
+        a_plan_override(conn, an_approved_plan(conn, week), "drop_line", "lower", "bb_back_squat")
+    [raised] = codes(flags(conn, DROP_SQUAT), "override_persisting")
+
+    document = drafted(conn, DROP_SQUAT)
+
+    assert raised.key == "override_persisting@line:2026-11-02/lower/bb_back_squat"
+    assert (raised.key, raised.params_hash) in {
+        (f["key"], f["params_hash"]) for f in document["flag"]
+    }
+    assert {"flag": raised.key, "params_hash": raised.params_hash, "because": "", "text": ""} in (
+        document["acknowledge"]
+    )
+
+
 def test_frozen_load_off_rack_has_its_flag_table_at_the_top_and_no_stub() -> None:
     conn = a_squat_week()
     plan_id = an_approved_plan(conn, "2026-10-26")

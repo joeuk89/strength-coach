@@ -86,7 +86,7 @@ class Reader(ABC):
         if not all(self.values.get(key) == "" for key in keys):
             return False
         for key in keys:
-            self._typed(key, EMPTY)
+            self._typed(key, EMPTY, required=True)
         return True
 
     @overload
