@@ -18,7 +18,12 @@ from coach.core.mirror import (
     Routine,
     mirrored_routine,
 )
-from coach.core.routine_projection import retired_routine, routine_diff
+from coach.core.routine_projection import (
+    RoutineChange,
+    diff_text,
+    retired_routine,
+    routine_diff,
+)
 from coach.hevy.protocol import HevyClient, Payload, WriteContext
 from coach.services.projections import SessionFacts, projection
 from coach.store import exercises, mirrors, routine_map
@@ -157,7 +162,7 @@ class Push:
         self, action: RoutineAction, body: Payload, live: Routine | None, *, unverified: bool
     ) -> None:
         routine_id = cast(str, action.routine_id)
-        if not unverified and live is not None and not routine_diff(body, live):
+        if not unverified and live is not None and not self._diff(body, live):
             self.outcomes.append(
                 RoutineOutcome(action.session_id, routine_id, "update", "unchanged")
             )
@@ -197,7 +202,7 @@ class Push:
         self, session_id: str, routine_id: str, body: Payload, action: Action, status: MapStatus
     ) -> None:
         read = self.client.read_back(
-            routine_id, self._context(routine_id), lambda r: routine_diff(body, r)
+            routine_id, self._context(routine_id), lambda r: diff_text(self._diff(body, r))
         )
         self.read_backs += 1
         with self.conn:
@@ -211,15 +216,21 @@ class Push:
         outcome: Outcome = "verified" if read.verified else "unverified"
         self.outcomes.append(RoutineOutcome(session_id, routine_id, action, outcome))
         if not read.verified:
+            changes = self._diff(body, read.routine)
             raise Invalid(
                 "verify_failed",
-                f"routine {routine_id} read back differently ({', '.join(read.diff)}); the run "
-                "stopped and a re-run resumes from it",
+                f"routine {routine_id} for session {session_id} read back differently "
+                f"({', '.join(read.diff)}); the run stopped and a re-run resumes from it",
                 {
                     "week_plan_id": self.plan["id"],
+                    "session_id": session_id,
+                    "changes": [c.to_json() for c in changes],
                     "routines": [o.to_json() for o in self.outcomes],
                 },
             )
+
+    def _diff(self, body: Payload, routine: Routine) -> tuple[RoutineChange, ...]:
+        return routine_diff(body, routine, exercises.library(self.conn), self.units)
 
     def _map(self, session_id: str, routine_id: str, status: MapStatus, *, verified: bool) -> None:
         routine_map.record(

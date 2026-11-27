@@ -1,16 +1,20 @@
 """A session's Hevy routine as the plan projects it, and the diff of a read-back against it
 (ADR 0011, "Push"; docs/spec/parity.md, the routine body and note rules)."""
 
+from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, cast
 
 from coach.core.config import Units
 from coach.core.exercise_ladder import rung_label, rung_line
-from coach.core.mirror import Routine, RoutineSet
+from coach.core.exposure import LibraryEntry
+from coach.core.load import PRECISION, Load, LoadMode
+from coach.core.mirror import Routine, RoutineExercise, RoutineSet
 from coach.core.note_dose import working_rpe, working_shape
 from coach.core.prescription import RungNaming, stepped_back_to
 from coach.core.program.form import Line
+from coach.core.units import from_kg
 
 type Json = dict[str, object]
 type DriftClass = Literal["structural", "load"]
@@ -178,50 +182,171 @@ def retired_routine(live: Routine, folder_id: str) -> Json:
     return {"title": title, "folder_id": _hevy_folder_id(folder_id), "exercises": exercises}
 
 
-def routine_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...]:
-    """What the read-back changed, by position: template id, set type, reps or range, duration,
-    `weight_kg` within 0.001, rest, exercise notes, title and folder."""
-    return _diff(body, routine, lambda note: note)
+type ChangeField = Literal[
+    "title",
+    "folder",
+    "removed",
+    "added",
+    "exercise",
+    "rest",
+    "notes",
+    "set_count",
+    "type",
+    "reps",
+    "range",
+    "duration",
+    "load",
+]
+
+_SUFFIXES: Mapping[str, str] = {"rest": " s", "duration": " s"}
 
 
-def drift_diff(body: Mapping[str, object], routine: Routine) -> tuple[str, ...]:
+@dataclass(frozen=True)
+class RoutineChange:
+    """One difference between a projected routine and the one Hevy holds. `exercise_id` names
+    the planned exercise, or for an added one the exercise or template Hevy holds; a load is in
+    athlete units, per hand under `per_hand_x2`."""
+
+    field: ChangeField
+    exercise_id: str | None = None
+    set: int | None = None
+    planned: object = None
+    found: object = None
+    units: Units | None = None
+
+    def to_json(self) -> Json:
+        return {
+            "field": self.field,
+            "exercise_id": self.exercise_id,
+            "set": self.set,
+            "planned": self.planned,
+            "found": self.found,
+        }
+
+    @property
+    def text(self) -> str:
+        """`bb_back_squat set 2 load 125 → 135 lb`, `db_curl removed`."""
+        if self.field == "added" and self.exercise_id is None:
+            return f"template {self.found} added"
+        if self.field in ("removed", "added"):
+            return f"{self.exercise_id} {self.field}"
+        if self.field == "exercise":
+            return f"{self.exercise_id} swapped for {self.found}"
+        if self.field == "notes":
+            return f"{self.exercise_id} notes"
+        if self.field in ("title", "folder"):
+            return f"{self.field} {_shown(self.planned)} → {_shown(self.found)}"
+        where = self.exercise_id if self.set is None else f"{self.exercise_id} set {self.set}"
+        suffix = f" {self.units}" if self.field == "load" else _SUFFIXES.get(self.field, "")
+        label = self.field.replace("_", " ")
+        return f"{where} {label} {_shown(self.planned)} → {_shown(self.found)}{suffix}"
+
+
+def _shown(value: object) -> str:
+    if value is None:
+        return "none"
+    if isinstance(value, float):
+        return f"{value:g}"
+    if isinstance(value, list):
+        return "-".join(str(v) for v in cast(list[object], value))
+    return str(value)
+
+
+def routine_diff(
+    body: Mapping[str, object],
+    routine: Routine,
+    library: Mapping[str, LibraryEntry],
+    units: Units,
+) -> tuple[RoutineChange, ...]:
+    """What the read-back changed, by position: template, set type, reps or range, duration,
+    `weight_kg` within 0.001, rest, exercise notes, title and folder. `library` names each
+    Exercise by the template it carries."""
+    return _Differ(library, units, lambda note: note).diff(body, routine)
+
+
+def drift_diff(
+    body: Mapping[str, object],
+    routine: Routine,
+    library: Mapping[str, LibraryEntry],
+    units: Units,
+) -> tuple[RoutineChange, ...]:
     """What an app edit changed: `routine_diff`, setting aside each note's `Next:` line on both
     sides, since the engine derives that line and its wording moves between releases."""
-    return _diff(body, routine, _without_next_line)
+    return _Differ(library, units, _without_next_line).diff(body, routine)
 
 
-def _diff(
-    body: Mapping[str, object], routine: Routine, compared_note: Callable[[str | None], str | None]
-) -> tuple[str, ...]:
-    found: list[str] = []
-    if body.get("title") != routine.title:
-        found.append("title")
-    if _text(body.get("folder_id")) != routine.folder_id:
-        found.append("folder")
-    sent = cast(Sequence[Mapping[str, object]], body.get("exercises") or [])
-    if len(sent) != len(routine.exercises):
-        return (*found, "exercise count")
-    for n, (want, got) in enumerate(zip(sent, routine.exercises, strict=True), start=1):
-        where = f"exercise {n}"
-        if want.get("exercise_template_id") != got.hevy_template_id:
-            found.append(f"{where} template")
+def diff_text(changes: Sequence[RoutineChange]) -> tuple[str, ...]:
+    return tuple(c.text for c in changes)
+
+
+@dataclass(frozen=True)
+class _Differ:
+    library: Mapping[str, LibraryEntry]
+    units: Units
+    compared_note: Callable[[str | None], str | None]
+
+    def diff(self, body: Mapping[str, object], routine: Routine) -> tuple[RoutineChange, ...]:
+        found: list[RoutineChange] = []
+        if body.get("title") != routine.title:
+            found.append(RoutineChange("title", planned=body.get("title"), found=routine.title))
+        folder = _text(body.get("folder_id"))
+        if folder != routine.folder_id:
+            found.append(RoutineChange("folder", planned=folder, found=routine.folder_id))
+        sent = cast(Sequence[Mapping[str, object]], body.get("exercises") or [])
+        if len(sent) != len(routine.exercises):
+            return (*found, *self._count(sent, routine))
+        for want, got in zip(sent, routine.exercises, strict=True):
+            found += self._exercise(want, got)
+        return tuple(found)
+
+    def _named(self, template_id: object) -> str:
+        """The Exercise carrying the template, or the template id when none does."""
+        entry = self.library.get(str(template_id))
+        return str(template_id) if entry is None else entry.exercise_id
+
+    def _count(self, sent: Sequence[Mapping[str, object]], routine: Routine) -> list[RoutineChange]:
+        planned = Counter(self._named(e.get("exercise_template_id")) for e in sent)
+        held = Counter(self._named(e.hevy_template_id) for e in routine.exercises)
+        mapped = {entry.exercise_id for entry in self.library.values()}
+        return [
+            *(RoutineChange("removed", name, planned=name) for name in (planned - held).elements()),
+            *(
+                RoutineChange("added", name if name in mapped else None, found=name)
+                for name in (held - planned).elements()
+            ),
+        ]
+
+    def _exercise(self, want: Mapping[str, object], got: RoutineExercise) -> list[RoutineChange]:
+        template = want.get("exercise_template_id")
+        name = self._named(template)
+        if template != got.hevy_template_id:
+            held = self._named(got.hevy_template_id)
+            return [RoutineChange("exercise", name, planned=name, found=held)]
+        found: list[RoutineChange] = []
         if want.get("rest_seconds") != got.rest_s:
-            found.append(f"{where} rest")
+            found.append(
+                RoutineChange("rest", name, planned=want.get("rest_seconds"), found=got.rest_s)
+            )
         sent_note = cast(str | None, want.get("notes")) or None
-        if compared_note(sent_note) != compared_note(got.notes):
-            found.append(f"{where} notes")
+        if self.compared_note(sent_note) != self.compared_note(got.notes):
+            found.append(RoutineChange("notes", name, planned=sent_note, found=got.notes))
         sets = cast(Sequence[Mapping[str, object]], want.get("sets") or [])
         if len(sets) != len(got.sets):
-            found.append(f"{where} set count")
-            continue
+            found.append(RoutineChange("set_count", name, planned=len(sets), found=len(got.sets)))
+            return found
+        entry = self.library.get(str(template))
+        mode = "total" if entry is None else entry.load_mode
         for m, (set_sent, set_got) in enumerate(zip(sets, got.sets, strict=True), start=1):
-            found += [f"{where} set {m} {field}" for field in _set_diff(set_sent, set_got)]
-    return tuple(found)
+            found += [
+                RoutineChange(field, name, m, planned, held, self.units)
+                for field, planned, held in _set_diff(set_sent, set_got, mode, self.units)
+            ]
+        return found
 
 
-def drift_class(diff: Sequence[str]) -> DriftClass:
+def drift_class(changes: Sequence[RoutineChange]) -> DriftClass:
     """An app edit that only moved weights is a load edit; anything else is structural."""
-    return "load" if all(d.endswith("weight_kg") for d in diff) else "structural"
+    return "load" if all(c.field == "load" for c in changes) else "structural"
 
 
 def _without_next_line(note: str | None) -> str | None:
@@ -297,25 +422,43 @@ def _kept_set(kept: RoutineSet) -> Json:
     return {k: v for k, v in one.items() if v is not None}
 
 
-def _set_diff(sent: Mapping[str, object], got: RoutineSet) -> list[str]:
-    found: list[str] = []
+type _SetChange = tuple[ChangeField, object, object]
+
+
+def _set_diff(
+    sent: Mapping[str, object], got: RoutineSet, mode: LoadMode, units: Units
+) -> list[_SetChange]:
+    found: list[_SetChange] = []
     if sent.get("type") != got.set_type:
-        found.append("type")
+        found.append(("type", sent.get("type"), got.set_type))
     if sent.get("reps") != got.reps:
-        found.append("reps")
+        found.append(("reps", sent.get("reps"), got.reps))
     span = cast(Mapping[str, int] | None, sent.get("rep_range"))
-    if (None if span is None else (span["start"], span["end"])) != got.rep_range:
-        found.append("range")
+    planned_range = None if span is None else (span["start"], span["end"])
+    if planned_range != got.rep_range:
+        found.append(("range", _listed(planned_range), _listed(got.rep_range)))
     if sent.get("duration_seconds") != got.duration_s:
-        found.append("duration")
+        found.append(("duration", sent.get("duration_seconds"), got.duration_s))
     weight = cast(float | None, sent.get("weight_kg"))
     if (weight is None) != (got.weight_kg is None) or (
         weight is not None
         and got.weight_kg is not None
         and abs(weight - got.weight_kg) > WEIGHT_TOLERANCE_KG
     ):
-        found.append("weight_kg")
+        found.append(
+            ("load", _athlete_load(weight, mode, units), _athlete_load(got.weight_kg, mode, units))
+        )
     return found
+
+
+def _listed(span: tuple[int, int] | None) -> list[int] | None:
+    return None if span is None else list(span)
+
+
+def _athlete_load(kg: float | None, mode: LoadMode, units: Units) -> float | None:
+    if kg is None:
+        return None
+    return round(Load(from_kg(kg, units), "total").as_mode(mode).amount, PRECISION)
 
 
 def _text(value: object) -> str | None:
