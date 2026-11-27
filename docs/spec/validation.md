@@ -331,7 +331,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `cadence_slow` | exercise | scheme, the scheme's metric (resets, stall streak or e1RM slope), blocks, `may_schemes`, `may`, `never` (the per-scheme condition and the switching table's row, `goals.md`) | rn:training-level §2 |
 | `cadence_fast` | exercise | scheme, the scheme's metric (exposures at top of range, or exposures the one-row cap bound), `may_schemes`, `may`, `never`; raised only on `double_progression` and `top_backoff` | rn:training-level §2 |
 | `phase_condition_met` | instance | phase id, condition, value | `null` |
-| `phase_trend_off` | instance | phase id, target rate, observed rate, window | rn:training-level §4 |
+| `phase_trend_off` | instance | phase id, target rate, observed rate, rate units, window | rn:training-level §4 |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes | rn:running-load.5 and .6 |
 | `run_spike` | workout or activity | run distance, longest in the previous 30 days, ratio; history, clears when the week closes (`week.md`) | rn:running-load.1 and .4 |
 | `training_max_unused` | exercise | scheme, decision id | `null` |

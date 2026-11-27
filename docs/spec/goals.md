@@ -167,7 +167,7 @@ citation. Both live in the phase registry (`coach schema --registry phase`), bes
 
 The observed rate is the change between the current 14-day Weigh-in average and the one 28 days
 earlier, per week; `checkin open` compares it once the Phase has 28 days of weigh-ins and raises
-`phase_trend_off` (phase id, target rate, observed rate, window) when it falls outside the band.
+`phase_trend_off` (phase id, target rate, observed rate, rate units, window) when it falls outside the band.
 It is a warning at the check-in, resolved by the coach's read (diet is out of scope; the engine
 states the fact). The card carries the Phase line it reads from (`check-in.md`).
 
@@ -231,7 +231,7 @@ Compact summary by default; `--full` adds per-line history.
 | Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion since the rung's start, whether it is met and whether an acknowledgement holds the offer (`held`); the same rows as the check-in card's Ladders field |
 | Dose | per muscle and per priority lift: hard sets achieved against target, by week of the block |
 | Adherence | core sessions by tier, misses by tag |
-| Phase | kind, target rate, 14-day bodyweight trend against it, the `until` condition and whether it is met |
+| Phase | kind, target rate, 14-day bodyweight trend against it with `rate_units` naming the unit (`pct_bw_per_week`), the `until` condition and whether it is met |
 | Goal | kind, adopted date, `why` verbatim |
 
 ### Cadence signals
@@ -299,7 +299,7 @@ niggle, answered by a swap or a Niggle, never a scheme.
 | Code | Raised by | Scope | Params |
 | --- | --- | --- | --- |
 | `phase_condition_met` | `checkin open`, every check-in | instance | phase id, condition, value |
-| `phase_trend_off` | `checkin open`, every check-in | instance | phase id, target rate, observed rate, window |
+| `phase_trend_off` | `checkin open`, every check-in | instance | phase id, target rate, observed rate, rate units, window |
 
 ## What the skills ask, judge and explain
 
