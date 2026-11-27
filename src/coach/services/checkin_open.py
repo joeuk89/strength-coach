@@ -154,10 +154,7 @@ def _card(
         ),
         card.ladders(ladder_reads(conn, units=units, on=on, zone=zone)),
         card.readiness(previous.readiness if previous else None),
-        card.sleep(
-            {d: h for d, h in fatigue.nights.items() if window.start <= d <= window.end},
-            short_sleep_week=any(t.name == "short_sleep_week" for t in opened.proposal.triggers),
-        ),
+        card.sleep(fatigue.nights, window.end),
         card.weight_phase(
             sum(1 for d in weighed if window.start <= d <= window.end),
             _in_units(fourteen_day_average(weighed, on), bodyweight_units),

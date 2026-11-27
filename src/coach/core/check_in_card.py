@@ -12,7 +12,14 @@ from coach.core.closed_week.dose import lift_trailing_mean, trailing_mean
 from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.exercise_ladder import LadderRead
-from coach.core.fatigue import Proposal
+from coach.core.fatigue import (
+    SHORT_NIGHT_HOURS,
+    Proposal,
+    measured_nights,
+    nights_read,
+    short_night,
+    short_sleep_week,
+)
 from coach.core.flag import Flag
 
 FIELDS = (
@@ -40,10 +47,12 @@ type Facts = Mapping[str, object]
 
 @dataclass(frozen=True)
 class Ask:
-    """A question the card leaves for the athlete, about one record when it names one."""
+    """A question the card leaves for the athlete, about one record when it names one;
+    `detail` states the form the answer takes where the kind alone does not."""
 
     kind: str
     about: str | None = None
+    detail: Facts = field(default_factory=dict[str, object])
 
 
 @dataclass(frozen=True)
@@ -331,13 +340,30 @@ def readiness(previous: str | None) -> CardField:
     return CardField("readiness", {"previous": previous}, (Ask("readiness"),))
 
 
-def sleep(nights: Mapping[datetime.date, float], *, short_sleep_week: bool) -> CardField:
-    short = sum(1 for hours in nights.values() if hours < 7)
-    asks = () if nights else (Ask("sleep_nights"),)
-    return CardField(
-        "sleep",
-        {"nights": len(nights), "short_nights": short, "short_sleep_week": short_sleep_week},
-        asks,
+def sleep(nights: Mapping[datetime.date, float], check_in: datetime.date) -> CardField:
+    """The nights the Short-sleep week reads; with none of them stored, the ask names those
+    nights and the hours under which a night is short."""
+    measured = measured_nights(nights, check_in)
+    facts = {
+        "nights": len(measured),
+        "short_nights": sum(1 for hours in measured.values() if short_night(hours)),
+        "short_sleep_week": short_sleep_week(nights, check_in) is not None,
+    }
+    return CardField("sleep", facts, () if measured else (_sleep_ask(check_in),))
+
+
+def _sleep_ask(check_in: datetime.date) -> Ask:
+    return Ask(
+        "sleep_nights",
+        detail={
+            "record": "sleep_night",
+            "under_hours": SHORT_NIGHT_HOURS,
+            "nights": [night.isoformat() for night in nights_read(check_in)],
+            "give": (
+                f"night and hours for every night under {SHORT_NIGHT_HOURS} hours; "
+                "other nights optional"
+            ),
+        },
     )
 
 
