@@ -152,3 +152,21 @@ def test_the_dose_line_reads_each_priority_lifts_figure_and_target_from_the_clos
         {"lift": "bb_bench_press", "delivered": 2, "target": 8, "mean": 2.0},
         {"lift": "pull_up", "delivered": 0, "target": 8, "mean": 0.0},
     ]
+
+
+def test_four_sleep_nights_under_seven_hours_and_no_others_are_a_short_sleep_week() -> None:
+    conn = a_two_session_program()
+    a_planned_two_session_week(conn, monday(0))
+    short = ("2026-11-02", "2026-11-03", "2026-11-05", "2026-11-07")
+    nights = "".join(f"[[sleep_night]]\nnight = {n}\nhours = 6.5\n" for n in short)
+    record(conn, nights.encode(), file="s.toml", clock=FixedClock())
+
+    card = opened(conn)
+
+    triggers = cast(list[dict[str, object]], field_of(card, "block").facts["triggers"])
+    assert {"trigger": "short_sleep_week", "evidence": list(short)} in triggers
+    assert field_of(card, "sleep").facts == {
+        "nights": 4,
+        "short_nights": 4,
+        "short_sleep_week": True,
+    }

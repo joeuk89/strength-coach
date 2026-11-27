@@ -189,7 +189,9 @@ rather than carrying them.
 - **Misses.** A tag per missed core session. Pattern over blame: a run of `time` misses is a
   schedule problem for the plan, not a willpower problem.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
-  shapes next week's dose; one bad night does not.
+  shapes next week's dose; one bad night does not. Record the short nights the card's Sleep ask
+  names as `[[sleep_night]]` rows with their hours; a weekly average, when that is all the
+  athlete has, goes in verbatim as an athlete note, never as a night.
 - **Phase.** When the card says the until condition is met or the trend is off, propose
   closing or keeping it with the athlete; a new Phase opens in the record.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain

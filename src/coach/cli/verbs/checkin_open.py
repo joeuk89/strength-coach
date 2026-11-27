@@ -60,7 +60,8 @@ def _field(found: CardField, last: int | None) -> Json:
         **found.facts,
         **_row_list(found.facts.get("rows"), last),
         "asks": [
-            {"ask": ask.kind, **({"about": ask.about} if ask.about else {})} for ask in found.asks
+            {"ask": ask.kind, **({"about": ask.about} if ask.about else {}), **ask.detail}
+            for ask in found.asks
         ],
     }
 
@@ -131,9 +132,21 @@ DECLARATION = Declaration(
                             "type": "array",
                             "items": {
                                 "type": "object",
+                                "description": (
+                                    "a sleep_nights ask also names the record, the hours under "
+                                    "which a night is short, the nights the Short-sleep week "
+                                    "reads and what to give"
+                                ),
                                 "properties": {
                                     "ask": {"type": "string"},
                                     "about": {"type": "string"},
+                                    "record": {"type": "string"},
+                                    "under_hours": {"type": "number"},
+                                    "nights": {
+                                        "type": "array",
+                                        "items": {"type": "string", "format": "date"},
+                                    },
+                                    "give": {"type": "string"},
                                 },
                                 "required": ["ask"],
                             },

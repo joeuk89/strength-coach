@@ -132,3 +132,49 @@ def test_the_dose_field_gives_each_lift_its_figure_target_and_trailing_mean() ->
         {"lift": "pull_up", "delivered": 11, "target": 8, "mean": 8.5},
     ]
     assert found.facts["muscles"] == [{"muscle": "lats", "delivered": 12.5, "mean": 12.5}]
+
+
+CHECK_IN = datetime.date(2026, 11, 11)
+
+
+def test_the_sleep_count_reads_the_seven_nights_before_the_check_in_on_a_ten_day_window() -> None:
+    nights = {
+        datetime.date(2026, 11, 1): 5.0,
+        datetime.date(2026, 11, 2): 5.0,
+        datetime.date(2026, 11, 3): 5.0,
+        datetime.date(2026, 11, 4): 6.0,
+        datetime.date(2026, 11, 6): 6.5,
+        datetime.date(2026, 11, 8): 8.0,
+        datetime.date(2026, 11, 10): 6.9,
+        datetime.date(2026, 11, 11): 4.0,
+    }
+
+    found = card.sleep(nights, CHECK_IN)
+
+    assert found.facts == {"nights": 4, "short_nights": 3, "short_sleep_week": False}
+    assert found.asks == ()
+
+
+def test_four_short_nights_in_the_seven_read_make_the_card_a_short_sleep_week() -> None:
+    nights = {datetime.date(2026, 11, d): 6.0 for d in (4, 5, 7, 10)}
+
+    found = card.sleep(nights, CHECK_IN)
+
+    assert found.facts == {"nights": 4, "short_nights": 4, "short_sleep_week": True}
+
+
+def test_the_sleep_ask_states_the_threshold_and_the_nights_it_wants() -> None:
+    found = card.sleep({datetime.date(2026, 11, 3): 5.0}, CHECK_IN)
+
+    assert found.facts["nights"] == 0
+    assert found.asks == (
+        Ask(
+            "sleep_nights",
+            detail={
+                "record": "sleep_night",
+                "under_hours": 7,
+                "nights": [f"2026-11-{d:02d}" for d in range(4, 11)],
+                "give": "night and hours for every night under 7 hours; other nights optional",
+            },
+        ),
+    )
