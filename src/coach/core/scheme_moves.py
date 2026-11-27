@@ -139,7 +139,7 @@ class SchemeMoves:
             )
 
     def unread(self, exposure: Exposure) -> None:
-        """A load-bearing line held three weeks with no effort reading cannot sit unnoticed."""
+        """A load-bearing line held `WEEKS_UNREAD` weeks with no effort reading is flagged."""
         if not self.given.loaded:
             return
         history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))

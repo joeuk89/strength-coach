@@ -730,9 +730,8 @@ def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:
         case "one_working":
             return None if len(groups) == 1 else "exactly one working group"
         case "one_timed":
-            if len(groups) != 1 or groups[0].duration_s is None or groups[0].reps is not None:
-                return "exactly one working group stating duration_s"
-            return None
+            timed = len(groups) == 1 and groups[0].duration_s is not None and groups[0].reps is None
+            return None if timed else "exactly one working group stating duration_s"
         case "top_then_backoffs":
             top = groups[0]
             if top.count != 1 or not isinstance(top.reps, int) or len(groups) < 2:
