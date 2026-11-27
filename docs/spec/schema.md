@@ -623,7 +623,7 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 | `[[note]]` | `athlete_note` |
 | `[[workout]]` | `workout` (source `manual`), `logged_set` |
 | `[[weigh_in]]`, `[[sleep_night]]`, `[[activity]]` | the table of the same name; a weigh-in or sleep night is withdrawn by a new row whose `withdraws` names it |
-| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span |
+| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span. A changed `cap_ends` is a withdrawal plus a fresh span in one Draft |
 | `[[exercise]]` | `exercise`, in place |
 | `[[observation]]` | `observation`, insert or retire in place; check-in file only |
 

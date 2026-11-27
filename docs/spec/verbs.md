@@ -225,7 +225,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | weigh_in | `[[weigh_in]]` | a Weigh-in | |
 | sleep_night | `[[sleep_night]]` | a Sleep night | |
 | activity | `[[activity]]` | an Activity | |
-| status_span | `[[status_span]]` | a Status span: ill, injured, travel, `no_training`; withdrawn, never deleted | |
+| status_span | `[[status_span]]` | a Status span: ill, injured, travel, `no_training`; withdrawn, never deleted. An `ill` span with a `to_date` may carry `cap_ends`, on or after it: the last day of the illness cap as the athlete stated it | |
 | exercise | `[[exercise]]` | an edit to an existing library Exercise (the four Hevy template columns, load mode, equipment kind; name and identity stay), or a new library Exercise with every column, `source = record`, for a Hevy template the history uses and no program line names (`cutover.md`) | |
 | observation | `[[observation]]` | an Observation raised or retired (ADR 0009) | yes |
 

@@ -55,6 +55,9 @@ its reason. A load the engine derived is never retyped.
   promote the override into a new program version, extend it with an override Decision and an
   until date, or leave it with an Acknowledgement and meet it again next week. Promote what the
   athlete will keep doing; extend what has an end in sight.
+- **Illness.** A line's illness cap names its end. When the athlete has not said how long they
+  need at reduced effort, ask, and record their answer as the span's cap end; never infer it.
+  A changed answer midweek is recorded again and the week replanned.
 - **Pins.** `pin_load_capped`: a recovery ceiling lowered a pin or left it with no effect.
   Lower the pin to the prescribed load, remove it, or acknowledge the warning with the reason.
 - **Rack.** `frozen_load_off_rack`: a load in the plan in force is gone from the location's

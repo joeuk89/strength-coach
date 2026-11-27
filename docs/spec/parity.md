@@ -36,7 +36,7 @@ decision. Each item is tested with values, never with a sentence.
 - [ ] Set cut floor: max(1, min(prescribed, derived-from sets) − 1); a borrowed exposure is a load base only.
 - [ ] Cut from the lower of the proposed and the derived-from load: a return week never carries a progression.
 - [ ] Return week's logged loads are next week's baseline; a deload's are not; after recovery, sets restore at the load the return week logged, never up.
-- [ ] Illness: `ill` day in the gap caps every set of the first session back at RPE 7, whatever the gap; block until 48 h symptom-free is confirmed; whole-body symptoms route to a professional (rn:detraining-return.4).
+- [ ] Illness: an `ill` span caps every set at RPE 7, whatever the gap, until the end the athlete states (fully recovered caps nothing), else on each lift until it is trained once; block until 48 h symptom-free is confirmed; whole-body symptoms route to a professional (rn:detraining-return.4).
 - [ ] Prescription never carries a load forward past the band its days off fall in; a decayed line is valid only when band, load ≤ cut(base), sets and RPE cap all agree.
 
 ### Core loop: loads, kit and the dumbbell model
@@ -166,7 +166,7 @@ decision. Each item is tested with values, never with a sentence.
 | Pre-layoff base borrowing from any slot dated on or before the layoff; sibling session keeps its approved line | a | Proposal and validator must share one base |
 | 43+ "re-test": next week's loads from what was logged | a | Only the generic baseline rule in code; make it explicit |
 | Return week logs are the baseline; deload logs are not; recovery `hold` never rises | a | Return ≠ deload |
-| Illness: RPE 7 cap on first session back, block until 48 h symptom-free confirmed (rn:detraining-return.4) | a | Safety rule with a claim |
+| Illness: RPE 7 cap until the athlete's stated end, else each lift until trained once; block until 48 h symptom-free confirmed (rn:detraining-return.4) | a | Safety rule with a claim; only the athlete knows how recovered they are |
 | `stale_prescription` arithmetic (band, load ≤ cut(base), sets, cap) | a | Validity check of a decayed line |
 | `stale_prescription` inferred provenance and `--write` flag merging | b | Exists because overlays are hand-edited JSON |
 | Capacity series "as-of": a later approval never reclassifies stored provenance | b | Replaying mutable files over history |
