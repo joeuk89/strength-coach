@@ -16,6 +16,7 @@ from coach.render.approval_prompt import approval_prompt
 from coach.services.hevy_import import import_hevy
 from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
 from coach.services.record import record
+from coach.services.status import status
 from coach.store import exercises, routine_map, week_plans
 from coach.store.connection import Connection
 
@@ -205,3 +206,57 @@ def test_an_import_after_the_push_raises_no_routine_drift_for_that_routine() -> 
     found = import_hevy(conn, hevy, LATER, full=False, units="lb")
 
     assert [f.code for f in found.warnings if f.code == "routine_drift"] == []
+
+
+def test_status_lists_no_unverified_routine_for_a_session_whose_every_line_is_avoided() -> None:
+    conn = a_squat_program(
+        a_session("lower", SQUAT_LINE), a_session("upper", a_line("bb_bench_press"))
+    )
+    with conn:
+        exercises.update(conn, "bb_bench_press", {"hevy_template_id": BENCH_TEMPLATE})
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    hevy = FakeHevy(FixedClock())
+    applied(conn, hevy, a_plan_draft(conn, hevy=True))
+    record(conn, AVOID_BENCH.encode(), file="niggle.toml", clock=FixedClock())
+    applied(conn, hevy, a_plan_draft(conn, hevy=True, week=datetime.date(2026, 11, 9)))
+
+    shown = status(
+        conn,
+        FixedClock(datetime.datetime(2026, 11, 10, 9, 0, tzinfo=datetime.UTC)),
+        engine_version="0.3.0",
+        pin="0.3.0",
+        hevy_on=True,
+        exported={},
+        units="lb",
+    ).plan
+
+    assert shown is not None
+    assert (shown.week, shown.routines_verified, shown.routines_unverified) == (
+        "2026-11-09",
+        2,
+        (),
+    )
+
+
+def test_an_import_skips_a_routine_its_plan_wrote_for_a_session_whose_every_line_is_avoided() -> (
+    None
+):
+    conn = an_avoided_bench(
+        a_session("lower", SQUAT_LINE), a_session("upper", a_line("bb_bench_press"))
+    )
+    hevy = FakeHevy(FixedClock())
+    applied(conn, hevy, a_plan_draft(conn, hevy=True))
+    with conn:
+        routine_map.record(
+            conn,
+            "upper",
+            routine_map.mapped(conn)["lower"],
+            "unverified",
+            plan_id="wp-2026-11-02",
+            at="2026-10-30T09:00:00Z",
+            verified=False,
+        )
+
+    found = import_hevy(conn, hevy, LATER, full=False, units="lb")
+
+    assert [f for f in found.warnings if f.code == "routine_drift"] == []

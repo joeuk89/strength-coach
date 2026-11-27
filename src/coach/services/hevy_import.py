@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import cast
 
 from coach.core.clock import Clock
 from coach.core.config import Units
@@ -12,7 +13,7 @@ from coach.core.import_flags import (
 )
 from coach.core.instant import utc_instant
 from coach.core.mirror import BodyMeasurement, engine_folders, mirrored_routine
-from coach.core.routine_projection import drift_diff
+from coach.core.routine_projection import drift_diff, in_routine
 from coach.core.workout_import import Changes, event_pull_changes, event_since, full_pull_changes
 from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
@@ -134,9 +135,12 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
 
 
 def _froze(conn: Connection, plan_id: str, session_id: str) -> bool:
-    """A routine its plan retired froze no line to project; its map row can stay live when
-    the retire read back differently."""
-    return any(r["session_id"] == session_id for r in week_plans.prescriptions(conn, plan_id))
+    """A routine its plan retired, or whose every line it froze with no set, has no line to
+    project; its map row can stay live when the write read back differently."""
+    return any(
+        r["session_id"] == session_id and in_routine(cast(list[object], r["set_groups"]))
+        for r in week_plans.prescriptions(conn, plan_id)
+    )
 
 
 def _weigh_ins(
