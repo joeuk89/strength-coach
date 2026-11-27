@@ -195,6 +195,7 @@ verbs:
 | `phase_condition_met` | `checkin open` | the Phase closing (`goal adopt` or a check-in file) |
 | `training_max_unused` | `checkin open` | retiring the Decision, or a version giving the exercise a scheme that reads it |
 | `activity_cap_exceeded`, `run_spike` | `checkin open` | history; the week closing |
+| `session_near_empty` | `checkin open` | a `miss_tag` Annotation on the planned session (the athlete said it did not count), or the check-in that reviews it with none (it counted) |
 | `engine_pin_dev` (ADR 0007) | `status` | `coach upgrade` on a release build, the only writer of `[engine]`; `init` refuses to write a `.dev` pin (`verbs.md`) |
 | `generated_file_drift` (ADR 0007, 0013) | `status` | `coach upgrade` regenerating the file |
 | `plan_behind_program` | `status`, and the `program adopt` whose version creates it (its dry run included) | a superseding WeekPlan for the week through `plan apply`, or next week's WeekPlan approved under the version in force; it reads only the current week, so it also ends with the week |
@@ -334,6 +335,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `phase_trend_off` | instance | phase id, target rate, observed rate, rate units, window | rn:training-level §4 |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes | rn:running-load.5 and .6 |
 | `run_spike` | workout or activity | run distance, longest in the previous 30 days, ratio; history, clears when the week closes (`week.md`) | rn:running-load.1 and .4 |
+| `session_near_empty` | session | date, working sets logged, working sets prescribed; a matched core session under one-third of its prescribed working sets (`week.md`, "The session gate"; the one-third is opinion) | `null` |
 | `training_max_unused` | exercise | scheme, decision id | `null` |
 | `exercise_unmapped` | workout | Hevy template id, title; a view over logged sets whose template id no Exercise carries, so an `[[exercise]]` record mapping or declaring the Exercise clears it for every version at once (`cutover.md`) | `null` |
 | `plan_behind_program` | week | plan id, the version in force when the plan was approved (or none), the version in force now; raised while the current week's plan in force was approved before the version in force was recorded and no plan for next week was approved under it, so the hash moves only with the plan or the version | `null` |

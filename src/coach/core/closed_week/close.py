@@ -38,6 +38,7 @@ class WeekFacts:
     claims: Mapping[str, PlannedRef] = field(default_factory=dict[str, PlannedRef])
     trained_unlogged: frozenset[PlannedRef] = frozenset()
     cancelled: frozenset[PlannedRef] = frozenset()
+    miss_tagged: frozenset[PlannedRef] = frozenset()
     spans: tuple[StatusSpan, ...] = ()
     carried: frozenset[str] = frozenset()
     returned: bool = False
@@ -63,6 +64,7 @@ def close_week(facts: WeekFacts) -> ClosedWeek:
             trained_unlogged=work.ref in facts.trained_unlogged,
             cancelled=work.ref in facts.cancelled,
             spans=facts.spans,
+            miss_tagged=work.ref in facts.miss_tagged,
         )
         for work in facts.planned
     )

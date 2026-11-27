@@ -16,11 +16,16 @@ from coach.core.closed_week.against import (
 )
 from coach.core.closed_week.match import PlannedRef, WeekWorkout, in_start_order
 from coach.core.exposure import ExposureSet
+from coach.core.flag import Flag, Scope, raise_flag
+from coach.core.planned_week import week_monday
 from coach.core.prescription import PlannedSession, StatusSpan
 
 GATE_KINDS = ("lifting", "coach_led")
 # rn:deloads.11: two thirds of the prescribed working sets, mean RPE no more than 1.5 under.
 GATE_SET_SHARE = 2 / 3
+# Opinion: under a third of the prescribed working sets logged, a matched session may not have
+# counted, so the athlete is asked.
+NEAR_EMPTY_SET_SHARE = 1 / 3
 
 
 @dataclass(frozen=True)
@@ -55,7 +60,8 @@ class PlannedWork:
 
 @dataclass(frozen=True)
 class SessionOutcome:
-    """`workouts` are every workout matched to the session, in start-time order."""
+    """`workouts` are every workout matched to the session, in start-time order; a
+    `miss_tagged` session is untrained whatever it holds."""
 
     work: PlannedWork
     trained: bool
@@ -66,6 +72,7 @@ class SessionOutcome:
     lines: tuple[LineAgainst, ...] = ()
     cancelled: bool = False
     rested: bool = False
+    miss_tagged: bool = False
 
     @property
     def session(self) -> PlannedSession:
@@ -82,6 +89,43 @@ class SessionOutcome:
             return None
         return against(self.lines)
 
+    @property
+    def sets_logged(self) -> int:
+        """The logged working sets paired with a prescribed one, as the gate counts them."""
+        return sum(len(line.pairs) for line in self.lines if not line.hold)
+
+    @property
+    def sets_prescribed(self) -> int:
+        return self.work.prescribed_sets
+
+    @property
+    def near_empty(self) -> bool:
+        return (
+            self.session.tier == "core"
+            and bool(self.workouts)
+            and self.sets_prescribed > 0
+            and self.sets_logged < NEAR_EMPTY_SET_SHARE * self.sets_prescribed - ROUNDING
+        )
+
+
+def session_near_empty(outcome: SessionOutcome) -> Flag | None:
+    """Raised until the athlete answers it with a `miss_tag`; with no answer the session stays
+    trained."""
+    if not outcome.near_empty or outcome.miss_tagged or outcome.cancelled:
+        return None
+    session = outcome.session
+    return raise_flag(
+        "session_near_empty",
+        Scope("session", week_monday(session.date), session_id=session.session_id),
+        {
+            "date": session.date.isoformat(),
+            "sets_logged": outcome.sets_logged,
+            "sets_prescribed": outcome.sets_prescribed,
+        },
+        f"{session.session_id} on {session.date} logged {outcome.sets_logged} of "
+        f"{outcome.sets_prescribed} prescribed working sets",
+    )
+
 
 def session_outcome(
     work: PlannedWork,
@@ -90,10 +134,11 @@ def session_outcome(
     trained_unlogged: bool = False,
     cancelled: bool = False,
     spans: Sequence[StatusSpan] = (),
+    miss_tagged: bool = False,
 ) -> SessionOutcome:
     session = work.session
     ordered = in_start_order(workouts)
-    trained = bool(ordered) or trained_unlogged
+    trained = (bool(ordered) or trained_unlogged) and not miss_tagged
     on_span = any(span.covers(session.date) for span in spans)
     excluded = cancelled or (on_span and not trained)
     core = session.tier == "core" and not excluded
@@ -114,6 +159,7 @@ def session_outcome(
         lines,
         cancelled,
         on_span and not trained,
+        miss_tagged,
     )
 
 

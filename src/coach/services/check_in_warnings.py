@@ -8,6 +8,7 @@ from typing import cast
 from coach.core.activity_rules import LoggedActivity, activity_cap_exceeded, run_spikes
 from coach.core.check_in import Window
 from coach.core.closed_week.match import conditioning_activity
+from coach.core.closed_week.sessions import session_near_empty
 from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.core.ledger_flags import followup_due, niggle_unconstrained, training_max_unused
@@ -34,6 +35,7 @@ def check_in_warnings(
         *_ledger_warnings(conn, on),
         *_phase_warnings(conn, weigh_ins(conn), on, bodyweight_units),
         *_activity_warnings(activities(conn, log), window, on),
+        *_near_empty_warnings(log, window),
         *_training_max_warnings(conn),
     )
 
@@ -112,6 +114,22 @@ def _activity_warnings(
             found.append(flag)
         monday += WEEK
     found.extend(run_spikes([a for a in activities if a.date <= on], since=window.start))
+    return found
+
+
+def _near_empty_warnings(log: WeekLog, window: Window) -> list[Flag]:
+    found: list[Flag] = []
+    if not log.redesigns:
+        return found
+    monday = max(week_monday(window.start), week_monday(log.redesigns[0]))
+    while monday <= window.end:
+        for outcome in log.week(monday).sessions:
+            if not window.start <= outcome.session.date <= window.end:
+                continue
+            flag = session_near_empty(outcome)
+            if flag is not None:
+                found.append(flag)
+        monday += WEEK
     return found
 
 
