@@ -9,9 +9,9 @@ from typing import cast
 from coach.core.config import Units
 from coach.core.load import Load, LoadMode, from_hevy_kg
 from coach.core.log import StoredSet
+from coach.core.registries.log import REPAIRABLE
 
 EXPOSURE_SET_TYPES = ("working", "test")
-REPAIRABLE = ("reps", "rpe", "weight_kg", "set_type")
 
 
 @dataclass(frozen=True)

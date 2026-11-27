@@ -1,6 +1,6 @@
 import datetime
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import NoReturn, cast
 
@@ -17,7 +17,7 @@ from coach.core.registries.ledger import (
     NIGGLE_STATUSES,
     REASONS,
 )
-from coach.core.registries.log import ANNOTATION_KINDS
+from coach.core.registries.log import ANNOTATION_KINDS, REPAIRABLE
 from coach.core.registries.program import LOAD_MODES, SET_TYPES
 
 type Json = Mapping[str, object]
@@ -27,8 +27,6 @@ TIERS = ("core", "optional")
 OPEN_REPS = re.compile(r"[1-9][0-9]*\+")
 BLOCK_ID = re.compile(r"b-\d{4}-\d{2}-\d{2}")
 DECISION_ID = re.compile(r"d-\d+")
-# check-in.md, "The sourced records": what each annotation kind is about.
-ON_PLANNED_SESSION = ("trained_unlogged", "cancelled", "miss_tag")
 ACTIVITY_CAPS = (("weekly_distance", "weekly_minutes"), ("single_distance", "single_minutes"))
 
 
@@ -391,33 +389,55 @@ def parse_annotation(f: Fields) -> AnnotationRecord:
         return f.done(AnnotationRecord(withdraws=f.text("withdraws"), key=f.key()))
     kind = required(f.term("kind", ANNOTATION_KINDS, required=True))
     target = required(f.ref("target", ("workout", "planned_session")) or _missing(f, "target"))
-    wanted = "planned_session" if kind in ON_PLANNED_SESSION else "workout"
+    wanted = ANNOTATION_KINDS.get(kind).target
     if target.kind != wanted:
         raise f.wrong("target", f"a {wanted} ref for a {kind} annotation")
-    params = f.raw("params")
-    if params is not None and not isinstance(params, dict):
-        raise f.wrong("params", "a table")
-    values = cast(Json, params) if params else None
-    if kind == "match":
-        values = _match_params(f, values)
     return f.done(
         AnnotationRecord(
             kind=kind,
             target=target,
             because=f.term("because", REASONS, required=True),
-            params=values,
+            params=_annotation_params(f, kind),
             text=f.text("text"),
             key=f.key(),
         )
     )
 
 
-def _match_params(f: Fields, params: Json | None) -> Json:
-    params = params or {}
-    planned = params.get("planned_session")
-    if not isinstance(planned, str) or Ref.parse(planned).kind != "planned_session":
-        raise f.wrong("params", "a table naming the planned_session the workout matches")
-    return params
+def _annotation_params(f: Fields, kind: str) -> Json | None:
+    """The kind's params from the registry, each read by type; any other key is refused."""
+    declared = ANNOTATION_KINDS.get(kind).params
+    params = f.table("params")
+    if params is None:
+        needed = [p.name for p in declared if p.required]
+        if needed:
+            raise Invalid("invalid_argument", f"{f.where} params: {', '.join(needed)} is required")
+        return None
+    for param in declared:
+        _ANNOTATION_PARAM[param.name](params, param.required)
+    return params.done(dict(params.values)) or None
+
+
+def _value(f: Fields, required: bool) -> None:
+    value = f.raw("value")
+    if value is None:
+        if required:
+            raise f.missing("value")
+        return
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        raise f.wrong("value", "a number or a string")
+
+
+_ANNOTATION_PARAM: Mapping[str, Callable[[Fields, bool], object]] = {
+    "position": lambda f, required: f.whole("position", required=required),
+    "field": lambda f, required: f.choice("field", REPAIRABLE, required=required),
+    "value": _value,
+    "load_mode": lambda f, required: f.term("load_mode", LOAD_MODES, required=required),
+    "planned_session": lambda f, required: (
+        f.ref("planned_session", ("planned_session",))
+        or (_missing(f, "planned_session") if required else None)
+    ),
+}
 
 
 def annotation_refs(record: AnnotationRecord) -> tuple[Ref, ...]:

@@ -333,3 +333,38 @@ def test_the_muscles_registry_flags_dosed_on_each_row() -> None:
     assert rows["traps"] == {"name": "traps", "dosed": False}
     assert "cardio" not in rows
     assert "full_body" not in rows
+
+
+def test_the_annotation_kinds_registry_shows_each_kind_s_target_and_params() -> None:
+    rows = run_coach("schema", "--registry", "annotation-kinds").envelope["result"]["rows"]
+
+    by_kind = {row["name"]: row for row in rows}
+    assert by_kind["match"]["target"] == "workout"
+    assert [(p["name"], p["required"]) for p in by_kind["match"]["params"]] == [
+        ("planned_session", True)
+    ]
+    assert [(p["name"], p["required"]) for p in by_kind["repair"]["params"]] == [
+        ("position", True),
+        ("field", True),
+        ("value", True),
+    ]
+    assert [(p["name"], p["required"]) for p in by_kind["discount"]["params"]] == [
+        ("position", False)
+    ]
+    assert by_kind["miss_tag"] == {"name": "miss_tag", "target": "planned_session", "params": []}
+    assert all(p["about"] for row in rows for p in row["params"])
+
+
+def test_the_record_draft_schema_lists_the_annotation_params() -> None:
+    draft = run_coach("schema", "record").envelope["result"]["draft"]
+
+    annotation = draft["schema"]["properties"]["annotation"]["items"]
+    params = annotation["properties"]["params"]
+    assert set(params["properties"]) == {
+        "position",
+        "field",
+        "value",
+        "load_mode",
+        "planned_session",
+    }
+    assert params["additionalProperties"] is False
