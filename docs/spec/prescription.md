@@ -290,9 +290,15 @@ rung next: it raises no `rung_met` or `ladder_top`, and they return with the run
 prompt and the Hevy note name that week's rung by index alone, since the band cut the dose a label
 would print, with no `Next:`; the note says it on a `This week:` line. The `cut` step names both
 rungs by index, for example from `rung 3` to `rung 1`, with its cause, and the plan Draft and the week page show that step. The
+step also stores the week's rung as `rung`, and the note and prompt read that, never the step's
+text; a plan frozen before the step stored it reads the index from its `to`. The
 check-in card still measures from the standing rung. All of this reads the frozen line's `rung` and
 steps, not the Decisions in force, so a Decision recorded after approval leaves the note alone. A
 line in a band that steps back no rung, because it stands on the first, keeps its `Next:`.
+
+A week whose rung a `swap_exercise` or `restate_sets` override changed, from the plan or a
+Decision, still offers the climb, but the approval prompt names its rung by index alone, since the
+rung's label would print an exercise or sets the line no longer runs.
 
 Illness alone (gap ≤ 10 days) is not a cut: the RPE 7 cap is the whole return. Illness with
 days off > 10 is a return line with the cap at 7.

@@ -226,7 +226,8 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
 the Draft's sessions. A plan's rows read back by date and position, which is the Draft's order
 because its sessions are always in date order. On an `exercise_ladder` line, `rung` freezes the
 rung the week prescribes, after any return-band step back: rungs may share an exercise (ADR 0025),
-so `exercise_id` alone does not tell them apart.
+so `exercise_id` alone does not tell them apart. A return band's `cut` step in `steps` also
+carries `rung`, the rung it stepped back to; a `cut` step frozen before it did carries none.
 
 A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
 in force on that date; a past plan's sessions are read from its `prescription` rows.

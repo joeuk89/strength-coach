@@ -3,7 +3,7 @@
 
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Literal, cast
 
 from coach.core.config import Units
@@ -18,7 +18,8 @@ from coach.core.units import from_kg
 
 type Json = dict[str, object]
 type DriftClass = Literal["structural", "load"]
-type RungKey = tuple[str, int | None]
+type RungSlot = int | Literal["off_ladder", "unrecorded"]
+type RungKey = tuple[str, RungSlot]
 
 WEIGHT_TOLERANCE_KG = 0.001
 RETIRED_PREFIX = "(unused) "
@@ -54,8 +55,16 @@ def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -
     return exercise_id
 
 
-def _origin(frozen: FrozenLine) -> RungKey:
-    return authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung
+def _rung_keys(exercise_id: str, rung: int | None) -> tuple[RungKey, ...]:
+    """Where a line on `rung` finds its authored line. With no rung it is off a ladder, or on one
+    but frozen before rungs were recorded."""
+    if rung is not None:
+        return ((exercise_id, rung),)
+    return ((exercise_id, "off_ladder"), (exercise_id, "unrecorded"))
+
+
+def found_at[T](found: Mapping[RungKey, T], exercise_id: str, rung: int | None) -> T | None:
+    return next((found[k] for k in _rung_keys(exercise_id, rung) if k in found), None)
 
 
 @dataclass(frozen=True)
@@ -73,9 +82,10 @@ class SessionRoutine:
 
 @dataclass(frozen=True)
 class RungLabels:
-    """A frozen rung's own label and the next rung's, if any. A frozen row records only the rung
-    its week prescribed, so that rung is the standing rung of both."""
+    """A frozen rung's index, its own label and the next rung's, if any. A frozen row records only
+    the rung its week prescribed, so that rung is the standing rung of both."""
 
+    index: int
     own: str
     next: str | None
 
@@ -90,18 +100,24 @@ class _Authored:
     labels: RungLabels | None = None
 
 
+def _origin(authored: Mapping[RungKey, _Authored], frozen: FrozenLine) -> _Authored | None:
+    return found_at(authored, authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung)
+
+
 def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Authored]:
-    """Every authored line keyed on its exercise and no rung, and a ladder line on each rung's
-    exercise and index too. A row frozen before rungs were recorded has no rung, and finds its
-    ladder rung by exercise: adopt then refused two rungs on one exercise."""
+    """Every line off a ladder keyed on its exercise, and a ladder line on each rung's exercise and
+    index. A row frozen before rungs were recorded has no rung, and finds its ladder rung by
+    exercise: adopt then refused two rungs on one exercise."""
     found: dict[RungKey, _Authored] = {}
     for position, line in enumerate(lines):
-        found[line.exercise, None] = _Authored(position, line)
         ladder = line.ladder
         if ladder is None:
+            found[line.exercise, "off_ladder"] = _Authored(position, line)
             continue
+        found[line.exercise, "unrecorded"] = _Authored(position, line)
         for index, rung in enumerate(ladder.rungs, start=1):
             labels = RungLabels(
+                index=index,
                 own=rung_label(line, ladder, index, standing=index, naming=naming),
                 next=(
                     rung_label(line, ladder, index + 1, standing=index, naming=naming)
@@ -111,15 +127,23 @@ def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Autho
             )
             shaped = _Authored(position, rung_line(line, ladder, index), labels)
             found[rung.exercise, index] = shaped
-            found[rung.exercise, None] = shaped
+            found[rung.exercise, "unrecorded"] = shaped
     return found
 
 
+RESHAPING_CAUSES = frozenset({"swap_exercise", "restate_sets"})
+
+
 def week_labels(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> RungLabels:
-    """A stepped-back week offers no climb, since the line returns to its standing rung next, and
-    names its rung by index alone, since the band cut the dose the label would print."""
+    """A stepped-back week offers no climb, since the line returns to its standing rung next. It
+    names its rung by index alone, since the band cut the dose the label would print, as does a
+    week whose exercise or sets an override changed."""
     to = stepped_back_to(steps)
-    return labels if to is None else RungLabels(own=to, next=None)
+    if to is not None:
+        return RungLabels(to, f"rung {to}", next=None)
+    if any(step.get("cause") in RESHAPING_CAUSES for step in steps):
+        return replace(labels, own=f"rung {labels.index}")
+    return labels
 
 
 def rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, RungLabels]:
@@ -137,12 +161,12 @@ def project_routine(session: SessionRoutine, template_ids: Mapping[str, str], un
     last = len(session.authored)
     lines = sorted(
         session.lines,
-        key=lambda f: a.position if (a := authored.get(_origin(f))) else last,
+        key=lambda f: a.position if (a := _origin(authored, f)) else last,
     )
     supersets: dict[str, int] = {}
     exercises: list[Json] = []
     for position, frozen in enumerate(lines):
-        found = authored.get(_origin(frozen))
+        found = _origin(authored, frozen)
         line = None if found is None else found.line
         notes = _notes(frozen, line, units)
         if found is not None and found.labels is not None:
@@ -371,7 +395,7 @@ def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
 def _rung_notes(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> list[str]:
     to = stepped_back_to(steps)
     if to is not None:
-        return [f"This week: {to}"]
+        return [f"This week: rung {to}"]
     return [] if labels.next is None else [f"{NEXT_LINE_PREFIX}{labels.next}"]
 
 

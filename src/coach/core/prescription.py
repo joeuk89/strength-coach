@@ -136,35 +136,51 @@ class PrescribeRequest:
 
 @dataclass(frozen=True)
 class Step:
-    """One derivation step: `(step, from, to, cause)`."""
+    """One derivation step: `(step, from, to, cause)`. `rung` is the rung a return band stepped
+    the week back to, on that `cut` step alone."""
 
     step: str
     from_: StepValue
     to: StepValue
     cause: str
+    rung: int | None = None
 
     def to_json(self) -> dict[str, object]:
         def value(v: StepValue) -> object:
             return list(v) if isinstance(v, tuple) else v
 
-        return {
+        found: dict[str, object] = {
             "step": self.step,
             "from": value(self.from_),
             "to": value(self.to),
             "cause": self.cause,
         }
+        if self.rung is not None:
+            found["rung"] = self.rung
+        return found
+
+
+LEGACY_RUNG_PREFIX = "rung "
 
 
 def rung_step_back(standing: int, week: int, cause: str) -> Step:
-    return Step("cut", f"rung {standing}", f"rung {week}", cause)
+    return Step("cut", f"rung {standing}", f"rung {week}", cause, rung=week)
 
 
-def stepped_back_to(steps: Iterable[Mapping[str, object]]) -> str | None:
-    """The rung a return band stepped this week back to. A step frozen when it named exercises reads
-    None, so its WeekPlan keeps projecting the note it pushed and raises no false drift."""
+def stepped_back_to(steps: Iterable[Mapping[str, object]]) -> int | None:
+    """The rung a return band stepped this week back to, as the `cut` step stored it. A step frozen
+    before it stored the rung reads it from the `rung <n>` text it wrote then; one frozen when it
+    named exercises reads None, so its WeekPlan keeps projecting the note it pushed."""
     for step in steps:
-        if step.get("step") == "cut" and str(step.get("from")).startswith("rung "):
-            return str(step.get("to"))
+        if step.get("step") != "cut":
+            continue
+        rung = step.get("rung")
+        if isinstance(rung, int) and not isinstance(rung, bool):
+            return rung
+        before, after = str(step.get("from")), str(step.get("to"))
+        index = after.removeprefix(LEGACY_RUNG_PREFIX)
+        if before.startswith(LEGACY_RUNG_PREFIX) and after != index and index.isdigit():
+            return int(index)
     return None
 
 

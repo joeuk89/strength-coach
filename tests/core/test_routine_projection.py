@@ -363,6 +363,21 @@ def test_a_stepped_back_rung_names_only_its_index_and_no_next_rung() -> None:
     ]
 
 
+def test_a_stepped_back_rung_reads_the_rung_the_step_stored_not_its_wording() -> None:
+    step = [
+        {
+            "step": "cut",
+            "from": "the third rung",
+            "to": "the first rung",
+            "cause": "return 43+, 52 days off",
+            "rung": 1,
+        }
+    ]
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, step, rung=1)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 4 s", "This week: rung 1"]
+
+
 def test_a_step_back_frozen_naming_exercises_keeps_the_note_it_pushed() -> None:
     step = [
         {
@@ -384,6 +399,27 @@ def test_a_row_frozen_before_rungs_were_recorded_finds_its_rung_by_exercise() ->
     frozen = FrozenLine("weighted_negative", TEMPO_GROUPS)
 
     assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]
+
+
+def test_a_row_off_the_ladder_finds_its_own_line_not_a_rung_on_its_exercise() -> None:
+    plain = Line("weighted_negative", TEMPO_SETS, 90, SchemeRef("hold"), cues="own cues")
+    session = SessionRoutine(
+        title="Pull",
+        folder_id="9000",
+        week_line="Week of 2026-11-02, rotation week A",
+        authored=(plain, TEMPO_LADDER),
+        lines=(
+            FrozenLine("weighted_negative", TEMPO_GROUPS),
+            FrozenLine("pull_up_negative", TEMPO_GROUPS, rung=1),
+        ),
+        names={"pull_up_negative": "Negative", "weighted_negative": "Weighted"},
+    )
+
+    body = cast(dict[str, Any], project_routine(session, LADDER_TEMPLATES, "lb"))
+
+    off_ladder = body["exercises"][0]
+    assert off_ladder["notes"].splitlines()[2:] == ["Cues: own cues"]
+    assert off_ladder["rest_seconds"] == 90
 
 
 def test_the_balance_ladder_note_names_the_next_rungs_exercise() -> None:
