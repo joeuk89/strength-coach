@@ -396,7 +396,7 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `rung_repeated` | line | a rung equal to the one before it in `exercise`, `sets` and `cues` |
 | `advance_criterion_off_rung` | line | `reps` on a duration rung, `duration_s` on a reps rung, or `manual` beside another key |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011); only when `coach.toml` has a `[hevy]` table (`validation.md`) |
-| `hevy_template_value_unknown` | line | under the same conditions, a template column present on the new exercise holds a value outside its registry (`hevy-exercise-types`, `hevy-equipment`, `hevy-muscle-groups`); one flag per bad column, none for an absent one |
+| `hevy_template_value_unknown` | line | under the same conditions, a template column present on the new exercise holds a value outside its registry (`hevy-exercise-types`, `hevy-equipment`, `hevy-muscle-groups`); one flag per exercise and bad column, none for an absent one |
 | `acknowledgement_unmatched` | version | one or more `[[acknowledge]]` keys adopt did not raise, all named in one flag |
 | `goal_missing` | version | no current Goal (`goals.md`) |
 | `priority_lifts_required` | version | `strength` emphasis under a Goal with no priority lifts (`goals.md`) |
@@ -670,7 +670,8 @@ A tempo ladder on one exercise, topped by a weighted rung (ADR 0025). The first 
 `negative_pull_up` at the same reps and differ only in their cues, which read lower for 4 s, 6 s
 and 8 s. Each rung's criterion is its reps at RPE, and the athlete's yes to `rung_met` carries the
 word that the tempo was held. The top rung is a load-bearing exercise, so it carries its own
-`start_load`, on the home dumbbell rack in the athlete's units.
+`start_load`, on the home dumbbell rack in the athlete's units. The example assumes a pound rack,
+where 10 is a row; on a kilogram rack the same Draft gives `start_load_off_rack` on rung 4.
 
 ```toml
 name = "Pull day around the negatives"

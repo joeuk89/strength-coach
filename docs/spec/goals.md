@@ -228,7 +228,7 @@ Compact summary by default; `--full` adds per-line history.
 | --- | --- |
 | Priority lifts | per lift: e1RM now, change over the closed block and over the last three, best load for reps, the scheme, stall streak and resets under the current scheme, cadence signal if any. The scheme, the date it took over, the stall streak and resets all read the lift's first line in a session that is not a `practice`; an `exercise_ladder` line's stall streak reads its standing rung's exercise. A lift on two such lines shows the first one's resets, per lift, under the current scheme. A lift only on a `practice` line shows no scheme, and a stall streak and resets of 0 |
 | Milestones | per milestone: distance (load, reps or ×BW to go) or the date reached |
-| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion since the rung's start, whether it is met and whether an acknowledgement holds the offer (`held`); the same rows as the check-in card's Ladders field |
+| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion that count on it (from the day after its `ladder_rung` Decision, or from adoption on the first rung, `prescription.md`), whether it is met and whether an acknowledgement holds the offer (`held`); the same rows as the check-in card's Ladders field |
 | Dose | per muscle and per priority lift: hard sets achieved against target, by week of the block |
 | Adherence | core sessions by tier, misses by tag |
 | Phase | kind, target rate, 14-day bodyweight trend against it with `rate_units` naming the unit (`pct_bw_per_week`), the `until` condition and whether it is met |

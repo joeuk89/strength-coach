@@ -118,10 +118,10 @@ decision. Each item is tested with values, never with a sentence.
 - [ ] Per routine in order: PUT, GET back, diff by position (weight within 0.001 kg, absent == null, swapped template = structural); a differing read-back stops the run, logs `verified: false`, exits 1; later routines `not_reached`; a re-run after success sends nothing.
 - [ ] Guards that survive the single-plan-record design: no approval; span ended; an unresolved `block` flag; app edit since cache; read-back differs; invalid reuse choice; retire target missing from cache.
 - [ ] Routine body: `weight_kg` is the load's `hevy_kg` only, none for null or unweighted bodyweight; a line without a template id is an error; no nulls, no routine-level notes.
-- [ ] Routine note per exercise: absolute `Target:` (equal sets collapse to `N×reps`, rep-out `5+ (stop at RPE 9)`, `choose the load` once), `Focus:`/`Cues:`; the first exercise carries the week line because Hevy drops routine notes on PUT.
+- [ ] Routine note per exercise: absolute `Target:` (equal sets collapse to `N×reps`, rep-out `5+ (stop at RPE 9)`, `choose the load` once), `Focus:`/`Cues:`, a ladder line's `Next:` naming the next rung; the first exercise carries the week line because Hevy drops routine notes on PUT.
 - [ ] One routine per session: create a missing routine, reuse a free spare, never take a spare mapped by another session; ids recorded only after a verified write; retire = rename `(unused)` keeping exercises, never DELETE, only after the span ended and no live plan carries it.
 - [ ] Preflight before approval (unresolved templates, unmapped sessions, orphans); a dry run of every writing verb writes nothing and matches the real run.
-- [ ] Drift: a routine whose cache differs from the plan in force warns; the card tells structural app edits (keep-or-replace) from load edits (fact) and flags a plan never written.
+- [ ] Drift: a routine whose cache differs from the plan in force warns, except where only a note's `Next:` line differs (the engine derives it; a push's read-back still compares it); the card tells structural app edits (keep-or-replace) from load edits (fact) and flags a plan never written.
 - [ ] Fixture transport refuses every write; recorded fixtures use GETs only and are anonymised.
 
 ### Core loop: history import and corrections

@@ -62,8 +62,10 @@ reused, a folder is forever.
   (amended 2026-10-31). It flips a Routine map row to `missing` when Hevy no longer returns its
   id, and raises a
   drift warning per routine, keyed (routine id, structural or load), when a live routine differs
-  from the stored projection of the plan in force. Drift resolves only by a typed override on the
-  next WeekPlan or by the next push overwriting it. The engine never adopts an app edit.
+  from the stored projection of the plan in force. The comparison ignores an exercise note's
+  `Next:` line on both sides, since the engine derives it, so an edit to that line alone is not
+  drift; a push's read-back verify still compares it (amended 2026-11-27). Drift resolves only
+  by a typed override on the next WeekPlan or by the next push overwriting it. The engine never adopts an app edit.
 
 ## Routines and folders
 
@@ -109,8 +111,9 @@ reused, a folder is forever.
   `unverified`, so a re-run re-PUTs only unverified routines and those whose stored projection
   differs from live, and sends nothing when all match. A second POST never duplicates a routine.
 - Routine body rules and the note format carry from the parity checklist: `weight_kg` is the
-  load's Hevy kg only; `Target:`, `Focus:`, `Cues:` per exercise; the week line sits on the first
-  exercise because Hevy drops routine-level notes on PUT.
+  load's Hevy kg only; `Target:`, `Focus:`, `Cues:` per exercise, and a ladder line's `Next:`
+  naming the next rung; the week line sits on the first exercise because Hevy drops
+  routine-level notes on PUT.
 
 ## Write audit
 
