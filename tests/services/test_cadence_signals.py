@@ -1,9 +1,18 @@
 import datetime
 
-from support.blocks import BENCH_LINE, BOUNDARY, PULL_UP_LINE, two_closed_blocks
+from support.blocks import (
+    BENCH_LINE,
+    BOUNDARY,
+    PULL_UP_LINE,
+    TOP_SETS,
+    WEEKS,
+    two_closed_blocks,
+)
 from support.check_in_cards import opened
 from support.clock import FixedClock, at
+from support.closed_weeks import monday
 from support.kit_fixtures import kit_files
+from support.plans import a_frozen_prescription
 from support.program_drafts import a_draft, a_ladder_line, a_line, a_rung, a_session, toml
 from support.programs import a_config
 
@@ -11,6 +20,7 @@ from coach.core.flag import Flag
 from coach.services.program import adopt
 from coach.services.record import record
 from coach.services.status import status
+from coach.store import week_plans
 from coach.store.connection import Connection
 
 
@@ -221,3 +231,67 @@ def test_first_rung_exposures_before_its_adoption_raise_no_cadence_slow() -> Non
     )
 
     assert "pull_up" not in signals_at_check_in(conn)
+
+
+def test_a_lift_whose_session_was_renamed_between_blocks_still_raises_cadence_slow() -> None:
+    conn = two_closed_blocks()
+    adopt(
+        conn,
+        toml(a_draft(a_session("upper", BENCH_LINE, PULL_UP_LINE), kind="amend", because="name")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY - datetime.timedelta(days=1))),
+    )
+
+    found = signals_at_check_in(conn)
+
+    assert (found["bb_bench_press"].code, found["bb_bench_press"].params["scheme"]) == (
+        "cadence_slow",
+        "top_backoff",
+    )
+
+
+RISING_BENCH = (100, 105, 105, 110, 115, 115)
+CAPPED: list[dict[str, object]] = [
+    {"step": "scheme", "from": 100, "to": 102.5, "cause": "one_row_cap"}
+]
+BENCH_DRILL = a_line(
+    "bb_bench_press", sets=[{"count": 3, "reps": 5}], scheme={"name": "hold"}, start_load=60
+)
+
+
+def bench_drilled_beside_push(*, push_capped: bool, drill_capped: bool) -> Connection:
+    """A rising bench on `push`'s top_backoff line and on the practice `drill`, each week's
+    frozen rows capped as asked."""
+    conn = two_closed_blocks(
+        bench_tops=RISING_BENCH, steps=CAPPED if push_capped else (), drill_line=BENCH_DRILL
+    )
+    for week in range(WEEKS):
+        plan = week_plans.in_force(conn, monday(week))
+        assert plan is not None
+        a_frozen_prescription(
+            conn,
+            str(plan["id"]),
+            "drill",
+            monday(week),
+            "bb_bench_press",
+            set_groups=[{"type": "working", **group} for group in TOP_SETS],
+            change="held",
+            steps=CAPPED if drill_capped else (),
+        )
+    return conn
+
+
+def test_a_practice_line_capped_every_week_leaves_an_uncapped_lift_with_no_cadence_fast() -> None:
+    conn = bench_drilled_beside_push(push_capped=False, drill_capped=True)
+
+    assert "bb_bench_press" not in signals_at_check_in(conn)
+
+
+def test_a_lift_capped_every_week_beside_an_uncapped_practice_line_raises_cadence_fast() -> None:
+    conn = bench_drilled_beside_push(push_capped=True, drill_capped=False)
+
+    fast = signals_at_check_in(conn)["bb_bench_press"]
+
+    assert (fast.code, fast.params["metric"]) == ("cadence_fast", {"capped": 2})
