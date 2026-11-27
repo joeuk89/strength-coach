@@ -262,7 +262,8 @@ def dose(closing: Sequence[ClosedWeek], weeks: Sequence[ClosedWeek]) -> CardFiel
 @dataclass(frozen=True)
 class LiftRead:
     """A lift trained in the window: its last top set and its e1RM before and after the window,
-    in athlete units."""
+    in athlete units. A timed lift adds the seconds of each working set of that exposure and
+    the seconds its line prescribed."""
 
     exercise_id: str
     priority: bool
@@ -270,6 +271,12 @@ class LiftRead:
     top_set: tuple[float | None, int | None, float | None]
     e1rm: float | None = None
     e1rm_before: float | None = None
+    seconds: tuple[int | None, ...] = ()
+    prescribed_seconds: int | None = None
+
+    @property
+    def timed(self) -> bool:
+        return any(s is not None for s in self.seconds)
 
     @property
     def moved(self) -> bool:
@@ -293,17 +300,22 @@ def lifts(reads: Sequence[LiftRead], *, emphasis: str) -> CardField | None:
         asks.append(Ask("pump_and_soreness"))
     elif emphasis == "maintenance":
         asks.append(Ask("kept_lifts_held"))
-    rows = [
-        {
-            "exercise": r.exercise_id,
-            "priority": r.priority,
-            "top_set": {"load": r.top_set[0], "reps": r.top_set[1], "rpe": r.top_set[2]},
-            "e1rm": r.e1rm,
-            "e1rm_before": r.e1rm_before,
-        }
-        for r in ordered
-    ]
+    rows = [_lift_row(r) for r in ordered]
     return CardField("lifts", {"emphasis": emphasis, "rows": rows}, tuple(asks))
+
+
+def _lift_row(read: LiftRead) -> Facts:
+    row: dict[str, object] = {
+        "exercise": read.exercise_id,
+        "priority": read.priority,
+        "top_set": {"load": read.top_set[0], "reps": read.top_set[1], "rpe": read.top_set[2]},
+        "e1rm": read.e1rm,
+        "e1rm_before": read.e1rm_before,
+    }
+    if read.timed:
+        row["seconds"] = list(read.seconds)
+        row["prescribed_seconds"] = read.prescribed_seconds
+    return row
 
 
 def ladders(reads: Sequence[LadderRead]) -> CardField | None:

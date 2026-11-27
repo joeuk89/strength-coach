@@ -94,6 +94,16 @@ def test_priority_lifts_lead_then_compounds_and_are_asked_how_the_top_set_felt()
     assert found.asks == (Ask("top_set_feel", "exercise:bb_bench_press"),)
 
 
+def test_a_timed_lift_unmatched_to_a_session_shows_its_seconds_and_no_prescription() -> None:
+    hang = card.LiftRead("dead_hang", False, False, (None, None, None), seconds=(25, 21))
+
+    found = card.lifts([hang], emphasis="strength")
+
+    assert found is not None
+    (row,) = cast(list[dict[str, object]], found.facts["rows"])
+    assert (row["seconds"], row["prescribed_seconds"]) == ([25, 21], None)
+
+
 def test_hypertrophy_asks_reps_and_rir_on_the_lines_that_moved_and_a_pump_read() -> None:
     found = card.lifts([CURL, SQUAT], emphasis="hypertrophy")
 

@@ -231,9 +231,25 @@ def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.Lif
                 (top.load.amount if top.load else None, top.reps, top.rpe),
                 after.load.amount if after else None,
                 before.load.amount if before else None,
+                tuple(s.duration_s for s in exposure.working),
+                _prescribed_seconds(log, exposure),
             )
         )
     return reads
+
+
+def _prescribed_seconds(log: WeekLog, exposure: Exposure) -> int | None:
+    """The longest set the line prescribed in the session the exposure's workout matched."""
+    monday = log.week_of(exposure.workout_id)
+    if not log.redesigns or monday < week_monday(log.redesigns[0]):
+        return None
+    for outcome in log.week(monday).sessions:
+        if exposure.workout_id not in outcome.workout_ids:
+            continue
+        for line in outcome.lines:
+            if line.exercise == exposure.exercise_id:
+                return max((t.seconds for t in line.targets if t.seconds is not None), default=None)
+    return None
 
 
 def _niggle_reads(conn: Connection) -> list[card.NiggleRead]:

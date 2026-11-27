@@ -220,6 +220,9 @@ class WeekLog:
     def workout(self, workout_id: str) -> WeekWorkout:
         return self._by_id[workout_id]
 
+    def week_of(self, workout_id: str) -> datetime.date:
+        return self._week_of(self.workout(workout_id))
+
     @cached_property
     def matched_exposures(self) -> tuple[Exposure, ...]:
         """Every Exposure, each carrying its workout's Match."""
