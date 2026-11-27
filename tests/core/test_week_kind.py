@@ -2,12 +2,12 @@ import datetime
 
 from support.exposures import an_exposure
 
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.kind import is_return_week, week_kind
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import (
     PlannedWork,
     SessionOutcome,
-    TargetSet,
     session_outcome,
 )
 from coach.core.prescription import PlannedSession, StatusSpan

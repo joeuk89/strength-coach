@@ -5,6 +5,13 @@ and "The session gate")."""
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from coach.core.closed_week.against import (
+    AgainstPrescription,
+    LineAgainst,
+    TargetSet,
+    against,
+    lines_against,
+)
 from coach.core.closed_week.match import PlannedRef, WeekWorkout
 from coach.core.exposure import ExposureSet
 from coach.core.prescription import PlannedSession, StatusSpan
@@ -18,21 +25,10 @@ ROUNDING = 1e-9
 
 
 @dataclass(frozen=True)
-class TargetSet:
-    """One prescribed working set: the bottom of its reps, its RPE, the top of its reps and its
-    load in athlete units."""
-
-    reps: int | None = None
-    rpe: float | None = None
-    top: int | None = None
-    load: float | None = None
-
-
-@dataclass(frozen=True)
 class PlannedWork:
-    """A planned session with its prescribed working sets by exercise; a `hold` line is not
-    among them. A dropped core session stays in the week as a Miss and takes no workout.
-    `returned` names the lines that took a return band."""
+    """A planned session with its prescribed working sets by exercise in plan order; `held`
+    names the `hold` lines among them. A dropped core session stays in the week as a Miss and
+    takes no workout. `returned` names the lines that took a return band."""
 
     session: PlannedSession
     targets: Mapping[str, tuple[TargetSet, ...]] = field(
@@ -40,6 +36,12 @@ class PlannedWork:
     )
     dropped: bool = False
     returned: frozenset[str] = frozenset()
+    held: frozenset[str] = frozenset()
+
+    @property
+    def scheme_targets(self) -> Mapping[str, tuple[TargetSet, ...]]:
+        """The lines a scheme moves: every line but a `hold` one."""
+        return {e: sets for e, sets in self.targets.items() if e not in self.held}
 
     @property
     def ref(self) -> PlannedRef:
@@ -47,14 +49,7 @@ class PlannedWork:
 
     @property
     def prescribed_sets(self) -> int:
-        return sum(len(sets) for sets in self.targets.values())
-
-
-@dataclass(frozen=True)
-class AgainstPrescription:
-    reps_missed: int = 0
-    effort_off: int = 0
-    rpe_missing: int = 0
+        return sum(len(sets) for sets in self.scheme_targets.values())
 
 
 @dataclass(frozen=True)
@@ -65,13 +60,20 @@ class SessionOutcome:
     in_adherence: bool
     passed: bool | None
     workout_id: str | None = None
-    against: AgainstPrescription | None = None
+    lines: tuple[LineAgainst, ...] = ()
     cancelled: bool = False
     rested: bool = False
 
     @property
     def session(self) -> PlannedSession:
         return self.work.session
+
+    @property
+    def against(self) -> AgainstPrescription | None:
+        """The counts the card shows: none for an untrained or coach-led session."""
+        if self.workout_id is None or self.session.kind == "coach_led":
+            return None
+        return against(self.lines)
 
 
 def session_outcome(
@@ -89,7 +91,8 @@ def session_outcome(
     core = session.tier == "core" and not excluded
     coach_led = session.kind == "coach_led"
     in_gate = core and session.kind in GATE_KINDS and (coach_led or work.prescribed_sets > 0)
-    pairs = _pairs(work, workout)
+    lines = lines_against(work.targets, work.held, workout)
+    pairs = [pair for line in lines if not line.hold for pair in line.pairs]
     passed: bool | None = None
     if in_gate:
         passed = trained if coach_led else trained and _passes(work, pairs)
@@ -100,45 +103,18 @@ def session_outcome(
         core,
         passed,
         None if workout is None else workout.id,
-        _against(pairs) if workout is not None and not coach_led else None,
+        lines,
         cancelled,
         on_span and not trained,
     )
 
 
-def _pairs(work: PlannedWork, workout: WeekWorkout | None) -> list[tuple[ExposureSet, TargetSet]]:
-    if workout is None:
-        return []
-    logged = {e.exercise_id: e.working for e in workout.exposures}
-    return [
-        pair
-        for exercise, targets in work.targets.items()
-        for pair in zip(logged.get(exercise, ()), targets, strict=False)
-    ]
-
-
 def _passes(work: PlannedWork, pairs: list[tuple[ExposureSet, TargetSet]]) -> bool:
     if len(pairs) < GATE_SET_SHARE * work.prescribed_sets - ROUNDING:
         return False
-    prescribed = [t.rpe for sets in work.targets.values() for t in sets if t.rpe is not None]
+    prescribed = [t.rpe for sets in work.scheme_targets.values() for t in sets if t.rpe is not None]
     rated = [(s.rpe if s.rpe is not None else t.rpe) for s, t in pairs if t.rpe is not None]
     if not prescribed or not rated:
         return True
     shortfall = sum(prescribed) / len(prescribed) - sum(rated) / len(rated)
     return shortfall <= GATE_RPE_SLACK + ROUNDING
-
-
-def _against(pairs: list[tuple[ExposureSet, TargetSet]]) -> AgainstPrescription:
-    return AgainstPrescription(
-        reps_missed=sum(
-            1 for s, t in pairs if t.reps is not None and s.reps is not None and s.reps < t.reps
-        ),
-        effort_off=sum(
-            1
-            for s, t in pairs
-            if s.rpe is not None
-            and t.rpe is not None
-            and abs(s.rpe - t.rpe) >= GATE_RPE_SLACK - ROUNDING
-        ),
-        rpe_missing=sum(1 for s, _ in pairs if s.rpe is None),
-    )

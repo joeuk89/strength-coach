@@ -135,7 +135,7 @@ class Fatigue:
                     continue
                 work = outcome.work
                 for exposure in self.log.workout(outcome.workout_id).exposures:
-                    targets = work.targets.get(exposure.exercise_id)
+                    targets = work.scheme_targets.get(exposure.exercise_id)
                     if (
                         not targets
                         or exposure.date > through

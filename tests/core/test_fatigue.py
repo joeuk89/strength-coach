@@ -1,7 +1,7 @@
 import datetime
 
 from coach.core.check_in import Window
-from coach.core.closed_week.sessions import TargetSet
+from coach.core.closed_week.against import TargetSet
 from coach.core.cut import LightShape
 from coach.core.exposure import ExposureSet
 from coach.core.fatigue import (
