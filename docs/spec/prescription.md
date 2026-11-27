@@ -151,8 +151,10 @@ Notes:
   workout that earned the climb is often logged that day, so a session trained on the new rung on
   that date does not count. From adoption they count on the date itself, since no earlier rung
   earned the first. The load, the criterion and `stall_streak` read only the standing rung's
-  exercise's exposures that count, and exposures on another rung's exercise, or on its own before
-  they count, count for nothing, so two rungs may share an exercise (ADR 0025). The line's key
+  exercise's exposures that count: ordinary ones (light-week and return-band exposures skipped)
+  from the rung's start, in the session or unmatched. Exposures on another rung's exercise, on
+  its own before they count, or from a week a return band stepped the line back, count for
+  nothing, so two rungs may share an exercise (ADR 0025). The line's key
   stays its first rung's exercise for every flag and override; the prescription and history
   matching carry the standing rung's. A
   light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
@@ -270,6 +272,11 @@ first) and prescribes the earlier rung's exercise and sets for the return weeks 
 set delta and RPE cap, no Decision written, its days off read across every rung's exercise; `wave_531` multiplies the training max by the band factor for the
 return week only, with no rep-out set. A return line whose band, load, set delta and RPE cap do
 not all derive together (an override fought the band) is `return_band_disagrees`.
+
+A load-bearing rung a return band steps back to reads no exposure, so it opens on its own
+`start_load` (the line's on the first rung) with the band's load factor; its log never anchors
+the standing rung, which returns at the load it held before the layoff (`program.md`, **Start
+loads**).
 
 A week an `exercise_ladder` line steps back offers no climb, since the line returns to its standing
 rung next: it raises no `rung_met` or `ladder_top`, and they return with the rung. The approval
