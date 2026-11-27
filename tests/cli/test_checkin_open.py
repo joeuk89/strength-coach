@@ -74,3 +74,18 @@ def test_a_readiness_other_than_poor_ok_or_good_is_exit_1(instance: Path) -> Non
     run = coach("checkin", "open", "--readiness", "tired")
 
     assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")
+
+
+def test_the_sleep_ask_carries_its_threshold_and_the_nights_it_wants(instance: Path) -> None:
+    run = coach("checkin", "open", "--date", "2026-10-30")
+
+    sleep = next(f for f in run.envelope["result"]["card"] if f["field"] == "sleep")
+    assert sleep["asks"] == [
+        {
+            "ask": "sleep_nights",
+            "record": "sleep_night",
+            "under_hours": 7,
+            "nights": [f"2026-10-{d}" for d in range(23, 30)],
+            "give": "night and hours for every night under 7 hours; other nights optional",
+        }
+    ]
