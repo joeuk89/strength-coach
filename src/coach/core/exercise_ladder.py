@@ -333,8 +333,6 @@ def _qualifying_run(
 def _counting(
     exposures: Iterable[Exposure], standing: StandingRung, session_id: str
 ) -> tuple[Exposure, ...]:
-    """The exposures that count on the standing rung: ordinary, in the line's session or
-    unmatched, from the rung's start."""
     return ordinary(standing.counted(e for e in exposures if e.session_id in (None, session_id)))
 
 
