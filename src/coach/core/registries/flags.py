@@ -471,7 +471,7 @@ OUTSIDE_WARNINGS = (
     outside_warning(
         "phase_trend_off",
         ("instance",),
-        ("phase_id", "target_rate", "observed_rate", "window"),
+        ("phase_id", "target_rate", "observed_rate", "rate_units", "window"),
         ("rn:training-level §4",),
     ),
     outside_warning(

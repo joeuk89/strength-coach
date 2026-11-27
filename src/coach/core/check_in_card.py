@@ -21,6 +21,7 @@ from coach.core.fatigue import (
     short_sleep_week,
 )
 from coach.core.flag import Flag
+from coach.core.phase_trend import RATE_UNITS
 
 FIELDS = (
     "header",
@@ -390,6 +391,7 @@ def weight_phase(
             "kind": phase.kind,
             "target_rate": phase.target_rate,
             "observed_rate": phase.observed_rate,
+            "rate_units": RATE_UNITS,
             "until": phase.until,
         }
     return CardField("weight_phase", facts, () if weigh_ins else (Ask("weigh_in"),))

@@ -53,6 +53,7 @@ def test_a_rate_outside_the_band_after_28_days_of_weigh_ins_raises_phase_trend_o
         "phase_id": "ph-0001",
         "target_rate": -0.5,
         "observed_rate": 0.0,
+        "rate_units": "pct_bw_per_week",
         "window": ["2026-11-01", "2026-11-29"],
     }
 

@@ -387,3 +387,16 @@ def test_the_errors_registry_points_to_the_flags_registry_for_adopt_violations()
 
 def test_a_registry_without_a_note_carries_no_note() -> None:
     assert "note" not in run_coach("schema", "--registry", "reasons").envelope["result"]
+
+
+def test_the_flags_registry_lists_the_rate_units_beside_phase_trend_offs_rates() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["phase_trend_off"]["params"] == [
+        "phase_id",
+        "target_rate",
+        "observed_rate",
+        "rate_units",
+        "window",
+    ]

@@ -62,3 +62,20 @@ def test_the_verb_keeps_exercise_ids_where_the_page_shows_names(instance: Path) 
         "pull_up",
     ]
     assert run.envelope["warnings"][0]["message"].startswith("pull_up on double_progression")
+
+
+def test_the_phase_names_its_rate_units(instance: Path) -> None:
+    phase = coach("progress").envelope["result"]["phase"]
+
+    assert (phase["kind"], phase["target_rate"], phase["rate_units"]) == (
+        "maintenance",
+        0.0,
+        "pct_bw_per_week",
+    )
+
+
+def test_the_schema_lists_the_phase_rate_units(instance: Path) -> None:
+    output = coach("schema", "progress").envelope["result"]["output"]
+
+    phase = output["properties"]["phase"]
+    assert phase["properties"]["rate_units"] == {"const": "pct_bw_per_week"}
