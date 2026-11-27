@@ -51,12 +51,15 @@ def close_week(facts: WeekFacts) -> ClosedWeek:
     matches = week_matches(
         facts.planned, facts.workouts, routines=facts.routines, claims=facts.claims
     )
-    by_workout = {w.id: w for w in facts.workouts}
-    taken = {(s.date, s.session_id): by_workout[w] for w, s in matches.items()}
+    taken: dict[PlannedRef, list[WeekWorkout]] = {}
+    for workout in facts.workouts:
+        session = matches.get(workout.id)
+        if session is not None:
+            taken.setdefault((session.date, session.session_id), []).append(workout)
     sessions = tuple(
         session_outcome(
             work,
-            workout=taken.get(work.ref),
+            workouts=taken.get(work.ref, ()),
             trained_unlogged=work.ref in facts.trained_unlogged,
             cancelled=work.ref in facts.cancelled,
             spans=facts.spans,
@@ -88,8 +91,14 @@ def week_matches(
     claims: Mapping[str, PlannedRef],
 ) -> dict[str, PlannedSession]:
     """A dropped session stays in the week as a Miss but takes no workout."""
-    matchable = [work.session for work in planned if not work.dropped]
-    return match_week(matchable, workouts, routines=routines, claims=claims)
+    matchable = [work for work in planned if not work.dropped]
+    return match_week(
+        [work.session for work in matchable],
+        workouts,
+        routines=routines,
+        claims=claims,
+        lines={work.ref: work.lines for work in matchable},
+    )
 
 
 def _dosed_exposures(facts: WeekFacts, matches: Mapping[str, PlannedSession]) -> list[Exposure]:

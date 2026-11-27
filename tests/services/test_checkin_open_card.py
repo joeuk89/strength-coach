@@ -52,7 +52,7 @@ def test_a_matched_session_is_prefilled_and_only_the_miss_is_asked_a_tag() -> No
     sessions = field_of(opened(conn), "sessions")
 
     lower, push = cast(list[dict[str, object]], sessions.facts["core"])
-    assert (lower["state"], lower["workout"], lower["session_rpe"]) == ("matched", "h-1", 8.0)
+    assert (lower["state"], lower["workouts"], lower["session_rpe"]) == ("matched", ["h-1"], 8.0)
     assert push["state"] == "missed"
     assert sessions.asks == (Ask("miss_tag", "planned_session:2026-11-04/push"),)
 

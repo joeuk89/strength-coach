@@ -1,9 +1,10 @@
 import datetime
 from collections.abc import Mapping
+from dataclasses import replace
 
 from support.exposures import an_exposure
 
-from coach.core.closed_week.against import TargetSet
+from coach.core.closed_week.against import AgainstPrescription, TargetSet
 from coach.core.closed_week.close import WeekFacts, close_week
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import PlannedWork
@@ -20,7 +21,12 @@ def planned(
 ) -> PlannedWork:
     on = MONDAY + datetime.timedelta(days=n)
     targets = {"bb_bench_press": SETS} if kind == "lifting" else {}
-    return PlannedWork(PlannedSession(session_id, on, "home", kind, ()), targets, dropped=dropped)
+    return PlannedWork(
+        PlannedSession(session_id, on, "home", kind, ()),
+        targets,
+        dropped=dropped,
+        lines=frozenset({"bb_bench_press"}),
+    )
 
 
 def bench(id_: str, n: int) -> WeekWorkout:
@@ -41,7 +47,7 @@ def test_matched_sessions_that_pass_the_gate_make_the_week_hard_with_its_dose() 
     week = close_week(facts)
 
     assert week.kind == "hard"
-    assert [s.workout_id for s in week.sessions] == ["h-1", "h-2"]
+    assert [s.workout_ids for s in week.sessions] == [("h-1",), ("h-2",)]
     assert week.dose == {"chest": 6, "triceps": 3}
     assert week.dose_target == 10
 
@@ -51,7 +57,7 @@ def test_a_dropped_core_session_is_a_miss_and_takes_no_workout() -> None:
 
     [session] = close_week(facts).sessions
 
-    assert (session.trained, session.in_adherence, session.workout_id) == (False, True, None)
+    assert (session.trained, session.in_adherence, session.workout_ids) == (False, True, ())
 
 
 def test_a_conditioning_or_practice_workout_delivers_no_dose() -> None:
@@ -93,7 +99,7 @@ def test_a_manual_coach_led_workout_on_a_wednesday_trains_its_standing_session()
 
     week = close_week(facts)
 
-    assert [(s.trained, s.workout_id) for s in week.sessions] == [(True, "m-1")]
+    assert [(s.trained, s.workout_ids) for s in week.sessions] == [(True, ("m-1",))]
     assert week.kind == "hard"
 
 
@@ -103,7 +109,10 @@ def test_a_workout_on_a_weekly_sessions_day_trains_it_and_not_an_earlier_standin
 
     week = close_week(facts)
 
-    assert [(s.trained, s.workout_id) for s in week.sessions] == [(False, None), (True, "h-1")]
+    assert [(s.trained, s.workout_ids) for s in week.sessions] == [
+        (False, ()),
+        (True, ("h-1",)),
+    ]
     assert week.dose == {"chest": 3, "triceps": 1.5}
 
 
@@ -181,3 +190,28 @@ def test_a_lift_with_no_hard_sets_reads_0_and_a_coach_led_estimate_adds_nothing(
     )
 
     assert close_week(facts).lift_dose == {"pull_up": 0}
+
+
+def test_a_session_split_across_two_workouts_is_read_against_both() -> None:
+    push = PlannedWork(
+        PlannedSession("push", MONDAY, "home", "lifting", ()),
+        {"bb_bench_press": SETS, "bb_row": SETS},
+        lines=frozenset({"bb_bench_press", "bb_row"}),
+    )
+    rows = an_exposure(
+        MONDAY.isoformat(), *[(50, 5, 8)] * 3, workout_id="h-2", exercise_id="bb_row"
+    )
+    facts = WeekFacts(
+        MONDAY,
+        (push,),
+        (
+            WeekWorkout("h-2", MONDAY, (rows,), started="15:00"),
+            replace(bench("h-1", 0), started="07:00"),
+        ),
+    )
+
+    [session] = close_week(facts).sessions
+
+    assert session.workout_ids == ("h-1", "h-2")
+    assert session.against == AgainstPrescription(reps_missed=3)
+    assert session.passed is True

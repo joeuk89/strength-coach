@@ -2,7 +2,7 @@
 against-the-prescription read (docs/spec/week.md, "The session gate"; docs/spec/verbs.md,
 "Read views")."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -107,11 +107,16 @@ def _reps_short(logged: ExposureSet, target: TargetSet | None) -> int | None:
 def lines_against(
     targets: Mapping[str, tuple[TargetSet, ...]],
     held: frozenset[str],
-    workout: WeekWorkout | None,
+    workouts: Sequence[WeekWorkout],
 ) -> tuple[LineAgainst, ...]:
     """Every prescribed line in plan order, `hold` lines among them, then every exercise the
-    workout logged that no line prescribes."""
-    logged = {} if workout is None else {e.exercise_id: e.working for e in workout.exposures}
+    workouts logged that no line prescribes. An exercise logged in more than one workout takes
+    their working sets in workout order."""
+    found: dict[str, list[ExposureSet]] = {}
+    for workout in workouts:
+        for exposure in workout.exposures:
+            found.setdefault(exposure.exercise_id, []).extend(exposure.working)
+    logged = {exercise: tuple(sets) for exercise, sets in found.items()}
     prescribed = tuple(
         LineAgainst(
             exercise,

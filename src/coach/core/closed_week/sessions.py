@@ -14,7 +14,7 @@ from coach.core.closed_week.against import (
     against,
     lines_against,
 )
-from coach.core.closed_week.match import PlannedRef, WeekWorkout
+from coach.core.closed_week.match import PlannedRef, WeekWorkout, in_start_order
 from coach.core.exposure import ExposureSet
 from coach.core.prescription import PlannedSession, StatusSpan
 
@@ -27,7 +27,8 @@ GATE_SET_SHARE = 2 / 3
 class PlannedWork:
     """A planned session with its prescribed working sets by exercise in plan order; `held`
     names the `hold` lines among them. A dropped core session stays in the week as a Miss and
-    takes no workout. `returned` names the lines that took a return band."""
+    takes no workout. `returned` names the lines that took a return band; `lines` every frozen
+    exercise of the session, `hold` lines included, which Match reads."""
 
     session: PlannedSession
     targets: Mapping[str, tuple[TargetSet, ...]] = field(
@@ -36,6 +37,7 @@ class PlannedWork:
     dropped: bool = False
     returned: frozenset[str] = frozenset()
     held: frozenset[str] = frozenset()
+    lines: frozenset[str] = frozenset()
 
     @property
     def scheme_targets(self) -> Mapping[str, tuple[TargetSet, ...]]:
@@ -53,12 +55,14 @@ class PlannedWork:
 
 @dataclass(frozen=True)
 class SessionOutcome:
+    """`workouts` are every workout matched to the session, in start-time order."""
+
     work: PlannedWork
     trained: bool
     in_gate: bool
     in_adherence: bool
     passed: bool | None
-    workout_id: str | None = None
+    workouts: tuple[WeekWorkout, ...] = ()
     lines: tuple[LineAgainst, ...] = ()
     cancelled: bool = False
     rested: bool = False
@@ -68,9 +72,13 @@ class SessionOutcome:
         return self.work.session
 
     @property
+    def workout_ids(self) -> tuple[str, ...]:
+        return tuple(w.id for w in self.workouts)
+
+    @property
     def against(self) -> AgainstPrescription | None:
         """The counts the card shows: none for an untrained or coach-led session."""
-        if self.workout_id is None or self.session.kind == "coach_led":
+        if not self.workouts or self.session.kind == "coach_led":
             return None
         return against(self.lines)
 
@@ -78,19 +86,20 @@ class SessionOutcome:
 def session_outcome(
     work: PlannedWork,
     *,
-    workout: WeekWorkout | None,
+    workouts: Sequence[WeekWorkout] = (),
     trained_unlogged: bool = False,
     cancelled: bool = False,
     spans: Sequence[StatusSpan] = (),
 ) -> SessionOutcome:
     session = work.session
-    trained = workout is not None or trained_unlogged
+    ordered = in_start_order(workouts)
+    trained = bool(ordered) or trained_unlogged
     on_span = any(span.covers(session.date) for span in spans)
     excluded = cancelled or (on_span and not trained)
     core = session.tier == "core" and not excluded
     coach_led = session.kind == "coach_led"
     in_gate = core and session.kind in GATE_KINDS and (coach_led or work.prescribed_sets > 0)
-    lines = lines_against(work.targets, work.held, workout)
+    lines = lines_against(work.targets, work.held, ordered)
     pairs = [pair for line in lines if not line.hold for pair in line.pairs]
     passed: bool | None = None
     if in_gate:
@@ -101,7 +110,7 @@ def session_outcome(
         in_gate,
         core,
         passed,
-        None if workout is None else workout.id,
+        ordered,
         lines,
         cancelled,
         on_span and not trained,

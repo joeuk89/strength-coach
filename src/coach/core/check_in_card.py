@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from coach.core.check_in import Window
 from coach.core.closed_week.adherence import Adherence
 from coach.core.closed_week.dose import lift_trailing_mean, trailing_mean
-from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.exercise_ladder import LadderRead
@@ -90,7 +89,6 @@ class SessionRead:
     week, which is what makes an untrained session a Miss rather than still to come."""
 
     outcome: SessionOutcome
-    workout: WeekWorkout | None
     closes: bool
 
     @property
@@ -103,7 +101,7 @@ class SessionRead:
         outcome = self.outcome
         if outcome.cancelled:
             return "cancelled"
-        if self.workout is not None:
+        if outcome.workouts:
             return "matched"
         if outcome.trained:
             return "trained_unlogged"
@@ -112,14 +110,20 @@ class SessionRead:
         return "missed" if self.closes else "to_come"
 
     @property
+    def minutes(self) -> int | None:
+        known = [w.minutes for w in self.outcome.workouts if w.minutes is not None]
+        return sum(known) if known else None
+
+    @property
     def session_rpe(self) -> float | None:
-        """The mean working-set RPE; a hand-entered workout carries its own."""
-        if self.workout is None:
-            return None
-        rated = [s.rpe for e in self.workout.exposures for s in e.working if s.rpe is not None]
-        if rated:
-            return round(sum(rated) / len(rated), 1)
-        return self.workout.session_rpe
+        """The mean working-set RPE over every workout; a hand-entered workout carries its own."""
+        workouts = self.outcome.workouts
+        rated = [
+            s.rpe for w in workouts for e in w.exposures for s in e.working if s.rpe is not None
+        ]
+        if not rated:
+            rated = [w.session_rpe for w in workouts if w.session_rpe is not None]
+        return round(sum(rated) / len(rated), 1) if rated else None
 
 
 def sessions(reads: Sequence[SessionRead]) -> CardField | None:
@@ -149,10 +153,10 @@ def _session_row(read: SessionRead) -> Facts:
         "kind": read.outcome.session.kind,
         "state": read.state,
     }
-    if read.workout is not None:
+    if read.outcome.workouts:
         row |= {
-            "workout": read.workout.id,
-            "minutes": read.workout.minutes,
+            "workouts": list(read.outcome.workout_ids),
+            "minutes": read.minutes,
             "session_rpe": read.session_rpe,
         }
     against = read.outcome.against

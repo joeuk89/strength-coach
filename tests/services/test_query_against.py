@@ -123,7 +123,7 @@ def test_a_line_logged_at_rpe_6_against_an_authored_8_shows_its_sets_two_under()
         "date": "2026-11-02",
         "session": "lower",
         "exercise": "bb_back_squat",
-        "workout": "h-1",
+        "workouts": ["h-1"],
         "state": "logged",
         "hold": False,
         "prescription": [{"sets": 4, "reps": [6, 8], "seconds": None, "load": None, "rpe": 8.0}],
@@ -146,9 +146,9 @@ def test_a_prescribed_line_with_no_logged_set_reads_not_logged() -> None:
 
     plank = by_exercise(read(conn))["plank"]
 
-    assert (plank["state"], plank["workout"], plank["seconds"], plank["off"]) == (
+    assert (plank["state"], plank["workouts"], plank["seconds"], plank["off"]) == (
         "not_logged",
-        "h-1",
+        ["h-1"],
         [],
         True,
     )
@@ -160,9 +160,9 @@ def test_a_missed_session_reads_every_line_not_logged() -> None:
 
     rows = read(conn).rows
 
-    assert [(r["exercise"], r["state"], r["workout"]) for r in rows] == [
-        ("bb_back_squat", "not_logged", None),
-        ("plank", "not_logged", None),
+    assert [(r["exercise"], r["state"], r["workouts"]) for r in rows] == [
+        ("bb_back_squat", "not_logged", []),
+        ("plank", "not_logged", []),
     ]
 
 
