@@ -242,3 +242,46 @@ def test_a_ladder_line_with_no_history_is_prescribed_its_first_rung() -> None:
 
     assert line.exercise_id == "plank"
     assert [(g.count, g.duration_s, g.rpe) for g in line.groups] == [(2, 30, 6)]
+
+
+def caps_by_day(draft: PlanDraftResult) -> dict[str, tuple[object, ...]]:
+    return {
+        str(s.session.date): tuple(
+            step.cause
+            for line in s.lines
+            for step in line.steps
+            if step.step == "rpe_ceiling" and step.cause != "not_binding"
+        )
+        for s in draft.draft.sessions
+    }
+
+
+def recorded(conn: Connection, text: str) -> None:
+    record(conn, text.encode(), file="r.toml", clock=FixedClock())
+
+
+ILL_TO_CAP_END = (
+    '[[status_span]]\nkind = "ill"\nfrom_date = 2026-10-28\nto_date = 2026-10-30\ncap_ends = {}\n'
+)
+
+
+def test_a_new_stated_cap_end_midweek_redrafts_a_superseding_plan_that_follows_it() -> None:
+    conn = a_squat_program(schedule={"rotation": ["A"], "A": {"mon": "lower", "thu": "lower"}})
+    squat_logged(conn, "h-1", "2026-10-26", *HELD_SQUAT)
+    recorded(conn, ILL_TO_CAP_END.format("2026-11-02"))
+    first = drafted(conn)
+    plan_id = an_approved_plan(conn, "2026-11-02")
+
+    recorded(
+        conn,
+        '[[status_span]]\nwithdraws = "ss-0001"\n\n' + ILL_TO_CAP_END.format("2026-11-05"),
+    )
+    superseding = drafted(conn)
+
+    assert caps_by_day(first) == {"2026-11-02": ("illness until 2026-11-02",), "2026-11-05": ()}
+    assert superseding.draft.supersedes == plan_id
+    assert 'cause = "illness until 2026-11-05"' in superseding.text
+    assert caps_by_day(superseding) == {
+        "2026-11-02": ("illness until 2026-11-05",),
+        "2026-11-05": ("illness until 2026-11-05",),
+    }
