@@ -355,6 +355,14 @@ def test_the_annotation_kinds_registry_shows_each_kind_s_target_and_params() -> 
     assert all(p["about"] for row in rows for p in row["params"])
 
 
+def test_the_annotation_kinds_registry_counts_a_set_s_position_across_the_workout() -> None:
+    rows = run_coach("schema", "--registry", "annotation-kinds").envelope["result"]["rows"]
+
+    abouts = [p["about"] for row in rows for p in row["params"] if p["name"] == "position"]
+    assert len(abouts) == 2
+    assert all("across every exercise" in about for about in abouts)
+
+
 def test_the_record_draft_schema_lists_the_annotation_params() -> None:
     draft = run_coach("schema", "record").envelope["result"]["draft"]
 

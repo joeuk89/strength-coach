@@ -33,7 +33,9 @@ class AnnotationKind:
         }
 
 
-POSITION = "the set's position in the workout's exercise, from 0"
+POSITION = (
+    "the set's position in the workout, counted from 0 across every exercise's sets in logged order"
+)
 # What core/exposure.py and the match writer read from each kind's params.
 ANNOTATION_KINDS = Registry(
     "annotation-kinds",
