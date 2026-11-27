@@ -1,5 +1,7 @@
-from coach.core.draft_schema import DraftKind
-from coach.core.plan_input import parse_plan_input
+from typing import cast
+
+from coach.core.draft_schema import DraftKind, Json, Recording
+from coach.core.plan_input import ENGINE_CONTEXT, parse_plan_input
 
 EXAMPLE = """week = 2026-11-02
 
@@ -112,7 +114,7 @@ because = "pain"
 text = "the knee is sore"
 
 [[acknowledge]]
-flag = "offgrid_anchor_ignored@line:lower/bb_back_squat"
+flag = "offgrid_anchor_ignored@line:2026-11-02/lower/bb_back_squat"
 params_hash = "sha256:0f"
 because = "coach_judgement"
 text = "the off-grid anchor was a one-off"
@@ -126,4 +128,22 @@ code = "offgrid_anchor_ignored"
 """,
 )
 
-PLAN = DraftKind("plan", lambda data: parse_plan_input(data, file="draft"), EXAMPLE, COVERAGE)
+ENGINE_WRITES = "written by plan draft as context for the agent; ignored on read"
+
+
+def _with_engine_context(recording: Recording) -> Json:
+    schema = recording.schema()
+    properties = cast(Json, schema["properties"])
+    described: Json = {
+        key: cast(Json, properties[key]) | {"description": ENGINE_WRITES} for key in ENGINE_CONTEXT
+    }
+    return schema | {"properties": properties | described}
+
+
+PLAN = DraftKind(
+    "plan",
+    lambda data: parse_plan_input(data, file="draft"),
+    EXAMPLE,
+    COVERAGE,
+    _with_engine_context,
+)

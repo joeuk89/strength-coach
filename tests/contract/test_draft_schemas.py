@@ -15,6 +15,7 @@ from support.json_schema import problems
 from coach.cli.registry import declarations, find
 from coach.core.draft_schema import DraftKind, record
 from coach.core.errors import Invalid
+from coach.core.plan_input import parse_plan_input
 from coach.core.program.parse import parse_program_draft
 from coach.core.registries.agent import RECORD_KINDS
 from coach.core.registries.ledger import DECISION_KINDS, FOLLOW_UP_EVENTS
@@ -254,3 +255,26 @@ def table_at(document: object, at: tuple[object, ...]) -> dict[str, object]:
 
 def toml_of(document: dict[str, object]) -> str:
     return dumps(cast(Any, document))
+
+
+def test_the_plan_drafts_acknowledgements_name_the_dated_key_their_weekplan_raises() -> None:
+    plan = kind_of("plan apply")
+    acknowledged = [
+        (parsed.week, acknowledgement.key.scope)
+        for document in (plan.example, *plan.coverage)
+        for parsed in [parse_plan_input(document.encode(), file="d.toml")]
+        for acknowledgement in parsed.acknowledgements
+    ]
+
+    assert acknowledged
+    assert all(scope.monday == week for week, scope in acknowledged)
+
+
+def test_the_plan_schema_names_the_keys_the_engine_writes_and_never_reads_back() -> None:
+    properties = draft_of("plan apply")["schema"]["properties"]
+
+    described = {
+        key: properties[key].get("description", "")
+        for key in ("supersedes", "note", "session", "flag")
+    }
+    assert all("ignored on read" in text for text in described.values()), described
