@@ -81,6 +81,20 @@ def test_the_third_consecutive_plan_with_the_same_hold_raises_override_persistin
     }
 
 
+def test_override_persisting_names_the_exercise_and_session_its_params_keep_by_id() -> None:
+    conn = a_squat_week()
+    a_held_plan(conn, "2026-10-26")
+    a_held_plan(conn, "2026-10-19")
+
+    [third] = codes(flags(conn, HOLD), "override_persisting")
+
+    assert third.message.startswith(
+        "hold on Back Squat (Barbell) in Lower has stood on 3 consecutive plans; "
+    )
+    assert "bb_back_squat" not in third.message
+    assert (third.scope.session_id, third.scope.exercise_id) == ("lower", "bb_back_squat")
+
+
 def test_a_week_an_override_decision_covered_never_counts() -> None:
     conn = a_squat_week()
     a_held_plan(conn, "2026-10-19")

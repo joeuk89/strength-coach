@@ -11,6 +11,7 @@ from coach.core.config import Units
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.frozen_prescription import dose, frozen_groups
 from coach.core.load import Load, LoadMode
+from coach.core.pages import PageNames
 from coach.core.prescription import PlanOverride, SessionPrescription
 from coach.core.rack import Rack, round_to_rack
 
@@ -100,9 +101,11 @@ def override_persisting(
     *,
     covered: Collection[LineOverride],
     monday: datetime.date,
+    names: PageNames,
 ) -> tuple[Flag, ...]:
     """The third consecutive approved plan with the same line override; `past` is newest first,
-    `covered` this week's line overrides an override Decision already carries."""
+    `covered` this week's line overrides an override Decision already carries. The message names
+    the line as the athlete does; the scope keeps its ids."""
     flags: list[Flag] = []
     for found in _line_overrides(overrides):
         if found in covered:
@@ -121,7 +124,8 @@ def override_persisting(
                 "override_persisting",
                 Scope("line", monday, session_id=session_id, exercise_id=exercise_id),
                 {"kind": kind, "weeks": weeks, "plan_ids": list(reversed(run))},
-                f"{kind} on {session_id}/{exercise_id} is on its {weeks}th consecutive plan; "
+                f"{kind} on {names.exercise(exercise_id)} in {names.session(session_id)} has "
+                f"stood on {weeks} consecutive plans; "
                 "promote it into the program, extend it by Decision, or leave it",
             )
         )

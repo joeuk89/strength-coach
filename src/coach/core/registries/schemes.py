@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Literal
 
-from coach.core.registries.registry import Registry, Row
+from coach.core.registries.registry import Registry, Row, TitledTerm
 
 type CadenceSignal = Literal["cadence_slow", "cadence_fast"]
 type ParamType = Literal[
@@ -56,6 +56,7 @@ class Scheme:
     name: str
     level: Literal["line", "session"]
     reads: str
+    title: str
     params: tuple[Param, ...] = ()
     set_types: tuple[str, ...] = ()
     set_groups: SetGroupShape = "any"
@@ -97,6 +98,7 @@ SCHEMES = Registry(
         Scheme(
             "double_progression",
             "line",
+            title="double progression",
             reads="reps at the authored RPE on the line's anchor exposures",
             set_types=LINE_SET_TYPES,
             rpe_on="every_working",
@@ -106,6 +108,7 @@ SCHEMES = Registry(
         Scheme(
             "linear",
             "line",
+            title="linear",
             reads="the anchor's load and whether its sets were made",
             params=(
                 Param("misses_before_reset", "integer", 2),
@@ -119,6 +122,7 @@ SCHEMES = Registry(
         Scheme(
             "hold",
             "line",
+            title="hold",
             reads="the anchor's top load, nothing else",
             set_types=LINE_SET_TYPES,
             opening="the authored sets, start_load where load-bearing",
@@ -126,6 +130,7 @@ SCHEMES = Registry(
         Scheme(
             "assistance_ladder",
             "line",
+            title="assistance ladder",
             reads="reps at RPE on the current rung",
             params=(Param("rungs", "loads"),),
             set_types=("working",),
@@ -137,6 +142,7 @@ SCHEMES = Registry(
         Scheme(
             "exercise_ladder",
             "line",
+            title="exercise ladder",
             reads="reps or duration at RPE on the standing rung",
             params=(
                 Param("rungs", "rungs", keys=RUNG_KEYS),
@@ -151,6 +157,7 @@ SCHEMES = Registry(
         Scheme(
             "top_backoff",
             "line",
+            title="top set and back-offs",
             reads="the exercise-wide e1RM, the top group's RPE as a cap",
             params=(Param("pct_of_top", "percent"),),
             set_types=("warm_up", "working"),
@@ -162,6 +169,7 @@ SCHEMES = Registry(
         Scheme(
             "wave_531",
             "line",
+            title="5/3/1 wave",
             reads=(
                 "the current training_max Decision on the exercise, the Block's hard-week count "
                 "and the last rep-out"
@@ -179,6 +187,7 @@ SCHEMES = Registry(
         Scheme(
             "emom_density",
             "session",
+            title="EMOM density",
             reads="the last matched Activity",
             params=(
                 Param("minutes", "integer"),
@@ -192,6 +201,7 @@ SCHEMES = Registry(
         Scheme(
             "circuit_rounds",
             "session",
+            title="circuit rounds",
             reads="the last matched Activity",
             params=(
                 Param("rounds", "integer"),
@@ -202,4 +212,8 @@ SCHEMES = Registry(
             ),
         ),
     ),
+)
+CADENCE_SIGNALS = Registry(
+    "cadence-signals",
+    (TitledTerm("cadence_slow", "slow cadence"), TitledTerm("cadence_fast", "fast cadence")),
 )

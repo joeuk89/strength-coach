@@ -1,12 +1,14 @@
 """The athlete page: the profile verbatim with sections generated from config and the store
 (ADR 0009)."""
 
+from collections.abc import Mapping
+
 from coach.core.config import GridLocation, Location
-from coach.core.pages import AthletePage
+from coach.core.pages import AthletePage, PageNames
 from coach.render.markdown import bullets, cell, page, section, table
 
 
-def athlete_page(athlete: AthletePage) -> str:
+def athlete_page(athlete: AthletePage, *, names: PageNames) -> str:
     facts = athlete.athlete
     return page(
         "Athlete",
@@ -31,7 +33,13 @@ def athlete_page(athlete: AthletePage) -> str:
             table(
                 ["niggle", "site", "status", "opened", "constraints"],
                 [
-                    [n.id, n.site, n.status, n.opened, [cell(c) for c in n.constraints]]
+                    [
+                        n.id,
+                        n.site,
+                        n.status,
+                        n.opened,
+                        [_constraint(c, names) for c in n.constraints],
+                    ]
                     for n in athlete.niggles
                 ],
             ),
@@ -48,7 +56,14 @@ def athlete_page(athlete: AthletePage) -> str:
             table(
                 ["decision", "session", "exercise", "until", "because", "text"],
                 [
-                    [d.id, d.session_id, d.exercise_id, d.until, d.because, d.text]
+                    [
+                        d.id,
+                        d.session_id and names.session(d.session_id),
+                        d.exercise_id and names.exercise(d.exercise_id),
+                        d.until,
+                        d.because,
+                        d.text,
+                    ]
                     for d in athlete.decisions
                 ],
             ),
@@ -58,6 +73,13 @@ def athlete_page(athlete: AthletePage) -> str:
             "\n\n".join(f"**{day.isoformat()}**\n\n{read}" for day, read in athlete.reads),
         ),
     )
+
+
+def _constraint(constraint: Mapping[str, object], names: PageNames) -> str:
+    exercise = constraint.get("exercise_id")
+    if isinstance(exercise, str):
+        constraint = {**constraint, "exercise_id": names.exercise(exercise)}
+    return cell(constraint)
 
 
 def _location(location: Location) -> str:

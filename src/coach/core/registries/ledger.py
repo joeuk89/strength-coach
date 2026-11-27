@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, get_args
 
-from coach.core.registries.registry import Registry, Row, terms
+from coach.core.registries.registry import Registry, Row, TitledTerm, terms
 
 type Reason = Literal[
     "pain", "kit", "stall", "fatigue", "schedule", "athlete_request", "coach_judgement", "progress"
@@ -77,8 +77,13 @@ CHECK_IN_TIERS = terms("check-in-tiers", "light", "deep")
 READINESS = terms("readiness", "poor", "ok", "good")
 GOAL_KINDS = terms("goal-kinds", "hypertrophy", "strength")
 GOAL_STATUSES = terms("goal-statuses", "current", "superseded")
-MILESTONE_TARGET_KINDS = terms(
-    "milestone-target-kinds", "e1rm", "load_x_reps", "bodyweight_multiple"
+MILESTONE_TARGET_KINDS = Registry(
+    "milestone-target-kinds",
+    (
+        TitledTerm("e1rm", "e1RM"),
+        TitledTerm("load_x_reps", "load for reps"),
+        TitledTerm("bodyweight_multiple", "bodyweight multiple"),
+    ),
 )
 PHASE_UNTIL_KINDS = terms(
     "phase-until-kinds", "date", "bodyweight_at_or_below", "bodyweight_at_or_above", "coachs_call"
