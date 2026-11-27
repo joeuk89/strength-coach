@@ -27,7 +27,7 @@ from coach.core.progress import (
     best_set,
     milestone_read,
 )
-from coach.core.stall import judged, stall_streak
+from coach.core.stall import JudgedLine, judged_line, stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
@@ -129,84 +129,67 @@ def _lift(
     rungs: Sequence[DecisionInForce],
     adopted: datetime.date | None,
 ) -> LiftProgress:
-    line = _line(form, exercise)
-    judged_line = _judged_line(form, exercise)
+    judged = judged_line(form, exercise)
     read = spans[-BLOCKS_READ:]
     at_end = tuple((s.id, _e1rm(exposures, exercise, s.end + _DAY)) for s in read)
-    history = ordinary(
-        newest_first(
-            e
-            for e in exposures
-            if e.exercise_id == exercise and (since is None or since <= e.date) and e.date <= today
+    judged_history = (
+        ordinary(
+            newest_first(
+                e
+                for e in exposures
+                if e.session_id in (None, judged.session_id)
+                and (since is None or since <= e.date)
+                and e.date <= today
+            )
         )
+        if judged
+        else ()
     )
-    judged_history = _of_session(history, judged_line[0]) if judged_line else ()
     return LiftProgress(
         exercise_id=exercise,
-        scheme=line.scheme.name if line else None,
+        scheme=judged.line.scheme.name if judged else None,
         e1rm_now=_e1rm(exposures, exercise, today + _DAY),
         e1rm_by_block=at_end,
         change_over_block=_change(exposures, exercise, read[-1:]),
         change_over_three=_change(exposures, exercise, read),
         best=best_set(exposures, exercise),
         stall_streak=_stall_streak(
-            judged_line, since_redesign(judged_history, redesigned), rungs, adopted
+            judged, since_redesign(judged_history, redesigned), rungs, adopted
         ),
-        resets=_resets(judged_line[1] if judged_line else None, judged_history),
+        resets=_resets(judged.line if judged else None, judged_history),
         signal=signal,
     )
 
 
-def _judged_line(form: ProgramForm | None, exercise: str) -> tuple[str, Line] | None:
-    """The exercise's first line in a judged session, with that session's id."""
-    return next(
-        (
-            (session.id, line)
-            for session in (form.sessions if form else ())
-            if judged(session.kind)
-            for line in session.lines
-            if line.exercise == exercise
-        ),
-        None,
-    )
-
-
-def _of_session(history: Sequence[Exposure], session_id: str) -> tuple[Exposure, ...]:
-    """What the line in `session_id` reads: exposures matched to it or to no session."""
-    return tuple(e for e in history if e.session_id in (None, session_id))
-
-
 def _stall_streak(
-    judged_line: tuple[str, Line] | None,
+    judged: JudgedLine | None,
     history: Sequence[Exposure],
     rungs: Sequence[DecisionInForce],
     adopted: datetime.date | None,
 ) -> int:
-    """Read on the judged line, a ladder's from the exposures that count on its standing rung; 0
-    when it has none."""
-    if judged_line is None:
+    """Read on the judged line, a ladder's from its standing rung's exercise's exposures that
+    count on that rung; 0 when it has none."""
+    if judged is None:
         return 0
-    session_id, line = judged_line
-    return len(stall_streak(*standing_line(line, session_id, rungs, history, adopted=adopted)))
+    standing, counted = standing_line(
+        judged.line, judged.session_id, rungs, history, adopted=adopted
+    )
+    return len(stall_streak(standing, [e for e in counted if e.exercise_id == standing.exercise]))
 
 
 def _scheme_since(versions: Sequence[programs.VersionRow], exercise: str) -> datetime.date | None:
-    """The adoption date of the oldest version in the unbroken run giving the exercise its
-    current scheme."""
-    current = _line(versions[0].form, exercise) if versions else None
+    """The adoption date of the oldest version in the unbroken run giving the exercise's judged
+    line its current scheme."""
+    current = judged_line(versions[0].form, exercise) if versions else None
     if current is None:
         return None
     since: datetime.date | None = None
     for version in versions:
-        line = _line(version.form, exercise)
-        if line is None or line.scheme.name != current.scheme.name:
+        judged = judged_line(version.form, exercise)
+        if judged is None or judged.line.scheme.name != current.line.scheme.name:
             break
         since = version.adopted_on
     return since
-
-
-def _line(form: ProgramForm | None, exercise: str) -> Line | None:
-    return None if form is None else form.first_line(exercise)
 
 
 def _e1rm(exposures: Sequence[Exposure], exercise: str, on: datetime.date) -> float | None:
@@ -227,8 +210,9 @@ def _change(
 def _resets(line: Line | None, history: Sequence[Exposure]) -> int:
     if line is None or line.scheme.name != "linear":
         return 0
-    loads = [e.top_load for e in history if e.top_load is not None]
-    return len(resets(line, history, None, loads[0].mode)) if loads else 0
+    on_line = [e for e in history if e.exercise_id == line.exercise]
+    loads = [e.top_load for e in on_line if e.top_load is not None]
+    return len(resets(line, on_line, None, loads[0].mode)) if loads else 0
 
 
 def _weeks_in(closed: ClosedWeeks, block: BlockSpan | None) -> list[ClosedWeek]:

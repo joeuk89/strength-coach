@@ -234,7 +234,7 @@ def test_rising_practice_exposures_do_not_hide_a_lifting_lines_stall() -> None:
     assert bench_in(report(conn)).stall_streak == 3
 
 
-def test_a_practice_line_on_linear_shows_zero_resets() -> None:
+def test_a_lift_only_on_a_practice_line_shows_no_scheme_and_zero_resets() -> None:
     conn = two_closed_blocks(bench_line=LINEAR_BENCH, bench_tops=DROP_AFTER_MISSES)
     adopt(
         conn,
@@ -246,7 +246,7 @@ def test_a_practice_line_on_linear_shows_zero_resets() -> None:
     )
 
     bench = bench_in(report(conn))
-    assert (bench.scheme, bench.resets) == ("linear", 0)
+    assert (bench.scheme, bench.resets) == (None, 0)
 
 
 def test_a_lighter_practice_exposure_is_no_reset_of_a_lifting_line_on_linear() -> None:
@@ -288,3 +288,80 @@ def test_a_flat_pull_up_logged_on_a_first_rungs_adoption_date_counts_in_the_stal
 
     assert pull_up_in(report(on_the_date)).stall_streak == 3
     assert pull_up_in(report(the_day_after)).stall_streak == 0
+
+
+def test_a_lift_on_a_practice_line_then_a_lifting_line_shows_the_lifting_lines_scheme() -> None:
+    conn = two_closed_blocks(drill_line=LINEAR_BENCH)
+
+    assert bench_in(report(conn)).scheme == "top_backoff"
+
+
+def test_a_practice_line_added_before_the_lifting_line_keeps_the_lifting_lines_stall() -> None:
+    conn = two_closed_blocks()
+    adopt(
+        conn,
+        toml(
+            a_draft(
+                a_drill(LINEAR_BENCH),
+                a_session("push", BENCH_LINE, PULL_UP_LINE),
+                kind="amend",
+                because="technique",
+            )
+        ),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+
+    bench = bench_in(report(conn))
+    assert (bench.scheme, bench.stall_streak) == ("top_backoff", 3)
+
+
+DIP_TEMPLATE = "6FCD7755"
+PULL_UP_TO_DIP_LADDER = a_ladder_line(
+    "pull_up",
+    a_rung(sets=[{"count": 3, "reps": 6, "rpe": 8}]),
+    a_rung("chest_dip", sets=[{"count": 3, "reps": 8, "rpe": 8}]),
+)
+
+
+def test_a_mixed_ladder_standing_on_its_second_exercise_shows_that_exercises_stall() -> None:
+    conn = two_closed_blocks(pull_up_line=PULL_UP_TO_DIP_LADDER)
+    record(
+        conn,
+        b'[[decision]]\nkind = "ladder_rung"\nsession = "push"\nexercise = "pull_up"\n'
+        b'rung = 2\nbecause = "progress"\ntext = "on to dips"\n',
+        file="d.toml",
+        clock=FixedClock(at(datetime.date(2026, 11, 30))),
+    )
+    for on in ("2026-12-01", "2026-12-02", "2026-12-03"):
+        a_logged_workout(conn, f"h-dip-{on}", on, (DIP_TEMPLATE, ((None, 6, 8),) * 3))
+
+    assert pull_up_in(report(conn)).stall_streak == 3
+
+
+def test_a_lift_on_two_lifting_lines_shows_the_first_lines_resets() -> None:
+    conn = two_closed_blocks(bench_line=LINEAR_BENCH, bench_tops=DROP_AFTER_MISSES)
+    adopt(
+        conn,
+        toml(
+            a_draft(
+                a_session("push", LINEAR_BENCH, PULL_UP_LINE),
+                a_session("heavy", LINEAR_BENCH),
+                kind="amend",
+                because="more bench",
+            )
+        ),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY)),
+    )
+    for top, on in zip((100, 100, 90), ("2026-11-10", "2026-11-11", "2026-11-12"), strict=True):
+        kg = top * KG_PER_LB
+        a_logged_workout(
+            conn, f"h-heavy-{on}", on, (BENCH_TEMPLATE, ((kg, 5, 8),) * 4), session_id="heavy"
+        )
+
+    assert bench_in(report(conn)).resets == 1
