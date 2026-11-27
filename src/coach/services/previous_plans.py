@@ -20,6 +20,7 @@ from coach.core.second_week import (
     override_persisting,
     unexplained_drift,
 )
+from coach.services.page_names import page_names
 from coach.store import decisions, exercises, niggles, programs, week_plans
 from coach.store.connection import Connection
 from coach.store.rows import Row
@@ -40,6 +41,7 @@ def second_week_flags(
         [_past(conn, row) for row in earlier],
         covered=_covered(conn, monday),
         monday=monday,
+        names=page_names(conn),
     )
     if not earlier:
         return persisting
