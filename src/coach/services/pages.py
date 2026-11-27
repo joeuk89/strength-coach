@@ -64,7 +64,8 @@ def page_facts(
 ) -> Pages:
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
-    library = _Library(page_names(conn), _equipment_kinds(conn))
+    rows = exercises.every(conn)
+    library = _Library(page_names(conn, rows), _equipment_kinds(rows))
     every_decision = decisions.every(conn)
     records = tuple(
         _record(conn, row, every_decision, units, bodyweight_units, zone)
@@ -95,10 +96,8 @@ class _Library:
     kinds: Mapping[str, str | None]
 
 
-def _equipment_kinds(conn: Connection) -> dict[str, str | None]:
-    return {
-        str(row["id"]): cast(str | None, row["equipment_kind"]) for row in exercises.every(conn)
-    }
+def _equipment_kinds(library: Sequence[Row]) -> dict[str, str | None]:
+    return {str(row["id"]): cast(str | None, row["equipment_kind"]) for row in library}
 
 
 def _line(row: Row, library: _Library) -> PageLine:
