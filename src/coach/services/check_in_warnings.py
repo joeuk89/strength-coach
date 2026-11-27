@@ -124,8 +124,10 @@ def _near_empty_warnings(log: WeekLog, window: Window) -> list[Flag]:
     monday = max(week_monday(window.start), week_monday(log.redesigns[0]))
     while monday <= window.end:
         for outcome in log.week(monday).sessions:
+            if not window.start <= outcome.session.date <= window.end:
+                continue
             flag = session_near_empty(outcome)
-            if flag is not None and window.start <= outcome.session.date <= window.end:
+            if flag is not None:
                 found.append(flag)
         monday += WEEK
     return found
