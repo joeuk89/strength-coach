@@ -670,7 +670,8 @@ A tempo ladder on one exercise, topped by a weighted rung (ADR 0025). The first 
 `negative_pull_up` at the same reps and differ only in their cues, which read lower for 4 s, 6 s
 and 8 s. Each rung's criterion is its reps at RPE, and the athlete's yes to `rung_met` carries the
 word that the tempo was held. The top rung is a load-bearing exercise, so it carries its own
-`start_load`, on the home dumbbell rack in the athlete's units.
+`start_load`, on the home dumbbell rack in the athlete's units. The example assumes a pound rack,
+where 10 is a row; on a kilogram rack the same Draft gives `start_load_off_rack` on rung 4.
 
 ```toml
 name = "Pull day around the negatives"
