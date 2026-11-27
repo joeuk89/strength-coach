@@ -358,7 +358,9 @@ def test_a_lift_on_two_lifting_lines_shows_the_first_lines_resets() -> None:
         kits=(kit_files(),),
         clock=FixedClock(at(BOUNDARY)),
     )
-    for top, on in zip((100, 100, 90), ("2026-11-10", "2026-11-11", "2026-11-12"), strict=True):
+    heavy_tops_with_two_resets = (100, 100, 90, 90, 80)
+    days = ("2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14")
+    for top, on in zip(heavy_tops_with_two_resets, days, strict=True):
         kg = top * KG_PER_LB
         a_logged_workout(
             conn, f"h-heavy-{on}", on, (BENCH_TEMPLATE, ((kg, 5, 8),) * 4), session_id="heavy"
