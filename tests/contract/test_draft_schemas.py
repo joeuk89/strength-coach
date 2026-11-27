@@ -86,10 +86,10 @@ def test_exactly_the_draft_verbs_name_a_draft() -> None:
     assert {d.name for d in declarations() if d.draft is not None} == set(KINDS)
 
 
-def test_the_verb_less_listing_leaves_the_drafts_out() -> None:
+def test_the_verb_less_listing_leaves_the_draft_schemas_out() -> None:
     rows = run_coach("schema").envelope["result"]["rows"]
 
-    assert all("draft" not in row for row in rows)
+    assert all(set(row.get("draft", {})) <= {"kind"} for row in rows)
 
 
 @pytest.mark.parametrize("verb", KINDS)
