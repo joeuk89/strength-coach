@@ -278,7 +278,10 @@ PLAN_WARNINGS = (
         ("rn:detraining-return.5",),
     ),
     acknowledgeable_warning(
-        "increment_over_step", ("line",), ("increment", "scheme_step", "from_exposure")
+        "increment_over_step",
+        ("line",),
+        ("increment", "scheme_step", "from_exposure"),
+        hashed=("increment", "scheme_step"),
     ),
     acknowledgeable_warning(
         "offgrid_anchor_ignored", ("line",), ("exposure", "logged_load", "anchor_used")
@@ -324,11 +327,13 @@ PLAN_WARNINGS = (
         ("line",),
         ("cap", "clipped_load", "anchor_exposure"),
         ("rn:autoregulation.6",),
+        hashed=("cap",),
     ),
     acknowledgeable_warning(
         "pin_load_capped",
         ("line",),
         ("load", "prescribed", "ceiling_kind", "rpe_cap", "ref", "outcome"),
+        hashed=("load", "ceiling_kind", "rpe_cap", "ref", "outcome"),
     ),
     acknowledgeable_warning(
         "unexplained_drift", ("line",), ("last_prescription", "this_prescription", "delta")
@@ -344,6 +349,7 @@ PLAN_WARNINGS = (
                 ("status_span", ()),
             ),
         ),
+        hashed=("reason",),
     ),
     acknowledgeable_warning(
         "dose_under_target",
@@ -360,7 +366,9 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "session_dose_high", ("session",), ("planned_sets", "ceiling"), ("rn:volume-frequency.3",)
     ),
-    acknowledgeable_warning("override_persisting", ("line",), ("kind", "weeks", "plan_ids")),
+    acknowledgeable_warning(
+        "override_persisting", ("line",), ("kind", "weeks", "plan_ids"), hashed=("kind",)
+    ),
     acknowledgeable_warning(
         "light_week_shape_off_trigger",
         ("week",),

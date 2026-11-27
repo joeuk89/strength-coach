@@ -220,6 +220,7 @@ def test_the_flags_registry_lists_a_capped_pin_as_a_line_warning_a_plan_can_leav
         "scope": ["line"],
         "params": ["load", "prescribed", "ceiling_kind", "rpe_cap", "ref", "outcome"],
         "rn": None,
+        "hashed": ["load", "ceiling_kind", "rpe_cap", "ref", "outcome"],
     }
 
 
