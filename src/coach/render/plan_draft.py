@@ -1,7 +1,7 @@
 from typing import cast
 
 from coach.core.config import Units
-from coach.core.flag import Flag
+from coach.core.flag import Acknowledgement, Flag
 from coach.core.plan_draft import AthleteNote, PlanDraft
 from coach.core.prescription import (
     LinePrescription,
@@ -16,28 +16,42 @@ type Table = dict[str, object]
 
 
 def plan_draft(draft: PlanDraft, *, units: Units) -> str:
-    """The Draft the agent edits, carrying the overrides it was derived with; `acknowledge`
-    starts empty and `plan apply` ignores the notes (docs/spec/overrides.md, "Draft shape")."""
+    """The Draft the agent edits, carrying the overrides and acknowledgements it was derived with
+    and an empty stub for every other warning; `plan apply` ignores the notes
+    (docs/spec/overrides.md, "Draft shape")."""
     document: Table = {"week": draft.week}
     if draft.supersedes is not None:
         document["supersedes"] = draft.supersedes
     document |= {
         "override": [_override(override) for override in draft.overrides],
-        "acknowledge": [],
+        "acknowledge": [
+            *(_acknowledge(kept) for kept in draft.acknowledgements),
+            *(_stub(flag) for flag in draft.unacknowledged),
+        ],
         "position": {
             "week": draft.position.week,
             "source": draft.position.source,
             "confirmed": draft.confirmed,
         },
-        "flag": [_flag(flag) for flag in (*draft.week_flags, *draft.conflicts, *draft.week_checks)],
-        "session": [_session(session, draft.notes, units) for session in draft.sessions],
+        "flag": [_flag(flag) for flag in _at_the_top(draft)],
+        "session": [
+            _session(session, draft.notes, draft.beside_lines, units) for session in draft.sessions
+        ],
         "note": [_note(note) for note in draft.notes],
     }
     return dumps(cast(dict[str, TomlValue], document))
 
 
+def _at_the_top(draft: PlanDraft) -> tuple[Flag, ...]:
+    beside = (f for f in draft.beside_lines if f.scope.kind != "line")
+    return (*draft.week_flags, *draft.conflicts, *draft.week_checks, *beside)
+
+
 def _session(
-    prescribed: SessionPrescription, notes: tuple[AthleteNote, ...], units: Units
+    prescribed: SessionPrescription,
+    notes: tuple[AthleteNote, ...],
+    beside: tuple[Flag, ...],
+    units: Units,
 ) -> Table:
     session = prescribed.session
     table: Table = {
@@ -49,11 +63,16 @@ def _session(
     }
     about = f"planned_session:{session.date.isoformat()}/{session.session_id}"
     table |= _notes_about(notes, about)
-    table["line"] = [_line(line, notes, units) for line in prescribed.lines]
+    table["line"] = [
+        _line(line, notes, _about(beside, session.session_id, line.exercise_id), units)
+        for line in prescribed.lines
+    ]
     return table
 
 
-def _line(line: LinePrescription, notes: tuple[AthleteNote, ...], units: Units) -> Table:
+def _line(
+    line: LinePrescription, notes: tuple[AthleteNote, ...], beside: tuple[Flag, ...], units: Units
+) -> Table:
     table: Table = {"exercise": line.exercise_id, "scheme": line.scheme}
     if line.derived_from is not None:
         table["derived_from"] = line.derived_from
@@ -64,8 +83,17 @@ def _line(line: LinePrescription, notes: tuple[AthleteNote, ...], units: Units) 
         {key: value for key, value in step.to_json().items() if value is not None}
         for step in line.steps
     ]
-    table["flag"] = [_flag(flag) for flag in line.flags]
+    table["flag"] = [_flag(flag) for flag in (*line.flags, *beside)]
     return table
+
+
+def _about(flags: tuple[Flag, ...], session_id: str, exercise_id: str) -> tuple[Flag, ...]:
+    return tuple(
+        f
+        for f in flags
+        if f.scope.kind == "line"
+        and (f.scope.session_id, f.scope.exercise_id) == (session_id, exercise_id)
+    )
 
 
 def _group(group: PrescribedGroup, units: Units) -> Table:
@@ -113,6 +141,20 @@ def _flag(flag: Flag) -> Table:
         "severity": flag.severity,
         "message": flag.message,
     }
+
+
+def _acknowledge(kept: Acknowledgement) -> Table:
+    table: Table = {
+        "flag": str(kept.key),
+        "params_hash": kept.params_hash,
+        "because": kept.because,
+        "text": kept.text,
+    }
+    return table | {"evidence": list(kept.evidence)} if kept.evidence else table
+
+
+def _stub(flag: Flag) -> Table:
+    return {"flag": flag.key, "params_hash": flag.params_hash, "because": "", "text": ""}
 
 
 def _note(note: AthleteNote) -> Table:

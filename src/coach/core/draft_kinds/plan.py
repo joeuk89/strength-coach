@@ -120,6 +120,12 @@ because = "coach_judgement"
 text = "the off-grid anchor was a one-off"
 evidence = ["workout:w-0012"]
 
+[[acknowledge]]
+flag = "no_e1rm@line:2026-11-02/upper/bb_row"
+params_hash = "sha256:1a"
+because = ""
+text = ""
+
 [[session]]
 id = "upper"
 
