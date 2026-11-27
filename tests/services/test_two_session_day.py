@@ -242,7 +242,7 @@ def test_a_swings_only_day_is_not_a_lifting_day_for_the_return_week() -> None:
 def test_the_program_draft_keeps_the_two_session_day_and_adopts_again_unchanged() -> None:
     conn = a_squat_program(LOWER, SWINGS, schedule=a_monday("lower", "cond-swings"))
 
-    text = show_draft(conn).text
+    text = show_draft(conn, config=a_config(), kits=(kit_files(),), clock=FixedClock()).text
     again = adopt(
         conn,
         text.encode(),

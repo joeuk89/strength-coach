@@ -80,6 +80,11 @@ def test_a_worked_ladder_re_adopts_unchanged_from_its_own_draft(draft: str) -> N
     conn = the_worked_store()
     adopted(conn, draft, hevy=False)
 
-    again = adopted(conn, show_draft(conn).text, hevy=False, dry_run=True)
+    again = adopted(
+        conn,
+        show_draft(conn, config=a_config(), kits=(kit_files(),), clock=FixedClock()).text,
+        hevy=False,
+        dry_run=True,
+    )
 
     assert again.diff.empty

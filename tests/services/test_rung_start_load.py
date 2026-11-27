@@ -154,7 +154,8 @@ def test_a_dry_run_shows_a_rungs_start_load_with_its_rung_and_hevy_kg() -> None:
 def test_a_rungs_start_load_survives_the_store_and_the_program_draft() -> None:
     conn = standing_on_the_weighted_rung()
 
-    [_, rung] = tomllib.loads(show_draft(conn).text)["session"][0]["line"][0]["scheme"]["rungs"]
+    shown = show_draft(conn, config=a_config(), kits=(kit_files(),), clock=FixedClock()).text
+    [_, rung] = tomllib.loads(shown)["session"][0]["line"][0]["scheme"]["rungs"]
     assert rung["start_load"] == 5
 
 

@@ -17,13 +17,14 @@ from coach.core.goal import Goal
 from coach.core.kit import KitFiles
 from coach.core.load import Load, LoadMode
 from coach.core.program.checks import AdoptContext, OpenBlock, violations
-from coach.core.program.defaults import fill
+from coach.core.program.defaults import Filled, fill
 from coach.core.program.diff import ProgramDiff, diff
 from coach.core.program.estimate import session_estimate
 from coach.core.program.fold import Folded, fold_overrides
 from coach.core.program.form import AcknowledgeEntry, Line, ProgramForm
 from coach.core.program.parse import parse_program_draft
 from coach.core.program.warnings import adopt_warnings, leave_warnings
+from coach.core.rack import Rack
 from coach.render.program_draft import program_draft
 from coach.services.cadence import cadence_signals
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
@@ -97,36 +98,19 @@ def adopt(
             return _no_op(conn, previous, config, dry_run)
         version_id = f"pv-{previous.sequence + 1 if previous else 1}"
         start = _position(draft.form, previous, position)
-        goal = _current_goal(conn)
         library = _library(conn)
         _check_declared(draft.form, library)
-        phase = _open_phase_kind(conn)
         closed = closed_weeks(conn, config.athlete.units)
-        filled = fill(
+        filled, context = _adopt_context(
+            conn,
             draft.form,
-            priority_lifts=goal.priority_lifts if goal else (),
-            phase=phase,
-            session_minutes=config.athlete.session_minutes,
-        )
-        context = AdoptContext(
+            previous=previous,
             version_id=version_id,
             library=library,
+            closed=closed,
             racks=racks,
-            last_exposures=_last_exposures(conn, config),
-            goal=goal,
-            phase=phase,
-            available_days=config.athlete.available_days,
-            hevy_on=config.hevy is not None,
-            previous=previous.form if previous else None,
-            routines=routine_map.mapped(conn),
-            open_block=_open_block(closed, previous),
-            adherence=adherence(closed.weeks, clock.today()),
-            signals={
-                str(flag.scope.exercise_id): flag
-                for flag in cadence_signals(
-                    conn, closed, units=config.athlete.units, on=clock.today(), zone=clock.zone
-                )
-            },
+            config=config,
+            clock=clock,
         )
         raised = adopt_warnings(filled.form, context)
         found = violations(
@@ -177,6 +161,50 @@ def adopt(
     return _with_plan_behind(conn, result, clock)
 
 
+def _adopt_context(
+    conn: Connection,
+    form: ProgramForm,
+    *,
+    previous: programs.VersionRow | None,
+    version_id: str,
+    library: Mapping[str, Mapping[str, object]],
+    closed: ClosedWeeks,
+    racks: Mapping[str, Mapping[str, Rack]],
+    config: Config,
+    clock: Clock,
+) -> tuple[Filled, AdoptContext]:
+    """The form filled as adopt fills it and the context its warnings and violations read."""
+    goal = _current_goal(conn)
+    phase = _open_phase_kind(conn)
+    filled = fill(
+        form,
+        priority_lifts=goal.priority_lifts if goal else (),
+        phase=phase,
+        session_minutes=config.athlete.session_minutes,
+    )
+    context = AdoptContext(
+        version_id=version_id,
+        library=library,
+        racks=racks,
+        last_exposures=_last_exposures(conn, config),
+        goal=goal,
+        phase=phase,
+        available_days=config.athlete.available_days,
+        hevy_on=config.hevy is not None,
+        previous=previous.form if previous else None,
+        routines=routine_map.mapped(conn),
+        open_block=_open_block(closed, previous),
+        adherence=adherence(closed.weeks, clock.today()),
+        signals={
+            str(flag.scope.exercise_id): flag
+            for flag in cadence_signals(
+                conn, closed, units=config.athlete.units, on=clock.today(), zone=clock.zone
+            )
+        },
+    )
+    return filled, context
+
+
 def _with_plan_behind(conn: Connection, result: AdoptResult, clock: Clock) -> AdoptResult:
     behind = plan_behind(conn, clock.today(), version_id=result.version_id)
     return replace(result, warnings=(*result.warnings, *behind))
@@ -214,22 +242,59 @@ class ShownDraft:
     folded: tuple[Folded, ...] = ()
 
 
-def show_draft(conn: Connection, *, apply_plan: datetime.date | None = None) -> ShownDraft:
-    """The version in force as a Draft for the next version; an acknowledgement whose scope names
-    a version names the next one and keeps its params hash, so it leaves only an unchanged warning.
+def show_draft(
+    conn: Connection,
+    *,
+    config: Config,
+    kits: Sequence[KitFiles],
+    clock: Clock,
+    apply_plan: datetime.date | None = None,
+) -> ShownDraft:
+    """The version in force as a Draft for the next version. It carries an acknowledgement only
+    for a flag a dry adopt of the shown content raises today; one whose scope names a version
+    names the next one and keeps its params hash, so it leaves only an unchanged warning.
     With `apply_plan`, that week's approved WeekPlan's line overrides are folded in
     (overrides.md, "What `--apply-plan` folds")."""
     version = _in_force(conn)
     next_id = f"pv-{version.sequence + 1}"
     carried = tuple(_carried(entry, next_id) for entry in version.form.acknowledgements)
     form = replace(version.form, acknowledgements=carried)
-    if apply_plan is None:
-        return ShownDraft(program_draft(form))
-    plan = week_plans.in_force(conn, apply_plan.isoformat())
-    if plan is None:
-        raise Invalid("state_conflict", f"the week of {apply_plan} has no approved WeekPlan")
-    folded = fold_overrides(form, week_plans.stored_overrides(conn, str(plan["id"])))
-    return ShownDraft(program_draft(folded.form, folded_pins=folded.pins), folded.folded)
+    pins: frozenset[tuple[str, str]] = frozenset()
+    folded: tuple[Folded, ...] = ()
+    if apply_plan is not None:
+        plan = week_plans.in_force(conn, apply_plan.isoformat())
+        if plan is None:
+            raise Invalid("state_conflict", f"the week of {apply_plan} has no approved WeekPlan")
+        applied = fold_overrides(form, week_plans.stored_overrides(conn, str(plan["id"])))
+        form, pins, folded = applied.form, applied.pins, applied.folded
+    shown = parse_program_draft(program_draft(form, folded_pins=pins).encode(), file="shown").form
+    raised = _raised_keys(conn, shown, version, config=config, kits=kits, clock=clock)
+    kept = tuple(entry for entry in form.acknowledgements if entry.flag in raised)
+    return ShownDraft(program_draft(replace(form, acknowledgements=kept), folded_pins=pins), folded)
+
+
+def _raised_keys(
+    conn: Connection,
+    form: ProgramForm,
+    previous: programs.VersionRow,
+    *,
+    config: Config,
+    kits: Sequence[KitFiles],
+    clock: Clock,
+) -> frozenset[str]:
+    """The keys adopting `form` as the version after `previous` would raise today."""
+    filled, context = _adopt_context(
+        conn,
+        form,
+        previous=previous,
+        version_id=f"pv-{previous.sequence + 1}",
+        library=_library(conn),
+        closed=closed_weeks(conn, config.athlete.units),
+        racks=racks_by_location(config, kits, form.locations()),
+        config=config,
+        clock=clock,
+    )
+    return frozenset(flag.key for flag in adopt_warnings(filled.form, context))
 
 
 def _carried(entry: AcknowledgeEntry, next_id: str) -> AcknowledgeEntry:
