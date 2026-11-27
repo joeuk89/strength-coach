@@ -1,13 +1,17 @@
 """The weekly sheet: the plan in force with its frozen prescriptions and their derivation steps."""
 
+from collections.abc import Callable
+
 from coach.core.config import Units
-from coach.core.pages import PageLine, PlannedSessionPage, WeekPage
+from coach.core.pages import PageLine, PageNames, PlannedSessionPage, WeekPage
+from coach.core.registries.program import MUSCLES
+from coach.core.registries.registry import title_of
 from coach.render.markdown import bullets, flag_text, group_text, page, section, table
 
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
-def week_page(week: WeekPage | None, *, units: Units, pin: str) -> str:
+def week_page(week: WeekPage | None, *, names: PageNames, units: Units, pin: str) -> str:
     if week is None:
         return page("Week", "No WeekPlan is approved yet.")
     overrides = table(
@@ -15,8 +19,8 @@ def week_page(week: WeekPage | None, *, units: Units, pin: str) -> str:
         [
             [
                 o.get("kind"),
-                o.get("session_id"),
-                o.get("exercise_id"),
+                _named(o.get("session_id"), names.session),
+                _named(o.get("exercise_id"), names.exercise),
                 o.get("because"),
                 o.get("text"),
             ]
@@ -29,6 +33,10 @@ def week_page(week: WeekPage | None, *, units: Units, pin: str) -> str:
         *(_session(s, units, pin) for s in week.sessions),
         section("Overrides", overrides),
     )
+
+
+def _named(id_: object, name: Callable[[str], str]) -> object:
+    return name(id_) if isinstance(id_, str) else id_
 
 
 NOT_DERIVED = "Not in the current derivation: frozen rows kept as approved."
@@ -49,7 +57,9 @@ def _lineless(session: PlannedSessionPage) -> str:
     kind = session.kind.replace("_", "-").capitalize()
     if not session.estimated_sets:
         return kind
-    sets = ", ".join(f"{muscle} {count}" for muscle, count in session.estimated_sets.items())
+    sets = ", ".join(
+        f"{title_of(MUSCLES, muscle)} {count}" for muscle, count in session.estimated_sets.items()
+    )
     return f"{kind} · estimated sets: {sets}"
 
 

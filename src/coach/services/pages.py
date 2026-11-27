@@ -16,7 +16,6 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
-    PageNames,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
@@ -29,6 +28,7 @@ from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
 from coach.services.ladders import rung_decisions, standing_rungs
+from coach.services.page_names import authored_sessions, page_names
 from coach.services.progress import newest_day, progress
 from coach.store import (
     check_ins,
@@ -81,10 +81,7 @@ def page_facts(
             bodyweight_units=bodyweight_units,
             zone=zone,
         ),
-        names=PageNames(
-            sessions={s.id: s.title for s in _authored(conn, programs.latest(conn)).values()},
-            exercises={id_: name for id_, (name, _) in names.items()},
-        ),
+        names=page_names(conn),
         week=_week(conn, names),
         routines=_routines(conn, config, kits, names, zone),
         check_ins=records,
@@ -117,21 +114,13 @@ def _version_of(conn: Connection, plan: Row | None) -> VersionRow | None:
     return programs.in_force_at(conn, str(plan["approved_at"])) if plan else programs.latest(conn)
 
 
-def _authored(conn: Connection, version: VersionRow | None) -> dict[str, Session]:
-    """Every session as the version names it, rehab sessions included."""
-    found = {s.id: s for s in niggles.every_rehab_session(conn)}
-    if version is not None:
-        found |= {s.id: s for s in version.form.sessions}
-    return found
-
-
 def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> WeekPage | None:
     plan = week_plans.latest_week(conn)
     if plan is None:
         return None
     plan_id = str(plan["id"])
     week = planned_week(conn, plan, niggles.rehab_histories(conn))
-    authored = _authored(conn, week.version)
+    authored = authored_sessions(conn, week.version)
     frozen: dict[PlannedRef, list[Row]] = {}
     for row in week_plans.prescriptions(conn, plan_id):
         frozen.setdefault((_day(row), str(row["session_id"])), []).append(row)
@@ -215,7 +204,7 @@ def _routine(
 ) -> RoutinePage:
     plan = week_plans.by_id(conn, live.plan_id) if live.plan_id else None
     version = _version_of(conn, plan)
-    sessions = _authored(conn, version)
+    sessions = authored_sessions(conn, version)
     session = sessions.get(live.session_id)
     location = (session.location if session else None) or (
         version.form.location if version else None
