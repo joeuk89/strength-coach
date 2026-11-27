@@ -353,6 +353,8 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 - `program show --draft` emits the current version as a Draft; `--apply-plan <week>` folds that
   WeekPlan's swap and pin overrides in, so promoting a persisting swap is an `amend` the agent
   edits only to write `because`. The trigger for promotion is `overrides.md`'s: `override_persisting` on the third consecutive plan.
+  The Draft carries an `[[acknowledge]]` entry only for a flag that a dry adopt of the shown
+  content raises today, so an unedited Draft passes `program adopt --dry-run`.
 
 ### Violations
 
