@@ -35,7 +35,7 @@ def run(call: InstanceCall) -> Outcome:
     view = str(call.args["view"])
     if view not in VIEWS:
         raise Invalid("invalid_argument", f"no view {view!r}; one of {', '.join(VIEWS.names())}")
-    last = None if call.full else call.last
+    last = None if call.full else call.last or VIEWS.get(view).page
     kind = _text(call, "kind")
     with open_instance_store(call.instance) as conn:
         if view == "exposures":

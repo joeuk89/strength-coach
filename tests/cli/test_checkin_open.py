@@ -147,3 +147,15 @@ def test_the_schema_lists_the_phase_rate_units(instance: Path) -> None:
 
     phase = output["properties"]["card"]["items"]["properties"]["phase"]
     assert phase["properties"]["rate_units"] == {"const": "pct_bw_per_week"}
+
+
+def test_a_card_field_with_fifteen_rows_returns_all_fifteen(instance: Path) -> None:
+    activity = '[[activity]]\ndate = 2026-10-30\nkind = "walk"\nminutes = {}\nrpe = 3\n'
+    draft = "\n".join(activity.format(10 + n) + "quality = false\n" for n in range(15))
+    (instance / "a.toml").write_text(draft, encoding="utf-8")
+    assert coach("record", "a.toml").code == 0
+
+    card = coach("checkin", "open", "--date", "2026-10-30").envelope["result"]["card"]
+
+    [field] = [f for f in card if f["field"] == "activities"]
+    assert (len(field["rows"]), field["count"], field["truncated"]) == (15, 15, False)

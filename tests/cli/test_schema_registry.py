@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 
-from coach.cli.envelope import BUDGET_BYTES
 from coach.core.registries import REGISTRIES
 
 
@@ -231,14 +230,10 @@ def test_the_flags_registry_cites_the_one_rung_step_for_ladder_top() -> None:
     assert rows["ladder_top"]["rn"] == "rn:bodyweight-skill-progression.3"
 
 
-def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
-    run = run_coach("schema", "--registry", "flags")
+def test_the_flags_registry_returns_every_row_with_no_options() -> None:
+    result = run_coach("schema", "--registry", "flags").envelope["result"]
 
-    result = run.envelope["result"]
-    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
-    assert result["truncated"] is True
-    assert len(result["rows"]) == 10
-    assert result["count"] == 103
+    assert (len(result["rows"]), result["count"], result["truncated"]) == (103, 103, False)
 
 
 def test_last_keeps_that_many_rows() -> None:
@@ -408,3 +403,18 @@ def test_the_flags_registry_lists_the_rate_units_beside_phase_trend_offs_rates()
         "rate_units",
         "window",
     ]
+
+
+def test_the_views_registry_names_the_page_of_each_history_view() -> None:
+    rows = run_coach("schema", "--registry", "views").envelope["result"]["rows"]
+
+    assert {row["name"]: row["page"] for row in rows} == {
+        "exposures": 50,
+        "readings": 50,
+        "flags": None,
+        "lines": None,
+        "routines": None,
+        "ledger": 50,
+        "exercises": 50,
+        "against": None,
+    }

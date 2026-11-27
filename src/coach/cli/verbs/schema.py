@@ -37,15 +37,6 @@ def _verb(args: Mapping[str, ArgValue]) -> str | None:
     return " ".join(words) if isinstance(words, tuple) else None
 
 
-def _whole(args: Mapping[str, ArgValue]) -> bool:
-    """The verb-less listing, or a verb's declaration carrying its Draft's schema."""
-    verb = _verb(args)
-    if isinstance(verb, str):
-        declaration = registry.find(verb)
-        return declaration is not None and declaration.draft is not None
-    return "registry" not in args
-
-
 def _registry(name: str, call: Call) -> Json:
     found = registries.find(name)
     if found is None:
@@ -71,8 +62,8 @@ DECLARATION = Declaration(
     output={
         "type": "object",
         "description": "one declaration with a verb, a Draft verb's with draft {kind, schema, "
-        "example}, never cut; {rows: [declaration, a Draft verb's draft as {kind} only], count, "
-        "truncated, registries} without one, never cut; {registry, note?, rows, count, truncated} "
+        "example}; {rows: [declaration, a Draft verb's draft as {kind} only], count, "
+        "truncated, registries} without one; {registry, note?, rows, count, truncated} "
         "with --registry",
         "properties": {
             "registry": {"type": "string", "description": "with --registry"},
@@ -92,7 +83,6 @@ DECLARATION = Declaration(
         },
     },
     run=run,
-    over_budget=_whole,
     examples=(
         Example(("schema",), "Every verb's declaration and the registry names."),
         Example(("schema", "status"), "The declaration of status."),

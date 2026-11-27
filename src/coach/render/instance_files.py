@@ -79,8 +79,8 @@ data only; the engine, its skills and its hooks come from the installed package 
   and a Draft verb's file shape under `draft`. A two-word verb is two words:
   `coach schema checkin open`. `coach schema` alone gives every verb and the registry names, and
   `coach schema --registry <name>` reads one registry.
-- A list stops at 10 rows and a result at the size budget, and each says when it was cut:
-  `--last <n>` keeps n rows, `--full` keeps everything.
+- A list comes whole; a history view stops at 50 rows and says so in `truncated`.
+  `--last <n>` keeps n rows, `--full` keeps every row.
 - The athlete's own account of themselves is the profile, `profile.md`.
 - A verb that takes a document reads a Draft the agent writes first, at
   `.coach/drafts/<date>-<kind>.toml`.

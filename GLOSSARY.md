@@ -783,8 +783,8 @@ at records of more than one kind: evidence, what a note is about, what an annota
 _Avoid_: link, pointer, foreign key (which is a single-kind column)
 
 **Compact summary**:
-The default output of a read verb: the few facts an agent needs next, within a fixed size budget.
-The whole record is a separate request.
+The default output of a read verb: the facts an agent needs next, with every row of a list that
+has an end. More detail, or the rest of a history view past its page, is a separate request.
 _Avoid_: digest, overview
 
 **Skill**:

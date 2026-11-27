@@ -1,10 +1,15 @@
+import dataclasses
+import datetime
 import tomllib
 from pathlib import Path
 from typing import Any
 
+import pytest
 from support.fixture_instances import coach, instance, rebuilt
 
-from coach.cli.envelope import BUDGET_BYTES
+from coach.cli.verbs import plan_draft as plan_draft_verb
+from coach.core.flag import Flag, Scope
+from coach.services.plan_draft import PlanDraftResult
 
 __all__ = ["instance", "rebuilt"]
 
@@ -35,7 +40,6 @@ def test_plan_draft_lists_every_flag_code_with_its_count_and_every_key(instance:
 
     result = run.envelope["result"]
     hashes = draft_hashes(instance / result["path"])
-    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
     assert {row["code"]: row["count"] for row in result["flags"]} == COUNTS
     assert (result["flag_count"], result["flags_truncated"]) == (22, False)
     assert result["flags"][0] == {
@@ -57,6 +61,40 @@ def test_plan_draft_lists_every_flag_code_with_its_count_and_every_key(instance:
         for entry in row["keys"]
     )
     assert all(set(row) == {"code", "severity", "count", "keys"} for row in result["flags"])
+
+
+def thirty_codes_of_two_keys(week: datetime.date) -> tuple[Flag, ...]:
+    return tuple(
+        Flag(f"sample_{n:02}", "warning", Scope("week", monday), {}, None, "a sample flag")
+        for n in range(30)
+        for monday in (week, week + datetime.timedelta(weeks=1))
+    )
+
+
+def test_plan_draft_lists_thirty_flag_codes_and_every_key_with_no_options(
+    instance: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    derive = plan_draft_verb.plan_draft
+
+    def with_thirty_codes(*args: Any, **kwargs: Any) -> PlanDraftResult:
+        drafted = derive(*args, **kwargs)
+        flags = thirty_codes_of_two_keys(drafted.draft.week)
+        return dataclasses.replace(
+            drafted, draft=dataclasses.replace(drafted.draft, template_checks=flags)
+        )
+
+    monkeypatch.setattr(plan_draft_verb, "plan_draft", with_thirty_codes)
+
+    result = coach("plan", "draft").envelope["result"]
+
+    sampled = [row for row in result["flags"] if row["code"].startswith("sample_")]
+    assert [row["code"] for row in sampled] == [f"sample_{n:02}" for n in range(30)]
+    assert all(len(row["keys"]) == 2 for row in sampled)
+    assert (len(result["flags"]), result["flag_count"], result["flags_truncated"]) == (
+        34,
+        82,
+        False,
+    )
 
 
 def test_query_flags_on_the_draft_returns_the_rows_plan_draft_lists(instance: Path) -> None:
@@ -116,7 +154,7 @@ def a_confirmed_plan_draft(instance: Path) -> tuple[str, dict[str, str]]:
     return str(path), grouped_hashes(drafted["flags"])
 
 
-def test_the_plan_apply_dry_run_lists_every_flag_with_what_an_acknowledgement_needs(
+def test_the_plan_apply_dry_run_lists_every_flag_whole(
     instance: Path,
 ) -> None:
     draft, hashes = a_confirmed_plan_draft(instance)
@@ -126,18 +164,22 @@ def test_the_plan_apply_dry_run_lists_every_flag_with_what_an_acknowledgement_ne
     assert (len(result["flags"]), result["flag_count"]) == (21, 21)
     assert "flags_truncated" not in result
     assert all(
-        set(row) == {"key", "code", "severity", "params_hash", "left"} for row in result["flags"]
+        set(row)
+        == {"key", "code", "severity", "scope", "params", "params_hash", "rn", "message", "left"}
+        for row in result["flags"]
     )
     assert {row["key"]: row["params_hash"] for row in result["flags"]} == {
         key: digest for key, digest in hashes.items() if not key.startswith("rotation_")
     }
-    assert result["flags"][0] == {
-        "key": "stall_streak@line:2026-11-02/lower-a/bb_romanian_deadlift",
-        "code": "stall_streak",
-        "severity": "warning",
-        "params_hash": hashes["stall_streak@line:2026-11-02/lower-a/bb_romanian_deadlift"],
-        "left": None,
-    }
+    first = result["flags"][0]
+    assert (first["key"], first["code"], first["severity"], first["left"]) == (
+        "stall_streak@line:2026-11-02/lower-a/bb_romanian_deadlift",
+        "stall_streak",
+        "warning",
+        None,
+    )
+    assert first["params_hash"] == hashes[first["key"]]
+    assert first["message"]
 
 
 def test_the_plan_apply_dry_run_never_cuts_its_flags_to_last(instance: Path) -> None:
@@ -148,13 +190,10 @@ def test_the_plan_apply_dry_run_never_cuts_its_flags_to_last(instance: Path) -> 
     assert (len(result["flags"]), result["flag_count"]) == (21, 21)
 
 
-def test_each_dry_run_flag_carries_the_params_hash_full_shows(instance: Path) -> None:
+def test_full_changes_no_dry_run_flag(instance: Path) -> None:
     draft, _ = a_confirmed_plan_draft(instance)
 
-    brief = coach("plan", "apply", draft, "--dry-run").envelope["result"]["flags"]
+    default = coach("plan", "apply", draft, "--dry-run").envelope["result"]["flags"]
     full = coach("plan", "apply", draft, "--dry-run", "--full").envelope["result"]["flags"]
 
-    assert [(f["key"], f["params_hash"]) for f in brief] == [
-        (f["key"], f["params_hash"]) for f in full
-    ]
-    assert all("message" in f and "params" in f and "scope" in f for f in full)
+    assert default == full

@@ -342,7 +342,7 @@ def test_program_show_reads_the_version_in_force(instance: Path) -> None:
         {"id": "pt-tuesday", "lines": 0},
         {"id": "a-mon-lower", "lines": 6},
     ]
-    assert (result["count"], result["truncated"]) == (11, True)
+    assert (len(result["sessions"]), result["count"], result["truncated"]) == (11, 11, False)
 
 
 def test_program_show_draft_writes_a_draft_that_re_adopts_as_an_amend_with_an_empty_diff(

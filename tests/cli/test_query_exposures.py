@@ -1,11 +1,13 @@
+import datetime
 from pathlib import Path
 
 import pytest
 from support.cli import Run, run_coach
 from support.clock import FixedClock
-from support.history import an_instance_with_eight_weeks
+from support.history import a_logged_workout, an_instance_with_eight_weeks
 
 from coach.cli import app
+from coach.store.connection import open_store
 
 ENGINE = "0.3.0"
 
@@ -62,3 +64,28 @@ def test_a_since_that_is_not_a_date_is_exit_1(instance: Path) -> None:
 
     assert run.code == 1
     assert run.envelope["error"]["code"] == "invalid_argument"
+
+
+def sixty_bench_exposures(root: Path) -> None:
+    """The eight weekly bench workouts and 52 more, one a day before them."""
+    conn = open_store(root / ".coach" / "coach.db")
+    for day in range(1, 53):
+        on = (datetime.date(2026, 9, 7) - datetime.timedelta(days=day)).isoformat()
+        a_logged_workout(conn, f"h-early-{day}", on, ("79D0BB3A", ((90, 5, 8),)))
+    conn.commit()
+    conn.close()
+
+
+def test_sixty_exposures_page_at_the_newest_fifty_and_full_returns_all_sixty(
+    instance: Path,
+) -> None:
+    sixty_bench_exposures(instance)
+
+    paged = coach("query", "exposures", "--exercise", "bb_bench_press").envelope["result"]
+    every = coach("query", "exposures", "--exercise", "bb_bench_press", "--full")
+
+    assert (len(paged["rows"]), paged["count"], paged["truncated"]) == (50, 60, True)
+    assert paged["rows"][0]["date"] == "2026-10-26"
+    assert paged["rows"][-1]["date"] == "2026-07-27"
+    result = every.envelope["result"]
+    assert (len(result["rows"]), result["count"], result["truncated"]) == (60, 60, False)

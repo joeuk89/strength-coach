@@ -193,7 +193,7 @@ def test_the_generated_claude_md_names_no_slash_command() -> None:
     assert re.findall(r"(?<![\w.])/[a-z][a-z-]*", claude_md("0.3.0")) == []
 
 
-def test_the_generated_claude_md_names_the_options_that_lift_the_default_cuts() -> None:
+def test_the_generated_claude_md_names_the_options_of_a_paged_view() -> None:
     text = claude_md("0.3.0")
 
     assert "--last <n>" in text

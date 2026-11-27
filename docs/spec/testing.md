@@ -55,11 +55,10 @@ Three committed fixture directories cover what builders cannot:
   `pages/`). It is generated, not typed: a committed script under `tests/support/` builds it
   through `store` functions and the `publish` service, and regenerating it is how it changes.
   Used by the import, export round-trip and CLI envelope tests, and by the contract test that
-  holds every default envelope under 3 KB (`verbs.md`). For that test to mean anything the
-  instance must overflow every list a default summary truncates: more than ten exposures per
-  lift, more than ten flags on the plan in force, more than ten routines, more than ten ledger
-  rows of each kind, more than ten readings per kind, so every `truncated` is true at least
-  once. It is still small: a year of one program, not a career.
+  runs every declared example and view on it (`verbs.md`). Each list holds more than ten rows
+  (exposures per lift, flags on the plan in force, routines, ledger rows of each kind, readings
+  per kind), so a list cut short shows. It is still small: a year of one program, not a
+  career.
 - `tests/fixtures/hevy/`: a handful of anonymised Hevy GET responses (a workout page, a routine,
   a folder, an exercise template). They fix the payload shapes the parser must accept and feed
   the parser tests only.
@@ -193,9 +192,9 @@ Seven directories, one per package plus contract:
 | `tests/render/` | `core` values | page determinism (ADR 0012: the same store, the same bytes), the check-in record renderer (`check-in.md`), the 40-line approval prompt (ADR 0006), the TOML emitter round-trip through `tomllib` |
 | `tests/services/` | `:memory:` built from `schema.sql` through scenario builders, `FakeHevy`, a fixed clock, the kit fixture as a value | each leaf's behaviour, transactions, refusals, idempotent re-runs |
 | `tests/cli/` | in-process `main` with a `FakeHevy` factory and a fixed clock; the fixture instance | one test per exit class, `init`, `import` with Hevy on and off, `plan apply` end to end, the export round-trip; one subprocess smoke test that `[sys.executable, "-m", "coach", "--help"]` exits 0 |
-| `tests/contract/` | the declarations, `schema.sql`, the registries, the skill files, the research notes' headings, the source tree, the fixture instance | the generated tests listed in `verbs.md`, `schema.md`, `validation.md` and `skills.md`, the 3 KB envelope test, the `rn:` registry test, the import DAG |
+| `tests/contract/` | the declarations, `schema.sql`, the registries, the skill files, the research notes' headings, the source tree, the fixture instance | the generated tests listed in `verbs.md`, `schema.md`, `validation.md` and `skills.md`, the default-envelope test, the `rn:` registry test, the import DAG |
 
-The 3 KB envelope test lives in `tests/contract/` only. Nothing runs against an on-disk instance
+The default-envelope test lives in `tests/contract/` only. Nothing runs against an on-disk instance
 except the fixture instance, and no test shells out except the one smoke test, which runs the
 interpreter the suite runs under, never the `coach` on PATH.
 

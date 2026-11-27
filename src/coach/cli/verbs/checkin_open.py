@@ -10,7 +10,6 @@ from coach.cli.declaration import (
     InstanceCall,
     Json,
     Outcome,
-    always,
 )
 from coach.cli.instance import open_instance_store
 from coach.cli.pull import PULL_SCHEMA
@@ -75,7 +74,7 @@ def _ask(ask: Ask) -> Json:
 
 
 def _row_list(rows: object, last: int | None) -> Json:
-    """A field's `rows` follow the list rule (verbs.md, "Envelope and budget")."""
+    """A field's `rows` follow the list rule (verbs.md, "Envelope and lists")."""
     if not isinstance(rows, list):
         return {}
     every = cast(list[object], rows)
@@ -105,7 +104,6 @@ DECLARATION = Declaration(
     ),
     writes="store",
     pulls_first=True,
-    over_budget=always,
     arguments=(
         Argument("--date", "the check-in's date (default today)"),
         Argument("--tier", "deep raises the derived tier; it never lowers it"),

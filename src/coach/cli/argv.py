@@ -3,13 +3,20 @@ from dataclasses import dataclass
 
 from coach.cli.declaration import Argument, ArgValue, Declaration
 from coach.core.errors import Invalid
-
-DEFAULT_LAST = 10
+from coach.core.registries.agent import HISTORY_PAGE
 
 GLOBAL_OPTIONS = (
     Argument("--fields", "comma list of dotted paths into result; excludes --full"),
-    Argument("--full", "the whole record instead of the compact summary", takes_value=False),
-    Argument("--last", f"how many of the newest rows a list keeps (default {DEFAULT_LAST})"),
+    Argument(
+        "--full",
+        "every row of a paged history view, and more detail where a verb names it",
+        takes_value=False,
+    ),
+    Argument(
+        "--last",
+        f"how many of the newest rows a list keeps (default every row; a history view keeps "
+        f"{HISTORY_PAGE})",
+    ),
     Argument("--help", "describe the verb instead of running it", takes_value=False),
     Argument("--version", "the installed engine version; needs no instance", takes_value=False),
 )
@@ -21,7 +28,7 @@ class Options:
     args: dict[str, ArgValue]
     fields: tuple[str, ...] | None
     full: bool
-    last: int
+    last: int | None
     help: bool
     version: bool
 
@@ -101,9 +108,9 @@ def _fields(raw: ArgValue | None) -> tuple[str, ...] | None:
     return paths
 
 
-def _last(raw: ArgValue | None) -> int:
+def _last(raw: ArgValue | None) -> int | None:
     if raw is None:
-        return DEFAULT_LAST
+        return None
     if isinstance(raw, str) and raw.isdigit() and int(raw) > 0:
         return int(raw)
     raise Invalid("invalid_argument", f"--last takes a positive whole number, not {raw!r}")

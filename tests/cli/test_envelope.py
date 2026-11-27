@@ -1,7 +1,6 @@
 import io
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 from support.cli import run_coach
@@ -12,18 +11,12 @@ from support.instances import an_instance
 
 from coach.cli import app, registry
 from coach.cli.declaration import (
-    Argument,
     Call,
     Declaration,
     Json,
     MakeClient,
     Outcome,
-    OverBudget,
-    always,
-    never,
-    on_dry_run,
 )
-from coach.cli.envelope import BUDGET_BYTES
 from coach.core.errors import CoachError, Invalid, Refused, Setup, Unreachable
 from coach.store.chain import ENGINE as CHAIN
 
@@ -188,221 +181,46 @@ def test_each_typed_error_exits_with_its_class(
     assert run.envelope["error"]["code"] == "some_code"
 
 
-# Ten rows this wide pass the budget, and the first five fit it.
-WIDE = BUDGET_BYTES // 6
-
-
-def a_listing(rows: int, *, width: int = 100, over_budget: OverBudget = never) -> Declaration:
+def a_listing(rows: int) -> Declaration:
     def listing(call: Call) -> Outcome:
-        kept = [{"id": n, "text": "x" * width} for n in range(rows)][: call.last]
+        kept = [{"id": n, "text": "x" * 1000} for n in range(rows)][: call.last]
         return Outcome({"rows": kept, "count": rows, "truncated": len(kept) < rows})
 
-    return Declaration(
-        name="listing",
-        summary="Lists.",
-        writes="none",
-        output={},
-        run=listing,
-        arguments=(Argument("--dry-run", "validate only", takes_value=False),),
-        over_budget=over_budget,
-    )
+    return Declaration(name="listing", summary="Lists.", writes="none", output={}, run=listing)
 
 
-def test_rows_past_the_budget_are_cut_from_the_end_and_marked_truncated(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(10, width=WIDE),))
-
-    run = run_coach("listing")
-
-    result = run.envelope["result"]
-    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
-    assert [row["id"] for row in result["rows"]] == [0, 1, 2, 3, 4]
-    assert (result["count"], result["truncated"]) == (10, True)
-
-
-def test_rows_under_the_budget_are_left_as_the_list_rule_kept_them(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(4),))
+def test_a_list_of_any_size_comes_whole_with_no_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(100),))
 
     result = run_coach("listing").envelope["result"]
 
-    assert (len(result["rows"]), result["truncated"]) == (4, False)
+    assert (len(result["rows"]), result["count"], result["truncated"]) == (100, 100, False)
 
 
-def test_full_lifts_the_cap(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(10, width=WIDE),))
+def test_last_keeps_the_first_n_rows_and_says_more_exist(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(registry, "declarations", lambda: (a_listing(100),))
 
-    result = run_coach("listing", "--full").envelope["result"]
+    result = run_coach("listing", "--last", "3").envelope["result"]
 
-    assert len(result["rows"]) == 10
-
-
-def test_a_verb_declared_over_budget_keeps_every_row_past_the_budget(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    listing = a_listing(10, width=WIDE, over_budget=always)
-    monkeypatch.setattr(registry, "declarations", lambda: (listing,))
-
-    run = run_coach("listing")
-
-    assert len(run.stdout.encode("utf-8")) > BUDGET_BYTES
-    assert (len(run.envelope["result"]["rows"]), run.envelope["result"]["truncated"]) == (10, False)
+    assert [row["id"] for row in result["rows"]] == [0, 1, 2]
+    assert (result["count"], result["truncated"]) == (100, True)
 
 
-def test_a_verb_over_budget_on_its_dry_run_fits_the_budget_without_it(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    listing = a_listing(10, width=WIDE, over_budget=on_dry_run)
-    monkeypatch.setattr(registry, "declarations", lambda: (listing,))
-
-    dry_run = run_coach("listing", "--dry-run").envelope["result"]
-    real = run_coach("listing")
-
-    assert len(dry_run["rows"]) == 10
-    assert len(real.stdout.encode("utf-8")) <= BUDGET_BYTES
-    assert (len(real.envelope["result"]["rows"]), real.envelope["result"]["truncated"]) == (5, True)
-
-
-def test_the_largest_row_list_is_cut_first(monkeypatch: pytest.MonkeyPatch) -> None:
-    def card(call: Call) -> Outcome:
-        def rows(n: int) -> Json:
-            return {
-                "rows": [{"text": "y" * (BUDGET_BYTES // 8)}] * n,
-                "count": n,
-                "truncated": False,
-            }
-
-        return Outcome({"lifts": rows(8), "activities": rows(2)})
-
-    monkeypatch.setattr(
-        registry,
-        "declarations",
-        lambda: (
-            Declaration(
-                name="card",
-                summary="A card.",
-                writes="none",
-                output={},
-                run=card,
-            ),
-        ),
-    )
-
-    result = run_coach("card").envelope["result"]
-
-    assert len(result["activities"]["rows"]) == 2
-    assert result["lifts"]["truncated"] is True
-    assert len(result["lifts"]["rows"]) < 8
-
-
-def test_a_json_schema_naming_rows_count_and_truncated_is_not_a_row_list(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def describe(call: Call) -> Outcome:
-        shape: Json = {"rows": {"type": "array"}, "count": {}, "truncated": {}}
-        return Outcome(
-            {"declarations": [{"properties": shape, "text": "z" * (BUDGET_BYTES + 1000)}]}
-        )
-
-    monkeypatch.setattr(
-        registry,
-        "declarations",
-        lambda: (
-            Declaration(
-                name="describe",
-                summary="Describes.",
-                writes="none",
-                output={},
-                run=describe,
-            ),
-        ),
-    )
-
-    run = run_coach("describe")
-
-    assert run.code == 0
-
-
-def a_group(code: str, keys: int) -> Json:
-    return {
-        "code": code,
-        "severity": "warning",
-        "count": keys,
-        "keys": [
-            {"key": f"{code}@line:{n:03}", "params_hash": "sha256:" + "0" * 64} for n in range(keys)
-        ],
-    }
-
-
-def a_grouping(result: Json) -> Declaration:
-    return Declaration(
+def test_a_grouped_flag_list_keeps_every_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    keys = [
+        {"key": f"stall_streak@line:{n:03}", "params_hash": "sha256:" + "0" * 64}
+        for n in range(300)
+    ]
+    group: Json = {"code": "stall_streak", "severity": "warning", "count": 300, "keys": keys}
+    grouping = Declaration(
         name="grouping",
         summary="Groups.",
         writes="none",
         output={},
-        run=lambda call: Outcome(result),
-    )
-
-
-def test_a_grouped_list_past_the_budget_loses_trailing_keys_from_the_longest_group(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    groups: Any = [
-        a_group("stall_streak", 60),
-        a_group("rep_range_missed", 5),
-        a_group("dose_under_target", 1),
-    ]
-    grouping = a_grouping({"rows": groups, "count": 3, "truncated": False})
-    monkeypatch.setattr(registry, "declarations", lambda: (grouping,))
-
-    run = run_coach("grouping")
-
-    result = run.envelope["result"]
-    longest, *rest = result["rows"]
-    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
-    assert [row["code"] for row in result["rows"]] == [
-        "stall_streak",
-        "rep_range_missed",
-        "dose_under_target",
-    ]
-    assert (result["count"], result["truncated"]) == (3, False)
-    assert (longest["count"], longest["keys_truncated"]) == (60, True)
-    assert 0 < len(longest["keys"]) < 60
-    assert longest["keys"] == groups[0]["keys"][: len(longest["keys"])]
-    assert rest == groups[1:]
-
-
-def test_grouped_rows_outside_a_row_list_are_fitted_the_same_way(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    flags = [a_group("stall_streak", 40), a_group("rep_range_missed", 30)]
-    grouping = a_grouping({"flags": flags, "flag_count": 70, "flags_truncated": False})
-    monkeypatch.setattr(registry, "declarations", lambda: (grouping,))
-
-    run = run_coach("grouping")
-
-    result = run.envelope["result"]
-    assert len(run.stdout.encode("utf-8")) <= BUDGET_BYTES
-    assert [row["code"] for row in result["flags"]] == ["stall_streak", "rep_range_missed"]
-    assert all(row["keys_truncated"] for row in result["flags"])
-    assert result["flags_truncated"] is False
-
-
-def test_keys_are_trimmed_before_any_flat_row(monkeypatch: pytest.MonkeyPatch) -> None:
-    flat: Json = {"rows": [{"text": "x" * 100}] * 5, "count": 5, "truncated": False}
-    grouping = a_grouping(
-        {
-            "flags": [a_group("stall_streak", 60)],
-            "flag_count": 60,
-            "flags_truncated": False,
-            "notes": flat,
-        }
+        run=lambda call: Outcome({"flags": [group], "flag_count": 300}),
     )
     monkeypatch.setattr(registry, "declarations", lambda: (grouping,))
 
-    result = run_coach("grouping").envelope["result"]
+    [row] = run_coach("grouping").envelope["result"]["flags"]
 
-    assert result["flags"][0]["keys_truncated"] is True
-    assert (len(result["notes"]["rows"]), result["notes"]["truncated"]) == (5, False)
+    assert row == group
