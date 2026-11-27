@@ -6,7 +6,8 @@ from collections.abc import Mapping
 from typing import cast
 
 from support.check_in_cards import field_of, opened
-from support.closed_weeks import a_planned_squat_week, monday
+from support.closed_weeks import a_check_in, a_planned_squat_week, monday
+from support.pages import the_pages
 from support.plans import a_squat_program, squat_logged
 
 from coach.store.connection import Connection
@@ -87,3 +88,27 @@ def test_the_row_keeps_its_top_set_and_e1rm_figures() -> None:
     top = cast(Mapping[str, object], row["top_set"])
     assert (top["load"], top["reps"], top["rpe"]) == (110.0, 5, 6.0)
     assert (row["e1rm"], row["e1rm_before"], row["priority"]) == (217.07, None, False)
+
+
+def lifts_section(conn: Connection) -> str:
+    a_check_in(conn, monday(0), "2026-11-08")
+    page = the_pages(conn)["pages/check-ins/2026-11-08.md"]
+    return page.split("## Lifts\n", 1)[1].split("\n## ", 1)[0]
+
+
+def test_the_page_names_the_e1rm_source_where_it_is_not_the_top_sets_exposure() -> None:
+    section = lifts_section(a_heavy_session_then_a_light_one())
+
+    assert "| e1RM from |" in section
+    assert section.rstrip().endswith(f"| Lower on {monday(0)} |")
+
+
+def test_the_page_leaves_the_source_out_where_the_top_set_gave_the_e1rm() -> None:
+    conn = a_squat_program()
+    a_planned_squat_week(conn, monday(0))
+    squat_logged(conn, "h-1", monday(0), *[(176, 5, 8)] * 4)
+
+    section = lifts_section(conn)
+
+    assert "Back Squat" in section
+    assert "from" not in section

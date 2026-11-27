@@ -507,7 +507,10 @@ def test_a_check_in_record_names_each_lift_in_its_dose_and_lifts_tables() -> Non
 
     assert "| Bench Press (Barbell) | 4 | 8 | 4 |" in rows
     assert "| Pull Up | 3 | 8 | 6 |" in rows
-    assert "| Bench Press (Barbell) | yes | load 100, reps 5, rpe 8 | 123.33 | – |" in rows
+    assert (
+        "| Bench Press (Barbell) | yes | load 100, reps 5, rpe 8, date 2026-12-07, session Push "
+        "| 123.33 | – | 6 | Push on 2026-11-02 |"
+    ) in rows
     assert not [row for row in rows if "bb_bench_press" in row or "pull_up" in row]
 
 
