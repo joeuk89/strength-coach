@@ -48,7 +48,7 @@ PER_CASE_WARNINGS = {
 
 
 @dataclass(frozen=True)
-class _Loaded:
+class _StartLoadRead:
     """A line, or a rung after the first, as the start-load checks read it."""
 
     exercise_id: str
@@ -508,9 +508,9 @@ class _Checks:
     def _start_load(
         self, session: Session, line: Line, exercise: Mapping[str, object], scope: Scope
     ) -> None:
-        self._loaded(
+        self._check_start_load(
             session,
-            _Loaded(
+            _StartLoadRead(
                 exercise_id=line.exercise,
                 exercise=exercise,
                 mode=line.load_mode or str(exercise.get("load_mode")),
@@ -543,9 +543,9 @@ class _Checks:
             return
         if exercise is None:
             return
-        self._loaded(
+        self._check_start_load(
             session,
-            _Loaded(
+            _StartLoadRead(
                 exercise_id=rung.exercise,
                 exercise=exercise,
                 mode=str(exercise.get("load_mode")),
@@ -559,7 +559,7 @@ class _Checks:
             scope,
         )
 
-    def _loaded(self, session: Session, loaded: _Loaded, scope: Scope) -> None:
+    def _check_start_load(self, session: Session, loaded: _StartLoadRead, scope: Scope) -> None:
         if loaded.mode in NO_LOAD_MODES:
             if loaded.start_load is not None:
                 self.unknown.append(loaded.key_path)

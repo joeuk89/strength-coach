@@ -85,8 +85,8 @@ def _summary(shown: ShowResult, last: int | None) -> Json:
 
 def _ladder(shown: ShownLadder) -> Json:
     return {
-        "session": shown.session_id,
-        "exercise": shown.exercise,
+        "session": shown.line.session_id,
+        "exercise": shown.line.exercise,
         "rungs": [
             {
                 "rung": rung.rung,

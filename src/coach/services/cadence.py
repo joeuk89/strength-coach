@@ -12,9 +12,9 @@ from coach.core.program.form import Line, ProgramForm
 from coach.core.stall import judged_line
 from coach.services.closed_weeks import ClosedWeeks
 from coach.services.history import read_history
-from coach.services.ladders import rung_decisions, standing_line
+from coach.services.ladders import RUNG_DECISIONS, standing_line
 from coach.services.leave_warning import leave_warning_decisions
-from coach.store import programs, week_plans
+from coach.store import decisions, programs, week_plans
 from coach.store.connection import Connection
 
 _DAY = datetime.timedelta(days=1)
@@ -46,7 +46,7 @@ def cadence_signals(
     adherence = _adherence(closed, before, last)
     exposures = read_history(conn, units).lifting
     left = leave_warning_decisions(conn, on)
-    rungs = rung_decisions(conn, zone, on)
+    rungs = decisions.in_force_dated(conn, on, RUNG_DECISIONS, zone)
     found: list[Flag] = []
     for session_id, line in _lines(version.form):
         if any(

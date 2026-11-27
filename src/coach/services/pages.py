@@ -2,7 +2,7 @@
 
 import datetime
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import cast
 
 from coach.core.closed_week.match import PlannedRef
@@ -16,6 +16,7 @@ from coach.core.pages import (
     FollowUpRead,
     NiggleRead,
     PageLine,
+    PageNames,
     Pages,
     PlannedSessionPage,
     PlatePoolKit,
@@ -27,7 +28,7 @@ from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
-from coach.services.ladders import rung_decisions, standing_rungs
+from coach.services.ladders import RUNG_DECISIONS, standing_rungs
 from coach.services.page_names import authored_sessions, page_names
 from coach.services.progress import newest_day, progress
 from coach.store import (
@@ -63,7 +64,7 @@ def page_facts(
 ) -> Pages:
     units = config.athlete.units
     bodyweight_units = config.athlete.bodyweight_units
-    names = _exercise_names(conn)
+    library = _Library(page_names(conn), _equipment_kinds(conn))
     every_decision = decisions.every(conn)
     records = tuple(
         _record(conn, row, every_decision, units, bodyweight_units, zone)
@@ -81,27 +82,31 @@ def page_facts(
             bodyweight_units=bodyweight_units,
             zone=zone,
         ),
-        names=page_names(conn),
-        week=_week(conn, names),
-        routines=_routines(conn, config, kits, names, zone),
+        names=library.names,
+        week=_week(conn, library),
+        routines=_routines(conn, config, kits, library, zone),
         check_ins=records,
     )
 
 
-def _exercise_names(conn: Connection) -> dict[str, tuple[str, str | None]]:
+@dataclass(frozen=True)
+class _Library:
+    names: PageNames
+    kinds: Mapping[str, str | None]
+
+
+def _equipment_kinds(conn: Connection) -> dict[str, str | None]:
     return {
-        str(row["id"]): (str(row["name"]), cast(str | None, row["equipment_kind"]))
-        for row in exercises.every(conn)
+        str(row["id"]): cast(str | None, row["equipment_kind"]) for row in exercises.every(conn)
     }
 
 
-def _line(row: Row, names: Mapping[str, tuple[str, str | None]]) -> PageLine:
+def _line(row: Row, library: _Library) -> PageLine:
     exercise_id = str(row["exercise_id"])
-    name, kind = names.get(exercise_id, (exercise_id, None))
     return PageLine(
         exercise_id=exercise_id,
-        name=name,
-        equipment_kind=kind,
+        name=library.names.exercise(exercise_id),
+        equipment_kind=library.kinds.get(exercise_id),
         set_groups=tuple(cast(list[Json], row["set_groups"])),
         steps=tuple(cast(list[Json], row["steps"])),
         flags=tuple(cast(list[Json], row["flags"])),
@@ -114,7 +119,7 @@ def _version_of(conn: Connection, plan: Row | None) -> VersionRow | None:
     return programs.in_force_at(conn, str(plan["approved_at"])) if plan else programs.latest(conn)
 
 
-def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> WeekPage | None:
+def _week(conn: Connection, library: _Library) -> WeekPage | None:
     plan = week_plans.latest_week(conn)
     if plan is None:
         return None
@@ -126,14 +131,14 @@ def _week(conn: Connection, names: Mapping[str, tuple[str, str | None]]) -> Week
         frozen.setdefault((_day(row), str(row["session_id"])), []).append(row)
     derived = tuple(
         _session_page(
-            s.session_id, s.date, s.kind, frozen.get((s.date, s.session_id), ()), authored, names
+            s.session_id, s.date, s.kind, frozen.get((s.date, s.session_id), ()), authored, library
         )
         for s in week.kept
     )
     planned = week.refs()
     orphans = tuple(
         _session_page(
-            session_id, day, _kind(authored, session_id), rows, authored, names, derived=False
+            session_id, day, _kind(authored, session_id), rows, authored, library, derived=False
         )
         for (day, session_id), rows in frozen.items()
         if (day, session_id) not in planned
@@ -157,7 +162,7 @@ def _session_page(
     kind: str,
     rows: Sequence[Row],
     authored: Mapping[str, Session],
-    names: Mapping[str, tuple[str, str | None]],
+    library: _Library,
     *,
     derived: bool = True,
 ) -> PlannedSessionPage:
@@ -167,7 +172,7 @@ def _session_page(
         title=_title(authored, session_id),
         date=day,
         kind=kind,
-        lines=tuple(_line(row, names) for row in rows),
+        lines=tuple(_line(row, library) for row in rows),
         estimated_sets=session.estimated_sets if session and not rows else None,
         derived=derived,
     )
@@ -188,10 +193,12 @@ def _routines(
     conn: Connection,
     config: Config,
     kits: Sequence[KitFiles],
-    names: Mapping[str, tuple[str, str | None]],
+    library: _Library,
     zone: datetime.tzinfo,
 ) -> tuple[RoutinePage, ...]:
-    return tuple(_routine(conn, live, config, kits, names, zone) for live in routine_map.live(conn))
+    return tuple(
+        _routine(conn, live, config, kits, library, zone) for live in routine_map.live(conn)
+    )
 
 
 def _routine(
@@ -199,7 +206,7 @@ def _routine(
     live: routine_map.LiveRow,
     config: Config,
     kits: Sequence[KitFiles],
-    names: Mapping[str, tuple[str, str | None]],
+    library: _Library,
     zone: datetime.tzinfo,
 ) -> RoutinePage:
     plan = week_plans.by_id(conn, live.plan_id) if live.plan_id else None
@@ -219,10 +226,12 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
-    standing = standing_rungs(version.form, rung_decisions(conn, zone)) if version else {}
-    naming = RungNaming(
-        config.athlete.units, {exercise: name for exercise, (name, _) in names.items()}
+    standing = (
+        standing_rungs(version.form, decisions.in_force_dated(conn, None, RUNG_DECISIONS, zone))
+        if version
+        else {}
     )
+    naming = RungNaming(config.athlete.units, library.names.exercises)
     ladders = _ladders(session, naming, standing) if session else {}
     return RoutinePage(
         session_id=live.session_id,
@@ -231,7 +240,7 @@ def _routine(
         location=location,
         lines=tuple(
             replace(line, ladder=ladders.get(line.exercise_id, ()))
-            for line in (_line(r, names) for r in rows if r["date"] == first)
+            for line in (_line(r, library) for r in rows if r["date"] == first)
         ),
         kit=_kit(config, kits, location),
     )

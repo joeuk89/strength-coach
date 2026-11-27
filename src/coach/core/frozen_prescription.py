@@ -17,7 +17,7 @@ def frozen_groups(groups: Sequence[PrescribedGroup], units: Units) -> list[Json]
 def dose(groups: Sequence[Mapping[str, object]], units: Units) -> str:
     """The working groups as `4×6–8 at 125 lb`, the heaviest working load named once."""
     working = [g for g in groups if g.get("type") != "warm_up"]
-    shape = " + ".join(_shape(g) for g in working) or "no working set"
+    shape = " + ".join(group_shape(g) for g in working) or "no working set"
     loads = [float(str(g["load"])) for g in working if g.get("load") is not None]
     return f"{shape} at {max(loads):g} {units}" if loads else shape
 
@@ -34,7 +34,8 @@ def _group(group: PrescribedGroup, units: Units) -> Json:
     return document | {key: value for key, value in optional.items() if value is not None}
 
 
-def _shape(group: Mapping[str, object]) -> str:
+def group_shape(group: Mapping[str, object]) -> str:
+    """`4×6–8`, `3×5` or `2×30 s`."""
     count = group["count"]
     rep_range = group.get("range")
     if isinstance(rep_range, list):

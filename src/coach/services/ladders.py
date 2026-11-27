@@ -18,14 +18,7 @@ from coach.store import decisions, programs, week_plans
 from coach.store.connection import Connection
 
 _DAY = datetime.timedelta(days=1)
-
-
-def rung_decisions(
-    conn: Connection, zone: datetime.tzinfo, on: datetime.date | None = None
-) -> tuple[DecisionInForce, ...]:
-    """The `ladder_rung` Decisions in force, each dated by the day it was recorded on in the
-    athlete's timezone."""
-    return decisions.in_force_dated(conn, on, ("ladder_rung",), zone)
+RUNG_DECISIONS = ("ladder_rung",)
 
 
 def standing_rungs(form: ProgramForm, found: Sequence[DecisionInForce]) -> dict[LineRef, int]:
@@ -66,7 +59,7 @@ def ladder_reads(
     version = programs.latest(conn)
     if version is None:
         return ()
-    found = rung_decisions(conn, zone, on)
+    found = decisions.in_force_dated(conn, on, RUNG_DECISIONS, zone)
     adopted = version.adopted_on
     exposures = read_history(conn, units).lifting
     plan = week_plans.latest_through(conn, week_monday(on).isoformat())

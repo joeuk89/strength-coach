@@ -825,7 +825,7 @@ def test_show_holds_each_ladder_line_with_its_session_and_its_standing_rung() ->
 
     [shown] = show(conn, units="lb", zone=datetime.UTC).ladders
 
-    assert (shown.session_id, shown.exercise) == ("lower", "dead_bug")
+    assert (shown.line.session_id, shown.line.exercise) == ("lower", "dead_bug")
     assert [rung.standing for rung in shown.rungs] == [False, True, False]
 
 
@@ -841,7 +841,7 @@ def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts
     assert adopted.version_id == "pv-1"
     assert exercises.get(conn, "custom_balance_board_one_foot_eyes_closed") is not None
     [shown] = show(conn, units="lb", zone=datetime.UTC).ladders
-    assert shown.session_id == "daily-balance"
+    assert shown.line.session_id == "daily-balance"
     assert [rung.standing for rung in shown.rungs] == [True, False, False, False, False]
     assert dry.diff.empty
 

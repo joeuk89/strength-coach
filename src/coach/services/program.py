@@ -29,11 +29,11 @@ from coach.render.program_draft import program_draft
 from coach.services.cadence import cadence_signals
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
-from coach.services.ladders import rung_decisions, standing_rungs
+from coach.services.ladders import RUNG_DECISIONS, standing_rungs
 from coach.services.plan_behind import plan_behind
 from coach.services.projections import rung_naming
 from coach.services.racks import racks_by_location
-from coach.store import exercises, goals, phases, programs, routine_map, week_plans
+from coach.store import decisions, exercises, goals, phases, programs, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.transaction import transaction
 
@@ -58,10 +58,9 @@ class AdoptResult:
 
 @dataclass(frozen=True)
 class ShownLadder:
-    """An `exercise_ladder` line's key, its session and every rung, the standing one marked."""
+    """An `exercise_ladder` line and every rung, the standing one marked."""
 
-    session_id: str
-    exercise: str
+    line: LineRef
     rungs: tuple[RungShape, ...]
 
 
@@ -212,7 +211,9 @@ def _with_plan_behind(conn: Connection, result: AdoptResult, clock: Clock) -> Ad
 
 def show(conn: Connection, *, units: Units, zone: datetime.tzinfo) -> ShowResult:
     version = _in_force(conn)
-    standing = standing_rungs(version.form, rung_decisions(conn, zone))
+    standing = standing_rungs(
+        version.form, decisions.in_force_dated(conn, None, RUNG_DECISIONS, zone)
+    )
     naming = rung_naming(conn, units)
     return ShowResult(
         version_id=version.id,
@@ -223,11 +224,8 @@ def show(conn: Connection, *, units: Units, zone: datetime.tzinfo) -> ShowResult
         sessions=tuple(programs.line_counts(conn, version.id)),
         ladders=tuple(
             ShownLadder(
-                session.id,
-                line.exercise,
-                rung_shapes(
-                    line, ladder, standing[LineRef(session.id, line.exercise)], naming=naming
-                ),
+                ref := LineRef(session.id, line.exercise),
+                rung_shapes(line, ladder, standing[ref], naming=naming),
             )
             for session in version.form.sessions
             for line in session.lines

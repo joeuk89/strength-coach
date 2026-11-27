@@ -31,8 +31,8 @@ from coach.core.stall import JudgedLine, judged_line, stall_streak
 from coach.services.cadence import cadence_signals, closed_spans
 from coach.services.closed_weeks import ClosedWeeks, closed_weeks
 from coach.services.history import read_history
-from coach.services.ladders import ladder_reads, rung_decisions, standing_line
-from coach.store import annotations, check_ins, goals, phases, programs, readings
+from coach.services.ladders import RUNG_DECISIONS, ladder_reads, standing_line
+from coach.store import annotations, check_ins, decisions, goals, phases, programs, readings
 from coach.store.connection import Connection
 
 BLOCKS_READ = 3
@@ -60,7 +60,7 @@ def progress(
     priority = stored.goal.priority_lifts if stored else ()
     signals = cadence_signals(conn, closed, units=units, on=on, zone=zone)
     by_exercise = {str(s.scope.exercise_id): s.code for s in signals}
-    rungs = rung_decisions(conn, zone, on)
+    rungs = decisions.in_force_dated(conn, on, RUNG_DECISIONS, zone)
     opened = programs.block_opened(conn)
     redesigned = None if opened is None else datetime.date.fromisoformat(opened)
     weigh_ins = {

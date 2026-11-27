@@ -423,7 +423,7 @@ def ladders(reads: Sequence[LadderRead]) -> CardField | None:
         return None
     rows = [ladder_row(r) for r in reads]
     asks = tuple(
-        Ask("ready_for_next_rung", f"line:{r.line.session_id}/{r.line.line_key}")
+        Ask("ready_for_next_rung", f"line:{r.line.session_id}/{r.line.exercise}")
         for r in reads
         if r.needed is None and r.next is not None
     )
@@ -433,7 +433,7 @@ def ladders(reads: Sequence[LadderRead]) -> CardField | None:
 def ladder_row(read: LadderRead) -> Facts:
     return {
         "session": read.line.session_id,
-        "line": read.line.line_key,
+        "line": read.line.exercise,
         "rung": read.rung,
         "exercise": read.exercise,
         "rungs": read.rungs,
