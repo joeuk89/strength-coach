@@ -253,7 +253,9 @@ def test_a_lift_whose_session_was_renamed_between_blocks_still_raises_cadence_sl
 
 
 RISING_BENCH = (100, 105, 105, 110, 115, 115)
-CAPPED = [{"step": "scheme", "from": 100, "to": 102.5, "cause": "one_row_cap"}]
+CAPPED: list[dict[str, object]] = [
+    {"step": "scheme", "from": 100, "to": 102.5, "cause": "one_row_cap"}
+]
 BENCH_DRILL = a_line(
     "bb_bench_press", sets=[{"count": 3, "reps": 5}], scheme={"name": "hold"}, start_load=60
 )
