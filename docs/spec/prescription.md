@@ -296,6 +296,10 @@ check-in card still measures from the standing rung. All of this reads the froze
 steps, not the Decisions in force, so a Decision recorded after approval leaves the note alone. A
 line in a band that steps back no rung, because it stands on the first, keeps its `Next:`.
 
+A week whose rung a `swap_exercise` or `restate_sets` override changed, from the plan or a
+Decision, still offers the climb, but the approval prompt names its rung by index alone, since the
+rung's label would print an exercise or sets the line no longer runs.
+
 Illness alone (gap ≤ 10 days) is not a cut: the RPE 7 cap is the whole return. Illness with
 days off > 10 is a return line with the cap at 7.
 

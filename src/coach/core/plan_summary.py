@@ -14,7 +14,13 @@ from coach.core.frozen_prescription import frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import RotationPosition
 from coach.core.prescription import LinePrescription, PlanOverride
-from coach.core.routine_projection import RungKey, RungLabels, authored_exercise, week_labels
+from coach.core.routine_projection import (
+    RungKey,
+    RungLabels,
+    authored_exercise,
+    found_at,
+    week_labels,
+)
 
 type Json = Mapping[str, object]
 type SessionRungLabels = Mapping[str, Mapping[RungKey, RungLabels]]
@@ -191,7 +197,7 @@ def _labels(
     steps: Sequence[Json],
     rung: int | None,
 ) -> RungLabels | None:
-    found = rung_labels.get(session_id, {}).get((authored_exercise(exercise_id, steps), rung))
+    found = found_at(rung_labels.get(session_id, {}), authored_exercise(exercise_id, steps), rung)
     return None if found is None else week_labels(found, steps)
 
 

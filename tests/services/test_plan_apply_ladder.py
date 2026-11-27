@@ -434,3 +434,38 @@ def test_the_prompt_after_a_ladder_rung_decision_shows_the_adopted_rungs_label()
     )
     assert adopted in fresh
     assert adopted in resumed
+
+
+RESTATE_THE_STANDING_RUNG = (
+    '[[override]]\nkind = "restate_sets"\nsession = "lower"\nexercise = "dead_bug"\n'
+    'sets = [{ count = 2, reps = 5, rpe = 7 }]\nbecause = "fatigue"\ntext = "Short day."\n'
+)
+
+
+def test_a_swapped_rung_shows_its_index_and_frozen_dose_with_no_authored_label() -> None:
+    conn = a_ladder_week(2)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True, overrides=SWAP_THE_STANDING_RUNG_TO_DEAD_BUG)
+
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
+
+    expected = f"  dead_bug 3×8 · first prescription · rung 2 · {NEXT_FROM_AB_WHEEL}"
+    assert [line for line in fresh if line.startswith("  dead_bug ")] == [expected]
+    assert [line for line in resumed if line.startswith("  dead_bug ")] == [expected]
+    assert str(the_ladder_exercise(hevy, DEAD_BUG).notes).splitlines() == [
+        "Target: 3×8 @8, choose the load",
+        "Cues: ab_wheel cues",
+        NEXT_FROM_AB_WHEEL,
+    ]
+
+
+def test_a_rung_restated_by_an_override_shows_its_index_and_frozen_dose() -> None:
+    conn = a_ladder_week(2)
+    hevy = FakeHevy(FixedClock())
+    data = a_plan_draft(conn, hevy=True, overrides=RESTATE_THE_STANDING_RUNG)
+
+    fresh, resumed = prompts_around_the_push(conn, hevy, data)
+
+    expected = f"  ab_wheel 2×5 · first prescription · rung 2 · {NEXT_FROM_AB_WHEEL}"
+    assert [line for line in fresh if line.startswith("  ab_wheel ")] == [expected]
+    assert [line for line in resumed if line.startswith("  ab_wheel ")] == [expected]
