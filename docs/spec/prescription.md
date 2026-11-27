@@ -174,9 +174,10 @@ exposure warns `load_too_light` when either holds:
   authored working sets and counting only pairs that carry both, is 1.5 or more under. An anchor
   from a week a return band capped the line's RPE is not read this way.
 - the rack row nearest the model load is more than one rack row above the prescribed load. The
-  model load is `load_for` of the line's e1RM (exercise-wide, every session included, the carried
-  e1RM while it binds) for the top working group's reps, the top of a range, at its RPE. The
-  prescribed load is the scheme's own move on the rack, before the cut and the ceilings.
+  model load is `model_load` of the line's e1RM (exercise-wide, every session included, the
+  carried e1RM while it binds) for the top working group's reps, the top of a range, at its RPE,
+  before any rack. The prescribed load is the scheme's own move on the rack, before the cut and
+  the ceilings.
 
 Both thresholds are opinion: the 1.5 is the session gate's slack (`week.md`), one number the
 engine reads as effort well off the authored RPE, and the one row matches the scheme's step.
