@@ -67,10 +67,6 @@ def found_at[T](found: Mapping[RungKey, T], exercise_id: str, rung: int | None) 
     return next((found[k] for k in _rung_keys(exercise_id, rung) if k in found), None)
 
 
-def _origin(authored: Mapping[RungKey, "_Authored"], frozen: FrozenLine) -> "_Authored | None":
-    return found_at(authored, authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung)
-
-
 @dataclass(frozen=True)
 class SessionRoutine:
     """`names` are the library's exercise names, for the next rung's label on a ladder line's
@@ -102,6 +98,10 @@ class _Authored:
     position: int
     line: Line
     labels: RungLabels | None = None
+
+
+def _origin(authored: Mapping[RungKey, _Authored], frozen: FrozenLine) -> _Authored | None:
+    return found_at(authored, authored_exercise(frozen.exercise_id, frozen.steps), frozen.rung)
 
 
 def _authored(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, _Authored]:
