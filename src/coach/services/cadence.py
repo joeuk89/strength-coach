@@ -62,7 +62,9 @@ def cadence_signals(
             (before, last),
             [e for e in counted if e.exercise_id == standing.exercise],
             adherence,
-            _capped(conn, closed, last, line) if line.scheme.name == "top_backoff" else (),
+            _capped(conn, closed, last, session_id, line)
+            if line.scheme.name == "top_backoff"
+            else (),
             session_id,
             standing,
         )
@@ -104,9 +106,11 @@ def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:
     return sum(w.adherence_trained for w in weeks) / planned if planned else None
 
 
-def _capped(conn: Connection, closed: ClosedWeeks, span: BlockSpan, line: Line) -> list[bool]:
-    """Per Prescription of the line frozen in the closed Block's ordinary weeks, whether the
-    one-row cap set its top."""
+def _capped(
+    conn: Connection, closed: ClosedWeeks, span: BlockSpan, session_id: str, line: Line
+) -> list[bool]:
+    """Per Prescription of the line frozen in its session in the closed Block's ordinary weeks,
+    whether the one-row cap set its top."""
     found: list[bool] = []
     for week in closed.weeks:
         if not week.ordinary or not span.holds(week.monday):
@@ -115,7 +119,7 @@ def _capped(conn: Connection, closed: ClosedWeeks, span: BlockSpan, line: Line) 
         if plan is None:
             continue
         for row in week_plans.prescriptions(conn, str(plan["id"])):
-            if row["exercise_id"] == line.exercise:
+            if row["session_id"] == session_id and row["exercise_id"] == line.exercise:
                 steps = cast(list[dict[str, object]], row["steps"])
                 found.append(any(step.get("cause") == "one_row_cap" for step in steps))
     return found
