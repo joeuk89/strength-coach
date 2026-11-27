@@ -381,3 +381,55 @@ def test_a_dry_run_of_a_draft_with_an_unresolved_ref_raises_what_the_real_run_ra
 
     assert raised.value.code == "draft_ref_unresolved"
     assert count(conn, "weigh_in") == 0
+
+
+ILL = '[[status_span]]\nkind = "ill"\nfrom_date = 2026-10-20\nto_date = 2026-10-23\n'
+
+
+def test_an_ill_span_keeps_the_athletes_stated_end_of_the_cap() -> None:
+    conn = a_store()
+
+    run(conn, ILL + "cap_ends = 2026-10-27\n")
+
+    assert conn.execute("SELECT cap_ends FROM status_span").fetchone() == ("2026-10-27",)
+
+
+def test_an_ill_span_with_no_stated_end_keeps_none() -> None:
+    conn = a_store()
+
+    run(conn, ILL)
+
+    assert conn.execute("SELECT cap_ends FROM status_span").fetchone() == (None,)
+
+
+def test_a_new_stated_end_is_a_withdrawal_and_a_fresh_span_in_one_draft() -> None:
+    conn = a_store()
+    run(conn, ILL + "cap_ends = 2026-10-27\n")
+
+    run(conn, '[[status_span]]\nwithdraws = "ss-0001"\n\n' + ILL + "cap_ends = 2026-10-30\n")
+
+    assert conn.execute("SELECT id, cap_ends FROM status_span_current").fetchall() == [
+        ("ss-0003", "2026-10-30")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("draft", "named"),
+    [
+        (ILL.replace('"ill"', '"travel"') + "cap_ends = 2026-10-27\n", "kind"),
+        (ILL.replace("to_date = 2026-10-23\n", "") + "cap_ends = 2026-10-27\n", "to_date"),
+        (ILL + "cap_ends = 2026-10-22\n", "2026-10-23"),
+    ],
+    ids=["not_ill", "no_to_date", "before_the_last_ill_day"],
+)
+def test_a_stated_end_is_refused_off_an_ill_span_or_before_its_last_day(
+    draft: str, named: str
+) -> None:
+    conn = a_store()
+
+    with pytest.raises(Invalid) as raised:
+        run(conn, draft)
+
+    assert raised.value.code == "invalid_argument"
+    assert "cap_ends" in raised.value.message and named in raised.value.message
+    assert count(conn, "status_span") == 0

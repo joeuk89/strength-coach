@@ -315,6 +315,7 @@ CREATE TABLE status_span (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL CHECK (kind IN ('ill','injured','travel','no_training')),
   from_date TEXT NOT NULL, to_date TEXT,   -- NULL is open-ended
+  cap_ends TEXT,                           -- ill only: the last day of the illness cap, as the athlete stated it; NULL is no answer
   text TEXT,
   withdraws TEXT REFERENCES status_span(id),  -- as annotation: a withdrawing row names the one it withdraws
   check_in TEXT REFERENCES check_in(id), draft_hash TEXT NOT NULL, recorded_at TEXT NOT NULL

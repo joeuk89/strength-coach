@@ -111,7 +111,24 @@ def m0005(conn: sqlite3.Connection) -> None:
     rebuild_table(conn, "prescription", PRESCRIPTION_V6)
 
 
-MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003, m0004, m0005)
+STATUS_SPAN_V7 = """CREATE TABLE status_span (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('ill','injured','travel','no_training')),
+  from_date TEXT NOT NULL, to_date TEXT,   -- NULL is open-ended
+  cap_ends TEXT,                           -- ill only: the last day of the illness cap, as the athlete stated it; NULL is no answer
+  text TEXT,
+  withdraws TEXT REFERENCES status_span(id),  -- as annotation: a withdrawing row names the one it withdraws
+  check_in TEXT REFERENCES check_in(id), draft_hash TEXT NOT NULL, recorded_at TEXT NOT NULL
+)"""  # noqa: E501
+
+
+def m0006(conn: sqlite3.Connection) -> None:
+    """The athlete's stated end of the illness cap on a status span. Every span already held keeps
+    no answer, so its cap holds until each lift is trained once, as it did."""
+    rebuild_table(conn, "status_span", STATUS_SPAN_V7)
+
+
+MIGRATIONS: tuple[Migration, ...] = (m0001, m0002, m0003, m0004, m0005, m0006)
 
 
 def widen_checks(

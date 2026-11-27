@@ -64,10 +64,15 @@ def status_spans(conn: Connection) -> tuple[StatusSpan, ...]:
         StatusSpan(
             str(row["kind"]),
             datetime.date.fromisoformat(str(row["from_date"])),
-            None if row["to_date"] is None else datetime.date.fromisoformat(str(row["to_date"])),
+            _date_or_none(row["to_date"]),
+            _date_or_none(row["cap_ends"]),
         )
         for row in readings.live(conn, "status_span")
     )
+
+
+def _date_or_none(value: object) -> datetime.date | None:
+    return None if value is None else datetime.date.fromisoformat(str(value))
 
 
 def muscle_map(conn: Connection) -> MuscleMap:
