@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-07
-amended: 2026-11-08 by the owner (a practice line raises neither `stall_streak` nor `cadence_slow`; `rung_met` and `ladder_top` stay); 2026-11-08 by ADR 0025 (rungs may share an exercise)
+amended: 2026-11-08 by the owner (a practice line raises neither `stall_streak` nor `cadence_slow`; `rung_met` and `ladder_top` stay); 2026-11-08 by ADR 0025 (rungs may share an exercise); 2026-11-27 by the review of build v7 (exposures count on a rung from the day after its Decision's date, as ADR 0025 says)
 ---
 
 # A ladder is a scheme whose rungs may be exercises, the standing rung is a Decision, and the engine offers the climb but never takes it
@@ -45,7 +45,8 @@ the athlete had to remember to report a change. The research note
 - **Rungs that share an exercise and differ by cues only.** Rejected here: Hevy logs the exercise
   id, so two stances under one id are one history; a stance that must be told apart is its own
   custom exercise and `manual` is kept for the rare rung that cannot be. Reversed by ADR 0025:
-  the criterion reads from the rung's start, so the start tells the stages apart.
+  the criterion reads only exposures that count on the rung, from the day after its start, so the
+  start tells the stages apart.
 
 ## Consequences
 
@@ -54,8 +55,9 @@ the athlete had to remember to report a change. The research note
 - A line's `exercise` is its first rung's exercise and stays the line's key for every scope
   (overrides, flags, `override_persisting`, one exercise per session) for the life of the
   version; history matching reads the standing rung's exercise.
-- The criterion and `stall_streak` read exposures from the standing rung's start: the Decision's
-  date, or adoption for rung 1. The return band steps back by rungs and a light week holds the
+- The criterion and `stall_streak` read the exposures that count on the standing rung: from the
+  day after its `ladder_rung` Decision's date, or from the adoption date itself for rung 1
+  (ADR 0025). The return band steps back by rungs and a light week holds the
   rung, as `assistance_ladder` does. `rung_met` and `ladder_top` hash on the rung only, so one
   acknowledgement or `leave_warning` holds until the rung moves.
 - The reason enum gains `progress`. The Decision catalogue gains `ladder_rung`; the flag
