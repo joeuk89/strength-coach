@@ -321,7 +321,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 
 | Code | Scope | Params | `rn` |
 | --- | --- | --- | --- |
-| `routine_drift` | routine | class (structural, load), plan in force, diff summary | `null` |
+| `routine_drift` | routine | class (structural, load), plan in force, session id, the changes (each with field, exercise id, set, planned and found value, a load in athlete units), diff summary | `null` |
 | `workout_reappeared` | workout | tombstone noticed at, new version `updated_at` | `null` |
 | `followup_due` | instance | follow-up id, due date | `null` |
 | `niggle_unconstrained` | instance | niggle id, opened | `null` |

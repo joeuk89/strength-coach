@@ -25,7 +25,7 @@ from coach.services.plan_apply import ApplyResult, DryRun, apply, dry_run
 from coach.services.program import adopt
 from coach.services.projections import projection, session_facts
 from coach.services.record import record
-from coach.store import week_plans
+from coach.store import exercises, week_plans
 from coach.store.connection import Connection
 
 AB_WHEEL = "99D5F10E"
@@ -379,7 +379,7 @@ def test_the_note_sent_is_the_note_read_back_with_its_multiplication_sign_and_do
 
     [routine] = hevy.routines()
     assert outcome.outcome == "verified"
-    assert routine_diff(sent, routine) == ()
+    assert routine_diff(sent, routine, exercises.library(conn), "lb") == ()
     assert the_note_next(hevy, DEAD_BUG) == ["Next: rung 2 · 3×4 @8 · lower for 6 s"]
 
 

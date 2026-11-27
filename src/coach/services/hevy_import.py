@@ -17,7 +17,7 @@ from coach.core.workout_import import Changes, event_pull_changes, event_since, 
 from coach.hevy.parse import parse_routine
 from coach.hevy.protocol import HevyClient
 from coach.services.projections import folder_role, projection, session_facts
-from coach.store import mirrors, routine_map, week_plans
+from coach.store import exercises, mirrors, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.import_runs import last_import_at, record_import_run
 from coach.store.mirrors import upsert_folder, upsert_routine
@@ -113,6 +113,7 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
     live = {r.hevy_id: r for r in mirrors.routines(conn)}
     # With no engine folder mirrored for the role, `plan apply` refuses or creates it first.
     roles = {f.role for f in mirrors.folders(conn)}
+    library = exercises.library(conn)
     flags: list[Flag] = []
     for row in routine_map.written(conn):
         mirrored = live.get(row.routine_id)
@@ -127,9 +128,10 @@ def _drift(conn: Connection, units: Units) -> tuple[Flag, ...]:
         ):
             continue
         body = projection(conn, plan, row.session_id, session, units)
-        diff = drift_diff(body, parse_routine({"routine": json.loads(mirrored.raw)}))
-        if diff:
-            flags.append(routine_drift(row.routine_id, row.plan_id, diff))
+        held = parse_routine({"routine": json.loads(mirrored.raw)})
+        changes = drift_diff(body, held, library, units)
+        if changes:
+            flags.append(routine_drift(row.routine_id, row.session_id, row.plan_id, changes))
     return tuple(flags)
 
 

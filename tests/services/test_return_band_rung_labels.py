@@ -18,7 +18,7 @@ from coach.core.routine_projection import routine_diff
 from coach.services.plan_apply import DryRun, apply, dry_run
 from coach.services.projections import projection, session_facts
 from coach.services.record import record
-from coach.store import week_plans
+from coach.store import exercises, week_plans
 from coach.store.connection import Connection
 
 DEAD_BUG = "D8911FC4"
@@ -178,7 +178,8 @@ def test_a_decision_recorded_after_approval_leaves_the_note_alone(
 
     plan = week_plans.by_id(conn, "wp-2026-11-02")
     facts = session_facts(conn, plan)["lower"]
-    assert routine_diff(projection(conn, plan, "lower", facts, "lb"), routine) == ()
+    sent = projection(conn, plan, "lower", facts, "lb")
+    assert routine_diff(sent, routine, exercises.library(conn), "lb") == ()
     assert the_prompt_line(conn, data) == before
 
 

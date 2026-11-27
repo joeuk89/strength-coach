@@ -444,7 +444,11 @@ ADOPT_WARNINGS = (
 )
 
 OUTSIDE_WARNINGS = (
-    outside_warning("routine_drift", ("routine",), ("drift_class", "plan_in_force", "diff")),
+    outside_warning(
+        "routine_drift",
+        ("routine",),
+        ("drift_class", "plan_in_force", "session_id", "changes", "diff"),
+    ),
     outside_warning("workout_reappeared", ("workout",), ("noticed_at", "updated_at")),
     outside_warning("followup_due", ("instance",), ("follow_up_id", "due")),
     outside_warning("niggle_unconstrained", ("instance",), ("niggle_id", "opened")),
