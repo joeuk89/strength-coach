@@ -4,6 +4,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import cast, get_args
 
+from coach.core.closed_week.against import LineAgainst, TargetSet
+from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.config import Units
 from coach.core.e1rm import point
 from coach.core.errors import Invalid
@@ -15,6 +17,7 @@ from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import week_monday
 from coach.core.registries.agent import RECORD_KINDS
 from coach.core.registries.flags import Severity
+from coach.services.closed_weeks import WeekLog
 from coach.services.history import read_history
 from coach.store import (
     annotations,
@@ -346,6 +349,72 @@ def lines(
         and (not changed or row["change"] != UNCHANGED)
     ]
     return _newest(rows, last)
+
+
+def against(
+    conn: Connection,
+    *,
+    week: datetime.date | None,
+    today: datetime.date,
+    session: str | None,
+    off: bool,
+    units: Units,
+    last: int | None,
+) -> QueryResult:
+    """`query against`: each line of the week's own WeekPlan beside the working sets logged for
+    it, then each exercise a matched workout logged and no line prescribed. The week holding
+    today unless `week` names a date in another."""
+    monday = week_monday(week or today)
+    rows = [
+        _against_row(outcome, line)
+        for outcome in WeekLog(conn, units).week(monday).sessions
+        if session is None or outcome.session.session_id == session
+        for line in outcome.lines
+        if not off or line.off
+    ]
+    return _newest(rows, last)
+
+
+def _against_row(outcome: SessionOutcome, line: LineAgainst) -> Row:
+    logged = line.logged
+    return {
+        "date": outcome.session.date.isoformat(),
+        "session": outcome.session.session_id,
+        "exercise": line.exercise,
+        "workout": outcome.workout_id,
+        "state": line.state,
+        "hold": line.hold,
+        "prescription": _prescribed_groups(line.targets),
+        "load": [None if s.load is None else s.load.amount for s in logged],
+        "reps": [s.reps for s in logged],
+        "seconds": [s.duration_s for s in logged],
+        "rpe": [s.rpe for s in logged],
+        "reps_short": list(line.reps_short),
+        "rpe_off": list(line.rpe_off),
+        "sets_missing": line.sets_missing,
+        "rpe_missing": line.rpe_missing,
+        "off": line.off,
+    }
+
+
+def _prescribed_groups(targets: Sequence[TargetSet]) -> list[Row]:
+    """Runs of identical prescribed sets, each as one group with its count."""
+    groups: list[tuple[TargetSet, int]] = []
+    for target in targets:
+        if groups and groups[-1][0] == target:
+            groups[-1] = (target, groups[-1][1] + 1)
+        else:
+            groups.append((target, 1))
+    return [
+        {
+            "sets": count,
+            "reps": target.reps if target.top in (None, target.reps) else [target.reps, target.top],
+            "seconds": target.seconds,
+            "load": target.load,
+            "rpe": target.rpe,
+        }
+        for target, count in groups
+    ]
 
 
 def _plan_flags(conn: Connection, draft: CheckedPlan | None, today: datetime.date) -> list[Row]:
