@@ -333,3 +333,57 @@ def test_the_muscles_registry_flags_dosed_on_each_row() -> None:
     assert rows["traps"] == {"name": "traps", "dosed": False}
     assert "cardio" not in rows
     assert "full_body" not in rows
+
+
+def test_the_annotation_kinds_registry_shows_each_kind_s_target_and_params() -> None:
+    rows = run_coach("schema", "--registry", "annotation-kinds").envelope["result"]["rows"]
+
+    by_kind = {row["name"]: row for row in rows}
+    assert by_kind["match"]["target"] == "workout"
+    assert [(p["name"], p["required"]) for p in by_kind["match"]["params"]] == [
+        ("planned_session", True)
+    ]
+    assert [(p["name"], p["required"]) for p in by_kind["repair"]["params"]] == [
+        ("position", True),
+        ("field", True),
+        ("value", True),
+    ]
+    assert [(p["name"], p["required"]) for p in by_kind["discount"]["params"]] == [
+        ("position", False)
+    ]
+    assert by_kind["miss_tag"] == {"name": "miss_tag", "target": "planned_session", "params": []}
+    assert all(p["about"] for row in rows for p in row["params"])
+
+
+def test_the_annotation_kinds_registry_counts_a_set_s_position_across_the_workout() -> None:
+    rows = run_coach("schema", "--registry", "annotation-kinds").envelope["result"]["rows"]
+
+    abouts = [p["about"] for row in rows for p in row["params"] if p["name"] == "position"]
+    assert len(abouts) == 2
+    assert all("across every exercise" in about for about in abouts)
+
+
+def test_the_record_draft_schema_lists_the_annotation_params() -> None:
+    draft = run_coach("schema", "record").envelope["result"]["draft"]
+
+    annotation = draft["schema"]["properties"]["annotation"]["items"]
+    params = annotation["properties"]["params"]
+    assert set(params["properties"]) == {
+        "position",
+        "field",
+        "value",
+        "load_mode",
+        "planned_session",
+    }
+    assert params["additionalProperties"] is False
+
+
+def test_the_errors_registry_points_to_the_flags_registry_for_adopt_violations() -> None:
+    result = run_coach("schema", "--registry", "errors").envelope["result"]
+
+    assert "coach schema --registry flags" in result["note"]
+    assert "program adopt" in result["note"]
+
+
+def test_a_registry_without_a_note_carries_no_note() -> None:
+    assert "note" not in run_coach("schema", "--registry", "reasons").envelope["result"]

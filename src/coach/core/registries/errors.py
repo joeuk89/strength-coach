@@ -105,4 +105,6 @@ ERRORS = Registry(
         _setup("store_behind_export", "The store is behind the export it was built from."),
         ErrorCode("internal_error", "internal", "An unexpected failure inside the engine."),
     ),
+    note="program adopt and plan apply refuse a Draft's violation with its flag code, such as "
+    "rung_repeated, as error.code (exit 1); those codes are rows of coach schema --registry flags.",
 )

@@ -18,7 +18,7 @@ DISCOUNT = f"""
 [[annotation]]
 kind = "discount"
 target = "workout:{WORKOUT}/bb_bench_press"
-params = {{ sets = [2] }}
+params = {{ position = 2 }}
 because = "pain"
 text = "shoulder pinched on the last set"
 """
@@ -54,7 +54,7 @@ def test_an_annotation_on_a_workout_exercise_is_written_with_its_params() -> Non
         "a-0001",
         "discount",
         f"workout:{WORKOUT}/bb_bench_press",
-        {"sets": [2]},
+        {"position": 2},
         "pain",
     )
     assert current(conn) == ["a-0001"]

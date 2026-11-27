@@ -165,7 +165,9 @@ DECLARATION = Declaration(
         ),
         Argument("--since", "exposures: on or after this date, YYYY-MM-DD"),
         Argument(
-            "--draft", "flags, lines: a plan Draft to validate now instead of the plan in force"
+            "--draft",
+            "flags, lines: a plan Draft to validate now instead of the plan in force; "
+            "coach schema plan apply gives its shape",
         ),
         Argument("--code", "flags: one flag code"),
         Argument("--severity", "flags: violation or warning"),

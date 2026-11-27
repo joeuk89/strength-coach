@@ -61,7 +61,8 @@ def parse_options(declaration: Declaration | None, tokens: Sequence[str]) -> Opt
             else:
                 raise Invalid("invalid_argument", f"{name} needs a value")
         elif positionals:
-            values[positionals.pop(0).key] = token
+            positional = positionals[0] if positionals[0].repeatable else positionals.pop(0)
+            _set(values, positional, token)
         else:
             raise Invalid("invalid_argument", f"unexpected argument {token!r}")
     return _split_globals(declared, values)

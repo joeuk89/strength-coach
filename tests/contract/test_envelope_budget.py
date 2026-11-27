@@ -137,7 +137,9 @@ OVER_BUDGET: dict[tuple[str, ...], str] = {
 def test_the_schema_verb_keeps_whole_exactly_the_declarations_carrying_a_draft() -> None:
     schema = declared(("schema",))
 
-    assert {d.name for d in declarations() if schema.over_budget({"verb": d.name})} == {
+    assert {
+        d.name for d in declarations() if schema.over_budget({"verb": tuple(d.name.split())})
+    } == {
         "program adopt",
         "plan apply",
         "record",

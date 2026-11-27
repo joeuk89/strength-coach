@@ -7,7 +7,7 @@ from coach.core.errors import Invalid
 
 
 def run(call: Call) -> Outcome:
-    name = call.args.get("verb")
+    name = _verb(call.args)
     registry_name = call.args.get("registry")
     if isinstance(registry_name, str):
         if isinstance(name, str):
@@ -31,9 +31,15 @@ def _every_verb() -> Json:
     }
 
 
+def _verb(args: Mapping[str, ArgValue]) -> str | None:
+    """The verb's words joined, so `checkin open` and `'checkin open'` name the same leaf."""
+    words = args.get("verb")
+    return " ".join(words) if isinstance(words, tuple) else None
+
+
 def _whole(args: Mapping[str, ArgValue]) -> bool:
     """The verb-less listing, or a verb's declaration carrying its Draft's schema."""
-    verb = args.get("verb")
+    verb = _verb(args)
     if isinstance(verb, str):
         declaration = registry.find(verb)
         return declaration is not None and declaration.draft is not None
@@ -45,7 +51,8 @@ def _registry(name: str, call: Call) -> Json:
     if found is None:
         known = ", ".join(r.name for r in registries.REGISTRIES)
         raise Invalid("invalid_argument", f"no registry {name!r}; one of {known}")
-    return {"registry": name, **_rows(found.rows(), call)}
+    note = {"note": found.note} if found.note else {}
+    return {"registry": name, **note, **_rows(found.rows(), call)}
 
 
 def _rows(rows: Sequence[Json], call: Call) -> Json:
@@ -58,16 +65,22 @@ DECLARATION = Declaration(
     summary="The verb declarations as JSON Schema, or one registry as data.",
     writes="none",
     arguments=(
-        Argument("verb", "the leaf to describe, quoted when it has two words"),
+        Argument("verb", "the leaf to describe, its words as typed: checkin open", repeatable=True),
         Argument("--registry", "the registry to print instead, by name"),
     ),
     output={
         "type": "object",
         "description": "one declaration with a verb, a Draft verb's with draft {kind, schema, "
-        "example}, never cut; {rows: [declaration without draft], count, truncated, registries} "
-        "without one, never cut; {registry, rows, count, truncated} with --registry",
+        "example}, never cut; {rows: [declaration, a Draft verb's draft as {kind} only], count, "
+        "truncated, registries} without one, never cut; {registry, note?, rows, count, truncated} "
+        "with --registry",
         "properties": {
             "registry": {"type": "string", "description": "with --registry"},
+            "note": {
+                "type": "string",
+                "description": "with --registry, what the rows alone do not say, when there is "
+                "something",
+            },
             "rows": {"type": "array", "items": {"type": "object"}},
             "count": {"type": "integer"},
             "truncated": {"type": "boolean"},

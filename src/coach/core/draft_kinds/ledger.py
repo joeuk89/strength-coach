@@ -243,19 +243,21 @@ date = 2026-11-03
 
 ANNOTATIONS = """[[annotation]]
 kind = "discount"
-target = "workout:w-0012"
+target = "workout:w-0012/bb_back_squat"
+params = { position = 3 }
 because = "fatigue"
 text = "slept four hours"
 
 [[annotation]]
 kind = "repair"
-target = "workout:w-0012"
+target = "workout:w-0012/bb_back_squat"
 because = "coach_judgement"
-params = { exercise = "bb_back_squat" }
+params = { position = 1, field = "reps", value = 5 }
 
 [[annotation]]
 kind = "load_mode"
-target = "workout:w-0012"
+target = "workout:w-0012/db_bench_press"
+params = { load_mode = "per_hand_x2" }
 because = "kit"
 
 [[annotation]]

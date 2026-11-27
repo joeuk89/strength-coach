@@ -168,8 +168,9 @@ class Declaration:
             "input": self.input_schema(),
             "output": self.output,
         }
-        if with_draft and self.draft is not None:
-            described["draft"] = self.draft().describe()
+        if self.draft is not None:
+            draft = self.draft()
+            described["draft"] = draft.describe() if with_draft else {"kind": draft.kind}
         return described | {
             "examples": [
                 {"argv": ["coach", *example.argv], "description": example.description}
