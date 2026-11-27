@@ -73,7 +73,7 @@ class LoggedLine:
     @property
     def e1rm(self) -> Load | None:
         """The best e1RM among the sets that carry an RPE."""
-        points = [p for s in self.line.logged if s.rpe is not None if (p := set_e1rm(s))]
+        points = [p for s in self.line.logged if s.rpe is not None and (p := set_e1rm(s))]
         return max(points, key=lambda p: p.total, default=None)
 
 

@@ -346,7 +346,7 @@ def _quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
     return quote
 
 
-def _lift_row(read: LiftRead, under_authored: Sequence[Facts] = ()) -> Facts:
+def _lift_row(read: LiftRead, under_authored: Sequence[Facts]) -> Facts:
     row: dict[str, object] = {
         "exercise": read.exercise_id,
         "priority": read.priority,
