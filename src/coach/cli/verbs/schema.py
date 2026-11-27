@@ -7,7 +7,7 @@ from coach.core.errors import Invalid
 
 
 def run(call: Call) -> Outcome:
-    name = call.args.get("verb")
+    name = _verb(call.args)
     registry_name = call.args.get("registry")
     if isinstance(registry_name, str):
         if isinstance(name, str):
@@ -31,9 +31,15 @@ def _every_verb() -> Json:
     }
 
 
+def _verb(args: Mapping[str, ArgValue]) -> str | None:
+    """The verb's words joined, so `checkin open` and `'checkin open'` name the same leaf."""
+    words = args.get("verb")
+    return " ".join(words) if isinstance(words, tuple) else None
+
+
 def _whole(args: Mapping[str, ArgValue]) -> bool:
     """The verb-less listing, or a verb's declaration carrying its Draft's schema."""
-    verb = args.get("verb")
+    verb = _verb(args)
     if isinstance(verb, str):
         declaration = registry.find(verb)
         return declaration is not None and declaration.draft is not None
@@ -58,7 +64,9 @@ DECLARATION = Declaration(
     summary="The verb declarations as JSON Schema, or one registry as data.",
     writes="none",
     arguments=(
-        Argument("verb", "the leaf to describe, quoted when it has two words"),
+        Argument(
+            "verb", "the leaf to describe, its words as typed: checkin open", repeatable=True
+        ),
         Argument("--registry", "the registry to print instead, by name"),
     ),
     output={
