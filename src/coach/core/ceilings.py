@@ -56,18 +56,14 @@ def niggle_load_caps(
 
 @dataclass(frozen=True)
 class IllnessCap:
-    """The `ill` span that caps a line, and the last day it caps: the athlete's stated end, or
-    None while it holds until the lift is trained once."""
+    """The `ill` span that caps a line; its cause names the athlete's stated end, or the lift
+    being trained once when they gave none."""
 
     span: StatusSpan
 
     @property
-    def ends(self) -> datetime.date | None:
-        return self.span.cap_ends
-
-    @property
     def cause(self) -> str:
-        return f"{ILLNESS} until {self.ends or 'this lift is trained once'}"
+        return f"{ILLNESS} until {self.span.cap_ends or 'this lift is trained once'}"
 
 
 def is_illness_cause(cause: str) -> bool:
