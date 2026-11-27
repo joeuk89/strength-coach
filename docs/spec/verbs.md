@@ -42,7 +42,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
 | `goal adopt <draft> [--dry-run]` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
 | `progress` | store write (the pull) | the progress view (`goals.md`) |
-| `query <view> [params]` | read | one of the seven read views below |
+| `query <view> [params]` | read | one of the eight read views below |
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
 | `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`), then the full pull when Hevy is on and a key is set |
@@ -232,7 +232,7 @@ opened or closed inside a check-in file or a `goal adopt` Draft (`goals.md`), so
 
 ## Read views
 
-Seven parametrised reads under `query`, each within the cap, each a row list:
+Eight parametrised reads under `query`, each within the cap, each a row list:
 
 | View | Params | Rows |
 | --- | --- | --- |
@@ -243,6 +243,7 @@ Seven parametrised reads under `query`, each within the cap, each a row list:
 | `routines` | none | the Routine map joined to folders: session, routine id, folder, status, last verified |
 | `ledger` | `--kind <record kind>`, `--id <id>`, `--open` | the record's fields and its event history |
 | `exercises` | `--match <text>`, `--pattern <pattern>` (repeatable), `--muscle <muscle>` (repeatable), `--last <n>` | the library by id: id, name, load mode, equipment kind, pattern, muscles (primary and secondary), Hevy template id, source. `--match` is a case-insensitive substring of the id or name; a repeated `--pattern` or `--muscle` keeps any of them, a muscle counting in primary or secondary; the filters combine, and one that matches nothing gives no rows |
+| `against` | `--week <date>`, `--session <id>`, `--off`, `--last <n>` | each line of the week's own WeekPlan (the week holding `--week`, else today; so a past week stays readable after the next plan is in force), in session then plan order, `hold` lines included and marked `hold`, then each exercise the session's matched workout logged and no line prescribed: date, session, exercise, workout, state (`logged`, `not_logged`, `not_prescribed`), the prescription as runs of identical prescribed sets (sets, reps or range, seconds, load, authored RPE), the logged working sets as parallel lists (load, reps, seconds, RPE), per logged set the reps short of the bottom of the range and the RPE off the authored RPE (logged minus authored; `null` for a set beyond the prescription), sets missing, RPE missing, and `off`: not logged, not prescribed, or any set missing, short, unrated against an authored RPE or off by 1.5 RPE or more. `--off` keeps only those rows. The card's `against` counts per session are these rows' counts over its logged lines, `hold` lines left out |
 
 Field projection is `--fields`, never a view. No verb knows a "current" Draft: a Draft is read by
 nothing after its verb consumes it (`instance.md`), so a read either names the file by path or

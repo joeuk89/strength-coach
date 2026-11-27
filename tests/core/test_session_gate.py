@@ -2,13 +2,9 @@ import datetime
 
 from support.exposures import an_exposure
 
+from coach.core.closed_week.against import AgainstPrescription, TargetSet, against
 from coach.core.closed_week.match import WeekWorkout
-from coach.core.closed_week.sessions import (
-    AgainstPrescription,
-    PlannedWork,
-    TargetSet,
-    session_outcome,
-)
+from coach.core.closed_week.sessions import PlannedWork, session_outcome
 from coach.core.prescription import PlannedSession, StatusSpan
 
 MONDAY = datetime.date(2026, 11, 2)
@@ -112,3 +108,23 @@ def test_the_read_against_the_prescription_is_a_figure_never_the_gate() -> None:
 
     assert outcome.against == AgainstPrescription(reps_missed=1, effort_off=1, rpe_missing=1)
     assert outcome.passed is True
+
+
+def test_a_hold_line_is_among_the_rows_and_outside_the_gate_and_the_counts() -> None:
+    session = PlannedSession("lower", MONDAY, "home", "lifting", (), "weekly", "core")
+    work = PlannedWork(
+        session,
+        {"bb_back_squat": SQUAT_SETS, "bb_bench_press": (TargetSet(6, 8),) * 3},
+        held=frozenset({"bb_bench_press"}),
+    )
+    bench = an_exposure("2026-11-02", *[(80, 6, None)] * 3, workout_id="h-1")
+    squat = squat_workout(*[(100, 6, 8.0)] * 4).exposures[0]
+
+    outcome = session_outcome(work, workout=WeekWorkout("h-1", MONDAY, (squat, bench)))
+
+    assert [(line.exercise, line.hold) for line in outcome.lines] == [
+        ("bb_back_squat", False),
+        ("bb_bench_press", True),
+    ]
+    assert outcome.against == against(outcome.lines) == AgainstPrescription()
+    assert (work.prescribed_sets, outcome.passed) == (6, True)

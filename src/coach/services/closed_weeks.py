@@ -7,12 +7,13 @@ from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import cast
 
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.block import Block, blocks
 from coach.core.closed_week.close import WeekFacts, close_week, week_matches
 from coach.core.closed_week.dose import MuscleMap
 from coach.core.closed_week.kind import is_return_week
 from coach.core.closed_week.match import PlannedRef, WeekWorkout, workout_class
-from coach.core.closed_week.sessions import PlannedWork, TargetSet
+from coach.core.closed_week.sessions import PlannedWork
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
 from coach.core.days_off import SessionTrained
@@ -324,7 +325,7 @@ class WeekLog:
             if line.scheme.name == "hold"
         }
         frozen = week_plans.prescriptions(self.conn, plan_id)
-        targets = _targets(frozen, hold_lines)
+        targets = _targets(frozen)
         returned = _returned(frozen)
         return tuple(
             PlannedWork(
@@ -332,6 +333,9 @@ class WeekLog:
                 targets.get((s.date, s.session_id), {}),
                 dropped=s.session_id in week.dropped,
                 returned=returned.get((s.date, s.session_id), frozenset()),
+                held=frozenset(
+                    e for session, e in hold_lines if session == s.session_id and e is not None
+                ),
             )
             for s in week.sessions
         )
@@ -380,18 +384,18 @@ def trained_without_sets(
     )
 
 
-def _targets(
-    rows: Sequence[Row], hold_lines: set[tuple[str | None, str | None]]
-) -> dict[PlannedRef, dict[str, tuple[TargetSet, ...]]]:
+def _targets(rows: Sequence[Row]) -> dict[PlannedRef, dict[str, tuple[TargetSet, ...]]]:
     found: dict[PlannedRef, dict[str, tuple[TargetSet, ...]]] = {}
     for row in rows:
         session_id, exercise_id = str(row["session_id"]), str(row["exercise_id"])
-        if (session_id, exercise_id) in hold_lines:
-            continue
         groups = cast(list[dict[str, object]], row["set_groups"])
         sets = tuple(
             TargetSet(
-                _bottom(group), _number(group.get("rpe")), _top(group), _number(group.get("load"))
+                _bottom(group),
+                _number(group.get("rpe")),
+                _top(group),
+                _number(group.get("load")),
+                _seconds(group.get("duration_s")),
             )
             for group in groups
             if group.get("type") == "working"
@@ -453,6 +457,10 @@ def _top(group: Mapping[str, object]) -> int | None:
     if isinstance(reps, str):
         return None
     return reps if isinstance(reps, int) else None
+
+
+def _seconds(value: object) -> int | None:
+    return value if isinstance(value, int) else None
 
 
 def _number(value: object) -> float | None:

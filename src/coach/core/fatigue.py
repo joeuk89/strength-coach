@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from coach.core.check_in import DAY, Window
-from coach.core.closed_week.sessions import TargetSet
+from coach.core.closed_week.against import TargetSet
 from coach.core.cut import LightShape, light_shape
 from coach.core.exposure import ExposureSet
 from coach.core.flag import Flag, Scope, raise_flag

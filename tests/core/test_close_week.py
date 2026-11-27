@@ -3,9 +3,10 @@ from collections.abc import Mapping
 
 from support.exposures import an_exposure
 
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.close import WeekFacts, close_week
 from coach.core.closed_week.match import WeekWorkout
-from coach.core.closed_week.sessions import PlannedWork, TargetSet
+from coach.core.closed_week.sessions import PlannedWork
 from coach.core.prescription import PlannedSession
 from coach.core.program.form import LiftDose
 
