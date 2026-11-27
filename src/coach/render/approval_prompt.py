@@ -8,12 +8,16 @@ from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.core.frozen_prescription import dose
 from coach.core.hevy_actions import HevyActions, RoutineAction
-from coach.core.plan_summary import PlanSummary, SummaryLine, SummarySession
+from coach.core.plan_summary import PinOutcome, PlanSummary, SummaryLine, SummarySession
 from coach.core.prescription import PlanOverride
 
 LIST_CAP = 5
 NAMES_CAP = 6
 DAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+PIN_OUTCOMES: dict[PinOutcome, str] = {
+    "reduced": "reduced by a recovery ceiling",
+    "no_effect": "no effect: a recovery ceiling holds the line",
+}
 
 
 def approval_prompt(
@@ -39,7 +43,8 @@ def approval_prompt(
         lines.extend(_session(group, units))
     left = [f for f in summary.flags if f.left is not None]
     standing = [f for f in summary.flags if f.left is None]
-    lines += _section("Overrides", [_override(o) for o in summary.overrides], full)
+    outcomes = _pin_outcomes(summary.sessions)
+    lines += _section("Overrides", [_override(o, outcomes) for o in summary.overrides], full)
     lines += _section("Left warnings", [_left(f) for f in left], full)
     lines += _section("Warnings not left", [f"  {f.key}: {f.message}" for f in standing], full)
     lines += _hevy(actions, full)
@@ -75,14 +80,28 @@ def _line(line: SummaryLine, units: Units) -> str:
     return f"{shown} · {labels.own}" + ("" if labels.next is None else f" · Next: {labels.next}")
 
 
-def _override(override: PlanOverride) -> str:
+def _pin_outcomes(sessions: Sequence[SummarySession]) -> dict[tuple[str, str], PinOutcome]:
+    """Each capped pin's outcome by its line; a session on several days keeps its first."""
+    found: dict[tuple[str, str], PinOutcome] = {}
+    for session in sessions:
+        for line in session.lines:
+            if line.pin_outcome is not None:
+                found.setdefault((session.session_id, line.exercise_id), line.pin_outcome)
+    return found
+
+
+def _override(override: PlanOverride, outcomes: dict[tuple[str, str], PinOutcome]) -> str:
     scope = "/".join(
         str(ref)
         for ref in (override.session_id, override.date, override.exercise_id)
         if ref is not None
     )
     where = f" {scope}" if scope else ""
-    return f"  {override.kind}{where} ({override.because}): {override.text}"
+    shown = f"  {override.kind}{where} ({override.because}): {override.text}"
+    if override.kind != "pin_load":
+        return shown
+    outcome = outcomes.get((str(override.session_id), str(override.exercise_id)))
+    return shown if outcome is None else f"{shown} · {PIN_OUTCOMES[outcome]}"
 
 
 def _left(flag: Flag) -> str:

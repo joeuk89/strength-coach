@@ -55,6 +55,8 @@ its reason. A load the engine derived is never retyped.
   promote the override into a new program version, extend it with an override Decision and an
   until date, or leave it with an Acknowledgement and meet it again next week. Promote what the
   athlete will keep doing; extend what has an end in sight.
+- **Pins.** `pin_load_capped`: a recovery ceiling lowered a pin or left it with no effect.
+  Lower the pin to the prescribed load, remove it, or acknowledge the warning with the reason.
 - **Rack.** `frozen_load_off_rack`: a load in the plan in force is gone from the location's
   rack. Say which planned loads move and to what, each load from the Draft.
 - **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Keep the change with the

@@ -186,8 +186,10 @@ _Avoid_: delta (fine as a flag param), tweak, adjustment, standing override (say
 
 **Recovery ceiling**:
 The lowest load or RPE a line may be set to on a date: a niggle's cap, the return band's cut,
-the illness cap on the first session back, or a light week's RPE cap. The return band is also a
-safety bound: no override waives it, only the days off behind it move.
+the illness cap, or a light week's RPE cap. The illness cap ends when the athlete says they have
+recovered; with no answer it holds on each lift until that lift is trained once. No pinned load
+lifts a line above a recovery ceiling. The return band is also a safety bound: no override
+waives it, only the days off behind it move.
 _Avoid_: limit, safety cap
 
 **Flag**:

@@ -103,3 +103,52 @@ def test_a_relocated_session_shows_at_its_new_location() -> None:
     )
 
     assert [s.location for s in found.sessions] == ["home", "travel"]
+
+
+def a_capped_pin(outcome: str, exercise_id: str = "bb_back_squat") -> dict[str, object]:
+    return raise_flag(
+        "pin_load_capped",
+        Scope("line", MONDAY, session_id="lower", exercise_id=exercise_id),
+        {
+            "load": 135,
+            "prescribed": 125,
+            "ceiling_kind": "illness",
+            "rpe_cap": 7,
+            "ref": None,
+            "outcome": outcome,
+        },
+        "m",
+    ).to_json()
+
+
+def test_a_frozen_line_carries_the_outcome_of_its_capped_pin() -> None:
+    capped = {**ROWS[0], "flags": [WEEK_FLAG.to_json(), a_capped_pin("no_effect")]}
+
+    found = frozen_summary(
+        week=MONDAY,
+        position="B",
+        supersedes=None,
+        rows=[capped, ROWS[1]],
+        overrides=(),
+        locations={"lower": "home", "upper": "home"},
+        rung_labels={},
+    )
+
+    assert [line.pin_outcome for s in found.sessions for line in s.lines] == ["no_effect", None]
+
+
+def test_a_capped_pin_on_another_line_is_not_this_lines_outcome() -> None:
+    elsewhere = a_capped_pin("reduced", exercise_id="bb_bench_press")
+    capped = {**ROWS[0], "flags": [elsewhere]}
+
+    found = frozen_summary(
+        week=MONDAY,
+        position="B",
+        supersedes=None,
+        rows=[capped],
+        overrides=(),
+        locations={"lower": "home"},
+        rung_labels={},
+    )
+
+    assert found.sessions[0].lines[0].pin_outcome is None

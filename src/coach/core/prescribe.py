@@ -8,7 +8,7 @@ from dataclasses import dataclass, field, replace
 from typing import cast
 
 from coach.core.anchor import StartLoad, anchor, anchor_load_unusable
-from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, bound
+from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, Unpinned, bound
 from coach.core.carried_e1rm import E1rmRead, carried_e1rm, e1rm_read
 from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs, return_band
@@ -175,7 +175,8 @@ class _Derivation:
             opening = _first(move.proposal)
             loaded = mode in LOAD_BEARING_MODES
             pinned = self._pin(opening, mode, *pin) if pin is not None and loaded else None
-            context = replace(context, scheme_load=opening, pin=pinned)
+            unpinned = Unpinned(move.proposal, move.rounding)
+            context = replace(context, scheme_load=opening, pin=pinned, unpinned=unpinned)
             proposal = move.proposal if pinned is None else _pinned(move.proposal, pinned)
             bounded = bound(context, proposal, move.rounding, self.steps, self.flags)
             change = "first prescription"
@@ -199,6 +200,7 @@ class _Derivation:
             anchor_top=before,
             scheme_load=moved,
             pin=pinned,
+            unpinned=Unpinned(move.proposal, move.rounding),
             e1rm=read.best,
             rung_exercises=self.line.rung_exercises,
         )

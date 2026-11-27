@@ -26,6 +26,9 @@ A ladder's rung moves only by a `ladder_rung` Decision on the athlete's yes (ADR
 the plan Draft, and `program` answers `ladder_top` at a block boundary with an `amend` giving
 the line a new scheme. No skill puts a ladder in `cues`.
 
+No pinned load lifts a line above a recovery ceiling: `plan-week` answers `pin_load_capped` by
+lowering the pin to the prescribed load, removing it, or acknowledging the warning with the reason.
+
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
 0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
 why in the profile prose, ADR 0014; what the check-in asks per emphasis is the card's, what
