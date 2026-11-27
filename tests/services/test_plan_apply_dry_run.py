@@ -346,3 +346,13 @@ def test_the_approval_prompt_says_the_pin_the_illness_cap_cancels_has_no_effect(
         "  pin_load lower/bb_back_squat (coach_judgement): Hold the squat under the last top set."
         " · no effect: a recovery ceiling holds the line"
     ) in prompt.splitlines()
+
+
+def test_the_approval_prompt_names_the_illness_cap_on_a_line_and_when_it_ends() -> None:
+    conn = an_ill_squat_week()
+
+    dry = run(conn, a_plan_draft(conn))
+
+    prompt = approval_prompt(dry.summary, dry.actions, dry.write_plan_hash, units="lb")
+    [squat] = [line for line in prompt.splitlines() if line.startswith("  bb_back_squat ")]
+    assert squat.endswith(" · illness cap until this lift is trained once")

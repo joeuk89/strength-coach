@@ -4,6 +4,7 @@ says yes to. Each list past its cap ends with a count of the rest; `full` lifts 
 import datetime
 from collections.abc import Sequence
 
+from coach.core.ceilings import ILLNESS
 from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.core.frozen_prescription import dose
@@ -74,6 +75,8 @@ def _line(line: SummaryLine, units: Units) -> str:
     shown = f"{line.exercise_id} {dose(line.set_groups, units)} · {line.change}"
     if line.dropped_by is not None:
         shown += f" ({line.dropped_by})"
+    if line.illness_cap is not None:
+        shown += f" · {ILLNESS} cap {line.illness_cap.removeprefix(f'{ILLNESS} ')}"
     labels = line.rung_labels
     if labels is None:
         return shown

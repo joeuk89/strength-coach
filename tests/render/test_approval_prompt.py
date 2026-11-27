@@ -87,3 +87,38 @@ def test_the_overrides_mark_each_pin_a_recovery_ceiling_reduced_or_cancelled() -
         " · reduced by a recovery ceiling",
         "  pin_load lower/bb_back_squat (coach_judgement): It goes up one step.",
     ]
+
+
+def test_each_line_the_illness_cap_binds_says_so_and_when_it_ends() -> None:
+    groups = [{"type": "normal", "count": 3, "load": 40.0, "load_kg": 18.14, "reps": 10}]
+    session = SummarySession(
+        "lower",
+        datetime.date(2026, 11, 2),
+        "home",
+        (
+            SummaryLine("bb_back_squat", groups, "held", illness_cap="illness until 2026-11-04"),
+            SummaryLine(
+                "bb_hip_thrust",
+                groups,
+                "held",
+                illness_cap="illness until this lift is trained once",
+            ),
+            SummaryLine("db_farmers_walk", groups, "held"),
+        ),
+    )
+    summary = PlanSummary(
+        week=datetime.date(2026, 11, 2),
+        position=RotationPosition("A", "plan_in_force"),
+        supersedes=None,
+        sessions=(session,),
+        overrides=(),
+        flags=(),
+    )
+
+    lines = approval_prompt(summary, HevyActions(), "sha256:w", units="lb").splitlines()
+
+    assert [line.split(" · ")[-1] for line in lines[2:5]] == [
+        "illness cap until 2026-11-04",
+        "illness cap until this lift is trained once",
+        "held",
+    ]

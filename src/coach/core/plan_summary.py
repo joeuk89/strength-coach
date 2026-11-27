@@ -7,6 +7,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
 
+from coach.core.ceilings import is_illness_cause
 from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.core.frozen_prescription import frozen_groups
@@ -23,7 +24,8 @@ type PinOutcome = Literal["reduced", "no_effect"]
 @dataclass(frozen=True)
 class SummaryLine:
     """`dropped_by` is the cause of the niggle step that dropped the line, if one did;
-    `pin_outcome` what an RPE ceiling left of the line's `pin_load`, if it lowered one."""
+    `pin_outcome` what an RPE ceiling left of the line's `pin_load`, if it lowered one;
+    `illness_cap` the cause of the illness cap that binds the line, naming its end."""
 
     exercise_id: str
     set_groups: Sequence[Json]
@@ -31,6 +33,7 @@ class SummaryLine:
     rung_labels: RungLabels | None = None
     dropped_by: str | None = None
     pin_outcome: PinOutcome | None = None
+    illness_cap: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,7 @@ def _fresh_line(
         _labels(rung_labels, session_id, line.exercise_id, steps, line.rung),
         _dropped_by(line.change, steps),
         _pin_outcome(line.flags, session_id, line.exercise_id),
+        _illness_cap(steps),
     )
 
 
@@ -153,6 +157,7 @@ def _line(row: Json, rung_labels: SessionRungLabels) -> SummaryLine:
             str(row["session_id"]),
             exercise_id,
         ),
+        _illness_cap(steps),
     )
 
 
@@ -160,6 +165,11 @@ def _dropped_by(change: str, steps: Sequence[Json]) -> str | None:
     if change != "dropped":
         return None
     return next((str(s["cause"]) for s in steps if s.get("step") == "niggle"), None)
+
+
+def _illness_cap(steps: Sequence[Json]) -> str | None:
+    causes = (str(s["cause"]) for s in steps if s.get("step") == "rpe_ceiling")
+    return next((c for c in causes if is_illness_cause(c)), None)
 
 
 def _pin_outcome(flags: Iterable[Flag], session_id: str, exercise_id: str) -> PinOutcome | None:
