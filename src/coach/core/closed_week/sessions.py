@@ -6,7 +6,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from coach.core.closed_week.against import (
-    EFFORT_OFF_RPE,
     ROUNDING,
     AgainstPrescription,
     LineAgainst,
@@ -19,6 +18,7 @@ from coach.core.exposure import ExposureSet
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.planned_week import week_monday
 from coach.core.prescription import PlannedSession, StatusSpan
+from coach.core.rpe_gap import RPE_GAP
 
 GATE_KINDS = ("lifting", "coach_led")
 # rn:deloads.11: two thirds of the prescribed working sets, mean RPE no more than 1.5 under.
@@ -171,4 +171,4 @@ def _passes(work: PlannedWork, pairs: list[tuple[ExposureSet, TargetSet]]) -> bo
     if not prescribed or not rated:
         return True
     shortfall = sum(prescribed) / len(prescribed) - sum(rated) / len(rated)
-    return shortfall <= EFFORT_OFF_RPE + ROUNDING
+    return shortfall <= RPE_GAP + ROUNDING
