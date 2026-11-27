@@ -240,9 +240,10 @@ def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.Lif
 
 def _prescribed_seconds(log: WeekLog, exposure: Exposure) -> int | None:
     """The longest set the line prescribed in the session the exposure's workout matched."""
-    if not log.redesigns or exposure.date < week_monday(log.redesigns[0]):
+    monday = log.week_of(exposure.workout_id)
+    if not log.redesigns or monday < week_monday(log.redesigns[0]):
         return None
-    for outcome in log.week(week_monday(exposure.date)).sessions:
+    for outcome in log.week(monday).sessions:
         if exposure.workout_id not in outcome.workout_ids:
             continue
         for line in outcome.lines:
