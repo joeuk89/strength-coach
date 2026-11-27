@@ -30,10 +30,10 @@ OPENING_RUNG = 1
 
 @dataclass(frozen=True)
 class LineRef:
-    """A session's line: `line_key` is the line's own exercise, its first rung's on a ladder."""
+    """A session's line: `exercise` is the line's own exercise, its first rung's on a ladder."""
 
     session_id: str
-    line_key: str
+    exercise: str
 
 
 @dataclass(frozen=True)
@@ -122,7 +122,7 @@ def standing_rung(
     found = [
         d
         for d in decisions
-        if (d.kind, d.session_id, d.exercise_id) == ("ladder_rung", line.session_id, line.line_key)
+        if (d.kind, d.session_id, d.exercise_id) == ("ladder_rung", line.session_id, line.exercise)
     ]
     if not found:
         return StandingRung(OPENING_RUNG, adopted)

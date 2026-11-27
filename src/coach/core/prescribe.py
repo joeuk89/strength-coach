@@ -88,7 +88,7 @@ class _Derivation:
     flags: list[Flag] = field(default_factory=list[Flag])
     standing: StandingRung | None = None
     week_rung: int | None = None
-    rung_anchors: tuple[Exposure, ...] | None = None
+    anchor_exposures: tuple[Exposure, ...] | None = None
 
     @property
     def scope(self) -> Scope:
@@ -105,7 +105,7 @@ class _Derivation:
         if "drop_line" in overrides:
             return None
         ladder = self.line.ladder
-        authored = self.line if ladder is None else self._week_rung(ladder)
+        authored = self.line if ladder is None else self._week_rung_line(ladder)
         if "swap_exercise" in overrides:
             authored = self._swap(authored, *overrides["swap_exercise"])
         exercise = self.request.version.exercises.get(authored.exercise)
@@ -135,7 +135,7 @@ class _Derivation:
         rack = self._rack(exercise, mode)
         start = None if authored.start_load is None else Load(authored.start_load, mode)
         found = anchor(
-            self.request.exposures if self.rung_anchors is None else self.rung_anchors,
+            self.request.exposures if self.anchor_exposures is None else self.anchor_exposures,
             exercise_id=authored.exercise,
             session_id=self.request.planned.session_id,
             on=self.request.planned.date,
@@ -304,7 +304,7 @@ class _Derivation:
                 found[override.kind] = ("override", override)
         return found
 
-    def _week_rung(self, ladder: ExerciseLadder) -> Line:
+    def _week_rung_line(self, ladder: ExerciseLadder) -> Line:
         """The standing rung, or in a return band the rung the band steps back to; only a week on
         the standing rung offers the climb."""
         request, planned = self.request, self.request.planned
@@ -347,13 +347,15 @@ class _Derivation:
             )
         line = rung_line(self.line, ladder, week)
         if line.start_load is not None:
-            self.rung_anchors = rung_anchors(request.exposures, standing, week, planned.session_id)
+            self.anchor_exposures = rung_anchors(
+                request.exposures, standing, week, planned.session_id
+            )
         return line
 
     def _swap(self, authored: Line, step: str, swap: PlanOverride) -> Line:
         """The other exercise under the line's scheme and sets, with the swap's own start load
         and load mode: nothing of the swapped-out exercise carries."""
-        self.rung_anchors = None
+        self.anchor_exposures = None
         to = str(swap.params["to"])
         self.steps.append(Step(step, authored.exercise, to, "swap_exercise"))
         start = cast(float | None, swap.params.get("start_load"))

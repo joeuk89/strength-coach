@@ -99,7 +99,7 @@ def progress_page(
                 ],
                 [
                     [
-                        f"{names.session(r.line.session_id)}: {names.exercise(r.line.line_key)}",
+                        f"{names.session(r.line.session_id)}: {names.exercise(r.line.exercise)}",
                         names.exercise(r.exercise),
                         "<br>".join(
                             marked_rung(label, standing=index == r.rung)
