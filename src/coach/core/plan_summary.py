@@ -3,9 +3,9 @@ and lines, its overrides and its flags (ADR 0006). A first approval shows the ch
 resume shows the WeekPlan's frozen rows (docs/spec/verbs.md, "Re-run safety")."""
 
 import datetime
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import cast
+from typing import Literal, cast
 
 from coach.core.config import Units
 from coach.core.flag import Flag
@@ -17,17 +17,20 @@ from coach.core.routine_projection import RungKey, RungLabels, authored_exercise
 
 type Json = Mapping[str, object]
 type SessionRungLabels = Mapping[str, Mapping[RungKey, RungLabels]]
+type PinOutcome = Literal["reduced", "no_effect"]
 
 
 @dataclass(frozen=True)
 class SummaryLine:
-    """`dropped_by` is the cause of the niggle step that dropped the line, if one did."""
+    """`dropped_by` is the cause of the niggle step that dropped the line, if one did;
+    `pin_outcome` what an RPE ceiling left of the line's `pin_load`, if it lowered one."""
 
     exercise_id: str
     set_groups: Sequence[Json]
     change: str
     rung_labels: RungLabels | None = None
     dropped_by: str | None = None
+    pin_outcome: PinOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -84,6 +87,7 @@ def _fresh_line(
         line.change,
         _labels(rung_labels, session_id, line.exercise_id, steps, line.rung),
         _dropped_by(line.change, steps),
+        _pin_outcome(line.flags, session_id, line.exercise_id),
     )
 
 
@@ -144,6 +148,11 @@ def _line(row: Json, rung_labels: SessionRungLabels) -> SummaryLine:
             cast(int | None, row["rung"]),
         ),
         _dropped_by(str(row["change"]), steps),
+        _pin_outcome(
+            (Flag.from_json(f) for f in cast(list[Json], row["flags"])),
+            str(row["session_id"]),
+            exercise_id,
+        ),
     )
 
 
@@ -151,6 +160,18 @@ def _dropped_by(change: str, steps: Sequence[Json]) -> str | None:
     if change != "dropped":
         return None
     return next((str(s["cause"]) for s in steps if s.get("step") == "niggle"), None)
+
+
+def _pin_outcome(flags: Iterable[Flag], session_id: str, exercise_id: str) -> PinOutcome | None:
+    for flag in flags:
+        scope = flag.scope
+        if (flag.code, scope.session_id, scope.exercise_id) == (
+            "pin_load_capped",
+            session_id,
+            exercise_id,
+        ):
+            return cast(PinOutcome, flag.params["outcome"])
+    return None
 
 
 def _labels(

@@ -3,6 +3,7 @@ from typing import Any, cast
 
 import pytest
 from support.clock import FixedClock
+from support.history import a_status_span
 from support.kit_fixtures import kit_files
 from support.plan_drafts import a_plan_draft
 from support.plans import (
@@ -18,6 +19,7 @@ from support.programs import a_config
 from coach.core.errors import Invalid
 from coach.core.flag import Flag
 from coach.core.hevy_actions import HevyActions, RoutineAction, TemplateCreate
+from coach.render.approval_prompt import approval_prompt
 from coach.services.plan_apply import DryRun, dry_run
 from coach.services.record import record
 from coach.store import exercises
@@ -302,3 +304,45 @@ def test_a_mapped_session_the_version_no_longer_has_is_retired_into_a_new_retire
         updates=(RoutineAction("lower", "r-1"),),
         retires=(RoutineAction("upper", "r-2"),),
     )
+
+
+CAPPED = "pin_load_capped@line:2026-11-02/lower/bb_back_squat"
+
+
+def an_ill_squat_week() -> Connection:
+    """Last Monday's squat at 100 lb too far from failure for an e1RM, then two ill days."""
+    conn = a_squat_program()
+    squat_logged(conn, "h-1", "2026-10-26", *[(100, 15, 7)] * 4)
+    a_status_span(conn, "ss-0001", "ill", "2026-10-28", "2026-10-29")
+    return conn
+
+
+def test_a_pin_the_illness_cap_cancels_is_a_warning_the_draft_can_acknowledge() -> None:
+    conn = an_ill_squat_week()
+    raised = run(conn, a_plan_draft(conn, overrides=PIN_115))
+    capped = next(f for f in raised.flags if f.key == CAPPED)
+    draft = a_plan_draft(
+        conn, overrides=PIN_115, acknowledge=acknowledge(CAPPED, capped.params_hash)
+    )
+
+    left = next(f for f in run(conn, draft).flags if f.key == CAPPED)
+
+    assert (capped.severity, capped.params["outcome"], capped.left) == (
+        "warning",
+        "no_effect",
+        None,
+    )
+    assert left.left is not None
+    assert left.left.source == "weekplan"
+
+
+def test_the_approval_prompt_says_the_pin_the_illness_cap_cancels_has_no_effect() -> None:
+    conn = an_ill_squat_week()
+
+    dry = run(conn, a_plan_draft(conn, overrides=PIN_115))
+
+    prompt = approval_prompt(dry.summary, dry.actions, dry.write_plan_hash, units="lb")
+    assert (
+        "  pin_load lower/bb_back_squat (coach_judgement): Hold the squat under the last top set."
+        " · no effect: a recovery ceiling holds the line"
+    ) in prompt.splitlines()
