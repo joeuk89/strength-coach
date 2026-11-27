@@ -109,6 +109,10 @@ class Reader(ABC):
             return cast(int | None, value)
         raise self.wrong(key, "a whole number of at least 0")
 
+    @overload
+    def boolean(self, key: str, *, required: Literal[True]) -> bool: ...
+    @overload
+    def boolean(self, key: str, *, required: bool = False) -> bool | None: ...
     def boolean(self, key: str, *, required: bool = False) -> bool | None:
         value = self._present(key, BOOLEAN, required=required)
         if value is None or isinstance(value, bool):

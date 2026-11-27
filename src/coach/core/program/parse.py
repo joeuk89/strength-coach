@@ -8,7 +8,7 @@ from typing import Literal, cast, overload
 
 from coach.core.draft_fields import draft_hash
 from coach.core.draft_reader import Reader, Table, is_int
-from coach.core.draft_schema import BOOLEAN, TEXT, TEXTS, Json, Location
+from coach.core.draft_schema import TEXT, TEXTS, Json, Location
 from coach.core.errors import Invalid
 from coach.core.muscles import MUSCLES_WANTED, read_muscles
 from coach.core.program.form import (
@@ -97,7 +97,7 @@ def parse_program_draft(data: bytes, *, file: str) -> ParsedDraft:
 def parse_form(document: Table, *, file: str) -> tuple[ProgramForm, tuple[str, ...]]:
     """The form and the paths of the keys outside the schema. Reads a Draft and a stored form."""
     unknown: list[str] = []
-    top = _Reader(document, (), file, unknown)
+    top = _ProgramReader(document, (), file, unknown)
     form = ProgramForm(
         name=top.text("name", required=True),
         kind=top.choice("kind", VERSION_KINDS.names(), required=True),
@@ -119,7 +119,7 @@ def parse_form(document: Table, *, file: str) -> tuple[ProgramForm, tuple[str, .
     return form, tuple(sorted(unknown))
 
 
-def _schedule(reader: "_Reader") -> Schedule:
+def _schedule(reader: "_ProgramReader") -> Schedule:
     rotation = reader.texts("rotation")
     if not rotation or len(set(rotation)) != len(rotation):
         raise reader.wrong("rotation", "a list of distinct week names")
@@ -134,7 +134,7 @@ def _schedule(reader: "_Reader") -> Schedule:
     return Schedule(tuple(rotation), weeks)
 
 
-def _dose(reader: "_Reader | None") -> Dose | None:
+def _dose(reader: "_ProgramReader | None") -> Dose | None:
     if reader is None:
         return None
     lift = reader.table("lift")
@@ -146,7 +146,7 @@ def _dose(reader: "_Reader | None") -> Dose | None:
     return dose
 
 
-def _lift_dose(reader: "_Reader", lift: str) -> LiftDose:
+def _lift_dose(reader: "_ProgramReader", lift: str) -> LiftDose:
     if not isinstance(reader.raw(lift), Mapping):
         return LiftDose(reader.count(lift, required=True))
     table = reader.table(lift, required=True)
@@ -158,7 +158,7 @@ def _lift_dose(reader: "_Reader", lift: str) -> LiftDose:
     return dose
 
 
-def _deload(reader: "_Reader | None") -> Deload | None:
+def _deload(reader: "_ProgramReader | None") -> Deload | None:
     if reader is None:
         return None
     deload = Deload(
@@ -166,13 +166,13 @@ def _deload(reader: "_Reader | None") -> Deload | None:
         set_cut_pct=reader.percent("set_cut_pct"),
         load_cut_pct=reader.percent("load_cut_pct"),
         rpe_cap=reader.rpe("rpe_cap", required=True),
-        test_priority_lifts=reader.true_or_false("test_priority_lifts"),
+        test_priority_lifts=reader.boolean("test_priority_lifts", required=True),
     )
     reader.finish()
     return deload
 
 
-def _session(reader: "_Reader") -> Session:
+def _session(reader: "_ProgramReader") -> Session:
     id_ = reader.text("id", required=True)
     reader.name_as(("session", id_))
     estimated = reader.table("estimated_sets")
@@ -202,19 +202,19 @@ def _session(reader: "_Reader") -> Session:
 
 def parse_line(document: Table, *, file: str) -> Line:
     """One line document in the form's shape; a rehab session's stored lines read through it."""
-    return _line(_Reader(document, ("line",), file, []))
+    return _line(_ProgramReader(document, ("line",), file, []))
 
 
 def parse_set_groups(groups: Sequence[Table], *, file: str, where: str) -> tuple[SetGroup, ...]:
     """A line's whole set groups outside a form; a key outside the group's shape is refused."""
     unknown: list[str] = []
-    parsed = tuple(_group(_Reader(group, (where,), file, unknown)) for group in groups)
+    parsed = tuple(_group(_ProgramReader(group, (where,), file, unknown)) for group in groups)
     if unknown:
         raise Invalid("unknown_key", f"{file}: unknown key {', '.join(unknown)}")
     return parsed
 
 
-def _line(reader: "_Reader") -> Line:
+def _line(reader: "_ProgramReader") -> Line:
     exercise = reader.text("exercise", required=True)
     reader.name_as((*reader.path[:-1], exercise))
     scheme = _scheme(reader.table("scheme"), line_exercise=exercise)
@@ -240,7 +240,7 @@ def _line(reader: "_Reader") -> Line:
     return line
 
 
-def _group(reader: "_Reader") -> SetGroup:
+def _group(reader: "_ProgramReader") -> SetGroup:
     group = SetGroup(
         count=reader.count("count", required=True),
         type=reader.text("type") or "working",
@@ -252,7 +252,9 @@ def _group(reader: "_Reader") -> SetGroup:
     return group
 
 
-def _scheme(reader: "_Reader | None", *, line_exercise: str | None = None) -> SchemeRef | None:
+def _scheme(
+    reader: "_ProgramReader | None", *, line_exercise: str | None = None
+) -> SchemeRef | None:
     if reader is None:
         return None
     name = reader.text("name", required=True)
@@ -265,7 +267,7 @@ def _scheme(reader: "_Reader | None", *, line_exercise: str | None = None) -> Sc
     return SchemeRef(name, params, ladder)
 
 
-def _ladder(reader: "_Reader", line_exercise: str) -> ExerciseLadder:
+def _ladder(reader: "_ProgramReader", line_exercise: str) -> ExerciseLadder:
     rungs = tuple(
         _rung(r, line_exercise if index == 0 else None)
         for index, r in enumerate(reader.tables("rungs", required=True, at_least_one=True))
@@ -273,7 +275,7 @@ def _ladder(reader: "_Reader", line_exercise: str) -> ExerciseLadder:
     return ExerciseLadder(rungs, _advance(reader.table("advance")))
 
 
-def _rung(reader: "_Reader", line_exercise: str | None) -> Rung:
+def _rung(reader: "_ProgramReader", line_exercise: str | None) -> Rung:
     """The first rung is the line's exercise, so it may leave `exercise` unsaid."""
     if line_exercise is None:
         exercise = reader.text("exercise", required=True)
@@ -292,7 +294,7 @@ def _rung(reader: "_Reader", line_exercise: str | None) -> Rung:
     return rung
 
 
-def _advance(reader: "_Reader | None") -> Advance:
+def _advance(reader: "_ProgramReader | None") -> Advance:
     if reader is None:
         return Advance()
     advance = Advance(
@@ -306,7 +308,7 @@ def _advance(reader: "_Reader | None") -> Advance:
     return advance
 
 
-def _exercises(reader: "_Reader | None") -> dict[str, Mapping[str, object]]:
+def _exercises(reader: "_ProgramReader | None") -> dict[str, Mapping[str, object]]:
     if reader is None:
         return {}
     declared: dict[str, Mapping[str, object]] = {}
@@ -315,7 +317,7 @@ def _exercises(reader: "_Reader | None") -> dict[str, Mapping[str, object]]:
     return declared
 
 
-def _declared_exercise(reader: "_Reader") -> dict[str, object]:
+def _declared_exercise(reader: "_ProgramReader") -> dict[str, object]:
     fields: dict[str, object] = {}
     for key in DECLARED_EXERCISE_KEYS:
         if not reader.has(key):
@@ -332,7 +334,7 @@ def _declared_exercise(reader: "_Reader") -> dict[str, object]:
     return fields
 
 
-def _acknowledge(reader: "_Reader") -> AcknowledgeEntry:
+def _acknowledge(reader: "_ProgramReader") -> AcknowledgeEntry:
     entry = AcknowledgeEntry(
         flag=reader.text("flag", required=True),
         because=reader.choice("because", REASONS.names(), required=True),
@@ -343,7 +345,7 @@ def _acknowledge(reader: "_Reader") -> AcknowledgeEntry:
     return entry
 
 
-class _Reader(Reader):
+class _ProgramReader(Reader):
     """One table's values read by type; `finish` records every key nobody read."""
 
     def __init__(
@@ -363,9 +365,9 @@ class _Reader(Reader):
     def _where(self, key: str) -> str:
         return f"{self.file}: {'.'.join((*self.path, key))}"
 
-    def _child(self, table: Table, key: str, index: int | None, at: Location) -> "_Reader":
+    def _child(self, table: Table, key: str, index: int | None, at: Location) -> "_ProgramReader":
         steps = (key,) if index is None else (key, str(index))
-        return _Reader(table, (*self.path, *steps), self.file, self.unknown, at=at)
+        return _ProgramReader(table, (*self.path, *steps), self.file, self.unknown, at=at)
 
     def name_as(self, path: tuple[str, ...]) -> None:
         self.path = path
@@ -427,13 +429,6 @@ class _Reader(Reader):
         if muscles is None:
             raise self.wrong(key, MUSCLES_WANTED)
         return muscles
-
-    def true_or_false(self, key: str) -> bool:
-        """A required boolean; left out, it reads as the wrong value rather than a missing key."""
-        value = self._typed(key, BOOLEAN, required=True)
-        if isinstance(value, bool):
-            return value
-        raise self.wrong(key, "true or false")
 
     def reps(self, key: str) -> Reps | None:
         value = self._typed(key, REPS)
