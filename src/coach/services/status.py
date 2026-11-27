@@ -1,7 +1,6 @@
 import datetime
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import cast
 
 from coach.core.check_in import (
     DAY,
@@ -17,7 +16,7 @@ from coach.core.flag import Flag
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.planned_week import RotationPosition, week_monday
-from coach.core.routine_projection import in_routine
+from coach.core.routine_projection import row_in_routine
 from coach.services.cadence import cadence_signals
 from coach.services.check_in_warnings import check_in_warnings
 from coach.services.closed_weeks import ClosedWeeks, WeekLog
@@ -284,9 +283,7 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     plan_id = str(row["id"])
     live = routine_map.live(conn)
     projected = {
-        str(r["session_id"])
-        for r in week_plans.prescriptions(conn, plan_id)
-        if in_routine(cast(list[object], r["set_groups"]))
+        str(r["session_id"]) for r in week_plans.prescriptions(conn, plan_id) if row_in_routine(r)
     }
     verified = [
         m

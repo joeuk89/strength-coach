@@ -38,6 +38,10 @@ def in_routine(set_groups: Sequence[object]) -> bool:
     return bool(set_groups)
 
 
+def row_in_routine(row: Mapping[str, object]) -> bool:
+    return in_routine(cast(Sequence[object], row["set_groups"]))
+
+
 def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -> str:
     """The exercise the version authored, before any swap."""
     for step in steps:

@@ -15,8 +15,8 @@ from coach.core.routine_projection import (
     RungKey,
     RungLabels,
     SessionRoutine,
-    in_routine,
     project_routine,
+    row_in_routine,
     rung_labels,
 )
 from coach.store import exercises, mirrors, niggles, programs, week_plans
@@ -75,7 +75,7 @@ def projection(
     rows = [
         r
         for r in week_plans.prescriptions(conn, str(plan["id"]))
-        if r["session_id"] == session_id and in_routine(cast(list[object], r["set_groups"]))
+        if r["session_id"] == session_id and row_in_routine(r)
     ]
     first = min(str(r["date"]) for r in rows)
     folders = {f.role: f.hevy_id for f in mirrors.folders(conn)}
