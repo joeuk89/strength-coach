@@ -72,8 +72,8 @@ DECLARATION = Declaration(
         "type": "object",
         "description": "one declaration with a verb, a Draft verb's with draft {kind, schema, "
         "example}, never cut; {rows: [declaration, a Draft verb's draft as {kind} only], count, "
-        "truncated, registries} "
-        "without one, never cut; {registry, note?, rows, count, truncated} with --registry",
+        "truncated, registries} without one, never cut; {registry, note?, rows, count, truncated} "
+        "with --registry",
         "properties": {
             "registry": {"type": "string", "description": "with --registry"},
             "note": {
