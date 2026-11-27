@@ -52,7 +52,13 @@ def test_a_maintenance_version_under_a_hypertrophy_goal_warns_emphasis_off_goal(
     assert the("emphasis_off_goal", warnings_of(a_draft())) == []
 
 
-HYPERTROPHY_BAND = ["double_progression", "assistance_ladder", "exercise_ladder", "hold"]
+HYPERTROPHY_BAND = [
+    "double_progression",
+    "assistance_ladder",
+    "exercise_ladder",
+    "hold",
+    "timed_load",
+]
 PRIORITY_BAND = [
     "top_backoff",
     "wave_531",

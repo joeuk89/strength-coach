@@ -5,6 +5,7 @@ from support.program_drafts import a_draft, a_line, a_session, toml
 from coach.core.flag import Flag
 from coach.core.program.checks import AdoptContext, violations
 from coach.core.program.parse import parse_program_draft
+from coach.core.program.warnings import adopt_warnings
 from coach.core.rack import IncrementRack
 
 CARRY: dict[str, object] = {
@@ -86,3 +87,11 @@ def test_a_timed_load_group_with_no_rpe_target_is_rpe_missing() -> None:
     [flag] = flags_of(carrying([{"count": 3, "duration_s": 30}]))
 
     assert flag.code == "rpe_missing"
+
+
+def test_a_timed_load_line_is_inside_the_hypertrophy_scheme_band() -> None:
+    form = parse_program_draft(toml(carrying()), file="d.toml").form
+
+    assert [
+        flag.key for flag in adopt_warnings(form, CONTEXT) if flag.code == "scheme_off_emphasis"
+    ] == []
