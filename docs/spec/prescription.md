@@ -126,14 +126,17 @@ Notes:
 
 - The one-row cap on `top_backoff` is a rule, not a warning: a bigger jump is the model
   over-reading one great day. Because every scheme's own step is at most one row,
-  `increment_over_step` fires only on a `pin_load` more than one row above the anchor. After a
+  `increment_over_step` fires only on a `pin_load` more than one row above the anchor, and not
+  on one at or under a `load_too_light` suggestion (below). After a
   return week the cap counts from the pre-layoff heaviest top scaled by the band, so the line
   gets back to its pre-layoff level in about one week rather than one row a week.
 - `top_backoff` reads the **best** point in the window, so one bad day never drops the top set;
   only a recovery ceiling or the window expiring lowers it.
 - When the e1RM moves the `top_backoff` top (the one-row cap does not bind), the `scheme` step
   records `cause = e1rm <exposure ref>`, the exposure the e1RM came from (the pre-layoff one
-  while the carried e1RM binds), and the line's `change` ends with it (below).
+  while the carried e1RM binds), and the line's `change` ends with it (below). When the cap
+  binds, the cause records the e1RM and the model load it discarded:
+  `one_row_cap, e1rm 215.83 from <exposure ref>, model 175`.
 - With no next rack row (a band at the top of its ladder, a dumbbell rack's heaviest pair) a
   hit holds and the step records `cause = rack_top`; the agent swaps or the version changes.
 - A `test` single is never authored; the deload policy prescribes it in a light week, below.
@@ -159,6 +162,36 @@ Notes:
   matching carry the standing rung's. A
   light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
   after the athlete's yes.
+
+## A line too light
+
+The one-row step stands, so a line far under what the athlete can lift climbs slowly. The
+engine says so and suggests the jump; the athlete agrees or names another load, and the coach
+pins it. A `double_progression`, `linear` or `top_backoff` line in a rack mode with an anchor
+exposure warns `load_too_light` when either holds:
+
+- the mean of logged minus authored RPE over the anchor's working sets, paired in order with the
+  authored working sets and counting only pairs that carry both, is 1.5 or more under. An anchor
+  from a week a return band capped the line's RPE is not read this way.
+- the rack row nearest the model load is more than one rack row above the prescribed load. The
+  model load is `load_for` of the line's e1RM (exercise-wide, every session included, the carried
+  e1RM while it binds) for the top working group's reps, the top of a range, at its RPE. The
+  prescribed load is the scheme's own move on the rack, before the cut and the ceilings.
+
+Both thresholds are opinion: the 1.5 is the session gate's slack (`week.md`), one number the
+engine reads as effort well off the authored RPE, and the one row matches the scheme's step.
+
+The params carry the anchor's logged sets, the e1RM with its source exposure (date, session),
+the model load and one suggested load: the rack row nearest the model load, no heavier than any
+safety ceiling. With no e1RM the warning still raises on the RPE gap, with no model and no
+suggestion. A line a return band cuts raises none: the carried e1RM is its catch-up, and a pin
+above the band is `return_band_disagrees`.
+
+The warning never moves a load and never changes the anchor: another session's exposure is
+evidence only. The coach answers with `pin_load`. A pin at or under the suggested load needs one
+acknowledgement, of this warning, and raises no `increment_over_step`; a pin above it raises
+`increment_over_step` as before. The pin is bounded like any other: an RPE ceiling still lowers
+it and warns `pin_load_capped`. The warning recurs each week until neither condition holds.
 
 ## Stalls
 

@@ -83,6 +83,7 @@ else changes.
 | usual interval clamped to 7–14 days | `prescription.md`, days off | this framework's |
 | three exposures to a `stall_streak` | `prescription.md`, Stalls | the sources say read the trend and name no count |
 | RPE 2 over the authored target as `rep_range_missed`; the one-row cap on `top_backoff`; `load_for` rounding down | `prescription.md`, the move | this framework's |
+| `load_too_light` at a mean RPE gap of 1.5 or a model load more than one rack row above the prescribed load | `prescription.md`, A line too light | the 1.5 is the session gate's slack (rn:deloads.11); reading it as too light, and the one row, are this framework's |
 | the test single at RPE 9 | `prescription.md`, The test set | this framework's |
 | the warm-up ramp 60; 50/75; 40/60/80; 40–80 | `prescription.md`, Warm-ups | this framework's (#39) |
 | deload defaults 40/0/8 and 30/0/8 | `goals.md`, Defaults per emphasis | the direction is rn:goal-programming §6 and rn:deloads.8–.10; the percentages are this framework's |
