@@ -5,9 +5,11 @@ import pytest
 from support.cli import Run, run_coach
 from support.clock import FixedClock
 from support.goals import WORKED
+from support.history import a_logged_workout
 from support.instances import an_instance
 
 from coach.cli import app
+from coach.store import exercises
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
 
@@ -113,6 +115,31 @@ def test_the_phase_line_names_its_rate_units(instance: Path) -> None:
         "rate_units": "pct_bw_per_week",
         "until": {"kind": "coachs_call", "value": None},
     }
+
+
+def test_a_lift_doubt_carries_its_reason_and_the_sets_it_quotes(instance: Path) -> None:
+    (instance / ".coach").mkdir()
+    with closing(open_store(instance / ".coach" / "coach.db")) as conn:
+        with conn:
+            seed_catalogue(conn)
+            exercises.update(conn, "bb_back_squat", {"hevy_template_id": "SQ-0001"})
+        a_logged_workout(conn, "w-1", "2026-10-30", ("SQ-0001", ((80, 5, 8.0),)))
+        a_logged_workout(conn, "w-2", "2026-10-30", ("SQ-0001", ((50, 5, 6.0),)))
+
+    run = coach("checkin", "open", "--date", "2026-10-30")
+
+    lifts = next(f for f in run.envelope["result"]["card"] if f["field"] == "lifts")
+    doubt, soreness = lifts["asks"]
+    assert soreness == {"ask": "soreness_and_niggles"}
+    assert (doubt["ask"], doubt["about"], doubt["reason"]) == (
+        "lift_doubt",
+        "exercise:bb_back_squat",
+        "exposures_disagree",
+    )
+    assert [(e["logged"], e["e1rm"]) for e in doubt["params"]["exposures"]] == [
+        ([{"load": 80.0, "reps": 5, "rpe": 8.0}], 98.67),
+        ([{"load": 50.0, "reps": 5, "rpe": 6.0}], 65.0),
+    ]
 
 
 def test_the_schema_lists_the_phase_rate_units(instance: Path) -> None:
