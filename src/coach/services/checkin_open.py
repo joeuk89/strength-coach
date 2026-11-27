@@ -233,6 +233,8 @@ def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.Lif
     inside = [e for e in every if window.start <= e.date <= window.end and e.working]
     patterns = {str(r["id"]): r["pattern"] for r in exercises.every(conn)}
     priority = _priority_lifts(conn)
+    by_ref = {e.ref: e for e in every}
+    counts = Counter(e.exercise_id for e in inside)
     latest: dict[str, Exposure] = {}
     for exposure in sorted(inside, key=lambda e: e.date):
         latest[exposure.exercise_id] = exposure
@@ -251,9 +253,16 @@ def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.Lif
                 before.load.amount if before else None,
                 tuple(s.duration_s for s in exposure.working),
                 _prescribed_seconds(log, exposure),
+                _source(exposure),
+                _source(by_ref[after.exposure]) if after else None,
+                counts[exercise_id],
             )
         )
     return reads
+
+
+def _source(exposure: Exposure) -> card.ExposureSource:
+    return card.ExposureSource(exposure.ref, exposure.date, exposure.session_id)
 
 
 def _prescribed_seconds(log: WeekLog, exposure: Exposure) -> int | None:

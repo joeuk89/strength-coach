@@ -5,7 +5,12 @@ from typing import cast
 
 from coach.render.markdown import bullets, cell, table
 
-LABELS = {"average_14_days": "14-day average", "e1rm": "e1RM", "e1rm_before": "e1RM before"}
+LABELS = {
+    "average_14_days": "14-day average",
+    "e1rm": "e1RM",
+    "e1rm_before": "e1RM before",
+    "e1rm_from": "e1RM from",
+}
 
 type Shown = Callable[[str, object], object]
 

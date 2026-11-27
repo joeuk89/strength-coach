@@ -106,4 +106,12 @@ def test_a_rep_based_lift_row_keeps_its_fields() -> None:
 
     squat = lift_rows(conn)["bb_back_squat"]
 
-    assert set(squat) == {"exercise", "priority", "top_set", "e1rm", "e1rm_before"}
+    assert set(squat) == {
+        "exercise",
+        "priority",
+        "top_set",
+        "e1rm",
+        "e1rm_before",
+        "exposures",
+        "e1rm_from",
+    }

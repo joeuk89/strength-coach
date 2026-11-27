@@ -66,7 +66,26 @@ def _field_text(field: CardField, names: PageNames) -> str:
     facts = field.facts
     if field.name == "block":
         facts = {key: value for key, value in facts.items() if key != "block"}
+    if field.name == "lifts":
+        rows = cast(Sequence[Mapping[str, object]], facts["rows"])
+        facts = {**facts, "rows": [_lift_row(r, names) for r in rows]}
     return facts_text(facts, _shown(names))
+
+
+def _lift_row(row: Mapping[str, object], names: PageNames) -> Mapping[str, object]:
+    """The e1RM's source shows only where it is not the top set's exposure."""
+    source = cast(Mapping[str, object] | None, row.get("e1rm_from"))
+    top = cast(Mapping[str, object], row["top_set"])
+    shown = {key: value for key, value in row.items() if key != "e1rm_from"}
+    shown["top_set"] = {**top, "session": _session_name(top["session"], names)}
+    if source is None or (source["date"], source["session"]) == (top["date"], top["session"]):
+        return shown
+    where = _session_name(source["session"], names) or "workout"
+    return {**shown, "e1rm_from": f"{where} on {source['date']}"}
+
+
+def _session_name(session: object, names: PageNames) -> str | None:
+    return None if session is None else names.session(str(session))
 
 
 def _shown(names: PageNames) -> Shown:
