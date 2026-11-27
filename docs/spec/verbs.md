@@ -36,7 +36,7 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | store write (the pull) | the check-in card (`check-in.md`) |
 | `checkin record <draft> [--dry-run]` | store write | the Check-in row plus every record the file carries |
 | `record <draft> [--dry-run]` | store write | ledger writes outside a check-in, any mix of record kinds |
-| `plan draft [--week <monday>] [--out <path>]` | store write (the pull), writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context), returns its path and summary |
+| `plan draft [--week <monday>] [--out <path>] [--refresh <path>]` | store write (the pull), writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context and an empty acknowledgement stub per warning), returns its path and summary; `--refresh` re-derives an edited Draft in place |
 | `plan apply <draft> [--dry-run] [--expect <hash>]` | Writing verb (Hevy) | the one Hevy write (ADR 0006, 0011) |
 | `program show [--draft [--apply-plan <week>]]` | read, may write a Draft file | the version in force, or the current version as a Draft to edit |
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
@@ -140,7 +140,8 @@ than the cap, so they write it: `plan draft` and `program show --draft` write a 
 (through the one emitter in `render`, ADR 0019) to
 `.coach/drafts/<date>-<kind>.toml` (or `--out <path>`) and return the path, the file hash and a
 compact summary. The agent edits the file in place and passes the path to `plan apply` or
-`program adopt`. The engine never overwrites a Draft. When the default path already exists and
+`program adopt`. The engine never overwrites a Draft, except the one a `plan draft --refresh`
+names (below). When the default path already exists and
 its content equals what the verb would write (same hash), the verb returns `ok` with that path:
 an identical re-derivation is a no-op. When the content differs, the verb writes to the next free
 suffix, `<date>-<kind>-2.toml`, `-3`, and returns that path, so an edited Draft is never lost and
@@ -194,6 +195,12 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`plan draft --week`** defaults to the next week with no approved plan, or the current week
   while its plan is unapproved. When an approved WeekPlan exists for the week, the Draft is a
   superseding one and the summary names the plan it supersedes.
+- **`plan draft --refresh <path>`** reads an edited plan Draft and re-derives it from its own
+  week, overrides, confirmed position and filled acknowledgements, so the flags the overrides
+  raise appear with their stubs without a dry run in between. It rewrites that file in place,
+  or writes to `--out` when given; `--week` beside it is `invalid_argument`. The Athlete notes,
+  the superseded plan, every `[[flag]]` table and the stubs are derived again, so an empty stub
+  for a warning that no longer stands goes.
 - **`import`** has one source, Hevy; with no `[hevy]` table it reports `skipped` and exits 0.
   Kit is read from `kit/` by the verbs that round, never pulled (ADR 0021).
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
@@ -278,7 +285,7 @@ Verbs without a Draft:
 | --- | --- |
 | `import` | no new versions, no-op counts of zero |
 | `publish` | nothing to export and no page changed: no commit, `ok` |
-| `plan draft`, `program show --draft` | `ok` with the same path when the file equals what it would write; the next `-n` suffix when it differs (above) |
+| `plan draft`, `program show --draft` | `ok` with the same path when the file equals what it would write; the next `-n` suffix when it differs (above); `plan draft --refresh` rewrites the file it names, the same bytes again on an unchanged store |
 | `upgrade` | pin already at the engine version: no-op |
 | `init` | an instance already exists: exit 5, `instance_exists` |
 | reads | pure |
