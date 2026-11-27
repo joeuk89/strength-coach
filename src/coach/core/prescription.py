@@ -90,9 +90,12 @@ class NiggleConstraint:
 
 @dataclass(frozen=True)
 class StatusSpan:
+    """`cap_ends` is the last day of the illness cap as the athlete stated it; None is no answer."""
+
     kind: str
     from_date: datetime.date
     to_date: datetime.date | None = None
+    cap_ends: datetime.date | None = None
 
     def covers(self, day: datetime.date) -> bool:
         return self.from_date <= day and (self.to_date is None or day <= self.to_date)

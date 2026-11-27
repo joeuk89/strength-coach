@@ -89,6 +89,7 @@ class StatusSpanRecord:
     kind: str | None = None
     from_date: datetime.date | None = None
     to_date: datetime.date | None = None
+    cap_ends: datetime.date | None = None
     text: str | None = None
     withdraws: str | None = None
     key: str | None = None
@@ -308,11 +309,23 @@ def _status_span(f: Fields) -> StatusSpanRecord:
     to_date = f.date("to_date")
     if from_date and to_date and to_date < from_date:
         raise f.wrong("to_date", f"on or after from_date {from_date}")
+    kind = f.term("kind", STATUS_SPAN_KINDS, required=True)
+    cap_ends = f.date("cap_ends")
+    if cap_ends is not None:
+        if kind != "ill":
+            raise f.wrong("cap_ends", "left out unless kind is ill")
+        if to_date is None:
+            raise f.wrong(
+                "cap_ends", "set only on a span with a to_date: the athlete has recovered"
+            )
+        if cap_ends < to_date:
+            raise f.wrong("cap_ends", f"on or after to_date {to_date}, the last ill day")
     return f.done(
         StatusSpanRecord(
-            kind=f.term("kind", STATUS_SPAN_KINDS, required=True),
+            kind=kind,
             from_date=from_date,
             to_date=to_date,
+            cap_ends=cap_ends,
             text=f.text("text"),
             key=f.key(),
         )

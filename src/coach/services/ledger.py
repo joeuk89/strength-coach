@@ -193,6 +193,7 @@ class _Writer:
             "kind": record.kind,
             "from_date": _iso(record.from_date),
             "to_date": _iso(record.to_date),
+            "cap_ends": _iso(record.cap_ends),
             "text": record.text,
         }
         readings.insert(self.conn, "status_span", self._stamped(row))

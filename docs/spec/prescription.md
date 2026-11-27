@@ -237,9 +237,16 @@ move, the `top_backoff` top, the wave loads of the training max), so it is defin
 scheme, and back-offs follow their top; at 0 the load is held. A `hold` line is cut like any
 other (ADR 0017).
 
-Illness is not a cut and not a week kind here: an `ill` span since the line's anchor with no
-exposure since it ended caps every set of the line at RPE 7 in step 6 (rn:detraining-return.4),
-where it binds by `min` with the other ceilings.
+Illness is not a cut and not a week kind here: an `ill` span caps every set of the line at RPE 7
+in step 6 (rn:detraining-return.4), where it binds by `min` with the other ceilings. The cap ends
+on the athlete's word: the span's `cap_ends`, the last day they say they need reduced effort,
+caps every line dated after the span began up to that day and none after, trained or not; a
+`cap_ends` on the last ill day is fully recovered and caps nothing after it. With no answer the
+cap stays on the cautious side: a span since the line's anchor with no exposure of the lift since
+it ended caps the line, so each lift is capped until it has been trained once. The step's cause
+names the end, `illness until 2026-11-12` or `illness until this lift is trained once`, and the
+approval prompt prints it on the line. A new answer midweek is a withdrawal and a fresh span,
+and a superseding WeekPlan replans the sessions left.
 
 The closed week's kind for the Block's count (light, return, break, minimum, one_off, hard,
 missed, partial) is `week.md`'s read after the fact. `week.md`'s `return` is the athlete's
@@ -359,7 +366,7 @@ In a `light_week`, when the version's deload policy has `test_priority_lifts`, a
 under `top_backoff` or `wave_531` is prescribed one `test` single at `load_for(e1RM, 1, 9)`
 rounded down (RPE 9 is opinion), before its working groups under the light cut. No test single
 is prescribed on a line a return band or the illness RPE cap binds; the step records which
-(`cause = return_band` or `illness`). This is the only `test` set there is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
+(`cause = return_band`, or the illness cap's cause with its end). This is the only `test` set there is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
 `working` single. The rule writes nothing from the result; the agent reads it at the block
 boundary and records a `training_max` Decision if the lift moves to `wave_531`.
 

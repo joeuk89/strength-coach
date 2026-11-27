@@ -315,6 +315,7 @@ CREATE TABLE status_span (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL CHECK (kind IN ('ill','injured','travel','no_training')),
   from_date TEXT NOT NULL, to_date TEXT,   -- NULL is open-ended
+  cap_ends TEXT,                           -- ill only: the last day of the illness cap, as the athlete stated it; NULL is no answer
   text TEXT,
   withdraws TEXT REFERENCES status_span(id),  -- as annotation: a withdrawing row names the one it withdraws
   check_in TEXT REFERENCES check_in(id), draft_hash TEXT NOT NULL, recorded_at TEXT NOT NULL
@@ -622,7 +623,7 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 | `[[note]]` | `athlete_note` |
 | `[[workout]]` | `workout` (source `manual`), `logged_set` |
 | `[[weigh_in]]`, `[[sleep_night]]`, `[[activity]]` | the table of the same name; a weigh-in or sleep night is withdrawn by a new row whose `withdraws` names it |
-| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span |
+| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span. A changed `cap_ends` is a withdrawal plus a fresh span in one Draft |
 | `[[exercise]]` | `exercise`, in place |
 | `[[observation]]` | `observation`, insert or retire in place; check-in file only |
 

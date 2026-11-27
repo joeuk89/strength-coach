@@ -326,6 +326,13 @@ text = "away for work"
 key = "trip"
 
 [[status_span]]
+kind = "ill"
+from_date = 2026-11-03
+to_date = 2026-11-05
+cap_ends = 2026-11-08
+text = "a head cold; easy until Sunday"
+
+[[status_span]]
 withdraws = "ss-0002"
 """
 

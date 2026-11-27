@@ -29,6 +29,12 @@ the line a new scheme. No skill puts a ladder in `cues`.
 No pinned load lifts a line above a recovery ceiling: `plan-week` answers `pin_load_capped` by
 lowering the pin to the prescribed load, removing it, or acknowledging the warning with the reason.
 
+The illness cap ends on the athlete's word: after an illness, `check-in` and `plan-week` ask the
+athlete how long they need at reduced effort and record the answer as the `ill` span's
+`cap_ends`, "fully recovered" as its last ill day. The agent never infers the answer; with none
+recorded, each lift stays capped until it is trained once. An answer that changes midweek is
+recorded again and the week replanned.
+
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
 0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
 why in the profile prose, ADR 0014; what the check-in asks per emphasis is the card's, what

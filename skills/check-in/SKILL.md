@@ -36,6 +36,8 @@ rather than carrying them.
   rung in the check-in record, reason `progress`; without one the rung stands. A `met` on the
   last rung (`ladder_top`) waits for the program at the block boundary. Do not ask about a
   `held` rung.
+- **Illness.** After an ill span, ask how long they need at reduced effort and record their
+  answer as the span's cap end, "fully recovered" as the last ill day; never infer it.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain
   changes gait, sleep or daily tasks; never diagnose.
 - **Block and tier.** When the card's Block line carries a proposal or the derived tier is deep,

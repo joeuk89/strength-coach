@@ -152,3 +152,49 @@ def test_a_capped_pin_on_another_line_is_not_this_lines_outcome() -> None:
     )
 
     assert found.sessions[0].lines[0].pin_outcome is None
+
+
+def a_step(step: str, cause: str) -> dict[str, object]:
+    return {"step": step, "from": 8, "to": 7, "cause": cause}
+
+
+def test_a_frozen_line_the_illness_cap_binds_carries_the_cap_and_its_end() -> None:
+    dated = {**ROWS[0], "steps": [a_step("rpe_ceiling", "illness until 2026-11-04")]}
+    trained = {
+        **ROWS[1],
+        "steps": [
+            a_step("rpe_ceiling", "illness until this lift is trained once"),
+            a_step("rpe_ceiling", "not_binding"),
+        ],
+    }
+
+    found = frozen_summary(
+        week=MONDAY,
+        position="B",
+        supersedes=None,
+        rows=[dated, trained],
+        overrides=(),
+        locations={"lower": "home", "upper": "home"},
+        rung_labels={},
+    )
+
+    assert [line.illness_cap for s in found.sessions for line in s.lines] == [
+        "illness until 2026-11-04",
+        "illness until this lift is trained once",
+    ]
+
+
+def test_a_line_capped_by_another_ceiling_carries_no_illness_cap() -> None:
+    capped = {**ROWS[0], "steps": [a_step("rpe_ceiling", "light_week")]}
+
+    found = frozen_summary(
+        week=MONDAY,
+        position="B",
+        supersedes=None,
+        rows=[capped],
+        overrides=(),
+        locations={"lower": "home"},
+        rung_labels={},
+    )
+
+    assert found.sessions[0].lines[0].illness_cap is None
