@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-27
-amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code); 2026-10-31 by wayfinder #44 (the Write audit is written by the client behind the `HevyClient` protocol, two lines per request; one test double, `FakeHevy`, and the real client tested with a recording opener; the 429 retry below the protocol); 2026-10-31 by wayfinder #45 (a push projects the WeekPlan's planned sessions, not every session in force; folder creates are Hevy actions in the dry run, the prompt and the Write plan hash); 2026-11-01 by issue #169 (every verb whose result derives from workouts pulls first, the age warning on the last import goes)
+amended: 2026-10-31 by wayfinder #42 (a reappearing workout id gets a `back` presence row and reads again under a warning; import upserts the routine and folder mirrors and never deletes a row; Hevy set types map to `warm_up` or `working`); 2026-10-31 by wayfinder #43 (the refusals name their exit class and code); 2026-10-31 by wayfinder #44 (the Write audit is written by the client behind the `HevyClient` protocol, two lines per request; one test double, `FakeHevy`, and the real client tested with a recording opener; the 429 retry below the protocol); 2026-10-31 by wayfinder #45 (a push projects the WeekPlan's planned sessions, not every session in force; folder creates are Hevy actions in the dry run, the prompt and the Write plan hash); 2026-11-01 by issue #169 (every verb whose result derives from workouts pulls first, the age warning on the last import goes); 2026-11-27 by issue #329 (a line frozen with no set is left out of its routine, and a session whose lines are all so projects none)
 ---
 
 # Hevy is a projection target: allow-listed writes, append-only import, retire not delete
@@ -81,6 +81,12 @@ reused, a folder is forever.
   pushed on the first. ADR 0010's "every session with a Hevy template gets a routine" holds over
   the rotation, not on the first push. Rejected: projecting every session in force with the
   version's authored loads, which would put a second, unfrozen routine body shape in the app.
+- **A line frozen with no set is not part of its routine** (amended 2026-11-27). An `avoid`
+  constraint drops a line by derivation and freezes it with no set groups; the plan and the
+  approval prompt still show it as dropped with its niggle. Hevy drops an exercise with no sets
+  on write, so the routine leaves the line out: it is not sent, not expected on read-back, not
+  read for drift and needs no exercise template. A session whose lines are all so projects no
+  routine that week.
 - The Routine map is one table: session id, Hevy routine id, folder, status
   `active | retired | missing | unverified`. `plan apply` writes it after a verified write; the one other writer is import flipping a row to `missing`.
 - A retired session's routine gets one PUT: title `(unused) <old title>`, folder Retired,
