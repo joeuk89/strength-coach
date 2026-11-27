@@ -12,7 +12,7 @@ from coach.core.e1rm import PRECISION, set_e1rm
 from coach.core.exposure import Exposure
 from coach.core.load import Load
 from coach.core.program.form import Line
-from coach.core.registries.schemes import SCHEMES, RpeOn
+from coach.core.registries.schemes import SCHEMES, RpeOn, Scheme
 from coach.core.rpe_gap import RPE_GAP
 
 type Reason = str
@@ -20,6 +20,7 @@ type Reason = str
 RPE_MISSING: Reason = "rpe_missing"
 REPS_SHORT_AT_LOW_RPE: Reason = "reps_short_at_low_rpe"
 EXPOSURES_DISAGREE: Reason = "exposures_disagree"
+EFFORT_MISSING: Reason = "effort_missing"
 # Opinion: e1RMs from two exposures of a lift more than a fifth apart cannot both be right,
 # beyond the day-to-day swing a rated RPE carries.
 DISAGREE_SHARE = 0.2
@@ -29,13 +30,17 @@ DISAGREE_SHARE = 0.2
 class LoggedLine:
     """One lift's sets in one session of the window beside the prescription, from the
     plan-against-log read. `rpe_on` is where the line's scheme reads RPE; a `capped` line took a
-    return band, whose RPE cap sits under the prescribed RPE, so no RPE gap is read on it."""
+    return band, whose RPE cap sits under the prescribed RPE, so no RPE gap is read on it. An
+    `effort_asked` line's template takes no RPE, so its effort is asked of the athlete and
+    stored on `workout_id`'s sets."""
 
     session_id: str | None
     date: datetime.date
     line: LineAgainst
     rpe_on: RpeOn
     capped: bool = False
+    effort_asked: bool = False
+    workout_id: str | None = None
 
     @property
     def exercise(self) -> str:
@@ -44,10 +49,16 @@ class LoggedLine:
     @property
     def rpe_missing(self) -> bool:
         """A set the scheme reads has no RPE against a prescribed one that authored it."""
-        if self.line.hold or self.rpe_on == "none":
+        if self.line.hold or self.rpe_on == "none" or self.effort_asked:
             return False
         read = self.line.pairs[:1] if self.rpe_on == "top" else self.line.pairs
         return any(s.rpe is None and t.rpe is not None for s, t in read)
+
+    @property
+    def effort_missing(self) -> bool:
+        """An effort-asked line whose logged sets carry no stored effort."""
+        logged = self.line.logged
+        return self.effort_asked and bool(logged) and all(s.rpe is None for s in logged)
 
     @property
     def short_at_low_rpe(self) -> bool:
@@ -91,17 +102,26 @@ def logged_lines(outcome: SessionOutcome) -> tuple[LoggedLine, ...]:
     for line in outcome.lines:
         if not line.logged:
             continue
-        date = next(
+        first = next(
             (
-                w.date
+                w
                 for w in outcome.workouts
                 if any(e.exercise_id == line.exercise for e in w.exposures)
             ),
-            session.date,
+            None,
         )
-        rpe_on = _rpe_on(session.lines, line.exercise)
-        capped = line.exercise in outcome.work.returned
-        found.append(LoggedLine(session.session_id, date, line, rpe_on, capped))
+        scheme = _scheme(session.lines, line.exercise)
+        found.append(
+            LoggedLine(
+                session.session_id,
+                session.date if first is None else first.date,
+                line,
+                "every_working" if scheme is None else scheme.rpe_on,
+                line.exercise in outcome.work.returned,
+                scheme is not None and scheme.effort_asked,
+                None if first is None else first.id,
+            )
+        )
     return tuple(found)
 
 
@@ -121,6 +141,9 @@ def lift_doubts(lines: Iterable[LoggedLine]) -> tuple[LiftDoubt, ...]:
         unrated = tuple(line for line in mine if line.rpe_missing)
         if unrated:
             found.append(LiftDoubt(exercise, RPE_MISSING, unrated))
+        unasked = tuple(line for line in mine if line.effort_missing)
+        if unasked:
+            found.append(LiftDoubt(exercise, EFFORT_MISSING, unasked))
         short = tuple(line for line in mine if line.short_at_low_rpe)
         if short:
             found.append(LiftDoubt(exercise, REPS_SHORT_AT_LOW_RPE, short))
@@ -146,11 +169,11 @@ def _well_under(off: float) -> bool:
     return off <= -RPE_GAP + ROUNDING
 
 
-def _rpe_on(lines: Sequence[Line], exercise: str) -> RpeOn:
+def _scheme(lines: Sequence[Line], exercise: str) -> Scheme | None:
     """A line swapped to another exercise froze under that exercise; its scheme is unknown here,
     so the prescription's own authored RPE says where it is read."""
     for line in lines:
         if exercise == line.exercise or exercise in line.rung_exercises:
             name = line.scheme.name
-            return SCHEMES.get(name).rpe_on if name in SCHEMES else "every_working"
-    return "every_working"
+            return SCHEMES.get(name) if name in SCHEMES else None
+    return None

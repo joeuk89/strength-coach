@@ -5,6 +5,7 @@ only what the store cannot know; a field with nothing to say is dropped (docs/sp
 import datetime
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import cast
 
 from coach.core.check_in import Window
 from coach.core.closed_week.adherence import Adherence
@@ -21,7 +22,13 @@ from coach.core.fatigue import (
     short_sleep_week,
 )
 from coach.core.flag import Flag
-from coach.core.lift_doubts import EXPOSURES_DISAGREE, LiftDoubt, LoggedLine, lift_doubts
+from coach.core.lift_doubts import (
+    EFFORT_MISSING,
+    EXPOSURES_DISAGREE,
+    LiftDoubt,
+    LoggedLine,
+    lift_doubts,
+)
 from coach.core.phase_trend import RATE_UNITS
 
 FIELDS = (
@@ -328,16 +335,36 @@ def lifts(
 
 
 def _doubt_ask(doubt: LiftDoubt) -> Ask:
+    quote = _timed_quoted if doubt.reason == EFFORT_MISSING else _quoted
     return Ask(
         "lift_doubt",
         f"exercise:{doubt.exercise}",
         reason=doubt.reason,
         params={
             "exposures": [
-                _quoted(line, with_e1rm=doubt.reason == EXPOSURES_DISAGREE) for line in doubt.lines
+                quote(line, with_e1rm=doubt.reason == EXPOSURES_DISAGREE) for line in doubt.lines
             ]
         },
     )
+
+
+def _timed_quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
+    """The quote with each set's seconds, and the positions and workout the answer is repaired
+    onto as each set's `rpe`."""
+    quote = _quoted(line, with_e1rm=with_e1rm)
+    logged = cast(list[dict[str, object]], quote["logged"])
+    prescribed = cast(list[dict[str, object]], quote["prescribed"])
+    return quote | {
+        "repair": f"workout:{line.workout_id}/{line.exercise}",
+        "logged": [
+            {"position": s.position, **row, "seconds": s.duration_s}
+            for s, row in zip(line.line.logged, logged, strict=True)
+        ],
+        "prescribed": [
+            row | {"seconds": t.seconds}
+            for t, row in zip(line.line.targets, prescribed, strict=True)
+        ],
+    }
 
 
 def _quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:

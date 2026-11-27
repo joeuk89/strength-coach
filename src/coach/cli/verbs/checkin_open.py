@@ -147,7 +147,9 @@ DECLARATION = Declaration(
                                     "that fired it in reason, and in params.exposures each "
                                     "session and date it quotes with the logged sets (load, "
                                     "reps, rpe), the prescribed sets (reps, reps_top, rpe, "
-                                    "load) and, on exposures_disagree, each one's e1rm"
+                                    "load), on exposures_disagree each one's e1rm, and on "
+                                    "effort_missing each set's position and seconds, the "
+                                    "prescribed seconds and the repair target"
                                 ),
                                 "properties": {
                                     "ask": {"type": "string"},
