@@ -51,7 +51,8 @@ def _registry(name: str, call: Call) -> Json:
     if found is None:
         known = ", ".join(r.name for r in registries.REGISTRIES)
         raise Invalid("invalid_argument", f"no registry {name!r}; one of {known}")
-    return {"registry": name, **_rows(found.rows(), call)}
+    note = {"note": found.note} if found.note else {}
+    return {"registry": name, **note, **_rows(found.rows(), call)}
 
 
 def _rows(rows: Sequence[Json], call: Call) -> Json:
@@ -72,9 +73,14 @@ DECLARATION = Declaration(
         "description": "one declaration with a verb, a Draft verb's with draft {kind, schema, "
         "example}, never cut; {rows: [declaration, a Draft verb's draft as {kind} only], count, "
         "truncated, registries} "
-        "without one, never cut; {registry, rows, count, truncated} with --registry",
+        "without one, never cut; {registry, note?, rows, count, truncated} with --registry",
         "properties": {
             "registry": {"type": "string", "description": "with --registry"},
+            "note": {
+                "type": "string",
+                "description": "with --registry, what the rows alone do not say, when there is "
+                "something",
+            },
             "rows": {"type": "array", "items": {"type": "object"}},
             "count": {"type": "integer"},
             "truncated": {"type": "boolean"},

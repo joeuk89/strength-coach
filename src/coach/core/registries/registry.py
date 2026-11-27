@@ -23,6 +23,8 @@ class Term:
 class Registry[E: Entry]:
     name: str
     entries: tuple[E, ...]
+    # What the rows alone do not say, such as codes another registry holds.
+    note: str | None = None
 
     def __post_init__(self) -> None:
         names = self.names()

@@ -368,3 +368,14 @@ def test_the_record_draft_schema_lists_the_annotation_params() -> None:
         "planned_session",
     }
     assert params["additionalProperties"] is False
+
+
+def test_the_errors_registry_points_to_the_flags_registry_for_adopt_violations() -> None:
+    result = run_coach("schema", "--registry", "errors").envelope["result"]
+
+    assert "coach schema --registry flags" in result["note"]
+    assert "program adopt" in result["note"]
+
+
+def test_a_registry_without_a_note_carries_no_note() -> None:
+    assert "note" not in run_coach("schema", "--registry", "reasons").envelope["result"]
