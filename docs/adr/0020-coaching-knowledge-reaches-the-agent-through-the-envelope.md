@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
+amended: 2026-11-27 by the owner on #323 (the per-skill budget rises from 1,500 to 3,000 tokens as a guard against a runaway skill, not a target; engine tables still reach the agent as flag fields, never as skill prose)
 ---
 
 # Coaching knowledge reaches the agent through the envelope; a running agent reads no document but the profile

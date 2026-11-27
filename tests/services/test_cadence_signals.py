@@ -295,3 +295,19 @@ def test_a_lift_capped_every_week_beside_an_uncapped_practice_line_raises_cadenc
     fast = signals_at_check_in(conn)["bb_bench_press"]
 
     assert (fast.code, fast.params["metric"]) == ("cadence_fast", {"capped": 2})
+
+
+def test_a_one_row_cap_step_that_records_its_e1rm_and_model_still_counts_as_capped() -> None:
+    recorded: list[dict[str, object]] = [
+        {
+            "step": "scheme",
+            "from": 100,
+            "to": 102.5,
+            "cause": "one_row_cap, e1rm 130 from exposure:w-1/bb_bench_press, model 110",
+        }
+    ]
+    conn = two_closed_blocks(bench_tops=RISING_BENCH, steps=recorded, drill_line=BENCH_DRILL)
+
+    fast = signals_at_check_in(conn)["bb_bench_press"]
+
+    assert (fast.code, fast.params["metric"]) == ("cadence_fast", {"capped": 2})

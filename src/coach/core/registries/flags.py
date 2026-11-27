@@ -284,6 +284,21 @@ PLAN_WARNINGS = (
         hashed=("increment", "scheme_step"),
     ),
     acknowledgeable_warning(
+        "load_too_light",
+        ("line",),
+        (
+            "anchor_exposure",
+            "logged_sets",
+            "rpe_gap",
+            "e1rm",
+            "e1rm_exposure",
+            "e1rm_date",
+            "e1rm_session",
+            "model_load",
+            "suggested_load",
+        ),
+    ),
+    acknowledgeable_warning(
         "offgrid_anchor_ignored", ("line",), ("exposure", "logged_load", "anchor_used")
     ),
     acknowledgeable_warning(

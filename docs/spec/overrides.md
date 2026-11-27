@@ -187,6 +187,8 @@ Every override and Decision carries `because`, `text` and `evidence`:
 - `drop_session` and `drop_line` beat every other override on their scope.
 - `pin_load` obeys every recovery ceiling: it can lower a load, never lift one above the ceiling.
   A pin an RPE ceiling lowers warns `pin_load_capped` (`prescription.md`, **RPE ceilings**).
+- A pin at or under a `load_too_light` suggestion is that warning's answer: it raises no
+  `increment_over_step` (`prescription.md`, **A line too light**).
 - The plan's override beats an override Decision of the same kind on the same line.
 - Anything else is the violation `override_conflict`, params the two kinds.
 - A superseding midweek plan inherits nothing: the agent restates overrides from

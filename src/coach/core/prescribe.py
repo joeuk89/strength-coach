@@ -10,6 +10,7 @@ from typing import cast
 from coach.core.anchor import StartLoad, anchor, anchor_load_unusable
 from coach.core.bounds import TEST_RPE, Bounded, LineContext, Proposal, Unpinned, bound
 from coach.core.carried_e1rm import E1rmRead, carried_e1rm, e1rm_read
+from coach.core.ceilings import safety_ceiling
 from coach.core.conditioning import conditioning_dose
 from coach.core.cut import close_rep_outs, return_band
 from coach.core.days_off import line_days_off
@@ -52,6 +53,7 @@ from coach.core.program.form import (
 )
 from coach.core.rack import Rack, Rounding, next_row_up, round_to_rack
 from coach.core.scheme_moves import Move, SchemeInput, SchemeMoves
+from coach.core.too_light import TooLight, too_light
 from coach.core.top_backoff import back_off_load
 from coach.core.warm_up import warm_up_loads
 
@@ -188,6 +190,8 @@ class _Derivation:
         schemes.stall(found.exposure)
         line = replace(line, sets=move.sets)
         moved = _first(move.proposal)
+        racked = _racked(moved, rack, move.rounding)
+        light = self._too_light(authored, found.exposure, racked, rack, read)
         pinned = None if pin is None or moved is None else self._pin(moved, moved.mode, *pin)
         context = LineContext(
             self.request,
@@ -209,8 +213,9 @@ class _Derivation:
         else:
             bounded = bound(context, move.proposal, move.rounding, self.steps, self.flags)
         if pin is not None:
-            self._check_increment(found.exposure, rack, before, bounded.load)
-        change = _change(line, before, bounded, move.change, _racked(moved, rack, move.rounding))
+            suggested = None if light is None else light.suggested
+            self._check_increment(found.exposure, rack, before, bounded.load, suggested)
+        change = _change(line, before, bounded, move.change, racked)
         if move.e1rm_source is not None:
             change = f"{change} ({move.e1rm_source})"
         return self._bounded(line, found.derived_from, rack, bounded, change, read)
@@ -371,13 +376,21 @@ class _Derivation:
         return pinned
 
     def _check_increment(
-        self, exposure: Exposure, rack: Rack | None, before: Load | None, pinned: Load | None
+        self,
+        exposure: Exposure,
+        rack: Rack | None,
+        before: Load | None,
+        pinned: Load | None,
+        suggested: Load | None,
     ) -> None:
-        """Every scheme steps at most one rack row, so only a pin can step further."""
+        """Every scheme steps at most one rack row, so only a pin can step further. A pin at or
+        under the suggested load answers `load_too_light`, whose acknowledgement covers it."""
         if rack is None or before is None or pinned is None:
             return
         one_row = next_row_up(rack, before).load
         if pinned.amount <= one_row.amount:
+            return
+        if suggested is not None and pinned.amount <= suggested.amount:
             return
         self._raise(
             "increment_over_step",
@@ -389,6 +402,41 @@ class _Derivation:
             f"the pinned {pinned.amount:g} is more than one rack row above the anchor's "
             f"{before.amount:g}",
         )
+
+    def _too_light(
+        self,
+        line: Line,
+        exposure: Exposure,
+        prescribed: Load | None,
+        rack: Rack | None,
+        read: E1rmRead,
+    ) -> TooLight | None:
+        """Not on a line a return band cuts: a pin over the band is `return_band_disagrees`."""
+        if rack is None or prescribed is None:
+            return None
+        request, planned = self.request, self.request.planned
+        days = line_days_off(
+            request.exposures,
+            request.trained,
+            exercise_id=line.exercise,
+            session_id=planned.session_id,
+            on=planned.date,
+        )
+        if return_band(days.days) is not None:
+            return None
+        found = too_light(
+            line,
+            exposure,
+            prescribed,
+            e1rm=read.best,
+            exposures=request.exposures,
+            rack=rack,
+            safety_ceiling=safety_ceiling(request.decisions, line.exercise),
+            scope=self.scope,
+        )
+        if found is not None:
+            self.flags.append(found.flag)
+        return found
 
     def _rack(self, exercise: ExerciseFacts, mode: LoadMode) -> Rack | None:
         if mode not in RACK_MODES:

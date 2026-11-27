@@ -8,12 +8,10 @@ from typing import Literal
 
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.exposure import ExposureSet
+from coach.core.rpe_gap import RPE_GAP
 
 type LineState = Literal["logged", "not_logged", "not_prescribed"]
 
-# rn:deloads.11: a logged RPE this far from the authored one counts as effort off, and the
-# session gate allows a mean RPE this far under.
-EFFORT_OFF_RPE = 1.5
 # The tolerance a difference or mean of tenths carries.
 ROUNDING = 1e-9
 
@@ -79,9 +77,7 @@ class LineAgainst:
 
     @property
     def effort_off(self) -> int:
-        return sum(
-            1 for off in self.rpe_off if off is not None and abs(off) >= EFFORT_OFF_RPE - ROUNDING
-        )
+        return sum(1 for off in self.rpe_off if off is not None and abs(off) >= RPE_GAP - ROUNDING)
 
     @property
     def off(self) -> bool:

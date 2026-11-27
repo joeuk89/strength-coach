@@ -155,8 +155,8 @@ def test_tokens_are_characters_divided_by_four_frontmatter_included() -> None:
     assert tokens("---\nname: x\n---\n" + "a" * 4) == 5
 
 
-def test_a_skill_padded_past_six_thousand_characters_is_over_budget() -> None:
-    padded = SKILL + "x" * (6001 - len(SKILL))
+def test_a_skill_padded_past_twelve_thousand_characters_is_over_budget() -> None:
+    padded = SKILL + "x" * (12001 - len(SKILL))
 
     assert tokens(padded) > TOKEN_BUDGET
-    assert tokens(padded[:6000]) <= TOKEN_BUDGET
+    assert tokens(padded[:12000]) <= TOKEN_BUDGET

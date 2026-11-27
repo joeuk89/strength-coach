@@ -287,6 +287,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `no_e1rm` | line | exercise id, scheme | rn:autoregulation.5 |
 | `carried_e1rm` | line | pre-layoff exposure ref, pre-layoff e1RM, band factor, carried value, expiry date (`prescription.md`, **The carried e1RM**) | rn:detraining-return.5 |
 | `increment_over_step` | line | increment, scheme step, from exposure; the params hash covers the increment and the scheme step only | `null` |
+| `load_too_light` | line | anchor exposure ref, the anchor's logged working sets (load, reps, RPE), the mean RPE gap, the e1RM with its exposure ref, date and session, the model load, the suggested load (the e1RM fields, model and suggestion null with no e1RM; `prescription.md`, **A line too light**) | `null` |
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
 | `anchor_load_unusable` | line | skipped exposure ref, logged load, anchor used (`start_load` or the older exposure's ref) | `null` |
 | `over_rep_cap` | exposure | reps, cap | rn:autoregulation.5 |

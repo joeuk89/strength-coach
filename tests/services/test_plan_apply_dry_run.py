@@ -356,3 +356,28 @@ def test_the_approval_prompt_names_the_illness_cap_on_a_line_and_when_it_ends() 
     prompt = approval_prompt(dry.summary, dry.actions, dry.write_plan_hash, units="lb")
     [squat] = [line for line in prompt.splitlines() if line.startswith("  bb_back_squat ")]
     assert squat.endswith(" · illness cap until this lift is trained once")
+
+
+TOO_LIGHT = "load_too_light@line:2026-11-02/lower/bb_back_squat"
+PIN_150 = PIN_115.replace("load = 115", "load = 150").replace(
+    "Hold the squat under the last top set.", "The athlete agreed to the suggested jump."
+)
+
+
+def test_a_pin_at_the_suggested_load_with_one_acknowledgement_passes_the_dry_run() -> None:
+    # e1RM 150 × (1 + 10/30) = 200 on Friday; eight at RPE 8 is 150 against Monday's step to 125
+    conn = a_squat_program()
+    squat_logged(conn, "h-0", "2026-10-23", (150, 8, 8))
+    squat_logged(conn, "h-1", "2026-10-26", *[(120, 8, 8)] * 4)
+    raised = run(conn, a_plan_draft(conn, overrides=PIN_150))
+    warning = next(f for f in raised.flags if f.key == TOO_LIGHT)
+    because = 'because = "athlete_request"\n'
+    draft = a_plan_draft(
+        conn, overrides=PIN_150, acknowledge=acknowledge(TOO_LIGHT, warning.params_hash, because)
+    )
+
+    dry = run(conn, draft)
+
+    assert warning.params["suggested_load"] == 150
+    assert [(f.code, f.left is not None) for f in dry.flags] == [("load_too_light", True)]
+    assert dry.write_plan_hash.startswith("sha256:")

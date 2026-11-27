@@ -121,5 +121,7 @@ def _capped(
         for row in week_plans.prescriptions(conn, str(plan["id"])):
             if row["session_id"] == session_id and row["exercise_id"] == line.exercise:
                 steps = cast(list[dict[str, object]], row["steps"])
-                found.append(any(step.get("cause") == "one_row_cap" for step in steps))
+                found.append(
+                    any(str(step.get("cause")).startswith("one_row_cap") for step in steps)
+                )
     return found
