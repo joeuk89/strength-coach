@@ -13,8 +13,17 @@ class ApprovedPlan:
     approved_under: str | None
 
 
-def plan_behind_program(plan: ApprovedPlan | None, version_id: str | None) -> tuple[Flag, ...]:
+def plan_behind_program(
+    plan: ApprovedPlan | None,
+    version_id: str | None,
+    *,
+    next_week: ApprovedPlan | None = None,
+) -> tuple[Flag, ...]:
+    """Next week's plan approved under the version in force already applies it, so this week's
+    last days need no redraft."""
     if plan is None or version_id is None or plan.approved_under == version_id:
+        return ()
+    if next_week is not None and next_week.approved_under == version_id:
         return ()
     flag = raise_flag(
         "plan_behind_program",
