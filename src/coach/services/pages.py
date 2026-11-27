@@ -27,7 +27,7 @@ from coach.core.program.form import Session
 from coach.core.rack import ListedRack
 from coach.services.checkin_open import record_card
 from coach.services.closed_weeks import planned_week
-from coach.services.ladders import rung_decisions, standing_rungs
+from coach.services.ladders import RUNG_DECISIONS, standing_rungs
 from coach.services.page_names import authored_sessions, page_names
 from coach.services.progress import newest_day, progress
 from coach.store import (
@@ -219,7 +219,11 @@ def _routine(
         else []
     )
     first = min((str(r["date"]) for r in rows), default=None)
-    standing = standing_rungs(version.form, rung_decisions(conn, zone)) if version else {}
+    standing = (
+        standing_rungs(version.form, decisions.in_force_dated(conn, None, RUNG_DECISIONS, zone))
+        if version
+        else {}
+    )
     naming = RungNaming(
         config.athlete.units, {exercise: name for exercise, (name, _) in names.items()}
     )
