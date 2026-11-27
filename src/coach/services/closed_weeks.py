@@ -327,6 +327,7 @@ class WeekLog:
         frozen = week_plans.prescriptions(self.conn, plan_id)
         targets = _targets(frozen)
         returned = _returned(frozen)
+        lines = _lines(frozen)
         return tuple(
             PlannedWork(
                 s,
@@ -336,6 +337,8 @@ class WeekLog:
                 held=frozenset(
                     e for session, e in hold_lines if session == s.session_id and e is not None
                 ),
+                lines=lines.get((s.date, s.session_id))
+                or frozenset(line.exercise for line in s.lines),
             )
             for s in week.sessions
         )
@@ -414,6 +417,16 @@ def _returned(rows: Sequence[Row]) -> dict[PlannedRef, frozenset[str]]:
         if any(str(step.get("cause", "")).startswith("return") for step in steps):
             ref = (_day(str(row["date"])), str(row["session_id"]))
             found.setdefault(ref, set()).add(str(row["exercise_id"]))
+    return {ref: frozenset(lines) for ref, lines in found.items()}
+
+
+def _lines(rows: Sequence[Row]) -> dict[PlannedRef, frozenset[str]]:
+    """Every frozen exercise by planned session; a swapped line froze as the exercise it swapped
+    to."""
+    found: dict[PlannedRef, set[str]] = {}
+    for row in rows:
+        ref = (_day(str(row["date"])), str(row["session_id"]))
+        found.setdefault(ref, set()).add(str(row["exercise_id"]))
     return {ref: frozenset(lines) for ref, lines in found.items()}
 
 

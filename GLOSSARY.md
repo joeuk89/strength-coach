@@ -353,8 +353,10 @@ _Avoid_: performance, session log
 
 **Match**:
 The link from a workout to the planned session it fulfilled, or none. Derived from the session's
-date window with the routine as a tiebreaker, corrected by a match annotation, never stored.
-Every Exposure of the workout carries it.
+date window, with the routine and the exercises the workout shares with the session's lines as
+tiebreakers, corrected by a match annotation, never stored. A workout has at most one; a planned
+session may hold several, when one session is split across workouts. Every Exposure of the
+workout carries it.
 _Avoid_: mapping, reconciliation
 
 **Miss**:

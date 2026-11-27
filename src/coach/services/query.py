@@ -382,7 +382,7 @@ def _against_row(outcome: SessionOutcome, line: LineAgainst) -> Row:
         "date": outcome.session.date.isoformat(),
         "session": outcome.session.session_id,
         "exercise": line.exercise,
-        "workout": outcome.workout_id,
+        "workouts": list(outcome.workout_ids),
         "state": line.state,
         "hold": line.hold,
         "prescription": _prescribed_groups(line.targets),

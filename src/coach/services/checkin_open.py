@@ -208,8 +208,7 @@ def _session_reads(
         for outcome in log.week(monday).sessions:
             if not window.start <= outcome.session.date <= window.end:
                 continue
-            workout = None if outcome.workout_id is None else log.workout(outcome.workout_id)
-            found.append(card.SessionRead(outcome, workout, monday in closes))
+            found.append(card.SessionRead(outcome, monday in closes))
         monday += WEEK
     return found
 

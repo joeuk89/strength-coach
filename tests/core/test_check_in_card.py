@@ -15,15 +15,23 @@ PT = PlannedSession("pt", MONDAY, "gym", "coach_led", ())
 REF = "planned_session:2026-11-02/pt"
 
 
-def a_workout(*rpes: float | None, session_rpe: float | None = None) -> WeekWorkout:
+def a_workout(
+    *rpes: float | None,
+    session_rpe: float | None = None,
+    id_: str = "w-1",
+    minutes: int | None = 60,
+    started: str = "",
+) -> WeekWorkout:
     sets = tuple(ExposureSet(i, "working", Load(60, "total"), 8, rpe) for i, rpe in enumerate(rpes))
-    exposures = (Exposure("w-1", "bb_bench_press", MONDAY, sets),) if sets else ()
-    return WeekWorkout("w-1", MONDAY, exposures, minutes=60, session_rpe=session_rpe)
+    exposures = (Exposure(id_, "bb_bench_press", MONDAY, sets),) if sets else ()
+    return WeekWorkout(
+        id_, MONDAY, exposures, minutes=minutes, session_rpe=session_rpe, started=started
+    )
 
 
-def a_read(workout: WeekWorkout | None) -> card.SessionRead:
-    outcome = session_outcome(PlannedWork(PT), workout=workout)
-    return card.SessionRead(outcome, workout, closes=True)
+def a_read(*workouts: WeekWorkout) -> card.SessionRead:
+    outcome = session_outcome(PlannedWork(PT), workouts=workouts)
+    return card.SessionRead(outcome, closes=True)
 
 
 def test_a_matched_coach_led_session_prefills_minutes_and_the_mean_working_set_rpe() -> None:
@@ -31,8 +39,24 @@ def test_a_matched_coach_led_session_prefills_minutes_and_the_mean_working_set_r
 
     assert found is not None
     [row] = cast(list[dict[str, object]], found.facts["core"])
-    assert (row["state"], row["minutes"], row["session_rpe"]) == ("matched", 60, 8.0)
+    assert (row["state"], row["workouts"], row["minutes"], row["session_rpe"]) == (
+        "matched",
+        ["w-1"],
+        60,
+        8.0,
+    )
     assert found.asks == ()
+
+
+def test_a_session_split_across_two_workouts_lists_both_and_sums_their_minutes() -> None:
+    morning = a_workout(7, 7, id_="w-1", minutes=40, started="07:00")
+    afternoon = a_workout(9, 9, id_="w-2", minutes=25, started="15:00")
+
+    found = card.sessions([a_read(afternoon, morning)])
+
+    assert found is not None
+    [row] = cast(list[dict[str, object]], found.facts["core"])
+    assert (row["workouts"], row["minutes"], row["session_rpe"]) == (["w-1", "w-2"], 65, 8.0)
 
 
 def test_session_rpe_is_asked_only_when_the_sets_carry_none() -> None:
@@ -50,10 +74,10 @@ def test_a_hand_entered_workout_carries_its_own_session_rpe() -> None:
 
 
 def test_an_untrained_session_is_a_miss_only_once_its_week_closes() -> None:
-    outcome = session_outcome(PlannedWork(PT), workout=None)
+    outcome = session_outcome(PlannedWork(PT))
 
-    assert card.SessionRead(outcome, None, closes=True).state == "missed"
-    assert card.SessionRead(outcome, None, closes=False).state == "to_come"
+    assert card.SessionRead(outcome, closes=True).state == "missed"
+    assert card.SessionRead(outcome, closes=False).state == "to_come"
 
 
 SQUAT = card.LiftRead("bb_back_squat", False, True, (100, 5, 8), 120, 115)

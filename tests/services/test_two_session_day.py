@@ -158,9 +158,9 @@ def test_each_workout_of_the_day_matches_its_own_session_and_the_swings_deliver_
 
     [week] = closed_weeks(conn).weeks
 
-    assert [(s.session.session_id, s.workout_id) for s in week.sessions] == [
-        ("lower", "h-1"),
-        ("cond-swings", "h-2"),
+    assert [(s.session.session_id, s.workout_ids) for s in week.sessions] == [
+        ("lower", ("h-1",)),
+        ("cond-swings", ("h-2",)),
     ]
     assert week.dose == {"quadriceps": 4, "glutes": 4, "adductors": 2.0, "lower_back": 2.0}
 
@@ -294,10 +294,10 @@ def test_the_closed_week_log_and_the_history_read_agree_on_every_match() -> None
     closed_through(conn, 3)
 
     logged = {
-        s.workout_id: s.session.session_id
+        workout_id: s.session.session_id
         for week in closed_weeks(conn).weeks
         for s in week.sessions
-        if s.workout_id is not None
+        for workout_id in s.workout_ids
     }
     read = {e.workout_id: e.session_id for e in read_history(conn, "kg").exposures}
 

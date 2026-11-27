@@ -103,7 +103,7 @@ All of these are pure functions of the store at a date and are never stored:
   | # | Field | Prefill and ask |
   | --- | --- | --- |
   | 1 | Header | window, derived tier, catch-up or not, plan in force |
-  | 2 | Sessions | every planned core session in the window: matched (workout, minutes, session RPE), trained-unlogged, cancelled or missed; asks a miss tag per miss and session RPE only where the sets carry none; the against-the-prescription read per session; optional sessions as a done streak |
+  | 2 | Sessions | every planned core session in the window: matched (every matched workout, minutes summed over them, session RPE), trained-unlogged, cancelled or missed; asks a miss tag per miss and session RPE only where the sets carry none; the against-the-prescription read per session; optional sessions as a done streak |
   | 3 | Week kind | the closed week's kind, trained fraction, gate passes (`week.md`) |
   | 4 | Block | hard weeks against the ceiling, triggers fired with evidence refs, the proposal: a light week with the proposed shape (`week.md`), `none` or `skipped (<n> hard weeks)` |
   | 5 | Adherence | figure, weeks counted, state (`ok`, `watch`, `low`, `insufficient`) |
