@@ -37,7 +37,8 @@ def parse_plan_input(data: bytes, *, file: str) -> PlanInput:
     position = _position(top.table("position"))
     top.raw("override")
     overrides = parse_plan_overrides(document, file=file)
-    acknowledgements = tuple(_acknowledge(f) for f in top.tables("acknowledge"))
+    entries = (_acknowledge(f) for f in top.tables("acknowledge"))
+    acknowledgements = tuple(entry for entry in entries if entry is not None)
     for name in ENGINE_CONTEXT:
         top.raw(name)
     return top.done(PlanInput(week, position, overrides, acknowledgements))
@@ -52,17 +53,22 @@ def _position(f: Fields | None) -> str | None:
     return f.done(week if confirmed else None)
 
 
-def _acknowledge(f: Fields) -> Acknowledgement:
+def _acknowledge(f: Fields) -> Acknowledgement | None:
+    """None for a stub `plan draft` wrote and the agent left empty."""
     text = required(f.text("flag", required=True))
     key = FlagKey.parse(text)
     if key.code not in FLAGS or FLAGS.get(key.code).severity != "warning":
         raise f.wrong("flag", "the key of a warning: a violation is never left (validation.md)")
     if "weekplan" not in FLAGS.get(key.code).left_by:
         raise f.wrong("flag", f"a warning a plan leaves; {key.code} is not raised on a plan")
+    params_hash = required(f.text("params_hash", required=True))
+    if f.left_empty("because", "text"):
+        f.refs("evidence")
+        return f.done(None)
     return f.done(
         Acknowledgement(
             key,
-            required(f.text("params_hash", required=True)),
+            params_hash,
             cast(Reason, f.term("because", REASONS, required=True)),
             required(f.text("text", required=True)),
             tuple(str(ref) for ref in f.refs("evidence")),

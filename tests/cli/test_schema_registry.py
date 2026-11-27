@@ -220,6 +220,7 @@ def test_the_flags_registry_lists_a_capped_pin_as_a_line_warning_a_plan_can_leav
         "scope": ["line"],
         "params": ["load", "prescribed", "ceiling_kind", "rpe_cap", "ref", "outcome"],
         "rn": None,
+        "hashed": ["load", "ceiling_kind", "rpe_cap", "ref", "outcome"],
     }
 
 
@@ -376,6 +377,13 @@ def test_the_record_draft_schema_lists_the_annotation_params() -> None:
         "planned_session",
     }
     assert params["additionalProperties"] is False
+
+
+def test_the_plan_apply_draft_schema_requires_because_and_text_on_an_acknowledgement() -> None:
+    draft = run_coach("schema", "plan", "apply").envelope["result"]["draft"]
+
+    acknowledge = draft["schema"]["properties"]["acknowledge"]["items"]
+    assert {"flag", "params_hash", "because", "text"} <= set(acknowledge["required"])
 
 
 def test_the_errors_registry_points_to_the_flags_registry_for_adopt_violations() -> None:

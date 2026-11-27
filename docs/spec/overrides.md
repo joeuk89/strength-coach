@@ -51,7 +51,8 @@ added lifting session counts toward the hard-week gate like any other.
 
 Scope is given by which refs are present: none for the week, `session`, or `session` plus
 `exercise`. Kind params sit inline beside the reason fields. Acknowledgements keep their own
-`[[acknowledge]]` array (`validation.md`). The engine writes the Athlete notes since the last
+`[[acknowledge]]` array, which the engine starts with an empty stub per warning
+(`validation.md`). The engine writes the Athlete notes since the last
 approved WeekPlan into the Draft as a `[[note]]` array (`date`, `text`, `about`), context the
 coach reads while editing; `plan apply` ignores the array and the Write plan hash excludes it
 (`check-in.md`, "Athlete notes").

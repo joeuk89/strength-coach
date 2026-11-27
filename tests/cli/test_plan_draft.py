@@ -8,14 +8,14 @@ from support.cli import run_coach
 from support.clock import FixedClock
 from support.instances import an_instance
 from support.kit_fixtures import INVENTORY, TABLES
-from support.plans import SQUAT_LINE, a_note
+from support.plans import SQUAT_LINE, SQUAT_TEMPLATE, a_note, squat_logged
 from support.program_drafts import a_draft, a_session, toml
 from support.programs import GYM, HOME
 
 from coach.cli import app
 from coach.cli.registry import declarations
 from coach.core.goal import Goal
-from coach.store import goals
+from coach.store import exercises, goals
 from coach.store.catalogue import seed_catalogue
 from coach.store.connection import open_store
 
@@ -169,3 +169,65 @@ def test_status_shows_no_plan_in_force_and_the_rotation_position(instance: Path)
 
     assert result["plan"] is None
     assert result["rotation"] == {"week": "2026-10-26", "position": "A", "source": "program_adopt"}
+
+
+PIN_130 = """[[override]]
+kind = "pin_load"
+session = "lower"
+exercise = "bb_back_squat"
+load = 130
+because = "athlete_request"
+text = "The athlete wants 130 this week."
+
+"""
+OFFGRID = "offgrid_anchor_ignored@line:2026-11-02/lower/bb_back_squat"
+OVER_STEP = "increment_over_step@line:2026-11-02/lower/bb_back_squat"
+
+
+def a_squat_logged_off_the_rack(root: Path) -> None:
+    conn = open_store(root / ".coach" / "coach.db")
+    with conn:
+        exercises.update(conn, "bb_back_squat", {"hevy_template_id": SQUAT_TEMPLATE})
+    squat_logged(conn, "h-1", "2026-10-26", *[(121, 8, 8)] * 4)
+    conn.close()
+
+
+def acknowledgements(path: Path) -> list[dict[str, Any]]:
+    return tomllib.loads(path.read_text())["acknowledge"]
+
+
+def test_refresh_adds_the_stub_for_the_flag_a_new_pin_raised_and_keeps_filled_entries(
+    instance: Path,
+) -> None:
+    a_squat_logged_off_the_rack(instance)
+    first = coach("plan", "draft", "--week", "2026-11-02").envelope["result"]
+    path = instance / first["path"]
+    [stub] = acknowledgements(path)
+    text = path.read_text()
+    text = text.replace('because = ""\ntext = ""', 'because = "kit"\ntext = "A mislabelled plate."')
+    text = text.replace("confirmed = false", "confirmed = true")
+    path.write_text(text.replace("override = []\n", "", 1) + "\n" + PIN_130)
+
+    run = coach("plan", "draft", "--refresh", first["path"])
+
+    assert run.code == 0, run.stdout
+    assert run.envelope["result"]["path"] == first["path"]
+    refreshed = tomllib.loads(path.read_text())
+    assert stub["flag"] == OFFGRID
+    assert [(a["flag"], a["because"], a["text"]) for a in refreshed["acknowledge"]] == [
+        (OFFGRID, "kit", "A mislabelled plate."),
+        (OVER_STEP, "", ""),
+    ]
+    [line] = refreshed["session"][0]["line"]
+    [over_step] = [f for f in line["flag"] if f["key"] == OVER_STEP]
+    assert refreshed["acknowledge"][1]["params_hash"] == over_step["params_hash"]
+    assert [o["kind"] for o in refreshed["override"]] == ["pin_load"]
+    assert refreshed["position"]["confirmed"] is True
+
+
+def test_refresh_with_week_is_exit_1(instance: Path) -> None:
+    first = coach("plan", "draft").envelope["result"]
+
+    run = coach("plan", "draft", "--refresh", first["path"], "--week", "2026-11-02")
+
+    assert (run.code, run.envelope["error"]["code"]) == (1, "invalid_argument")

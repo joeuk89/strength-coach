@@ -19,11 +19,12 @@ from coach.core.closed_week.match import QUALITY_RPE
 from coach.core.config import Config
 from coach.core.errors import Invalid
 from coach.core.fatigue import light_week_flags
-from coach.core.flag import Flag
+from coach.core.flag import Acknowledgement, Flag
 from coach.core.instant import parse_instant
 from coach.core.kit import KitFiles
 from coach.core.load import LoadMode
 from coach.core.overrides import override_conflicts
+from coach.core.plan_check import TemplateFacts, missing_templates
 from coach.core.plan_draft import AthleteNote, PlanDraft
 from coach.core.planned_week import RotationPosition, choose_sessions, planned_sessions
 from coach.core.prescribe import prescribe
@@ -36,6 +37,7 @@ from coach.core.prescription import (
     ProgramVersion,
     SessionPrescription,
 )
+from coach.core.program.checks import TEMPLATE_COLUMNS
 from coach.core.program.form import ProgramForm
 from coach.render.plan_draft import plan_draft as render_plan_draft
 from coach.services.closed_weeks import (
@@ -82,9 +84,11 @@ def plan_draft(
     week: datetime.date | None = None,
     overrides: Sequence[PlanOverride] = (),
     position: str | None = None,
+    acknowledgements: Sequence[Acknowledgement] = (),
 ) -> PlanDraftResult:
     """`position` is the rotation week a Draft confirmed; without one the inferred week stands
-    unconfirmed."""
+    unconfirmed. `acknowledgements` are a refreshed Draft's filled entries, written back as
+    they stand."""
     version = _in_force(conn)
     monday = week or default_week(conn, clock.today())
     if monday.weekday() != 0:
@@ -180,8 +184,23 @@ def plan_draft(
             *status_span_drops(sessions, spans),
         ),
         hard_week_count=hard_week_count,
+        acknowledgements=tuple(acknowledgements),
+        template_checks=missing_templates(
+            sessions, template_facts(conn) if config.hevy is not None else None
+        ),
     )
     return PlanDraftResult(draft, render_plan_draft(draft, units=config.athlete.units))
+
+
+def template_facts(conn: Connection) -> dict[str, TemplateFacts]:
+    return {
+        str(row["id"]): TemplateFacts(
+            str(row["id"]),
+            cast(str | None, row["hevy_template_id"]),
+            {column: cast(str | None, row[column]) for column in TEMPLATE_COLUMNS},
+        )
+        for row in exercises.every(conn)
+    }
 
 
 def _in_force(conn: Connection) -> programs.VersionRow:

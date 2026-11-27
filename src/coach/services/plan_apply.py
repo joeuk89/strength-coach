@@ -6,7 +6,6 @@ import datetime
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import cast
 
 from coach.core.clock import Clock
 from coach.core.config import Config, Units
@@ -27,7 +26,6 @@ from coach.core.plan_check import CheckedPlan, TemplateFacts, check_plan
 from coach.core.plan_input import PlanInput, parse_plan_input
 from coach.core.plan_summary import PlanSummary, fresh_summary, frozen_summary
 from coach.core.prescription import PlanOverride
-from coach.core.program.checks import TEMPLATE_COLUMNS
 from coach.core.routine_projection import row_in_routine
 from coach.core.write_plan import (
     moved_routines,
@@ -37,10 +35,10 @@ from coach.core.write_plan import (
 )
 from coach.hevy.protocol import HevyClient
 from coach.services.leave_warning import leave_warning_decisions
-from coach.services.plan_draft import plan_draft
+from coach.services.plan_draft import plan_draft, template_facts
 from coach.services.projections import session_facts, session_rung_labels
 from coach.services.routine_push import Push, RoutineOutcome, guard
-from coach.store import exercises, mirrors, niggles, programs, routine_map, week_plans
+from coach.store import mirrors, niggles, programs, routine_map, week_plans
 from coach.store.connection import Connection
 from coach.store.programs import VersionRow
 from coach.store.rows import Row
@@ -103,11 +101,10 @@ def _validated(
         overrides=found.overrides,
         position=found.position,
     )
-    templates = _templates(conn) if config.hevy is not None else None
+    templates = template_facts(conn) if config.hevy is not None else None
     checked = check_plan(
         drafted.draft,
         acknowledgements=(*found.acknowledgements, *leave_warning_decisions(conn, found.week)),
-        templates=templates,
     )
     return CheckedDraft(checked, found.acknowledgements, templates)
 
@@ -207,7 +204,7 @@ def _frozen_actions(
         routine_map=routine_map.rows(conn),
         folders={folder.role for folder in mirrors.folders(conn)},
         sessions_in_force=_in_force(conn, version, projected),
-        templates=_templates(conn),
+        templates=template_facts(conn),
     )
 
 
@@ -236,17 +233,6 @@ def _actions(
         sessions_in_force=in_force,
         templates=templates,
     )
-
-
-def _templates(conn: Connection) -> dict[str, TemplateFacts]:
-    return {
-        str(row["id"]): TemplateFacts(
-            str(row["id"]),
-            cast(str | None, row["hevy_template_id"]),
-            {column: cast(str | None, row[column]) for column in TEMPLATE_COLUMNS},
-        )
-        for row in exercises.every(conn)
-    }
 
 
 @dataclass(frozen=True)

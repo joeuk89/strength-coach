@@ -1,5 +1,6 @@
 import datetime
 import tomllib
+from typing import Any
 
 from support.clock import FixedClock
 from support.history import a_logged_workout
@@ -215,3 +216,77 @@ def the_squat_anchor(conn: Connection) -> str | None:
     )
     [line] = drafted.draft.sessions[0].lines
     return line.derived_from
+
+
+def drafted(conn: Connection, overrides: str = "") -> dict[str, Any]:
+    parsed = parse_plan_overrides(tomllib.loads(overrides), file="plan.toml")
+    text = plan_draft(
+        conn,
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(),
+        week=NEXT_MONDAY,
+        overrides=parsed,
+    ).text
+    return tomllib.loads(text)
+
+
+def test_override_persisting_has_its_flag_table_under_its_line_and_a_stub() -> None:
+    conn = a_squat_week()
+    a_held_plan(conn, "2026-10-26")
+    a_held_plan(conn, "2026-10-19")
+    [raised] = codes(flags(conn, HOLD), "override_persisting")
+
+    document = drafted(conn, HOLD)
+
+    [line] = document["session"][0]["line"]
+    assert (raised.key, raised.params_hash) in {(f["key"], f["params_hash"]) for f in line["flag"]}
+    assert {"flag": raised.key, "params_hash": raised.params_hash, "because": "", "text": ""} in (
+        document["acknowledge"]
+    )
+
+
+DROP_SQUAT = """
+[[override]]
+kind = "drop_line"
+session = "lower"
+exercise = "bb_back_squat"
+because = "pain"
+text = "Drop the squat while the knee settles."
+"""
+
+
+def test_a_line_flag_whose_line_was_dropped_has_its_flag_table_at_the_top_and_a_stub() -> None:
+    conn = a_squat_week()
+    for week in ("2026-10-26", "2026-10-19"):
+        a_plan_override(conn, an_approved_plan(conn, week), "drop_line", "lower", "bb_back_squat")
+    [raised] = codes(flags(conn, DROP_SQUAT), "override_persisting")
+
+    document = drafted(conn, DROP_SQUAT)
+
+    assert raised.key == "override_persisting@line:2026-11-02/lower/bb_back_squat"
+    assert (raised.key, raised.params_hash) in {
+        (f["key"], f["params_hash"]) for f in document["flag"]
+    }
+    assert {"flag": raised.key, "params_hash": raised.params_hash, "because": "", "text": ""} in (
+        document["acknowledge"]
+    )
+
+
+def test_frozen_load_off_rack_has_its_flag_table_at_the_top_and_no_stub() -> None:
+    conn = a_squat_week()
+    plan_id = an_approved_plan(conn, "2026-10-26")
+    a_frozen_prescription(
+        conn,
+        plan_id,
+        "lower",
+        "2026-10-26",
+        "bb_back_squat",
+        set_groups=[{**SQUAT_GROUPS[0], "load": 121.0}],
+        change="held",
+    )
+
+    document = drafted(conn)
+
+    assert "frozen_load_off_rack@session:2026-11-02/lower" in {f["key"] for f in document["flag"]}
+    assert all(not s["flag"].startswith("frozen_load_off_rack") for s in document["acknowledge"])

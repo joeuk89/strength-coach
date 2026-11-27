@@ -25,6 +25,7 @@ from coach.core.errors import Invalid
 type Table = Mapping[str, object]
 
 WHOLE: Json = {"type": "integer", "minimum": 0}
+EMPTY: Json = {"const": ""}
 
 
 def is_int(value: object) -> bool:
@@ -79,6 +80,14 @@ class Reader(ABC):
     def text(self, key: str, *, required: bool = False) -> str | None: ...
     def text(self, key: str, *, required: bool = False) -> str | None:
         return self._string(key, TEXT, required=required)
+
+    def left_empty(self, *keys: str) -> bool:
+        """Whether every key holds the empty string an engine-written stub leaves to fill."""
+        if not all(self.values.get(key) == "" for key in keys):
+            return False
+        for key in keys:
+            self._typed(key, EMPTY, required=True)
+        return True
 
     @overload
     def choice(self, key: str, choices: Sequence[str], *, required: Literal[True]) -> str: ...

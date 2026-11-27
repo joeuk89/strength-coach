@@ -120,10 +120,14 @@ athlete request, coach judgement, progress); the text is the coach's voice, unpo
 optional (niggle, exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no
 `because`.
 
-In the plan Draft the agent writes an `[[acknowledge]]` table, which names the key as `flag`, as
-`program.md` and `overrides.md` show. It copies the two values from the warning's own `[[flag]]`
-table, whose `key` becomes `flag` and whose `params_hash` is copied as is. The engine writes each
-`[[flag]]` table at the top of the Draft, or under the `[[session.line]]` the flag is about:
+In the plan Draft an acknowledgement is an `[[acknowledge]]` table, which names the key as `flag`,
+as `program.md` and `overrides.md` show. The engine writes each `[[flag]]` table at the top of the
+Draft, or under the `[[session.line]]` the flag is about, one for every flag the dry run can raise,
+the second-week flags and `hevy_template_missing` included. For each warning a WeekPlan can leave,
+it also writes an `[[acknowledge]]` stub with `flag` and `params_hash` copied from that warning
+and `because` and `text` empty. The agent fills the two in, or deletes the stub. A stub left with
+both empty is ignored on read, so the warning stays unacknowledged and never blocks; one with
+only one of them filled is refused like any entry missing it. A filled entry:
 
 ```toml
 [[acknowledge]]
@@ -134,6 +138,10 @@ text = "The 121 was a mislabelled plate."
 evidence = ["niggle:n-0001"]  # optional
 ```
 
+- **Overrides raise flags.** An override added to the Draft can raise a warning the Draft did
+  not carry (a `pin_load` more than a row up raises `increment_over_step`). `plan draft --refresh
+  <path>` re-derives the Draft in place, keeping its overrides, position and filled entries and
+  adding the new flags with their stubs (`verbs.md`).
 - **Home.** The agent writes acknowledgements in the plan Draft next to the overrides. They freeze
   onto the WeekPlan at approval and show at the approval prompt as "left warnings" with their
   reasons, beside the overrides.
@@ -157,7 +165,10 @@ warning returns and the coach judges it again. When the coach wants it quiet for
 `repeated_decline` walk and the adherence suppression windows, which the parity checklist
 replaced with a snooze date), the acknowledgement is a **Decision** of kind `leave_warning`: the
 same `{key, params_hash, because, text, evidence}` plus an until date. The validator treats the
-warning as left while the Decision is in force and the params hash is unchanged.
+warning as left while the Decision is in force and the params hash is unchanged. A warning that
+recurs unchanged each week hashes only its standing facts, never the latest exposure, a dated ref
+or a week count, so the Decision keeps matching while the condition stands; the registry rows
+below name the params each such hash covers.
 
 A Decision names one full key, never a bare code: the coach cannot silence `session_dose_high`
 everywhere for a block. A pattern that holds across lines earns a program change or an override
@@ -275,7 +286,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `top_set_above_e1rm` | line | e1RM, model, load, RPE target | rn:autoregulation.6 |
 | `no_e1rm` | line | exercise id, scheme | rn:autoregulation.5 |
 | `carried_e1rm` | line | pre-layoff exposure ref, pre-layoff e1RM, band factor, carried value, expiry date (`prescription.md`, **The carried e1RM**) | rn:detraining-return.5 |
-| `increment_over_step` | line | increment, scheme step, from exposure | `null` |
+| `increment_over_step` | line | increment, scheme step, from exposure; the params hash covers the increment and the scheme step only | `null` |
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
 | `anchor_load_unusable` | line | skipped exposure ref, logged load, anchor used (`start_load` or the older exposure's ref) | `null` |
 | `over_rep_cap` | exposure | reps, cap | rn:autoregulation.5 |
@@ -285,14 +296,14 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
 | `rung_met` | line | `rung` the standing rung (from 1), `next` the next rung's exercise id, `next_rung` its index, `exposures` the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the message names the next rung by its label (ADR 0025); the params hash covers `rung` and `next` only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
 | `ladder_top` | line | the standing rung, the ladder's last; raised instead of `rung_met` when the last rung's criterion holds | rn:bodyweight-skill-progression.3 |
-| `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref | rn:autoregulation.6 |
-| `pin_load_capped` | line | the pinned load, the prescribed load (as the rack step leaves it), ceiling kind (illness, light week, niggle: the RPE ceiling that lowered the pin; a return band's is `return_band_disagrees`), RPE cap, ref (the niggle, else none), outcome (`no_effect` when the line prescribes what it would without the pin, else `reduced`) | `null` |
+| `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref; the params hash covers the cap only | rn:autoregulation.6 |
+| `pin_load_capped` | line | the pinned load, the prescribed load (as the rack step leaves it), ceiling kind (illness, light week, niggle: the RPE ceiling that lowered the pin; a return band's is `return_band_disagrees`), RPE cap, ref (the niggle, else none), outcome (`no_effect` when the line prescribes what it would without the pin, else `reduced`); the params hash covers every param but the prescribed load | `null` |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
-| `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
+| `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs; the params hash covers the reason only | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
 | `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) | rn:volume-frequency.1 |
 | `lift_dose_under_target` | week | priority lift, target, the four weekly figures, the counted variants (`week.md`) | rn:volume-frequency.1, rn:minimum-effective-dose.4 |
 | `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) | rn:volume-frequency.3 |
-| `override_persisting` | line | kind, weeks, plan ids | `null` |
+| `override_persisting` | line | kind, weeks, plan ids; the params hash covers the kind only | `null` |
 | `light_week_shape_off_trigger` | week | proposed shape, the plan's shape, triggers | rn:deloads.5, .8 to .10 |
 | `light_week_unprompted` | week | hard-week count, ceiling | rn:deloads.3 and .4 |
 | `minimum_week_floor` | week | priority lift, kept sessions | rn:minimum-effective-dose.4 |
