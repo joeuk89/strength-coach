@@ -2,7 +2,7 @@ from collections.abc import Collection, Iterable, Sequence
 
 from coach.core.flag import Flag, Scope, raise_flag
 from coach.core.log import WorkoutVersion
-from coach.core.routine_projection import drift_class
+from coach.core.routine_projection import RoutineChange, diff_text, drift_class
 
 
 def workout_reappeared(workout_id: str, noticed_at: str, updated_at: str) -> Flag:
@@ -40,12 +40,22 @@ def exercise_unmapped(
     return tuple(flags)
 
 
-def routine_drift(routine_id: str, plan_id: str, diff: Sequence[str]) -> Flag:
-    found = drift_class(diff)
+def routine_drift(
+    routine_id: str, session_id: str, plan_id: str, changes: Sequence[RoutineChange]
+) -> Flag:
+    found = drift_class(changes)
+    diff = diff_text(changes)
     return raise_flag(
         "routine_drift",
         Scope("routine", routine_id=routine_id),
-        {"drift_class": found, "plan_in_force": plan_id, "diff": list(diff)},
-        f"routine {routine_id} differs from {plan_id} in Hevy ({found}: {', '.join(diff)}); "
-        "an override on the next WeekPlan or the next push resolves it",
+        {
+            "drift_class": found,
+            "plan_in_force": plan_id,
+            "session_id": session_id,
+            "changes": [c.to_json() for c in changes],
+            "diff": list(diff),
+        },
+        f"routine {routine_id} for session {session_id} differs from {plan_id} in Hevy "
+        f"({found}: {', '.join(diff)}); an override on the next WeekPlan or the next push "
+        "resolves it",
     )

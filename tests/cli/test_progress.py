@@ -7,7 +7,6 @@ from support.clock import FixedClock, at
 from support.instances import an_instance
 
 from coach.cli import app
-from coach.cli.envelope import BUDGET_BYTES
 from coach.store.connection import connect
 
 ENGINE = "0.3.0"
@@ -31,7 +30,7 @@ def coach(*argv: str) -> Run:
     return run_coach(*argv, clock=FixedClock(at(BOUNDARY)))
 
 
-def test_progress_reports_the_closed_block_under_the_budget(instance: Path) -> None:
+def test_progress_reports_the_closed_block(instance: Path) -> None:
     run = coach("progress")
 
     assert run.code == 0
@@ -42,7 +41,6 @@ def test_progress_reports_the_closed_block_under_the_budget(instance: Path) -> N
     assert [b["block"] for b in bench["e1rm_by_block"]] == ["b-2026-10-30", "b-2026-11-23"]
     assert result["goal"]["why"] == WHY
     assert [w["code"] for w in run.envelope["warnings"]] == ["cadence_slow"]
-    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
 
 
 def test_full_adds_per_line_history(instance: Path) -> None:
@@ -62,3 +60,20 @@ def test_the_verb_keeps_exercise_ids_where_the_page_shows_names(instance: Path) 
         "pull_up",
     ]
     assert run.envelope["warnings"][0]["message"].startswith("pull_up on double_progression")
+
+
+def test_the_phase_names_its_rate_units(instance: Path) -> None:
+    phase = coach("progress").envelope["result"]["phase"]
+
+    assert (phase["kind"], phase["target_rate"], phase["rate_units"]) == (
+        "maintenance",
+        0.0,
+        "pct_bw_per_week",
+    )
+
+
+def test_the_schema_lists_the_phase_rate_units(instance: Path) -> None:
+    output = coach("schema", "progress").envelope["result"]["output"]
+
+    phase = output["properties"]["phase"]
+    assert phase["properties"]["rate_units"] == {"const": "pct_bw_per_week"}

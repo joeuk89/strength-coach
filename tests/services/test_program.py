@@ -52,6 +52,10 @@ def run(
     )
 
 
+def drafted(conn: Connection, **config: Any) -> str:
+    return show_draft(conn, config=a_config(**config), kits=(kit_files(),), clock=CLOCK).text
+
+
 def rotation_draft(**fields: Any) -> bytes:
     draft = a_draft(a_session("push"), a_session("pull", a_line("bb_bent_over_row")), **fields)
     draft["schedule"] = {"rotation": ["A", "B"], "A": {"mon": "push"}, "B": {"mon": "pull"}}
@@ -319,7 +323,7 @@ def test_show_draft_re_adopts_as_an_amend_with_an_empty_diff() -> None:
     conn = the_worked_store()
     run(conn, WORKED_DRAFT_COMPLETE)
 
-    text = show_draft(conn).text
+    text = drafted(conn)
     dry = run(conn, text, dry_run=True)
     amend = run(conn, text)
 
@@ -651,7 +655,7 @@ def test_a_stale_acknowledgement_is_refused_as_acknowledgement_unmatched() -> No
 def test_a_carried_acknowledgement_leaves_nothing_once_its_warning_params_change() -> None:
     conn = the_worked_store()
     run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
-    draft = tomllib.loads(show_draft(conn).text)
+    draft = tomllib.loads(drafted(conn, available_days=EVERY_DAY))
     [pull] = [s for s in draft["session"] if s["id"] == "a-sat-pull"]
     [line] = [x for x in pull["line"] if x["exercise"] == "pull_up"]
     line["sets"] = [{"count": 3, "reps": [8, 12], "rpe": 8}]
@@ -672,7 +676,7 @@ def test_a_carried_acknowledgement_still_leaves_its_unchanged_warning() -> None:
     conn = the_worked_store()
     adopted = run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
 
-    again = run(conn, show_draft(conn).text, available_days=EVERY_DAY)
+    again = run(conn, drafted(conn, available_days=EVERY_DAY), available_days=EVERY_DAY)
 
     assert again.version_id == "pv-2"
     assert again.acknowledgements == adopted.acknowledgements
@@ -691,7 +695,7 @@ def test_a_left_version_warning_re_adopts_from_show_draft_under_the_next_version
     ]
     adopted = run(conn, toml(draft))
 
-    again = run(conn, show_draft(conn).text)
+    again = run(conn, drafted(conn))
 
     [left] = [f for f in again.warnings if f.code == "emphasis_off_goal"]
     assert left.key == "emphasis_off_goal@version:pv-2"
@@ -708,7 +712,7 @@ def test_dose_acknowledgements_re_adopt_from_show_draft_under_the_next_version()
     both = ("dose_off_band@dose:pv-1/bb_bench_press", "dose_off_band@dose:pv-1/pull_up")
     adopted = run(conn, off_band_dose(*both), available_days=EVERY_DAY)
 
-    again = run(conn, show_draft(conn).text, available_days=EVERY_DAY)
+    again = run(conn, drafted(conn, available_days=EVERY_DAY), available_days=EVERY_DAY)
 
     dose = {f.key: f.left is not None for f in again.warnings if f.code == "dose_off_band"}
     assert dose == {
@@ -821,7 +825,7 @@ def test_show_holds_each_ladder_line_with_its_session_and_its_standing_rung() ->
 
     [shown] = show(conn, units="lb", zone=datetime.UTC).ladders
 
-    assert (shown.session_id, shown.exercise) == ("lower", "dead_bug")
+    assert (shown.line.session_id, shown.line.exercise) == ("lower", "dead_bug")
     assert [rung.standing for rung in shown.rungs] == [False, True, False]
 
 
@@ -831,12 +835,73 @@ def test_the_balance_board_ladder_adopts_with_its_declared_stances_and_re_adopts
     conn = the_worked_store()
 
     adopted = run(conn, BALANCE_STANCES_DRAFT)
-    text = show_draft(conn).text
+    text = drafted(conn)
     dry = run(conn, text, dry_run=True)
 
     assert adopted.version_id == "pv-1"
     assert exercises.get(conn, "custom_balance_board_one_foot_eyes_closed") is not None
     [shown] = show(conn, units="lb", zone=datetime.UTC).ladders
-    assert shown.session_id == "daily-balance"
+    assert shown.line.session_id == "daily-balance"
     assert [rung.standing for rung in shown.rungs] == [True, False, False, False, False]
     assert dry.diff.empty
+
+
+def with_scheme_changed_and_acknowledged(text: str) -> bytes:
+    draft = tomllib.loads(text)
+    [lower] = [s for s in draft["session"] if s["id"] == "a-mon-lower"]
+    [lunge] = [x for x in lower["line"] if x["exercise"] == "db_lunge"]
+    lunge["scheme"] = {"name": "linear"}
+    draft["acknowledge"] = [
+        *draft.get("acknowledge", []),
+        {
+            "flag": "scheme_change_off_signal@line:a-mon-lower/db_lunge",
+            "because": "coach_judgement",
+            "text": "Linear while the lunge groove settles.",
+        },
+    ]
+    return toml(draft)
+
+
+def test_show_draft_leaves_out_a_scheme_change_acknowledgement_and_dry_adopts_clean() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+    changed = run(
+        conn, with_scheme_changed_and_acknowledged(drafted(conn)), available_days=EVERY_DAY
+    )
+
+    text = drafted(conn, available_days=EVERY_DAY)
+    dry = run(conn, text, dry_run=True, available_days=EVERY_DAY)
+
+    assert "scheme_change_off_signal@line:a-mon-lower/db_lunge" in {
+        e.flag for e in changed.acknowledgements
+    }
+    assert "scheme_change_off_signal" not in text
+    assert dry.diff.empty
+
+
+def test_show_draft_carries_a_content_acknowledgement_the_shown_version_still_raises() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+    run(conn, with_scheme_changed_and_acknowledged(drafted(conn)), available_days=EVERY_DAY)
+
+    flags = [
+        e["flag"] for e in tomllib.loads(drafted(conn, available_days=EVERY_DAY))["acknowledge"]
+    ]
+
+    assert "scheme_off_emphasis@line:a-sat-pull/pull_up" in flags
+
+
+def test_a_stale_entry_added_to_a_show_draft_is_still_acknowledgement_unmatched() -> None:
+    conn = the_worked_store()
+    run(conn, WORKED_DRAFT_COMPLETE, available_days=EVERY_DAY)
+    run(conn, with_scheme_changed_and_acknowledged(drafted(conn)), available_days=EVERY_DAY)
+    draft = tomllib.loads(drafted(conn, available_days=EVERY_DAY))
+    stale = "scheme_change_off_signal@line:a-mon-lower/db_lunge"
+    draft["acknowledge"].append({"flag": stale, "because": "coach_judgement", "text": "Stale."})
+
+    with pytest.raises(Invalid) as refused:
+        run(conn, toml(draft), dry_run=True, available_days=EVERY_DAY)
+
+    assert refused.value.code == "acknowledgement_unmatched"
+    [violation] = cast(list[dict[str, Any]], refused.value.details["violations"])
+    assert violation["params"]["flag_keys"] == [stale]

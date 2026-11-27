@@ -55,11 +55,10 @@ Three committed fixture directories cover what builders cannot:
   `pages/`). It is generated, not typed: a committed script under `tests/support/` builds it
   through `store` functions and the `publish` service, and regenerating it is how it changes.
   Used by the import, export round-trip and CLI envelope tests, and by the contract test that
-  holds every default envelope under 3 KB (`verbs.md`). For that test to mean anything the
-  instance must overflow every list a default summary truncates: more than ten exposures per
-  lift, more than ten flags on the plan in force, more than ten routines, more than ten ledger
-  rows of each kind, more than ten readings per kind, so every `truncated` is true at least
-  once. It is still small: a year of one program, not a career.
+  runs every declared example and view on it (`verbs.md`). Each list holds more than ten rows
+  (exposures per lift, flags on the plan in force, routines, ledger rows of each kind, readings
+  per kind), so a list cut short shows. It is still small: a year of one program, not a
+  career.
 - `tests/fixtures/hevy/`: a handful of anonymised Hevy GET responses (a workout page, a routine,
   a folder, an exercise template). They fix the payload shapes the parser must accept and feed
   the parser tests only.
@@ -75,7 +74,7 @@ templates and workouts in memory. It satisfies `HevyClient` and nothing more: th
 allow-listed writes (ADR 0011), the GETs the protocol declares (workout events and pages,
 routines, folders, exercise templates, body measurements) and `open_audit()`; it has no method
 for any other endpoint, so a service that wanted one fails by construction. Like Hevy, it drops
-routine-level notes on PUT. A test can tell it to move a routine's `updated_at`, fail the next
+routine-level notes on PUT and an exercise with no sets on every routine write. A test can tell it to move a routine's `updated_at`, fail the next
 GET, or return a read-back that differs from the PUT. It keeps the audit lines the real client
 would write in a list the test reads. It has no 429 fault: the retry lives inside
 `hevy/client.py`, below the protocol, and is tested there.
@@ -193,9 +192,9 @@ Seven directories, one per package plus contract:
 | `tests/render/` | `core` values | page determinism (ADR 0012: the same store, the same bytes), the check-in record renderer (`check-in.md`), the 40-line approval prompt (ADR 0006), the TOML emitter round-trip through `tomllib` |
 | `tests/services/` | `:memory:` built from `schema.sql` through scenario builders, `FakeHevy`, a fixed clock, the kit fixture as a value | each leaf's behaviour, transactions, refusals, idempotent re-runs |
 | `tests/cli/` | in-process `main` with a `FakeHevy` factory and a fixed clock; the fixture instance | one test per exit class, `init`, `import` with Hevy on and off, `plan apply` end to end, the export round-trip; one subprocess smoke test that `[sys.executable, "-m", "coach", "--help"]` exits 0 |
-| `tests/contract/` | the declarations, `schema.sql`, the registries, the skill files, the research notes' headings, the source tree, the fixture instance | the generated tests listed in `verbs.md`, `schema.md`, `validation.md` and `skills.md`, the 3 KB envelope test, the `rn:` registry test, the import DAG |
+| `tests/contract/` | the declarations, `schema.sql`, the registries, the skill files, the research notes' headings, the source tree, the fixture instance | the generated tests listed in `verbs.md`, `schema.md`, `validation.md` and `skills.md`, the default-envelope test, the `rn:` registry test, the import DAG |
 
-The 3 KB envelope test lives in `tests/contract/` only. Nothing runs against an on-disk instance
+The default-envelope test lives in `tests/contract/` only. Nothing runs against an on-disk instance
 except the fixture instance, and no test shells out except the one smoke test, which runs the
 interpreter the suite runs under, never the `coach` on PATH.
 
@@ -207,7 +206,7 @@ in strict mode run in the same `uv run` step. One GitHub Actions workflow runs t
 every push and pull request. No pre-commit framework.
 
 The whole suite aims to run in under thirty seconds on an idle laptop; no test enforces it, and a change that adds noticeably to it says why. A guard fails any single test that
-takes longer than two seconds of CPU time (six on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated, and host load cannot fail it. The cost: a test slowed by `time.sleep`, I/O or a subprocess no longer trips the guard. A test is never cut or weakened to save time. A
+takes longer than two seconds of CPU time (six on CI, whose shared runners are about three times slower), so a slow test is fixed where it is written rather than tolerated. It measures the test process's CPU time, so time spent waiting for a busy host does not count, though contention can still add some. The cost: a test slowed by `time.sleep`, I/O or a subprocess no longer trips the guard. A test is never cut or weakened to save time. A
 module- or session-scoped fixture is setup the tests share, so the guard does not charge it to
 whichever test asks for it first. The
 old suite's eleven minutes against on-disk instances is the anti-pattern this budget rules out.

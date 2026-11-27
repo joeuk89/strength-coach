@@ -11,6 +11,7 @@ from coach.core.exposure import Exposure, ExposureSet
 from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
 from coach.core.frozen_prescription import frozen_groups
 from coach.core.line_history import newest_first, ordinary
+from coach.core.names import named
 from coach.core.note_dose import working_rpe, working_shape
 from coach.core.prescription import DecisionInForce, PrescribedGroup, RungNaming
 from coach.core.program.form import (
@@ -30,18 +31,20 @@ OPENING_RUNG = 1
 
 @dataclass(frozen=True)
 class LineRef:
-    """A session's line: `line_key` is the line's own exercise, its first rung's on a ladder."""
+    """A session's line: `exercise` is the line's own exercise, its first rung's on a ladder."""
 
     session_id: str
-    line_key: str
+    exercise: str
 
 
 @dataclass(frozen=True)
 class StandingRung:
-    """The rung a line stands on (from 1) and the first date an exposure counts on it."""
+    """The rung a line stands on (from 1), the first date an exposure counts on it, and whether a
+    `ladder_rung` Decision chose it rather than the line opening there."""
 
     index: int
     counts_from: datetime.date | None
+    chosen: bool = False
 
     def counted(self, exposures: Iterable[Exposure]) -> tuple[Exposure, ...]:
         """Those of `exposures` the rung's load, criterion and `stall_streak` may read."""
@@ -120,7 +123,7 @@ def standing_rung(
     found = [
         d
         for d in decisions
-        if (d.kind, d.session_id, d.exercise_id) == ("ladder_rung", line.session_id, line.line_key)
+        if (d.kind, d.session_id, d.exercise_id) == ("ladder_rung", line.session_id, line.exercise)
     ]
     if not found:
         return StandingRung(OPENING_RUNG, adopted)
@@ -130,19 +133,21 @@ def standing_rung(
     return StandingRung(
         min(max(index, OPENING_RUNG), len(ladder.rungs)),
         None if decision.on is None else decision.on + datetime.timedelta(days=1),
+        chosen=True,
     )
 
 
 def rung_line(line: Line, ladder: ExerciseLadder, index: int) -> Line:
     """The line as rung `index` prescribes it: the rung's exercise, sets and cues under the
-    line's scheme. The line's `start_load` and `load_mode` are the first rung's; a later rung
-    has its own load in its own exercise's mode. The line's own key stays with the caller's
-    scope."""
+    line's scheme. The line's `start_load` is the first rung's; a later rung has its own load,
+    in the line's `load_mode` on the line's exercise and in its own exercise's mode otherwise.
+    The line's own key stays with the caller's scope."""
     rung = ladder.rungs[index - 1]
     shaped = replace(line, exercise=rung.exercise, sets=rung.sets, cues=rung.cues)
     if index == OPENING_RUNG:
         return shaped
-    return replace(shaped, start_load=rung.start_load, load_mode=None)
+    mode = line.load_mode if rung.exercise == line.exercise else None
+    return replace(shaped, start_load=rung.start_load, load_mode=mode)
 
 
 def rung_label(
@@ -151,11 +156,11 @@ def rung_label(
     """`rung <n> · [<exercise name> · ]<dose>[ · <load>][ · <cues>]`: the name only when the
     rung's exercise differs from the standing rung's, and an empty segment left out."""
     rung = ladder.rungs[index - 1]
-    named = rung.exercise != ladder.rungs[standing - 1].exercise
+    other_exercise = rung.exercise != ladder.rungs[standing - 1].exercise
     load = rung_line(line, ladder, index).start_load
     segments = (
         f"rung {index}",
-        naming.name(rung.exercise) if named else None,
+        named(naming.names, rung.exercise) if other_exercise else None,
         _rung_dose(rung, naming),
         None if load is None else f"{load:g} {naming.units}",
         rung.cues,
@@ -177,12 +182,15 @@ def _rung_dose(rung: Rung, naming: RungNaming) -> str:
 
 def rung_anchors(
     exposures: Iterable[Exposure], standing: StandingRung, week: int, session_id: str
-) -> tuple[Exposure, ...]:
-    """What may anchor a later rung carrying its own start load this `week`. A rung a return band
-    stepped back to has none: the standing rung's start says nothing of that rung's history."""
+) -> tuple[Exposure, ...] | None:
+    """What may anchor the load of rung `week`, carrying its own start load; None where the whole
+    exercise history may, on a first rung the line never left. A rung a return band stepped back
+    to has none: the standing rung's start says nothing of that rung's history."""
     if week != standing.index:
         return ()
-    return _counted_in_session(exposures, standing, session_id)
+    if not standing.chosen:
+        return None
+    return _counting(exposures, standing, session_id)
 
 
 def climb_offer(
@@ -310,12 +318,10 @@ def _qualifying_run(
     first, up to the first that misses the rung's criterion."""
     criterion = full_criterion(ladder, standing.index)
     rung = ladder.rungs[standing.index - 1]
-    history = ordinary(
-        newest_first(
-            e
-            for e in _counted_in_session(exposures, standing, session_id)
-            if e.exercise_id == rung.exercise and e.date < before
-        )
+    history = newest_first(
+        e
+        for e in _counting(exposures, standing, session_id)
+        if e.exercise_id == rung.exercise and e.date < before
     )
     run: list[Exposure] = []
     for exposure in history:
@@ -325,10 +331,10 @@ def _qualifying_run(
     return run
 
 
-def _counted_in_session(
+def _counting(
     exposures: Iterable[Exposure], standing: StandingRung, session_id: str
 ) -> tuple[Exposure, ...]:
-    return standing.counted(e for e in exposures if e.session_id in (None, session_id))
+    return ordinary(standing.counted(e for e in exposures if e.session_id in (None, session_id)))
 
 
 def _meets(sets: Sequence[SetGroup], criterion: Advance, exposure: Exposure) -> bool:

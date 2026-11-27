@@ -12,6 +12,7 @@ from coach.cli.declaration import (
 )
 from coach.cli.drafts import write_engine_draft
 from coach.cli.instance import open_instance_store
+from coach.cli.kit import read_kit_files
 from coach.core.errors import Invalid
 from coach.services.program import ShownLadder, ShowResult, show, show_draft
 
@@ -26,7 +27,17 @@ def run(call: InstanceCall) -> Outcome:
         raise Invalid("invalid_argument", "--apply-plan folds into the Draft; add --draft")
     with open_instance_store(call.instance) as conn:
         shown = show(conn, units=call.instance.units, zone=call.clock.zone)
-        drafted = show_draft(conn, apply_plan=week) if as_draft else None
+        drafted = (
+            show_draft(
+                conn,
+                config=call.instance.config,
+                kits=read_kit_files(call.instance),
+                clock=call.clock,
+                apply_plan=week,
+            )
+            if as_draft
+            else None
+        )
     if drafted is None:
         return Outcome(_summary(shown, None if call.full else call.last))
     text = drafted.text
@@ -74,8 +85,8 @@ def _summary(shown: ShowResult, last: int | None) -> Json:
 
 def _ladder(shown: ShownLadder) -> Json:
     return {
-        "session": shown.session_id,
-        "exercise": shown.exercise,
+        "session": shown.line.session_id,
+        "exercise": shown.line.exercise,
         "rungs": [
             {
                 "rung": rung.rung,

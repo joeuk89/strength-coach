@@ -3,7 +3,6 @@ import datetime
 import re
 
 from support.blocks import two_closed_blocks
-from support.check_in_cards import field_of, opened
 from support.clock import FixedClock
 from support.closed_weeks import a_check_in, a_planned_squat_week, closed_through, monday
 from support.kit_fixtures import kit_files, split_hardware_tables
@@ -22,7 +21,6 @@ from support.programs import a_config
 from coach.core.config import Config, ImplementChoice, PlatePoolLocation
 from coach.core.hevy_actions import MapStatus
 from coach.core.mirror import MirroredRoutine
-from coach.render.facts import facts_text
 from coach.render.pages import render_pages
 from coach.services.closed_weeks import closed_weeks
 from coach.services.pages import page_facts
@@ -217,7 +215,7 @@ PT = a_session(
     title="PT · chest and back",
     kind="coach_led",
     line=None,
-    estimated_sets={"chest": 4, "lats": 4, "biceps": 3},
+    estimated_sets={"chest": 4, "upper_back": 4, "biceps": 3},
 )
 
 
@@ -229,7 +227,7 @@ def test_the_week_page_heads_a_coach_led_session_with_its_estimated_sets() -> No
 
     assert (
         "## Wed 2026-11-04: PT · chest and back\n\n"
-        "Coach-led · estimated sets: chest 4, lats 4, biceps 3"
+        "Coach-led · estimated sets: chest 4, upper back 4, biceps 3"
     ) in page
 
 
@@ -405,43 +403,78 @@ def test_a_routine_page_marks_the_rung_a_ladder_rung_decision_names() -> None:
     assert page.count("Ladder:") == 1
 
 
-def test_a_check_in_record_shows_the_cards_ladders_field() -> None:
+def test_a_check_in_record_shows_each_ladder_by_its_session_exercise_and_rung_names() -> None:
     conn = a_ladder_program()
     logged(conn, "dead_bug", "2026-11-05", 10)
     a_check_in(conn, monday(0), "2026-11-08")
-    ladders = facts_text(field_of(opened(conn), "ladders").facts)
 
     page = the_pages(conn)["pages/check-ins/2026-11-08.md"]
 
-    assert f"## Ladders\n\n{ladders}\n" in page
-    assert "| dead_bug |" in ladders
+    ladders = page.split("## Ladders\n\n")[1].split("\n\n")[0].splitlines()
+    assert ladders == [
+        "| line | standing rung | exposures toward the criterion | met | held | next rung |",
+        "| --- | --- | --- | --- | --- | --- |",
+        "| Lower: Dead Bug | rung 1 · 3×10 @8 · first cues | 1 of 2 | no | no | "
+        "rung 2 · Ab Wheel Rollout · 3×8 @8 · ab_wheel cues |",
+    ]
 
 
 def test_the_progress_page_names_each_lift_and_shows_no_exercise_id() -> None:
     page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
 
     rows = page.splitlines()
-    assert [row.split(" | ")[0] for row in rows if "| top_backoff |" in row] == [
+    assert [row.split(" | ")[0] for row in rows if "| top set and back-offs |" in row] == [
         "| Bench Press (Barbell)"
     ]
-    assert [row.split(" | ")[0] for row in rows if "| double_progression |" in row] == ["| Pull Up"]
-    assert "| Bench Press (Barbell) | kind load_x_reps, load 110, reps 5 | – | load 10 |" in rows
+    assert [row.split(" | ")[0] for row in rows if "| double progression |" in row] == ["| Pull Up"]
     assert "bb_bench_press" not in page
     assert "pull_up" not in page
 
 
-def test_the_progress_page_names_each_priority_lift_in_its_dose() -> None:
+def test_the_progress_page_shows_each_scheme_and_signal_by_its_display_name() -> None:
     page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
 
-    assert "| Bench Press (Barbell) 4, Pull Up 6 |" in page
-    assert "Target: per_muscle 10, Bench Press (Barbell) 8, Pull Up 8." in page
+    rows = page.splitlines()
+    bench = next(row for row in rows if row.startswith("| Bench Press (Barbell) | top"))
+    assert bench.split(" | ")[1] == "top set and back-offs"
+    assert bench.split(" | ")[-1] == "slow cadence |"
+    assert not [r for r in rows if "top_backoff" in r or "cadence_slow" in r]
 
 
-def test_the_progress_page_names_the_lift_a_signal_is_about() -> None:
+def test_the_progress_page_shows_each_milestone_target_by_its_kinds_display_name() -> None:
+    rows = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"].splitlines()
+
+    assert "| Bench Press (Barbell) | load for reps: 110 × 5 | – | load 10 |" in rows
+    assert "| Bench Press (Barbell) | bodyweight multiple: 0.75 | – | not computable |" in rows
+
+
+def test_the_progress_page_dates_the_closed_block_without_its_id() -> None:
     page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
 
-    assert "warning `cadence_slow`: Bench Press (Barbell) on top_backoff: cadence slow" in page
-    assert "warning `cadence_slow`: Pull Up on double_progression: cadence slow" in page
+    assert "\n\nThe closed Block ran from 2026-11-23 to 2026-12-13.\n\n" in page
+    assert "b-2026-" not in page
+
+
+def test_the_progress_page_names_each_priority_lift_and_muscle_in_its_dose() -> None:
+    page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
+
+    assert (
+        "| 2026-12-07 | light | biceps 1.5, chest 4, front delts 2, lats 3, triceps 2, "
+        "upper back 1.5 | Bench Press (Barbell) 4, Pull Up 3 |"
+    ) in page
+    assert "Target: per muscle 10, Bench Press (Barbell) 8, Pull Up 8." in page
+
+
+def test_the_progress_page_names_the_lift_scheme_and_signal_of_each_signal() -> None:
+    page = the_pages(two_closed_blocks(thursday_pull_ups=True))["pages/progress.md"]
+
+    assert (
+        "- warning, slow cadence: Bench Press (Barbell) on top set and back-offs: cadence slow"
+        in page
+    )
+    assert "- warning, slow cadence: Pull Up on double progression: cadence slow" in page
+    assert "the version may move the lift to 5/3/1 wave," in page
+    assert "wave_531" not in page
 
 
 def test_the_progress_page_shows_an_id_with_no_name_as_it_stands() -> None:
@@ -451,6 +484,92 @@ def test_the_progress_page_shows_an_id_with_no_name_as_it_stands() -> None:
 
     page = render_pages(nameless)["pages/progress.md"]
 
-    assert "| bb_bench_press | top_backoff |" in page
+    assert "| bb_bench_press | top set and back-offs |" in page
     assert "| bb_bench_press 4, pull_up 6 |" in page
-    assert "warning `cadence_slow`: bb_bench_press on top_backoff" in page
+    assert "- warning, slow cadence: bb_bench_press on top set and back-offs" in page
+
+
+def two_blocks_check_in() -> list[str]:
+    return the_pages(two_closed_blocks(thursday_pull_ups=True))[
+        "pages/check-ins/2026-12-13.md"
+    ].splitlines()
+
+
+def test_a_check_in_record_names_the_session_of_each_planned_session_row() -> None:
+    rows = two_blocks_check_in()
+
+    assert "| Push on 2026-11-02 | lifting | matched | h-push-0 | – | 7.6 |" in "\n".join(rows)
+    assert not [row for row in rows if "planned_session:" in row]
+
+
+def test_a_check_in_record_names_each_lift_in_its_dose_and_lifts_tables() -> None:
+    rows = two_blocks_check_in()
+
+    assert "| Bench Press (Barbell) | 4 | 8 | 4 |" in rows
+    assert "| Pull Up | 3 | 8 | 6 |" in rows
+    assert (
+        "| Bench Press (Barbell) | yes | load 100, reps 5, rpe 8, date 2026-12-07, session Push "
+        "| 123.33 | – | 6 | Push on 2026-11-02 |"
+    ) in rows
+    assert not [row for row in rows if "bb_bench_press" in row or "pull_up" in row]
+
+
+def test_a_check_in_record_shows_each_muscle_by_its_display_name() -> None:
+    rows = two_blocks_check_in()
+
+    assert "| front delts | 2 | 2 |" in rows
+    assert "| upper back | 1.5 | 3 |" in rows
+
+
+def test_a_check_in_record_leaves_the_block_id_out_of_its_block_section() -> None:
+    rows = two_blocks_check_in()
+
+    block = rows[rows.index("## Block") + 2 :][:2]
+    assert block == ["- hard weeks: 0", "- ceiling: 6"]
+    assert not [row for row in rows if "b-2026-" in row]
+
+
+def test_the_athlete_page_names_the_session_and_exercise_of_each_override_decision() -> None:
+    conn = a_squat_program()
+    record(
+        conn,
+        b'[[decision]]\nkind = "override"\nsession = "lower"\nexercise = "bb_back_squat"\n'
+        b'until = 2026-11-30\nbecause = "fatigue"\ntext = "Hold through November."\n'
+        b'[decision.override]\nkind = "hold"\n',
+        file="d.toml",
+        clock=FixedClock(),
+    )
+
+    rows = the_pages(conn)["pages/athlete.md"].splitlines()
+
+    [decision] = [row for row in rows if "Hold through November." in row]
+    assert decision.split(" | ")[1:4] == ["Lower", "Back Squat (Barbell)", "2026-11-30"]
+    assert not [row for row in rows if "bb_back_squat" in row]
+
+
+def test_the_athlete_page_names_the_exercise_a_niggle_constraint_caps() -> None:
+    conn = a_squat_program()
+    record(
+        conn,
+        b'[[niggle]]\nsite = "left knee"\nopened = 2026-11-03\ndate = 2026-11-03\n'
+        b'status = "reported"\n'
+        b'constraints = [{ kind = "load_cap", exercise = "bb_back_squat", value = 100 }]\n',
+        file="d.toml",
+        clock=FixedClock(),
+    )
+
+    rows = the_pages(conn)["pages/athlete.md"].splitlines()
+
+    [niggle] = [row for row in rows if "left knee" in row]
+    assert "Back Squat (Barbell)" in niggle
+    assert "bb_back_squat" not in niggle
+
+
+def test_the_week_page_names_the_session_and_exercise_of_each_override() -> None:
+    conn = a_squat_program()
+    plan_id = a_planned_squat_week(conn, monday(0))
+    a_plan_override(conn, plan_id, "hold", "lower", "bb_back_squat")
+
+    rows = the_pages(conn)["pages/week.md"].splitlines()
+
+    assert "| hold | Lower | Back Squat (Barbell) | pain | Knee niggle. |" in rows

@@ -16,6 +16,7 @@ from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import DEFAULT_CHECKIN_CADENCE_DAYS, Units
 from coach.core.e1rm import e1rm
 from coach.core.exposure import Exposure
+from coach.core.lift_doubts import LoggedLine, logged_lines, unmatched_line
 from coach.core.phase_trend import fourteen_day_average, observed_rate
 from coach.core.planned_week import DAYS_IN_WEEK, week_monday
 from coach.core.registries.program import COMPOUND_PATTERNS
@@ -134,9 +135,10 @@ def _card(
     weighed = weigh_ins(conn)
     logged = activities(conn, log)
     phase = phases.in_force(conn)
+    session_reads = _session_reads(log, window, closing)
     fields: list[CardField | None] = [
         card.header(window, chosen, None if plan is None else str(plan["id"])),
-        card.sessions(_session_reads(log, window, closing)),
+        card.sessions(session_reads),
         card.week_kind(closing),
         None
         if version is None
@@ -151,13 +153,11 @@ def _card(
         card.lifts(
             _lift_reads(conn, log, window),
             emphasis=version.form.emphasis if version else "hypertrophy",
+            lines=_logged_lines(log, window, session_reads),
         ),
         card.ladders(ladder_reads(conn, units=units, on=on, zone=zone)),
         card.readiness(previous.readiness if previous else None),
-        card.sleep(
-            {d: h for d, h in fatigue.nights.items() if window.start <= d <= window.end},
-            short_sleep_week=any(t.name == "short_sleep_week" for t in opened.proposal.triggers),
-        ),
+        card.sleep(fatigue.nights, window.end),
         card.weight_phase(
             sum(1 for d in weighed if window.start <= d <= window.end),
             _in_units(fourteen_day_average(weighed, on), bodyweight_units),
@@ -208,10 +208,24 @@ def _session_reads(
         for outcome in log.week(monday).sessions:
             if not window.start <= outcome.session.date <= window.end:
                 continue
-            workout = None if outcome.workout_id is None else log.workout(outcome.workout_id)
-            found.append(card.SessionRead(outcome, workout, monday in closes))
+            found.append(card.SessionRead(outcome, monday in closes))
         monday += WEEK
     return found
+
+
+def _logged_lines(
+    log: WeekLog, window: Window, reads: Sequence[card.SessionRead]
+) -> list[LoggedLine]:
+    """Each session's lines, then every exposure in the window no session took."""
+    taken = {w for read in reads for w in read.outcome.workout_ids}
+    return [
+        *(line for read in reads for line in logged_lines(read.outcome)),
+        *(
+            unmatched_line(e)
+            for e in log.exposures
+            if window.start <= e.date <= window.end and e.working and e.workout_id not in taken
+        ),
+    ]
 
 
 def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.LiftRead]:
@@ -219,6 +233,8 @@ def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.Lif
     inside = [e for e in every if window.start <= e.date <= window.end and e.working]
     patterns = {str(r["id"]): r["pattern"] for r in exercises.every(conn)}
     priority = _priority_lifts(conn)
+    by_ref = {e.ref: e for e in every}
+    counts = Counter(e.exercise_id for e in inside)
     latest: dict[str, Exposure] = {}
     for exposure in sorted(inside, key=lambda e: e.date):
         latest[exposure.exercise_id] = exposure
@@ -235,9 +251,32 @@ def _lift_reads(conn: Connection, log: WeekLog, window: Window) -> list[card.Lif
                 (top.load.amount if top.load else None, top.reps, top.rpe),
                 after.load.amount if after else None,
                 before.load.amount if before else None,
+                tuple(s.duration_s for s in exposure.working),
+                _prescribed_seconds(log, exposure),
+                _source(exposure),
+                _source(by_ref[after.exposure]) if after else None,
+                counts[exercise_id],
             )
         )
     return reads
+
+
+def _source(exposure: Exposure) -> card.ExposureSource:
+    return card.ExposureSource(exposure.ref, exposure.date, exposure.session_id)
+
+
+def _prescribed_seconds(log: WeekLog, exposure: Exposure) -> int | None:
+    """The longest set the line prescribed in the session the exposure's workout matched."""
+    monday = log.week_of(exposure.workout_id)
+    if not log.redesigns or monday < week_monday(log.redesigns[0]):
+        return None
+    for outcome in log.week(monday).sessions:
+        if exposure.workout_id not in outcome.workout_ids:
+            continue
+        for line in outcome.lines:
+            if line.exercise == exposure.exercise_id:
+                return max((t.seconds for t in line.targets if t.seconds is not None), default=None)
+    return None
 
 
 def _niggle_reads(conn: Connection) -> list[card.NiggleRead]:

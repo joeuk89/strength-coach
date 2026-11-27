@@ -16,6 +16,7 @@ TREND_DAYS = 28
 WEEKS_IN_TREND = TREND_DAYS / 7
 RATE_PRECISION = 2
 WEIGHT_PRECISION = 1
+RATE_UNITS = "pct_bw_per_week"
 
 type WeighIns = Mapping[datetime.date, float]
 
@@ -67,6 +68,7 @@ def phase_trend_off(phase: PhaseInForce, weigh_ins: WeighIns, on: datetime.date)
             "phase_id": phase.id,
             "target_rate": target,
             "observed_rate": rate,
+            "rate_units": RATE_UNITS,
             "window": [since.isoformat(), on.isoformat()],
         },
         f"bodyweight moved {rate:+g} % a week over the last {TREND_DAYS} days against the "

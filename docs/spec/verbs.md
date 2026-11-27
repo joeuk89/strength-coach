@@ -1,4 +1,4 @@
-# Verb set and output budgets
+# Verb set and default outputs
 
 The seventeen verbs the agent, the hooks and a human terminal can run, what each returns by
 default, what a second identical call does, and the rule for adding one. Decided 2026-10-31
@@ -8,7 +8,8 @@ contract tests. Amended 2026-10-31 by [Verb, hook and validation amendments](htt
 the `writes` declaration field, `--dry-run` on every asked verb, the exit-class codes, the
 Draft-local key, `notes` in the plan Draft, and what `status` and `query` return. Amended
 2026-11-07 by the `report` verb (`voice.md`, "Reporting"): the seventeenth leaf, declared
-`writes: github`.
+`writes: github`. Amended 2026-11-27 by the owner on #362: no envelope has a size budget, a list
+returns whole by default, and only the history views page.
 
 ## Budget and admission
 
@@ -31,18 +32,18 @@ printed before its JSON, and the rest asked the six questions the `query` views 
 | Leaf | Kind | Does |
 | --- | --- | --- |
 | `status` | read | where we stand and what needs attention; what the SessionStart hook shows |
-| `schema [verb] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data |
+| `schema [verb ...] [--registry <name>]` | read | the verb declarations as JSON Schema, or one registry as data; a two-word verb is given as two words or quoted as one |
 | `import [--full]` | store write | Hevy workouts append-only with tombstones (ADR 0011); kit is a committed file, never imported (ADR 0021); like every verb, rebuilds a missing database from `export/` first (`schema.md`, "The rebuild") |
 | `checkin open [--date <d>] [--tier light\|deep] [--readiness poor\|ok\|good]` | store write (the pull) | the check-in card (`check-in.md`) |
 | `checkin record <draft> [--dry-run]` | store write | the Check-in row plus every record the file carries |
 | `record <draft> [--dry-run]` | store write | ledger writes outside a check-in, any mix of record kinds |
-| `plan draft [--week <monday>] [--out <path>]` | store write (the pull), writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context), returns its path and summary |
+| `plan draft [--week <monday>] [--out <path>] [--refresh <path>]` | store write (the pull), writes a Draft file | derives the week's Prescriptions, writes the plan Draft (with the window's Athlete notes as context and an empty acknowledgement stub per warning), returns its path and summary; `--refresh` re-derives an edited Draft in place |
 | `plan apply <draft> [--dry-run] [--expect <hash>]` | Writing verb (Hevy) | the one Hevy write (ADR 0006, 0011) |
 | `program show [--draft [--apply-plan <week>]]` | read, may write a Draft file | the version in force, or the current version as a Draft to edit |
 | `program adopt <draft> [--dry-run] [--position <week>]` | store write | a new Program version (`program.md`) |
 | `goal adopt <draft> [--dry-run]` | store write | the Goal, and a Phase opened or closed in the same file (`goals.md`) |
 | `progress` | store write (the pull) | the progress view (`goals.md`) |
-| `query <view> [params]` | read | one of the seven read views below |
+| `query <view> [params]` | read | one of the eight read views below |
 | `publish [--dry-run]` | Writing verb (git) | export, pages, the athlete-authored files (`coach.toml`, `profile.md`, `kit/`), one commit (ADR 0001, 0012, 0021) |
 | `upgrade [--dry-run]` | Writing verb (git) | migrate, export, bump the pin, regenerate, commit (ADR 0007) |
 | `init [--dry-run] [--pin <X.Y.Z>]` | Writing verb (git) | create an instance (`instance.md`), then the full pull when Hevy is on and a key is set |
@@ -70,8 +71,11 @@ A Draft verb's declaration names the Draft it reads, so `coach <verb> --help` an
 Schema recorded from the verb's own parser over a minimal example and coverage Drafts (so it
 cannot drift from what the parser reads), and the example. A scheme's params come from the
 `schemes` registry and the record tables from `record-kinds`, `check_in_only` kinds in the
-check-in file's schema alone. The schema states shape, not the cross-field rules the checks and
-the dry run report.
+check-in file's schema alone, and an annotation's params from `annotation-kinds`, which names
+each kind's target and params; the parser refuses a param its kind does not declare or a
+required one left out. The plan Draft's schema marks the keys `plan draft` writes and `plan
+apply` ignores on read (`supersedes`, `note`, `[[session]]`, `[[flag]]`). The schema states
+shape, not the cross-field rules the checks and the dry run report.
 
 **The pull.** A verb whose result derives from workouts pulls Hevy first, through the same
 service function `import` runs, when `[hevy]` is on: `checkin open`, `plan draft`, `progress`,
@@ -103,7 +107,7 @@ Not leaves, and why:
   `checkin open` returns the card as data the agent voices, `program show --draft` returns a form
   by path.
 
-## Envelope and budget
+## Envelope and lists
 
 The envelope is ADR 0002's: `schema_version`, `ok`, `verb`, `result` or `error {code, message}`,
 `warnings[]`. `coach --version` needs no instance and returns the same envelope with `verb: null`
@@ -112,32 +116,35 @@ Three rules every leaf obeys:
 
 - **Stdout is exactly one JSON document.** Nothing before it, nothing after it, on any exit class.
   Diagnostics go to stderr. A contract test parses the stdout of every declared example as JSON.
-- **6 KB default on every envelope.** Reads, write results, dry runs (the permission prompt shows
-  one) and errors all fit it. Five verbs are allowed over it, because their whole default
-  output is what the agent must act on: `checkin open` (the card), `plan apply --dry-run` (ADR
-  0006's approval prompt), `program adopt --dry-run` (every adopt warning), `report
-  --dry-run` (the whole issue body the athlete approves) and `schema` with no argument (every
-  verb's declaration and every registry name, the agent's one call to see them all) or naming a
-  Draft verb (the whole Draft schema the agent writes the file against). `--full` lifts the cap; `--fields a.b,c` is a comma list of dotted
-  paths into `result` only, allowed on every verb, and excludes `--full`; the envelope's own
-  fields stay, `warnings[]` always present, and a path naming one is refused saying so. One generated size test per
-  declaration.
-- **Lists truncate, fields never drop.** A row list defaults to the newest 10 (`--last <n>`) and
-  carries `count` and `truncated`; meeting the cap by truncating rows is allowed, meeting it by
-  omitting a declared field is not. A grouped flag list (one row per flag code with its
-  `keys[]`) never loses a row: the cap trims trailing keys from the longest `keys[]` first and
-  marks that row `keys_truncated: true`, so every code stays visible. The `plan apply --dry-run`
-  flag list is never cut, by `--last` or the cap, because the agent approves against it: it
-  carries `flag_count` and no `flags_truncated`.
+- **No size budget.** No envelope is cut to meet a size. A cut result leaves the agent acting on
+  part of the data or spending calls to fetch the rest, and every cap so far proved arbitrary.
+  `--fields a.b,c` is a comma list of dotted paths into `result` only, allowed on every verb, and
+  excludes `--full`; the envelope's own fields stay, `warnings[]` always present, and a path
+  naming one is refused saying so.
+- **A list is whole, a history view pages.** A row list carries `count` and `truncated` (or
+  `<list>_count` and `<list>_truncated`) and returns every row by default: card field rows,
+  `plan draft` flags (every code and every key) and notes, `plan apply` outcomes, `program show`
+  sessions, `schema --registry` rows and the `query` views `flags`, `lines`, `routines` and
+  `against`. Each is bounded by a week, a program or a registry, and the agent acts on all of it.
+  `--last <n>` keeps the first n when the agent asks. Four views read history that grows without
+  end, so they page at 50 rows: `query exposures` (every logged exercise), `query readings`
+  (Weigh-ins, Sleep nights and Activities), `query ledger` (a record kind's rows and event
+  history) and `query exercises` (a search over the whole library). The page is not a budget:
+  `truncated` says there is more, `--last <n>` sets the page and `--full` returns every row.
+  `schema --registry views` names each view's `page`. A declared field never drops.
+- **`--full` adds detail.** It gives each line's history on `progress`, the full pull on
+  `import`, one row per flag on `query flags`, every row of a paged view and the whole approval
+  prompt on `plan apply --dry-run`. Elsewhere it is accepted and changes nothing.
 
 ## Drafts written by the engine
 
-ADR 0002 has documents travel as files the agent wrote. Two reads hand the agent a form larger
-than the cap, so they write it: `plan draft` and `program show --draft` write a TOML Draft
+ADR 0002 has documents travel as files the agent wrote. Two reads hand the agent a form it
+edits, so they write it: `plan draft` and `program show --draft` write a TOML Draft
 (through the one emitter in `render`, ADR 0019) to
 `.coach/drafts/<date>-<kind>.toml` (or `--out <path>`) and return the path, the file hash and a
 compact summary. The agent edits the file in place and passes the path to `plan apply` or
-`program adopt`. The engine never overwrites a Draft. When the default path already exists and
+`program adopt`. The engine never overwrites a Draft, except the one a `plan draft --refresh`
+names (below). When the default path already exists and
 its content equals what the verb would write (same hash), the verb returns `ok` with that path:
 an identical re-derivation is a no-op. When the content differs, the verb writes to the next free
 suffix, `<date>-<kind>-2.toml`, `-3`, and returns that path, so an edited Draft is never lost and
@@ -157,12 +164,13 @@ assigned id before it writes; the stored rows carry only real ids and the key is
 
 ## Default summaries
 
-What each leaf's `result` carries without `--fields` or `--full`. Row lists follow the list rule.
+What each leaf's `result` carries without `--fields` or `--full`. Row lists follow the list rule
+(above).
 
 | Leaf | Default `result` |
 | --- | --- |
-| `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified`); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`), `plan_behind_program` among them while this week's plan in force was approved under an older version; whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
-| `schema` | the declaration(s), or the registry rows. A Draft verb's declaration carries `draft`: the Draft `kind` (`program`, `plan`, `ledger`, `check-in`, `goal`, `report`), a JSON Schema 2020-12 `schema` of the TOML file recorded from the verb's own parser, and one minimal `example` the parser accepts. The verb-less listing leaves `draft` out of each row |
+| `status` | in order: engine version against the pin; Hevy on or off, age of the last import, workouts stored (Hevy and manual counts); store schema version; each plate-pool location's kit tables, current or stale against its inventory (`kit_tables_stale`, ADR 0021); plan in force (week, approved date, hash, routines verified or `unverified` against the newest approved WeekPlan, which it names: next week's once `plan apply` has pushed it); the rotation's week and position; program version in force; the current Goal (id, kind, priority lifts) and the open Phase (id, kind, `until`); Block (hard weeks against the ceiling, light week or deload pending); check-in due and its derived tier; open niggles and due follow-ups as counts with ids; Decisions in force as counts by kind with ids; current Observations as a count with ids; the outside-plan warnings standing (`validation.md`), `plan_behind_program` among them while this week's plan in force was approved under an older version and no plan for next week was approved under the version in force; whether the export is behind the store, or the store behind the export (`store_behind_export`, `schema.md`). No prose line. The cutover acceptance check reads this summary and nothing else (`cutover.md`) |
+| `schema` | the declaration(s), or the registry rows. A Draft verb's declaration carries `draft`: the Draft `kind` (`program`, `plan`, `ledger`, `check-in`, `goal`, `report`), a JSON Schema 2020-12 `schema` of the TOML file recorded from the verb's own parser, and one minimal `example` the parser accepts. The verb-less listing keeps only the Draft `kind` in each Draft verb's row, never the schema or example. `query --draft` reads a plan Draft too and points to `schema plan apply` for its shape. With `--registry`, a registry whose rows need a pointer carries a `note`: `errors` names `--registry flags` for the codes a Draft violation is refused with |
 | `import` | whether the store was rebuilt from the export first (`rebuilt`, with the manifest's schema version); workouts new, versioned, gone, back, window |
 | `checkin open` | the card (`check-in.md`), derived tier, window, `pull`; the outside-plan codes it reports in `warnings[]` (`week.md`) |
 | `checkin record` | row id, window, tier, ids written by record kind, superseded row id if any. The file may carry `window_start` on the instance's first row only (`week.md`) |
@@ -170,12 +178,12 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 | `record` | ids written by record kind, withdrawn or superseded ids if any |
 | `record --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `plan draft` | path, hash, week, superseded plan id if any, line count, every flag code with its count and keys (each key with the params hash an acknowledgement copies), rotation position and its source, `notes[]` (the Athlete notes since the last approved WeekPlan, verbatim with `about`; `check-in.md`), `pull` |
-| `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, every flag in validation order as `{key, code, severity, params_hash, left}` (`left` the acknowledgement that leaves it, or null; `--full` gives each flag whole) with `flag_count`, the hash |
+| `plan apply --dry-run` | ADR 0006's prompt summary: week, folders to create, routine changes (update, create, retire), templates to create, every flag in validation order, whole: `{key, code, severity, scope, params, params_hash, rn, message, left}` (`left` the acknowledgement that leaves it, or null) with `flag_count`, the hash |
 | `plan apply` | WeekPlan id, hash, per-routine outcome (written, verified, unverified), audit lines appended |
 | `program show` | version number, kind, emphasis, adopted date, `because`, sessions with line counts; with `--draft`: path and hash |
 | `program adopt --dry-run` | the diff against the previous version with filled defaults, violations, warnings (`program.md`), `pull`; `plan_behind_program` in `warnings[]` when the version would leave this week's plan in force behind |
 | `program adopt` | version number, kind, Block reset or kept, acknowledgements frozen, `pull`; `plan_behind_program` in `warnings[]` when the version leaves this week's plan in force behind, so the week is redrafted and applied again |
-| `goal adopt` | goal id, kind, priority lifts, phase opened or closed |
+| `goal adopt` | goal id, kind, priority lifts, phase opened or closed, and the diff from the Goal it supersedes: kind, priority lifts and `why` in full as from and to, milestones added and removed |
 | `goal adopt --dry-run` | the real result with `dry_run: true`, `no_op: true` on an already-stored Draft |
 | `progress` | `goals.md`'s view: per priority lift e1RM trend and cadence signal, milestones, Phase status, Block, `pull` |
 | `query` | `rows[]`, `count`, `truncated` |
@@ -191,6 +199,12 @@ What each leaf's `result` carries without `--fields` or `--full`. Row lists foll
 - **`plan draft --week`** defaults to the next week with no approved plan, or the current week
   while its plan is unapproved. When an approved WeekPlan exists for the week, the Draft is a
   superseding one and the summary names the plan it supersedes.
+- **`plan draft --refresh <path>`** reads an edited plan Draft and re-derives it from its own
+  week, overrides, confirmed position and filled acknowledgements, so the flags the overrides
+  raise appear with their stubs without a dry run in between. It rewrites that file in place,
+  or writes to `--out` when given; `--week` beside it is `invalid_argument`. The Athlete notes,
+  the superseded plan, every `[[flag]]` table and the stubs are derived again, so an empty stub
+  for a warning that no longer stands goes.
 - **`import`** has one source, Hevy; with no `[hevy]` table it reports `skipped` and exits 0.
   Kit is read from `kit/` by the verbs that round, never pulled (ADR 0021).
 - **`program show --apply-plan <week>`** folds that WeekPlan's swap and pin overrides into the
@@ -222,7 +236,7 @@ check-in file adds its own header (`date`, `tier`, `read`; `check-in.md`).
 | weigh_in | `[[weigh_in]]` | a Weigh-in | |
 | sleep_night | `[[sleep_night]]` | a Sleep night | |
 | activity | `[[activity]]` | an Activity | |
-| status_span | `[[status_span]]` | a Status span: ill, injured, travel, `no_training`; withdrawn, never deleted | |
+| status_span | `[[status_span]]` | a Status span: ill, injured, travel, `no_training`; withdrawn, never deleted. An `ill` span with a `to_date` may carry `cap_ends`, on or after it: the last day of the illness cap as the athlete stated it | |
 | exercise | `[[exercise]]` | an edit to an existing library Exercise (the four Hevy template columns, load mode, equipment kind; name and identity stay), or a new library Exercise with every column, `source = record`, for a Hevy template the history uses and no program line names (`cutover.md`) | |
 | observation | `[[observation]]` | an Observation raised or retired (ADR 0009) | yes |
 
@@ -232,17 +246,19 @@ opened or closed inside a check-in file or a `goal adopt` Draft (`goals.md`), so
 
 ## Read views
 
-Seven parametrised reads under `query`, each within the cap, each a row list:
+Eight parametrised reads under `query`, each a row list; `exposures`, `readings`, `ledger` and
+`exercises` page at 50 rows (the list rule):
 
 | View | Params | Rows |
 | --- | --- | --- |
-| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | exercise, date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, e1RM, annotations applied |
+| `exposures` | `--exercise <id>` (repeatable), `--since <date>` or `--last <n>` | exercise, date, session (the workout's matched planned session, for every workout, `null` when unmatched; rows matched to a conditioning session are shown, not hidden), load, reps, RPE, the seconds of each set where the sets carry a duration (`duration_s`) and the metres where they carry a distance (`distance_m`), e1RM, annotations applied |
 | `readings` | `--kind weigh_in\|sleep_night\|activity`, `--last <n>` | the record's fields with source |
 | `flags` | `--code`, `--severity`, `--scope`, `--summary`, `--draft <path>` | flags frozen on the plan in force, or, with `--draft`, on that plan Draft re-validated now (the same validation `plan apply --dry-run` runs, read-only). With no filter, one row per flag code: `code`, `severity`, `count`, `keys[]` (each key with its params hash, in the Draft's order); the message is the registry's (`schema --registry flags`). A filter (`--code`, `--severity`, `--scope`) or `--full` gives one row per flag with its message; `--summary` gives counts by (code, severity) |
 | `lines` | `--exercise`, `--session`, `--date`, `--changed`, `--draft <path>` | lines of the plan in force, or of the named Draft: date, session, exercise, prescription, change from last week, flags |
 | `routines` | none | the Routine map joined to folders: session, routine id, folder, status, last verified |
 | `ledger` | `--kind <record kind>`, `--id <id>`, `--open` | the record's fields and its event history |
 | `exercises` | `--match <text>`, `--pattern <pattern>` (repeatable), `--muscle <muscle>` (repeatable), `--last <n>` | the library by id: id, name, load mode, equipment kind, pattern, muscles (primary and secondary), Hevy template id, source. `--match` is a case-insensitive substring of the id or name; a repeated `--pattern` or `--muscle` keeps any of them, a muscle counting in primary or secondary; the filters combine, and one that matches nothing gives no rows |
+| `against` | `--week <date>`, `--session <id>`, `--off`, `--last <n>` | each line of the week's own WeekPlan (the week holding `--week`, else today; so a past week stays readable after the next plan is in force), in session then plan order, `hold` lines included and marked `hold`, then each exercise the session's matched workouts logged and no line prescribed: date, session, exercise, workouts (every workout matched to the session, in start-time order), state (`logged`, `not_logged`, `not_prescribed`), the prescription as runs of identical prescribed sets (sets, reps or range, seconds, load, authored RPE), the logged working sets as parallel lists (load, reps, seconds, RPE), per logged set the reps short of the bottom of the range and the RPE off the authored RPE (logged minus authored; `null` for a set beyond the prescription), sets missing, RPE missing, and `off`: not logged, not prescribed, or any set missing, short, unrated against an authored RPE or off by 1.5 RPE or more. `--off` keeps only those rows. The card's `against` counts per session are these rows' counts over its logged lines, `hold` lines left out |
 
 Field projection is `--fields`, never a view. No verb knows a "current" Draft: a Draft is read by
 nothing after its verb consumes it (`instance.md`), so a read either names the file by path or
@@ -274,7 +290,7 @@ Verbs without a Draft:
 | --- | --- |
 | `import` | no new versions, no-op counts of zero |
 | `publish` | nothing to export and no page changed: no commit, `ok` |
-| `plan draft`, `program show --draft` | `ok` with the same path when the file equals what it would write; the next `-n` suffix when it differs (above) |
+| `plan draft`, `program show --draft` | `ok` with the same path when the file equals what it would write; the next `-n` suffix when it differs (above); `plan draft --refresh` rewrites the file it names, the same bytes again on an unchanged store |
 | `upgrade` | pin already at the engine version: no-op |
 | `init` | an instance already exists: exit 5, `instance_exists` |
 | reads | pure |
@@ -313,9 +329,9 @@ Generated from the declarations, none hand-written per verb:
   is a separate console entry point for the plugin's hooks (ADR 0019), not a leaf, and is absent
   from `--help`, `schema` and the generated permission rules.
 - Every declared example's stdout parses as exactly one JSON document.
-- Every default envelope but the five allowed over it is under 6 KB on the fixture instance,
-  which overflows every list a default summary truncates (`testing.md`); this test lives in
-  `tests/contract/` only.
+- Every declared example and every view on the fixture instance carries each field its
+  declaration requires, and each `truncated` a declaration names is true on some call
+  (`testing.md`); this test lives in `tests/contract/` only.
 - Every verb declared `writes: hevy`, `git` or `github` declares `--dry-run`, and its dry run on the
   fixture instance writes no file and opens no transaction.
 - Every verb with a `draft` argument declares `--dry-run`, and its dry run on the fixture

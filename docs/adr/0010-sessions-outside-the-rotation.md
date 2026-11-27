@@ -83,7 +83,10 @@ WeekPlan override, a longer park or resume is a Decision.
   workout history is protected.
 - Practice workouts match the practice session by `docs/spec/week.md`'s one Match rule (the
   day's window, routine id as a tiebreaker; amended 2026-10-31) and import as ordinary append-only
-  Workouts.
+  Workouts. A workout takes a practice or conditioning session only by its routine id or an
+  exercise it shares with the session's lines, and a second workout of an already-matched session
+  joins that session first, so a split core session never falls to the practice session beside it
+  (amended 2026-11-27).
 
 ## Consequences
 

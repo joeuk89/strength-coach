@@ -9,7 +9,7 @@ from coach.cli.declaration import (
     Json,
     Outcome,
 )
-from coach.cli.drafts import write_engine_draft
+from coach.cli.drafts import read_draft, rewrite_draft, write_engine_draft
 from coach.cli.instance import open_instance_store
 from coach.cli.kit import read_kit_files, require_current_kit
 from coach.cli.pull import PULL_SCHEMA
@@ -17,29 +17,45 @@ from coach.core.draft_fields import draft_hash
 from coach.core.errors import Invalid
 from coach.core.flag import grouped
 from coach.core.plan_draft import PlanDraft
+from coach.core.plan_input import parse_plan_input
 from coach.services.plan_draft import plan_draft
 
 
 def run(call: InstanceCall) -> Outcome:
     require_current_kit(call.instance)
-    out = call.args.get("out")
+    out = _text(call.args.get("out"))
+    refresh = _text(call.args.get("refresh"))
+    week = _week(call.args.get("week"))
+    if refresh is not None and week is not None:
+        raise Invalid("invalid_argument", "--refresh takes its week from the Draft; drop --week")
+    found = None if refresh is None else parse_plan_input(read_draft(refresh), file=refresh)
     with open_instance_store(call.instance) as conn:
         drafted = plan_draft(
             conn,
             config=call.instance.config,
             kits=read_kit_files(call.instance),
             clock=call.clock,
-            week=_week(call.args.get("week")),
+            week=week if found is None else found.week,
+            overrides=() if found is None else found.overrides,
+            position=None if found is None else found.position,
+            acknowledgements=() if found is None else found.acknowledgements,
         )
-    path = write_engine_draft(
-        call.instance.root,
-        today=call.clock.today().isoformat(),
-        kind="plan",
-        text=drafted.text,
-        out=out if isinstance(out, str) else None,
-    )
+    if refresh is not None and out is None:
+        path = rewrite_draft(refresh, drafted.text)
+    else:
+        path = write_engine_draft(
+            call.instance.root,
+            today=call.clock.today().isoformat(),
+            kind="plan",
+            text=drafted.text,
+            out=out,
+        )
     digest = draft_hash(drafted.text.encode("utf-8"))
     return Outcome(_summary(drafted.draft, path, digest, None if call.full else call.last))
+
+
+def _text(value: object) -> str | None:
+    return value if isinstance(value, str) else None
 
 
 def _week(value: object) -> datetime.date | None:
@@ -81,7 +97,8 @@ DECLARATION = Declaration(
         "Draft to edit, with the Athlete notes since the last approved WeekPlan. Returns the "
         "path, hash, week, the plan it supersedes, the line count, every flag code with its "
         "count and keys, each key with its params hash, the rotation position with its source "
-        "and the notes."
+        "and the notes. The Draft holds an empty acknowledgement stub for each warning; "
+        "--refresh re-derives an edited Draft in place."
     ),
     writes="store",
     pulls_first=True,
@@ -92,6 +109,11 @@ DECLARATION = Declaration(
             "approved WeekPlan)",
         ),
         Argument("--out", "where the Draft is written (default .coach/drafts/<date>-plan.toml)"),
+        Argument(
+            "--refresh",
+            "an existing plan Draft to re-derive in place: its week, overrides, confirmed "
+            "position and filled acknowledgements kept, a stub added for each new warning",
+        ),
     ),
     output={
         "type": "object",
@@ -129,7 +151,6 @@ DECLARATION = Declaration(
                                 "required": ["key", "params_hash"],
                             },
                         },
-                        "keys_truncated": {"type": "boolean"},
                     },
                     "required": ["code", "severity", "count", "keys"],
                 },
@@ -147,5 +168,9 @@ DECLARATION = Declaration(
         Example(("plan", "draft"), "Draft the next week with no approved plan."),
         Example(("plan", "draft", "--week", "2026-11-02"), "Draft the week starting 2 Nov 2026."),
         Example(("plan", "draft", "--last", "2"), "Draft the next week, listing 2 flag codes."),
+        Example(
+            ("plan", "draft", "--refresh", ".coach/drafts/2026-10-30-plan.toml"),
+            "Re-derive an edited Draft after adding overrides.",
+        ),
     ),
 )

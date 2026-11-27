@@ -101,6 +101,7 @@ def _plan(plan: PlanInForce | None) -> Json | None:
         "approved_at": plan.approved_at,
         "hash": plan.write_plan_hash,
         "routines": {
+            "plan": plan.routines_plan,
             "verified": plan.routines_verified,
             "unverified": list(plan.routines_unverified),
         },
@@ -178,7 +179,7 @@ OUTPUT: Json = {
             week=DATE,
             approved_at=STRING,
             hash=STRING,
-            routines=_object(verified=INTEGER, unverified=STRINGS),
+            routines=_object(plan=STRING, verified=INTEGER, unverified=STRINGS),
         ),
         "rotation": _object(
             True,

@@ -9,11 +9,12 @@ from coach.core.config import Units
 from coach.core.flag import Flag, leave
 from coach.core.planned_week import week_monday
 from coach.core.program.form import Line, ProgramForm
+from coach.core.stall import judged_line
 from coach.services.closed_weeks import ClosedWeeks
 from coach.services.history import read_history
-from coach.services.ladders import rung_decisions, standing_line
+from coach.services.ladders import RUNG_DECISIONS, standing_line
 from coach.services.leave_warning import leave_warning_decisions
-from coach.store import programs, week_plans
+from coach.store import decisions, programs, week_plans
 from coach.store.connection import Connection
 
 _DAY = datetime.timedelta(days=1)
@@ -45,7 +46,7 @@ def cadence_signals(
     adherence = _adherence(closed, before, last)
     exposures = read_history(conn, units).lifting
     left = leave_warning_decisions(conn, on)
-    rungs = rung_decisions(conn, zone, on)
+    rungs = decisions.in_force_dated(conn, on, RUNG_DECISIONS, zone)
     found: list[Flag] = []
     for session_id, line in _lines(version.form):
         if any(
@@ -61,7 +62,9 @@ def cadence_signals(
             (before, last),
             [e for e in counted if e.exercise_id == standing.exercise],
             adherence,
-            _capped(conn, closed, last, line) if line.scheme.name == "top_backoff" else (),
+            _capped(conn, closed, last, session_id, line)
+            if line.scheme.name == "top_backoff"
+            else (),
             session_id,
             standing,
         )
@@ -88,9 +91,13 @@ def _form_at(conn: Connection, span: BlockSpan) -> ProgramForm | None:
 
 
 def _scheme_of(form: ProgramForm, session_id: str, exercise_id: str) -> str | None:
+    """The scheme of the exercise's line in the session, or, in a version without that session,
+    of its judged line: a renamed session keeps the lift's read."""
     session = form.session(session_id)
-    lines = session.lines if session else ()
-    return next((line.scheme.name for line in lines if line.exercise == exercise_id), None)
+    if session is None:
+        judged = judged_line(form, exercise_id)
+        return None if judged is None else judged.line.scheme.name
+    return next((line.scheme.name for line in session.lines if line.exercise == exercise_id), None)
 
 
 def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:
@@ -99,9 +106,11 @@ def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:
     return sum(w.adherence_trained for w in weeks) / planned if planned else None
 
 
-def _capped(conn: Connection, closed: ClosedWeeks, span: BlockSpan, line: Line) -> list[bool]:
-    """Per Prescription of the line frozen in the closed Block's ordinary weeks, whether the
-    one-row cap set its top."""
+def _capped(
+    conn: Connection, closed: ClosedWeeks, span: BlockSpan, session_id: str, line: Line
+) -> list[bool]:
+    """Per Prescription of the line frozen in its session in the closed Block's ordinary weeks,
+    whether the one-row cap set its top."""
     found: list[bool] = []
     for week in closed.weeks:
         if not week.ordinary or not span.holds(week.monday):
@@ -110,7 +119,9 @@ def _capped(conn: Connection, closed: ClosedWeeks, span: BlockSpan, line: Line) 
         if plan is None:
             continue
         for row in week_plans.prescriptions(conn, str(plan["id"])):
-            if row["exercise_id"] == line.exercise:
+            if row["session_id"] == session_id and row["exercise_id"] == line.exercise:
                 steps = cast(list[dict[str, object]], row["steps"])
-                found.append(any(step.get("cause") == "one_row_cap" for step in steps))
+                found.append(
+                    any(str(step.get("cause")).startswith("one_row_cap") for step in steps)
+                )
     return found

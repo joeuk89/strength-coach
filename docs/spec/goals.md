@@ -167,7 +167,7 @@ citation. Both live in the phase registry (`coach schema --registry phase`), bes
 
 The observed rate is the change between the current 14-day Weigh-in average and the one 28 days
 earlier, per week; `checkin open` compares it once the Phase has 28 days of weigh-ins and raises
-`phase_trend_off` (phase id, target rate, observed rate, window) when it falls outside the band.
+`phase_trend_off` (phase id, target rate, observed rate, rate units, window) when it falls outside the band.
 It is a warning at the check-in, resolved by the coach's read (diet is out of scope; the engine
 states the fact). The card carries the Phase line it reads from (`check-in.md`).
 
@@ -182,7 +182,7 @@ plan warnings (`validation.md`); scope `version` is the program version id.
 | `goal_missing` | violation | version | none | `goal adopt` |
 | `priority_lifts_required` | violation | version | emphasis | a Goal with priority lifts, or a different emphasis |
 | `emphasis_off_goal` | warning | version | goal kind, emphasis | Acknowledgement (a planned maintenance or strength block under a hypertrophy goal is legitimate) |
-| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `exercise_ladder`, `hold`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, `exercise_ladder`, or `double_progression` with a rep range inside 3–6 |
+| `scheme_off_emphasis` | warning | line | line scheme, emphasis, expected band | Acknowledgement, or the line naming a fitting scheme. Band: hypertrophy line `double_progression`, `assistance_ladder`, `exercise_ladder`, `hold`, `timed_load`; priority lift or strength line `top_backoff`, `wave_531`, `linear`, `assistance_ladder`, `exercise_ladder`, or `double_progression` with a rep range inside 3–6 |
 | `priority_lift_absent` | warning | priority_lift | exercise id | Acknowledgement, or a line for it |
 | `priority_lift_not_first` | warning | session | exercise id, position among the session's lines that carry a working group (an activation-only or warm-up line never counts) | Acknowledgement, or reordering |
 | `dose_off_band` | warning | dose | muscle or lift, target, band, phase | Acknowledgement, or a target inside the band |
@@ -226,12 +226,12 @@ Compact summary by default; `--full` adds per-line history.
 
 | Section | Content |
 | --- | --- |
-| Priority lifts | per lift: e1RM now, change over the closed block and over the last three, best load for reps, stall streak and resets under the current scheme, cadence signal if any |
+| Priority lifts | per lift: e1RM now, change over the closed block and over the last three, best load for reps, the scheme, stall streak and resets under the current scheme, cadence signal if any. The scheme, the date it took over, the stall streak and resets all read the lift's first line in a session that is not a `practice`; an `exercise_ladder` line's stall streak reads its standing rung's exercise. A lift on two such lines shows the first one's resets, per lift, under the current scheme. A lift only on a `practice` line shows no scheme, and a stall streak and resets of 0 |
 | Milestones | per milestone: distance (load, reps or ×BW to go) or the date reached |
-| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion since the rung's start, whether it is met and whether an acknowledgement holds the offer (`held`); the same rows as the check-in card's Ladders field |
+| Ladders | per `exercise_ladder` line (ADR 0023): the standing rung, the exposures toward its criterion that count on it (from the day after its `ladder_rung` Decision, or from adoption on the first rung, `prescription.md`), whether it is met and whether an acknowledgement holds the offer (`held`); the same rows as the check-in card's Ladders field |
 | Dose | per muscle and per priority lift: hard sets achieved against target, by week of the block |
 | Adherence | core sessions by tier, misses by tag |
-| Phase | kind, target rate, 14-day bodyweight trend against it, the `until` condition and whether it is met |
+| Phase | kind, target rate, 14-day bodyweight trend against it with `rate_units` naming the unit (`pct_bw_per_week`), the `until` condition and whether it is met |
 | Goal | kind, adopted date, `why` verbatim |
 
 ### Cadence signals
@@ -250,7 +250,7 @@ Every row requires adherence at or above the floor (`week.md`) over the blocks i
 | `cadence_slow` | `top_backoff`, `wave_531` | a non-positive exercise-wide e1RM slope across the two blocks; never in a `practice` session |
 | `cadence_fast` | `double_progression` | every exposure in the closed block hit the top of its rep range at or under the authored RPE, with no stall |
 | `cadence_fast` | `top_backoff` | the one-row cap bound on every exposure in the closed block: the model asked for more than a row each time |
-| `cadence_fast` | `linear`, `hold`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
+| `cadence_fast` | `linear`, `hold`, `timed_load`, `assistance_ladder`, `exercise_ladder`, `wave_531` | never raised: on `linear` the pace is already right; the others have no faster scheme to propose |
 
 A reset is the stall move the weekly rule records; its definition is the Weekly prescription
 ticket's. The signal never carries the words novice, intermediate or advanced; those stay
@@ -299,19 +299,19 @@ niggle, answered by a swap or a Niggle, never a scheme.
 | Code | Raised by | Scope | Params |
 | --- | --- | --- | --- |
 | `phase_condition_met` | `checkin open`, every check-in | instance | phase id, condition, value |
-| `phase_trend_off` | `checkin open`, every check-in | instance | phase id, target rate, observed rate, window |
+| `phase_trend_off` | `checkin open`, every check-in | instance | phase id, target rate, observed rate, rate units, window |
 
 ## What the skills ask, judge and explain
 
 One table so the four moments are seen together; nothing reads it at runtime (ADR 0020). The
-`check-in` asks row is the card builder's: `checkin open` reads the version's emphasis and
-priority lifts and asks accordingly (`check-in.md`). The other rows are each skill's own Judge,
-which carries its column in its own words inside its budget (`skills.md`). Each cell is the whole
-of what the emphasis changes.
+`check-in` asks row is the card builder's: a logged RPE answers how a lift went on every
+emphasis, so `checkin open` asks the same whatever the emphasis (`check-in.md`). The other rows
+are each skill's own Judge, which carries its column in its own words inside its budget
+(`skills.md`). Each cell is the whole of what the emphasis changes.
 
 | Moment | `hypertrophy` | priority lifts and `strength` | `maintenance` |
 | --- | --- | --- | --- |
-| `check-in` asks | reps and RIR on the lines that moved; pump and soreness as a dose read | the priority lifts first: did the top set move, how did it feel, any grind | whether the kept lifts held |
+| `check-in` asks | nothing the log answers: a lift only where its log cannot answer or does not add up (`check-in.md`, the Lifts row); soreness and niggles | as `hypertrophy`, the priority lifts leading the rows | as `hypertrophy` |
 | `plan-week` judges | dose attainment against target; a flat line early in a block wants sets (`restate_sets`), late wants the deload | e1RM trend on each priority lift; fatigue against the RIR cap; a flat block is normal, not a crisis | nothing weekly beyond the recovery ceilings |
 | `plan-week` explains a line as | last week's reps at the authored RPE, from the derivation steps | e1RM times the scheme | held |
 | `program` at the boundary | reads `coach progress`: dose achieved, muscles behind target, cadence signals; proposes next block's sets and any swap, never a scheme change on a stalled `double_progression` line | reads `coach progress`: e1RM over three blocks, milestones, cadence signals; proposes scheme changes on signalled lifts per **Response to a cadence signal**, a test week result as the training max | whether to return to the Goal's emphasis |

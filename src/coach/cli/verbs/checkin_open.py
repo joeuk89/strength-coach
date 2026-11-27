@@ -10,12 +10,12 @@ from coach.cli.declaration import (
     InstanceCall,
     Json,
     Outcome,
-    always,
 )
 from coach.cli.instance import open_instance_store
 from coach.cli.pull import PULL_SCHEMA
-from coach.core.check_in_card import CardField
+from coach.core.check_in_card import Ask, CardField
 from coach.core.errors import Invalid
+from coach.core.phase_trend import RATE_UNITS
 from coach.core.registries.ledger import READINESS
 from coach.services.checkin_open import checkin_open
 
@@ -59,14 +59,22 @@ def _field(found: CardField, last: int | None) -> Json:
         "field": found.name,
         **found.facts,
         **_row_list(found.facts.get("rows"), last),
-        "asks": [
-            {"ask": ask.kind, **({"about": ask.about} if ask.about else {})} for ask in found.asks
-        ],
+        "asks": [_ask(ask) for ask in found.asks],
+    }
+
+
+def _ask(ask: Ask) -> Json:
+    return {
+        "ask": ask.kind,
+        **({"about": ask.about} if ask.about else {}),
+        **ask.detail,
+        **({"reason": ask.reason} if ask.reason else {}),
+        **({"params": dict(ask.params)} if ask.params else {}),
     }
 
 
 def _row_list(rows: object, last: int | None) -> Json:
-    """A field's `rows` follow the list rule (verbs.md, "Envelope and budget")."""
+    """A field's `rows` follow the list rule (verbs.md, "Envelope and lists")."""
     if not isinstance(rows, list):
         return {}
     every = cast(list[object], rows)
@@ -96,7 +104,6 @@ DECLARATION = Declaration(
     ),
     writes="store",
     pulls_first=True,
-    over_budget=always,
     arguments=(
         Argument("--date", "the check-in's date (default today)"),
         Argument("--tier", "deep raises the derived tier; it never lowers it"),
@@ -131,11 +138,43 @@ DECLARATION = Declaration(
                             "type": "array",
                             "items": {
                                 "type": "object",
+                                "description": (
+                                    "a sleep_nights ask also names the record, the hours under "
+                                    "which a night is short, the nights the Short-sleep week "
+                                    "reads and what to give; a lift_doubt ask names the rule "
+                                    "that fired it in reason, and in params.exposures each "
+                                    "session and date it quotes with the logged sets (load, "
+                                    "reps, rpe), the prescribed sets (reps, reps_top, rpe, "
+                                    "load), on exposures_disagree each one's e1rm, and on "
+                                    "effort_missing each set's position and seconds, the "
+                                    "prescribed seconds and the repair target"
+                                ),
                                 "properties": {
                                     "ask": {"type": "string"},
                                     "about": {"type": "string"},
+                                    "record": {"type": "string"},
+                                    "under_hours": {"type": "number"},
+                                    "nights": {
+                                        "type": "array",
+                                        "items": {"type": "string", "format": "date"},
+                                    },
+                                    "give": {"type": "string"},
+                                    "reason": {"type": "string"},
+                                    "params": {"type": "object"},
                                 },
                                 "required": ["ask"],
+                            },
+                        },
+                        "phase": {
+                            "type": "object",
+                            "description": "weight_phase only, with an open Phase",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "kind": {"type": "string"},
+                                "target_rate": {"type": "number"},
+                                "observed_rate": {"type": ["number", "null"]},
+                                "rate_units": {"const": RATE_UNITS},
+                                "until": {"type": "object"},
                             },
                         },
                     },

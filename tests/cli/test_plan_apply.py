@@ -21,7 +21,7 @@ from support.plans import squat_logged
 from support.terminal import typed
 from support.worked_week import a_dry_run, the_worked_week
 
-from coach.cli import app, envelope
+from coach.cli import app
 from coach.cli.hook.in_process import run_in_process
 from coach.cli.registry import declarations
 from coach.cli.verbs.plan_apply import dry_run_result
@@ -461,8 +461,8 @@ def test_query_flags_and_lines_with_no_plan_in_force_return_no_rows(instance: Pa
         assert run.envelope["result"] == {"rows": [], "count": 0, "truncated": False}
 
 
-def test_full_carries_each_flag_whole(instance: Path) -> None:
-    run = coach("plan", "apply", a_draft_file(instance), "--dry-run", "--full")
+def test_the_dry_run_carries_each_flag_whole_with_no_options(instance: Path) -> None:
+    run = coach("plan", "apply", a_draft_file(instance), "--dry-run")
 
     [flag] = run.envelope["result"]["flags"]
     assert flag["params"] == {
@@ -487,13 +487,10 @@ def test_the_hook_asks_with_the_prompt_of_the_real_dry_run(instance: Path) -> No
     assert f"Write plan hash {digest}" in run.reason
 
 
-def test_the_default_dry_run_of_the_worked_week_fits_the_envelope_budget() -> None:
+def test_the_dry_run_of_the_worked_week_lists_each_flag() -> None:
     found = a_dry_run(the_worked_week())
     result = dry_run_result(found, units="lb", full=False)
 
-    document = envelope.render(envelope.success(1, "plan apply", result, []), pretty=False)
-
-    assert len(document.encode("utf-8")) < envelope.BUDGET_BYTES
     assert result["flag_count"] == len(found.flags) == 4
     flags: Any = result["flags"]
     assert [(f["key"], f["code"], f["severity"], f["left"]) for f in flags] == [
@@ -501,7 +498,7 @@ def test_the_default_dry_run_of_the_worked_week_fits_the_envelope_budget() -> No
     ]
 
 
-def test_the_declared_dry_run_flags_are_the_rows_an_acknowledgement_needs() -> None:
+def test_the_declared_dry_run_flags_are_whole() -> None:
     [declaration] = [d for d in declarations() if d.name == "plan apply"]
     properties: Any = declaration.output["properties"]
 
@@ -510,6 +507,10 @@ def test_the_declared_dry_run_flags_are_the_rows_an_acknowledgement_needs() -> N
         "key",
         "code",
         "severity",
+        "scope",
+        "params",
         "params_hash",
+        "rn",
+        "message",
         "left",
     ]

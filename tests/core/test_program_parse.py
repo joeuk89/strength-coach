@@ -87,6 +87,15 @@ def test_a_malformed_value_is_an_invalid_argument_naming_it(
     assert why in raised.value.message
 
 
+def test_a_deload_without_test_priority_lifts_names_the_key_as_required() -> None:
+    deload = {"hard_weeks_ceiling": 6, "set_cut_pct": 40, "load_cut_pct": 0, "rpe_cap": 8}
+
+    with pytest.raises(Invalid) as raised:
+        parse_program_draft(toml(a_draft(deload=deload)), file="d.toml")
+
+    assert raised.value.message == "d.toml: deload.test_priority_lifts is required"
+
+
 def test_a_draft_that_is_not_toml_is_an_invalid_argument() -> None:
     with pytest.raises(Invalid):
         parse_program_draft(b"name = ", file="d.toml")

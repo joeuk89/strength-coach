@@ -9,6 +9,7 @@ from coach.core.check_in import Window
 from coach.core.check_in_card import Card
 from coach.core.config import Athlete, ImplementChoice, Location, Units
 from coach.core.exercise_ladder import RungShape
+from coach.core.names import named
 from coach.core.progress import Progress
 from coach.core.rack import ListedRack
 
@@ -160,10 +161,10 @@ class PageNames:
     exercises: Mapping[str, str]
 
     def session(self, session_id: str) -> str:
-        return self.sessions.get(session_id, session_id)
+        return named(self.sessions, session_id)
 
     def exercise(self, exercise_id: str) -> str:
-        return self.exercises.get(exercise_id, exercise_id)
+        return named(self.exercises, exercise_id)
 
 
 @dataclass(frozen=True)

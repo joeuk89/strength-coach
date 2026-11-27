@@ -7,7 +7,7 @@ from coach.core.closed_week.match import (
     match_week,
     workout_class,
 )
-from coach.core.exposure import LibraryEntry
+from coach.core.exposure import Exposure, LibraryEntry
 from coach.core.log import StoredSet
 from coach.core.prescription import PlannedSession
 
@@ -18,12 +18,17 @@ def day(n: int) -> datetime.date:
     return MONDAY + datetime.timedelta(days=n)
 
 
-def a_planned(session_id: str, on: int, cadence: str = "weekly") -> PlannedSession:
-    return PlannedSession(session_id, day(on), "home", "lifting", (), cadence)
+def a_planned(
+    session_id: str, on: int, cadence: str = "weekly", kind: str = "lifting"
+) -> PlannedSession:
+    return PlannedSession(session_id, day(on), "home", kind, (), cadence)
 
 
-def a_workout(id_: str, on: int, routine: str | None = None, start: str = "") -> WeekWorkout:
-    return WeekWorkout(id_, day(on), routine_id=routine, started=start)
+def a_workout(
+    id_: str, on: int, routine: str | None = None, start: str = "", logs: tuple[str, ...] = ()
+) -> WeekWorkout:
+    exposures = tuple(Exposure(id_, exercise, day(on), ()) for exercise in logs)
+    return WeekWorkout(id_, day(on), exposures, routine_id=routine, started=start)
 
 
 def matched(
@@ -31,8 +36,14 @@ def matched(
     workouts: list[WeekWorkout],
     routines: dict[str, str] | None = None,
     claims: dict[str, tuple[datetime.date, str]] | None = None,
+    lines: dict[str, tuple[str, ...]] | None = None,
 ) -> dict[str, str]:
-    found = match_week(planned, workouts, routines=routines or {}, claims=claims or {})
+    by_ref = {
+        (s.date, s.session_id): frozenset((lines or {}).get(s.session_id, ())) for s in planned
+    }
+    found = match_week(
+        planned, workouts, routines=routines or {}, claims=claims or {}, lines=by_ref
+    )
     return {workout: session.session_id for workout, session in found.items()}
 
 
@@ -155,3 +166,127 @@ def test_a_claim_on_a_weekly_session_holds_only_on_its_date() -> None:
     claims = {"m-1": (day(2), "push")}
 
     assert matched([a_planned("push", 0)], [a_workout("m-1", 2)], claims=claims) == {}
+
+
+def a_split_day() -> list[PlannedSession]:
+    return [
+        a_planned("sun-deadlift", 6),
+        a_planned("daily-hang", 6, "daily", "practice"),
+        a_planned("cond-swings", 6, kind="conditioning"),
+    ]
+
+
+SPLIT_LINES = {
+    "sun-deadlift": ("bb_deadlift", "db_bulgarian_split_squat", "bb_hip_thrust", "db_curl"),
+    "daily-hang": ("dead_hang",),
+    "cond-swings": ("kb_swing",),
+}
+
+
+def test_a_second_workout_of_the_core_sessions_lines_joins_it_before_the_practice_session() -> None:
+    workouts = [
+        a_workout("h-1", 6, start="07:00", logs=("bb_deadlift", "db_bulgarian_split_squat")),
+        a_workout("h-2", 6, start="15:00", logs=("bb_hip_thrust", "db_curl")),
+    ]
+
+    found = matched(a_split_day(), workouts, lines=SPLIT_LINES)
+
+    assert found == {"h-1": "sun-deadlift", "h-2": "sun-deadlift"}
+
+
+def test_a_second_workout_from_the_core_sessions_routine_joins_it() -> None:
+    workouts = [
+        a_workout("h-1", 6, "r-dl", "07:00", ("bb_deadlift",)),
+        a_workout("h-2", 6, "r-dl", "15:00", ("band_pull_up",)),
+    ]
+
+    found = matched(a_split_day(), workouts, {"sun-deadlift": "r-dl"}, lines=SPLIT_LINES)
+
+    assert found == {"h-1": "sun-deadlift", "h-2": "sun-deadlift"}
+
+
+def test_a_workout_overlapping_two_matched_sessions_joins_the_larger_overlap() -> None:
+    planned = [a_planned("push", 1), a_planned("pull", 1)]
+    lines = {"push": ("bb_bench_press", "db_curl"), "pull": ("bb_row", "db_curl", "band_pull_up")}
+    workouts = [
+        a_workout("h-1", 1, start="07:00", logs=("bb_bench_press",)),
+        a_workout("h-2", 1, start="08:00", logs=("bb_row",)),
+        a_workout("h-3", 1, start="18:00", logs=("db_curl", "band_pull_up")),
+    ]
+
+    assert matched(planned, workouts, lines=lines) == {"h-1": "push", "h-2": "pull", "h-3": "pull"}
+
+
+def test_equal_overlap_on_two_matched_sessions_joins_the_first_in_plan_order() -> None:
+    planned = [a_planned("push", 1), a_planned("pull", 1)]
+    lines = {"push": ("bb_bench_press", "db_curl"), "pull": ("bb_row", "db_curl")}
+    workouts = [
+        a_workout("h-1", 1, start="07:00", logs=("bb_bench_press",)),
+        a_workout("h-2", 1, start="08:00", logs=("bb_row",)),
+        a_workout("h-3", 1, start="18:00", logs=("db_curl",)),
+    ]
+
+    assert matched(planned, workouts, lines=lines)["h-3"] == "push"
+
+
+def test_a_workout_takes_a_conditioning_session_by_a_shared_exercise() -> None:
+    workouts = [
+        a_workout("h-1", 6, start="07:00", logs=("bb_deadlift",)),
+        a_workout("h-2", 6, start="15:00", logs=("kb_swing",)),
+    ]
+
+    found = matched(a_split_day(), workouts, lines=SPLIT_LINES)
+
+    assert found == {"h-1": "sun-deadlift", "h-2": "cond-swings"}
+
+
+def test_a_workout_takes_a_practice_session_by_its_routine() -> None:
+    workouts = [a_workout("h-1", 6, "r-hang", logs=("ring_support",))]
+
+    found = matched(a_split_day()[1:], workouts, {"daily-hang": "r-hang"}, lines=SPLIT_LINES)
+
+    assert found == {"h-1": "daily-hang"}
+
+
+def test_a_workout_sharing_nothing_with_the_open_sessions_on_its_date_is_unmatched() -> None:
+    workouts = [
+        a_workout("h-1", 6, start="07:00", logs=("bb_deadlift",)),
+        a_workout("h-2", 6, start="15:00", logs=("bb_bench_press", "db_lateral_raise")),
+    ]
+
+    assert matched(a_split_day(), workouts, lines=SPLIT_LINES) == {"h-1": "sun-deadlift"}
+
+
+def test_a_claim_on_a_matched_session_adds_the_workout_and_leaves_the_first_on_it() -> None:
+    workouts = [
+        a_workout("h-1", 6, start="07:00", logs=("bb_deadlift",)),
+        a_workout("h-2", 6, start="15:00", logs=("bb_bench_press",)),
+    ]
+    claims = {"h-2": (day(6), "sun-deadlift")}
+
+    found = matched(a_split_day(), workouts, claims=claims, lines=SPLIT_LINES)
+
+    assert found == {"h-1": "sun-deadlift", "h-2": "sun-deadlift"}
+
+
+def test_a_matched_standing_session_is_joined_only_on_a_date_it_holds() -> None:
+    planned = [a_planned("mobility", 0, "standing"), a_planned("thu-squat", 3)]
+    lines = {"mobility": ("goblet_squat",), "thu-squat": ("bb_squat", "goblet_squat")}
+    workouts = [
+        a_workout("h-1", 0, logs=("goblet_squat",)),
+        a_workout("h-2", 3, logs=("bb_squat", "goblet_squat")),
+    ]
+
+    assert matched(planned, workouts, lines=lines) == {"h-1": "mobility", "h-2": "thu-squat"}
+
+
+def test_a_second_workout_that_day_joins_the_standing_session_it_matched() -> None:
+    planned = [a_planned("mobility", 0, "standing")]
+    lines = {"mobility": ("goblet_squat", "cossack_squat")}
+    workouts = [
+        a_workout("h-1", 2, start="07:00", logs=("goblet_squat",)),
+        a_workout("h-2", 2, start="18:00", logs=("cossack_squat",)),
+        a_workout("h-3", 4, logs=("goblet_squat",)),
+    ]
+
+    assert matched(planned, workouts, lines=lines) == {"h-1": "mobility", "h-2": "mobility"}

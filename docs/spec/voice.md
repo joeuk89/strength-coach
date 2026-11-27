@@ -161,8 +161,7 @@ agent must make that no existing verb can make".
 - **Dry run**: repo, title, labels, the full body as it will be sent, and `similar[]`: open
   issues labelled `bug` or `enhancement` whose title shares two or more non-stopwords with the
   Draft's, as `{number, title, url}`; null with a warning when GitHub cannot be read, never a
-  refusal. The real run never re-checks. The dry run is the fourth envelope allowed over 6 KB
-  (`verbs.md`).
+  refusal. The real run never re-checks.
 - **Result**: `{number, url, labels}`. No audit file, nothing stored.
 
 ### The prompt

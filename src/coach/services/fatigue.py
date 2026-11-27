@@ -131,11 +131,9 @@ class Fatigue:
             if week.kind in UNJUDGED_WEEKS:
                 continue
             for outcome in week.sessions:
-                if outcome.workout_id is None:
-                    continue
                 work = outcome.work
-                for exposure in self.log.workout(outcome.workout_id).exposures:
-                    targets = work.targets.get(exposure.exercise_id)
+                for exposure in (e for w in outcome.workouts for e in w.exposures):
+                    targets = work.scheme_targets.get(exposure.exercise_id)
                     if (
                         not targets
                         or exposure.date > through

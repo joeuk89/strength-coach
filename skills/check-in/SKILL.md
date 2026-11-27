@@ -5,24 +5,37 @@ description: The weekly review. Use when a check-in is due, when the athlete rep
 ---
 
 ## Read first
-The profile, once. Ask the athlete's readiness (`poor`, `ok`, `good`) first and pass it to
-`coach checkin open --readiness`. The card it returns states what the store already knows and
+The profile, once. Take the athlete's readiness (`poor`, `ok`, `good`) from their opening words
+when they give it and state it back for confirmation; ask for it only when they have not. Pass it
+to `coach checkin open --readiness`. The card it returns states what the store already knows and
 asks only what it cannot. Never change its figures or the order of its fields.
+Where a session's figures against the prescription need their lines, read them with
+`coach query against --week <its date> --session <id> --off`: each line beside its logged sets.
 
 ## Ask
 Send the card as one message in the coach's voice; the athlete answers by number. A fact the log
-already answers is stated for confirmation, not asked. Follow up only for a gap that blocks the
-read or next week's plan. On a deep tier, settle every open niggle and follow-up with the athlete
-rather than carrying them.
+already answers is stated for confirmation, not asked. Logged RPE is trusted: never ask how a lift
+felt or how many reps were left when its sets carry an RPE. Ask about a lift only for the card's
+`lift_doubt` or a specific point you must settle, and make each such question answerable without
+opening Hevy: name the session and day, quote what was logged (load, reps and RPE per set) and
+state the exact doubt. On `effort_missing` (a timed carry Hevy takes no RPE on), ask the
+effort once for the line, quoting its load, sets and seconds, and record the answer as a
+`repair` of `rpe` on each quoted set at the card's `repair` target. Follow up only for a gap
+that blocks the read or next week's plan. On a deep tier, settle every open niggle and
+follow-up with the athlete rather than carrying them.
 
 ## Judge
 - **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's
   Readiness field records it; an RPE drift trigger on the card's Block line matters on the
   compound lifts, elsewhere a rising RPE is a note.
 - **Misses.** A tag per missed core session. Pattern over blame: a run of `time` misses is a
-  schedule problem for the plan, not a willpower problem.
+  schedule problem for the plan, not a willpower problem. On `session_near_empty`, ask the
+  athlete whether the session counted: a no is a `miss_tag` on it with their reason; a yes needs
+  no record, and only then ask its session RPE.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
-  shapes next week's dose; one bad night does not.
+  shapes next week's dose; one bad night does not. Record the short nights the card's Sleep ask
+  names as `[[sleep_night]]` rows with their hours; a weekly average, when that is all the
+  athlete has, goes in verbatim as an athlete note, never as a night.
 - **Phase.** When the card says the until condition is met or the trend is off, propose
   closing or keeping it with the athlete; a new Phase opens in the record.
 - **Ladders.** The card's Ladders field is the week's ask: a `met` (`rung_met` standing) or a
@@ -30,6 +43,8 @@ rather than carrying them.
   rung in the check-in record, reason `progress`; without one the rung stands. A `met` on the
   last rung (`ladder_top`) waits for the program at the block boundary. Do not ask about a
   `held` rung.
+- **Illness.** After an ill span, ask how long they need at reduced effort and record their
+  answer as the span's cap end, "fully recovered" as the last ill day; never infer it.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain
   changes gait, sleep or daily tasks; never diagnose.
 - **Block and tier.** When the card's Block line carries a proposal or the derived tier is deep,

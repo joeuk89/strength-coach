@@ -85,6 +85,14 @@ what it reads from history, how it moves the dose, when it counts a stall and wh
 deload. Declared once in the engine's registry; the form names it.
 _Avoid_: progression (alone), plugin, model
 
+**Timed load**:
+The scheme for a loaded set held for time, such as a carry: the authored sets, seconds and
+effort target. When every set is held for its seconds at an effort at or under the target,
+the load moves one rack row up. A short set, an effort over the target or no effort given
+holds the load. The effort is the athlete's answer at the check-in, since the log records the
+seconds but no effort.
+_Avoid_: loaded hold, carry scheme
+
 **Ladder**:
 The ordered rungs a line climbs when there is no load to add: assisted loads on one exercise,
 or a run of exercises and set shapes each harder than the last. Declared whole on the line; the
@@ -186,8 +194,10 @@ _Avoid_: delta (fine as a flag param), tweak, adjustment, standing override (say
 
 **Recovery ceiling**:
 The lowest load or RPE a line may be set to on a date: a niggle's cap, the return band's cut,
-the illness cap on the first session back, or a light week's RPE cap. The return band is also a
-safety bound: no override waives it, only the days off behind it move.
+the illness cap, or a light week's RPE cap. The illness cap ends when the athlete says they have
+recovered; with no answer it holds on each lift until that lift is trained once. No pinned load
+lifts a line above a recovery ceiling. The return band is also a safety bound: no override
+waives it, only the days off behind it move.
 _Avoid_: limit, safety cap
 
 **Flag**:
@@ -288,6 +298,11 @@ Whether a trained core lifting session counted as training stress for the hard-w
 of its working sets logged, close enough to the prescribed effort. Not a measure of compliance.
 _Avoid_: compliance, completion, hard-week gate (fine in prose for the same test)
 
+**Near-empty session**:
+A matched core session with under one-third of its prescribed working sets logged. The athlete is
+asked whether it counted; a no makes it a Miss, and with no answer it stays trained.
+_Avoid_: partial session (the week kind is `partial`), abandoned session
+
 **Hit**:
 A set, or an exposure, that met its scheme's target: every working set at the authored reps at or
 under the authored RPE. The scheme moves the dose on a hit and holds otherwise. A miss in this
@@ -353,13 +368,15 @@ _Avoid_: performance, session log
 
 **Match**:
 The link from a workout to the planned session it fulfilled, or none. Derived from the session's
-date window with the routine as a tiebreaker, corrected by a match annotation, never stored.
-Every Exposure of the workout carries it.
+date window, with the routine and the exercises the workout shares with the session's lines as
+tiebreakers, corrected by a match annotation, never stored. A workout has at most one; a planned
+session may hold several, when one session is split across workouts. Every Exposure of the
+workout carries it.
 _Avoid_: mapping, reconciliation
 
 **Miss**:
-A planned session whose week has ended with no match, no move and no cancellation. Derived, never
-stored.
+A planned session whose week has ended with no match, no move and no cancellation, or one the
+athlete said did not count (a near-empty session given a miss tag). Derived, never stored.
 _Avoid_: skipped session (an optional session skipped is not a miss)
 
 **Activity**:
@@ -697,7 +714,7 @@ _Avoid_: subcommand, tool, endpoint
 **Draft**:
 A file written for one verb to consume: a plan, a check-in record, a program text form, a ledger
 of records. The agent writes it, or a verb writes it as a form for the agent to edit, never over
-an existing one. Disposable; nothing reads it after the verb takes it, and no verb knows a
+an existing one unless the agent names that one to re-derive. Disposable; nothing reads it after the verb takes it, and no verb knows a
 current one: a read names the file by path or reads the plan in force. Its shape, a JSON Schema
 and a minimal example, comes from `coach schema <verb>`.
 _Avoid_: proposal, overlay, working file, input file
@@ -766,8 +783,8 @@ at records of more than one kind: evidence, what a note is about, what an annota
 _Avoid_: link, pointer, foreign key (which is a single-kind column)
 
 **Compact summary**:
-The default output of a read verb: the few facts an agent needs next, within a fixed size budget.
-The whole record is a separate request.
+The default output of a read verb: the facts an agent needs next, with every row of a list that
+has an end. More detail, or the rest of a history view past its page, is a separate request.
 _Avoid_: digest, overview
 
 **Skill**:

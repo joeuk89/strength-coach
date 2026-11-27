@@ -18,6 +18,7 @@ from coach.core.prescription import (
 )
 from coach.core.program.form import Dose, LiftDose, Line, SetGroup
 
+UNTIL_TRAINED = "illness until this lift is trained once"
 RUNGS = [60, 50, 40, 30, 20, 10, 0]
 PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", rungs=RUNGS)
 
@@ -160,11 +161,12 @@ def test_a_pin_load_above_a_niggle_cap_is_recovery_ceiling_exceeded() -> None:
     assert line.groups[-1].load == Load(100, "total")
 
 
-def ill(from_date: str, to_date: str | None) -> StatusSpan:
+def ill(from_date: str, to_date: str | None, cap_ends: str | None = None) -> StatusSpan:
     return StatusSpan(
         "ill",
         datetime.date.fromisoformat(from_date),
         None if to_date is None else datetime.date.fromisoformat(to_date),
+        None if cap_ends is None else datetime.date.fromisoformat(cap_ends),
     )
 
 
@@ -176,9 +178,52 @@ def test_an_ill_span_with_no_exposure_after_it_caps_every_set_at_rpe_7_and_is_no
     )
 
     assert [s.step for s in line.steps].count("cut") == 0
-    assert Step("rpe_ceiling", 8, 7, "illness") in line.steps
+    assert Step("rpe_ceiling", 8, 7, UNTIL_TRAINED) in line.steps
     working = line.groups[-1]
     assert (working.count, working.rpe, working.rpe_cap) == (4, 7, 7)
+
+
+def test_a_stated_cap_end_caps_a_line_on_that_day_and_names_it() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        status_spans=(ill("2026-10-28", "2026-10-30", "2026-11-02"),),
+    )
+
+    assert Step("rpe_ceiling", 8, 7, "illness until 2026-11-02") in line.steps
+    assert line.groups[-1].rpe_cap == 7
+
+
+def test_a_stated_cap_end_caps_nothing_after_it() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        status_spans=(ill("2026-10-28", "2026-10-30", "2026-11-01"),),
+    )
+
+    assert line.groups[-1].rpe_cap is None
+    assert [s for s in line.steps if s.step == "rpe_ceiling"] == []
+
+
+def test_a_stated_cap_end_on_the_last_ill_day_is_fully_recovered_and_caps_nothing() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        status_spans=(ill("2026-10-28", "2026-10-30", "2026-10-30"),),
+    )
+
+    assert line.groups[-1].rpe_cap is None
+
+
+def test_a_stated_cap_end_holds_after_the_lift_is_trained_once() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        an_exposure("2026-10-31", (60, 10, 6), exercise_id="bb_back_squat"),
+        status_spans=(ill("2026-10-20", "2026-10-24", "2026-11-04"),),
+    )
+
+    assert Step("rpe_ceiling", 8, 7, "illness until 2026-11-04") in line.steps
 
 
 def test_an_exposure_after_the_ill_span_lifts_the_illness_cap() -> None:
@@ -200,7 +245,7 @@ def test_illness_with_days_off_over_10_is_a_return_line_with_the_cap_at_7() -> N
     assert line.steps[:4] == (
         Step("cut", 120, 114, "return 11–21, 18 days off"),
         Step("cut", 4, 3, "sets"),
-        Step("rpe_ceiling", 8, 7, "illness"),
+        Step("rpe_ceiling", 8, 7, UNTIL_TRAINED),
         Step("rpe_ceiling", 8, 7, "not_binding"),
     )
     assert (line.groups[-1].count, line.groups[-1].rpe_cap) == (3, 7)
@@ -278,7 +323,7 @@ def test_illness_inside_a_light_week_prescribes_no_test_single_and_says_why() ->
     )
 
     assert "test" not in [g.type for g in line.groups]
-    assert Step("test", None, None, "illness") in line.steps
+    assert Step("test", None, None, UNTIL_TRAINED) in line.steps
 
 
 def test_a_light_week_alone_records_no_test_step() -> None:
@@ -311,7 +356,7 @@ def test_an_rpe_ceiling_limits_the_load_through_the_e1rm_rounded_down() -> None:
 
     # e1RM 120 × (1 + 7/30) = 148; six reps at RPE 7 is 148 / (1 + 9/30) = 113.85
     assert line.steps[:3] == (
-        Step("rpe_ceiling", 8, 7, "illness"),
+        Step("rpe_ceiling", 8, 7, UNTIL_TRAINED),
         Step("rpe_ceiling", 120, 113.85, "e1rm"),
         Step("rack", 113.85, 110, "row"),
     )
@@ -526,3 +571,133 @@ def test_a_light_week_tests_the_priority_lift_and_never_its_counted_variant() ->
 
     assert "test" not in [g.type for g in on_variant.groups]
     assert [g.type for g in on_lift.groups].count("test") == 1
+
+
+ILL = (ill("2026-10-28", "2026-10-30"),)
+
+
+def bench_pin(load: float) -> PlanOverride:
+    return PlanOverride("pin_load", "lower", "bb_bench_press", params={"load": load})
+
+
+def capped_pin(line: LinePrescription) -> dict[str, object] | None:
+    found = next((f for f in line.flags if f.code == "pin_load_capped"), None)
+    return None if found is None else dict(found.params)
+
+
+def test_a_pin_on_a_hold_line_with_no_e1rm_has_no_effect_under_the_illness_cap() -> None:
+    no_e1rm = an_exposure("2026-10-26", *[(100, 15, 7)] * 4, session_id="lower")
+
+    line = derive(HOLD, no_e1rm, status_spans=ILL, overrides=(bench_pin(110),))
+
+    assert line.groups[-1].load == Load(100, "total")
+    assert capped_pin(line) == {
+        "load": 110,
+        "prescribed": 100,
+        "ceiling_kind": "illness",
+        "rpe_cap": 7,
+        "ref": None,
+        "outcome": "no_effect",
+    }
+
+
+def squat_pin(load: float) -> PlanOverride:
+    return PlanOverride("pin_load", "lower", "bb_back_squat", params={"load": load})
+
+
+# e1RM 150 × (1 + 12/30) = 210; six reps at RPE 7 is 210 / (1 + 9/30) = 161.54. The hit alone
+# climbs one row to 155.
+SQUAT_HIT_FAR_FROM_FAILURE = ((150, 8, 6),) * 4
+
+
+def test_a_pin_over_the_illness_e1rm_limit_is_reduced_to_the_limit() -> None:
+    logged = squat_on("2026-10-26", *SQUAT_HIT_FAR_FROM_FAILURE)
+
+    line = derive(a_line(), logged, status_spans=ILL, overrides=(squat_pin(170),))
+
+    assert Step("rpe_ceiling", 170, 161.54, "e1rm") in line.steps
+    assert line.groups[-1].load == Load(160, "total")
+    assert capped_pin(line) == {
+        "load": 170,
+        "prescribed": 160,
+        "ceiling_kind": "illness",
+        "rpe_cap": 7,
+        "ref": None,
+        "outcome": "reduced",
+    }
+
+
+def test_a_pin_on_a_hold_line_with_no_e1rm_has_no_effect_under_a_light_week() -> None:
+    no_e1rm = an_exposure("2026-10-26", *[(100, 15, 7)] * 4, session_id="lower")
+
+    line = derive(HOLD, no_e1rm, overrides=(LIGHT_WEEK, bench_pin(110)))
+
+    assert line.groups[-1].load == Load(100, "total")
+    assert capped_pin(line) == {
+        "load": 110,
+        "prescribed": 100,
+        "ceiling_kind": "light_week",
+        "rpe_cap": 8,
+        "ref": None,
+        "outcome": "no_effect",
+    }
+
+
+def test_a_pin_over_the_light_week_e1rm_limit_is_reduced_to_the_limit() -> None:
+    logged = squat_on("2026-10-26", *SQUAT_HIT_FAR_FROM_FAILURE)
+
+    line = derive(a_line(), logged, overrides=(LIGHT_WEEK, squat_pin(175)))
+
+    # six reps at RPE 8 is 210 / (1 + 8/30) = 165.79
+    assert Step("rpe_ceiling", 175, 165.79, "e1rm") in line.steps
+    assert line.groups[-1].load == Load(165, "total")
+    assert capped_pin(line) == {
+        "load": 175,
+        "prescribed": 165,
+        "ceiling_kind": "light_week",
+        "rpe_cap": 8,
+        "ref": None,
+        "outcome": "reduced",
+    }
+
+
+def test_a_pin_capped_by_a_niggle_rpe_cap_names_the_niggle() -> None:
+    logged = squat_on("2026-10-26", *SQUAT_HIT_FAR_FROM_FAILURE)
+    cap = NiggleConstraint("n-0005", "rpe_cap", pattern="squat", value=7)
+
+    line = derive(a_line(), logged, niggle_constraints=(cap,), overrides=(squat_pin(170),))
+
+    flag = next(f for f in line.flags if f.code == "pin_load_capped")
+    assert (flag.params["ceiling_kind"], flag.params["ref"]) == ("niggle", "niggle:n-0005")
+    assert flag.message == (
+        "the pinned 170 is held at 160 by niggle n-0005's RPE 7 ceiling; the pin is reduced"
+    )
+
+
+def test_a_pin_on_the_e1rm_limit_raises_nothing_new() -> None:
+    logged = squat_on("2026-10-26", *SQUAT_HIT_FAR_FROM_FAILURE)
+
+    line = derive(a_line(), logged, status_spans=ILL, overrides=(squat_pin(160),))
+
+    assert line.groups[-1].load == Load(160, "total")
+    assert capped_pin(line) is None
+
+
+def test_a_pin_on_a_hold_line_at_the_anchor_raises_nothing_new() -> None:
+    no_e1rm = an_exposure("2026-10-26", *[(100, 15, 7)] * 4, session_id="lower")
+
+    line = derive(HOLD, no_e1rm, status_spans=ILL, overrides=(bench_pin(95),))
+
+    assert line.groups[-1].load == Load(95, "total")
+    assert capped_pin(line) is None
+
+
+def test_the_illness_warning_says_the_pin_has_no_effect() -> None:
+    no_e1rm = an_exposure("2026-10-26", *[(100, 15, 7)] * 4, session_id="lower")
+
+    line = derive(HOLD, no_e1rm, status_spans=ILL, overrides=(bench_pin(110),))
+
+    flag = next(f for f in line.flags if f.code == "pin_load_capped")
+    assert flag.message == (
+        "the pinned 110 is held at 100 by the illness RPE 7 ceiling; the pin has no effect"
+    )

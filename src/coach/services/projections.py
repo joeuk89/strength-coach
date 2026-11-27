@@ -16,6 +16,7 @@ from coach.core.routine_projection import (
     RungLabels,
     SessionRoutine,
     project_routine,
+    row_in_routine,
     rung_labels,
 )
 from coach.store import exercises, mirrors, niggles, programs, week_plans
@@ -69,9 +70,12 @@ def projection(
     facts: SessionFacts,
     units: Units,
 ) -> Json:
-    """The session's routine body from the plan's frozen lines on its first planned date."""
+    """The session's routine body from the plan's frozen lines on its first planned date, each
+    line that carries a set."""
     rows = [
-        r for r in week_plans.prescriptions(conn, str(plan["id"])) if r["session_id"] == session_id
+        r
+        for r in week_plans.prescriptions(conn, str(plan["id"]))
+        if r["session_id"] == session_id and row_in_routine(r)
     ]
     first = min(str(r["date"]) for r in rows)
     folders = {f.role: f.hevy_id for f in mirrors.folders(conn)}

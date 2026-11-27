@@ -44,7 +44,12 @@ def test_an_e1rm_asking_for_two_rows_above_the_anchor_prescribes_one_row_above()
     # e1RM 100 × (1 + 7/30) = 123.33; three reps at RPE 8 is 105.71, down to 105: two rows up
     line = derive(bench_on("2026-10-26", top_rpe=6))
 
-    assert line.steps[0] == Step("scheme", 100, 102.5, "one_row_cap")
+    assert line.steps[0] == Step(
+        "scheme",
+        100,
+        102.5,
+        "one_row_cap, e1rm 123.33 from exposure:w-2026-10-26/bb_bench_press, model 105.71",
+    )
     assert working_loads(line) == [(1, Load(102.5, "total")), (3, Load(87.5, "total"))]
     assert line.change == "1×3 @8 + 3×5: 100 → 102.5"
 
@@ -88,9 +93,11 @@ def test_with_no_e1rm_in_42_days_the_top_holds_and_warns_no_e1rm() -> None:
     line = derive(bench_on("2026-09-10", top_rpe=6), trained=trained)
 
     assert working_loads(line) == [(1, Load(100, "total")), (3, Load(85, "total"))]
-    assert [(f.code, dict(f.params)) for f in line.flags] == [
-        ("no_e1rm", {"exercise_id": "bb_bench_press", "scheme": "top_backoff"})
+    assert [(f.code, f.params.get("scheme")) for f in line.flags] == [
+        ("no_e1rm", "top_backoff"),
+        ("load_too_light", None),
     ]
+    assert dict(line.flags[0].params) == {"exercise_id": "bb_bench_press", "scheme": "top_backoff"}
 
 
 def test_one_bad_day_never_lowers_the_top_set() -> None:
@@ -239,7 +246,12 @@ def test_the_carried_cap_counts_one_row_above_the_scaled_pre_layoff_top() -> Non
     line = deadlift(high_reps, ON_RAMP, RETURN, on="2026-11-08")
 
     assert working_loads(line)[0] == (1, Load(130, "total"))
-    assert line.steps[0] == Step("scheme", 112.5, 130, "one_row_cap")
+    assert line.steps[0] == Step(
+        "scheme",
+        112.5,
+        130,
+        "one_row_cap, e1rm 178.5 from exposure:w-2026-08-26/bb_deadlift, model 139.09",
+    )
 
 
 def test_a_live_point_at_the_carried_e1rm_ends_it_and_the_cap_counts_from_the_live_tops() -> None:

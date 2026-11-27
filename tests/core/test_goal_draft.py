@@ -219,7 +219,7 @@ def test_the_diff_names_each_changed_field_and_nothing_else() -> None:
                 {"exercise": "pull_up", "target": {"kind": "load_x_reps", "load": 0.0, "reps": 5}},
             ],
         },
-        "why": True,
+        "why": {"from": WORKED_WHY, "to": "a bigger bench"},
     }
 
 

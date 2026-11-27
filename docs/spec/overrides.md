@@ -51,7 +51,8 @@ added lifting session counts toward the hard-week gate like any other.
 
 Scope is given by which refs are present: none for the week, `session`, or `session` plus
 `exercise`. Kind params sit inline beside the reason fields. Acknowledgements keep their own
-`[[acknowledge]]` array (`validation.md`). The engine writes the Athlete notes since the last
+`[[acknowledge]]` array, which the engine starts with an empty stub per warning
+(`validation.md`). The engine writes the Athlete notes since the last
 approved WeekPlan into the Draft as a `[[note]]` array (`date`, `text`, `about`), context the
 coach reads while editing; `plan apply` ignores the array and the Write plan hash excludes it
 (`check-in.md`, "Athlete notes").
@@ -185,6 +186,9 @@ Every override and Decision carries `because`, `text` and `evidence`:
 - No override waives a return band (ADR 0005): the band moves only with days off.
 - `drop_session` and `drop_line` beat every other override on their scope.
 - `pin_load` obeys every recovery ceiling: it can lower a load, never lift one above the ceiling.
+  A pin an RPE ceiling lowers warns `pin_load_capped` (`prescription.md`, **RPE ceilings**).
+- A pin at or under a `load_too_light` suggestion is that warning's answer: it raises no
+  `increment_over_step` (`prescription.md`, **A line too light**).
 - The plan's override beats an override Decision of the same kind on the same line.
 - Anything else is the violation `override_conflict`, params the two kinds.
 - A superseding midweek plan inherits nothing: the agent restates overrides from

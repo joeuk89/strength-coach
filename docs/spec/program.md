@@ -107,7 +107,7 @@ No `status`: a parked session is a Decision, not a field (ADR 0010).
 | `type` | no, default `working` | `warm_up`, `working`, `activation`, `test` |
 | `reps` | reps-based | An integer, a range `[6, 8]`, or an open top `"8+"` for a rep-out |
 | `duration_s` | duration lines | Instead of `reps` |
-| `rpe` | per the registry | Required on every working group of a scheme whose rule reads it (`double_progression`, `linear`, `assistance_ladder`, each rung of an `exercise_ladder`) and on the top group of `top_backoff`; missing is `rpe_missing`. Optional elsewhere (a back-off, a `hold` line, `wave_531`), where it is rendered and never a ceiling. Stored as RPE; a hypertrophy line renders it as RIR (`10 − rpe`). Never filled: the `program` skill proposes it from `goals.md`'s band |
+| `rpe` | per the registry | Required on every working group of a scheme whose rule reads it (`double_progression`, `linear`, `timed_load`, `assistance_ladder`, each rung of an `exercise_ladder`) and on the top group of `top_backoff`; missing is `rpe_missing`. Optional elsewhere (a back-off, a `hold` line, `wave_531`), where it is rendered and never a ceiling. Stored as RPE; a hypertrophy line renders it as RIR (`10 − rpe`). Never filled: the `program` skill proposes it from `goals.md`'s band |
 
 Set types:
 
@@ -253,6 +253,7 @@ grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 | `double_progression` | none | warm_up, working, activation | any | every working group | reps at the authored RPE on the line's anchor exposures | `start_load` at the bottom of the rep range |
 | `linear` | `misses_before_reset`, `reset_factor` (registry defaults 2 and 0.9; `prescription.md`, Stalls, says why a coach names 0.95) | warm_up, working, activation | any | every working group | the anchor's load and whether its sets were made | `start_load`, the authored sets |
 | `hold` | none | warm_up, working, activation | any | none | the anchor's top load, nothing else; the authored sets stand until an override or a new version | the authored sets, `start_load` where load-bearing |
+| `timed_load` | none | working | exactly one working group stating `duration_s` and no `reps` | the working group (the effort target) | the anchor's load, each working set's seconds and the stored effort (below) | `start_load`, the authored sets |
 | `assistance_ladder` | `rungs` (assisted loads, descending) | working | exactly one working group; its `count`, `reps` and `rpe` are the ladder's | the working group | reps at RPE on the current rung | the first rung |
 | `exercise_ladder` | `rungs` (rung tables, below), `advance` (a criterion table, default `{ exposures = 2 }`) | working | on each rung, exactly one working group stating `reps` or `duration_s` | each rung's working group | reps or duration at RPE on the standing rung | the first rung |
 | `top_backoff` | `pct_of_top` | warm_up, working | the first working group is the top (`count = 1`, an integer `reps`, `rpe`); at least one later working group, each a back-off at `pct_of_top` | the top group | the exercise-wide e1RM (`prescription.md`), the top group's RPE as a cap | `start_load` is the top set; back-offs derive from it |
@@ -271,6 +272,14 @@ grid location (ADR 0008). No exercise or catalogue entry carries an increment.
 The criterion keys, at scheme level and on a rung: `reps` (a reps rung only), `duration_s` (a duration rung only), `rpe_at_most`, `exposures` and `manual` (`true`, with no other key: the athlete's word, for the rare rung the logs cannot tell). A key off its rung is `advance_criterion_off_rung`. With nothing said the criterion is every working set at the rung's reps or duration at or under its RPE on 2 consecutive exposures; a rep range reads its top and an open top `"8+"` its number. A ladder needs at least two rungs (`ladder_too_short`), and a rung equal to the one before it in `exercise`, `sets` and `cues` is `rung_repeated`; only neighbours are compared, so a ladder may return to an earlier shape later. The worked examples below show two in full.
 
 Every surface names a rung by its label, `rung <n> · [<exercise name> · ]<dose>[ · <load>][ · <cues>]`, with the name only when the rung's exercise differs from the standing rung's (ADR 0025): `rung_met`'s message, the Hevy note's "Next:", the check-in card, the approval prompt, the routine page, the progress page and `program show`.
+
+`timed_load` is the scheme for a loaded set held for time, such as a carry (ADR 0026). It needs
+the seconds in the log, so its exercise must log on a `weight_duration` Hevy template; any other
+template, or none known (a built-in carry records distance), is `template_untimed`. Moving a
+carry onto it means a new custom exercise with a `start_load`; the old history stays where it
+is. Hevy takes no RPE on that template, so the check-in asks the effort and stores it on the
+sets (`check-in.md`, the Lifts row). `hold` is unchanged, and an unloaded timed hold stays on an
+`exercise_ladder` with duration rungs.
 
 `wave_531` is the slow strength cadence: the scheme the `program` skill names when `cadence_slow`
 fires on a `top_backoff` lift (`goals.md`, **Response to a cadence signal**). Adopt never fills
@@ -318,7 +327,15 @@ from the last matched Activity; their lines use `hold`.
   a rung that bears no load is `unknown_key`. The rung's load opens the line while it stands on
   the rung with no Exposure of the rung's exercise that counts on it (`prescription.md`), in the
   session or unmatched; after that the newest such Exposure's load holds, and the load never
-  steps up. An Exposure on a `ladder_rung` Decision's own date belongs to the previous rung.
+  steps up. An Exposure on a `ladder_rung` Decision's own date belongs to the previous rung, and
+  a light-week or return-band Exposure counts on no rung, so a week a return band stepped the
+  line back never sets the standing rung's load: back on its rung, the line takes the load it
+  held before the layoff, or the rung's `start_load` with no Exposure that counts. The same
+  rule holds on a first rung a `ladder_rung` Decision chose, so a log from before the move never
+  sets its load; only a first rung the line never left reads the exercise's whole history,
+  where history wins. A rung a return band steps back to reads no Exposure: it opens on its own
+  `start_load`, the line's for the first rung. A later rung on the line's own exercise keeps the
+  line's `load_mode`, so one exercise reads one mode.
 
 ## Adopt
 
@@ -345,6 +362,8 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 - `program show --draft` emits the current version as a Draft; `--apply-plan <week>` folds that
   WeekPlan's swap and pin overrides in, so promoting a persisting swap is an `amend` the agent
   edits only to write `because`. The trigger for promotion is `overrides.md`'s: `override_persisting` on the third consecutive plan.
+  The Draft carries an `[[acknowledge]]` entry only for a flag that a dry adopt of the shown
+  content raises today, so an unedited Draft passes `program adopt --dry-run`.
 
 ### Violations
 
@@ -369,14 +388,15 @@ validate, fill, upsert declared exercises, record the version, open or continue 
 | `start_load_off_rack` | line | above |
 | `no_working_sets` | line | zero working sets under a scheme that reads them (every scheme but `hold`) |
 | `set_type_not_allowed` | line | any authored `test` group (the deload policy alone prescribes one), or a type the scheme's row does not permit |
-| `set_groups_off_scheme` | line | the working groups do not fit the scheme's row: a `top_backoff` first working group with `count` other than 1 or a range for `reps`, or no back-off group; more than one working group under `assistance_ladder`, or on a rung of an `exercise_ladder`; a rung group stating neither `reps` nor `duration_s`; a `wave_531` working group stating `reps` |
+| `set_groups_off_scheme` | line | the working groups do not fit the scheme's row: a `top_backoff` first working group with `count` other than 1 or a range for `reps`, or no back-off group; more than one working group under `assistance_ladder`, or on a rung of an `exercise_ladder`; a rung group stating neither `reps` nor `duration_s`; a `wave_531` working group stating `reps`; a `timed_load` line with other than one working group, or one stating `reps` or no `duration_s` |
 | `rpe_missing` | line | a working group the scheme's row requires `rpe` on has none, a rung's included |
+| `template_untimed` | line | a `timed_load` line whose exercise's `hevy_exercise_type` is not `weight_duration`, none included; raised whether or not `coach.toml` has a `[hevy]` table |
 | `rung_exercise_unknown` | version | a rung's `exercise` is not in the library and not declared in the Draft |
 | `ladder_too_short` | line | an `exercise_ladder` with fewer than two rungs |
 | `rung_repeated` | line | a rung equal to the one before it in `exercise`, `sets` and `cues` |
 | `advance_criterion_off_rung` | line | `reps` on a duration rung, `duration_s` on a reps rung, or `manual` beside another key |
 | `hevy_template_missing` | line | a new exercise without a template id lacks one of the four template columns (ADR 0011); only when `coach.toml` has a `[hevy]` table (`validation.md`) |
-| `hevy_template_value_unknown` | line | under the same conditions, a template column present on the new exercise holds a value outside its registry (`hevy-exercise-types`, `hevy-equipment`, `hevy-muscle-groups`); one flag per bad column, none for an absent one |
+| `hevy_template_value_unknown` | line | under the same conditions, a template column present on the new exercise holds a value outside its registry (`hevy-exercise-types`, `hevy-equipment`, `hevy-muscle-groups`); one flag per exercise and bad column, none for an absent one |
 | `acknowledgement_unmatched` | version | one or more `[[acknowledge]]` keys adopt did not raise, all named in one flag |
 | `goal_missing` | version | no current Goal (`goals.md`) |
 | `priority_lifts_required` | version | `strength` emphasis under a Goal with no priority lifts (`goals.md`) |
@@ -650,7 +670,8 @@ A tempo ladder on one exercise, topped by a weighted rung (ADR 0025). The first 
 `negative_pull_up` at the same reps and differ only in their cues, which read lower for 4 s, 6 s
 and 8 s. Each rung's criterion is its reps at RPE, and the athlete's yes to `rung_met` carries the
 word that the tempo was held. The top rung is a load-bearing exercise, so it carries its own
-`start_load`, on the home dumbbell rack in the athlete's units.
+`start_load`, on the home dumbbell rack in the athlete's units. The example assumes a pound rack,
+where 10 is a row; on a kilogram rack the same Draft gives `start_load_off_rack` on rung 4.
 
 ```toml
 name = "Pull day around the negatives"

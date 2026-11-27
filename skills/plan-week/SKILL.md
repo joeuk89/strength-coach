@@ -11,6 +11,8 @@ prescription, the steps that derived it and its change from last week. Judge the
 carry a flag or an override; show the rest as they stand. The summary lists each flag code
 with its count and keys; to read one code's flags with their messages, run
 `coach query flags --draft <path> --code <code>`, or `--full` for every flag.
+Last week's lines beside what was logged, sets and RPE against the prescription, come from
+`coach query against --week <a date in last week> --off`.
 
 ## Ask
 State the week for confirmation: the rotation position, the day each session falls on, where
@@ -20,7 +22,9 @@ that blocks the plan.
 
 ## Judge
 Every answer is an override with its reason, an override Decision, or an Acknowledgement with
-its reason. A load the engine derived is never retyped.
+its reason. A load the engine derived is never retyped. Fill each warning's stub
+or delete it; after adding overrides, `coach plan draft --refresh <path>` adds their flags. A
+warning recurring unchanged takes a standing `leave_warning` Decision, its key undated.
 - **Stalls.** `stall_streak` wants `hold`, `restate_sets` or `swap_exercise`, chosen by the
   emphasis. Under hypertrophy, read dose against target: a flat line early in a block wants sets,
   late it wants the deload. On a priority lift, read the e1RM trend, not the week; a flat block
@@ -53,9 +57,17 @@ its reason. A load the engine derived is never retyped.
   promote the override into a new program version, extend it with an override Decision and an
   until date, or leave it with an Acknowledgement and meet it again next week. Promote what the
   athlete will keep doing; extend what has an end in sight.
+- **Illness.** A line's illness cap names its end. When the athlete has not said how long they
+  need at reduced effort, ask, and record their answer as the span's cap end; never infer it.
+  A changed answer midweek is recorded again and the week replanned.
+- **Pins.** `pin_load_capped`: a recovery ceiling lowered a pin or left it with no effect.
+  Lower the pin to the prescribed load, remove it, or acknowledge the warning with the reason.
+  `load_too_light`: offer its suggested load; on the athlete's yes pin it, or the load they name,
+  and acknowledge the warning. Never invent the load.
 - **Rack.** `frozen_load_off_rack`: a load in the plan in force is gone from the location's
   rack. Say which planned loads move and to what, each load from the Draft.
-- **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Keep the change with the
+- **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Its changes name the
+  session, the exercise, the set and the planned and found values. Keep the change with the
   athlete's reason, or let this week's plan replace it; ask them which, in those words, when
   the reason is not plain.
 

@@ -51,6 +51,18 @@ def write_engine_draft(root: Path, *, today: str, kind: str, text: str, out: str
     raise AssertionError("unreachable")
 
 
+def rewrite_draft(path: str, text: str) -> str:
+    """Rewrite the Draft the agent named for a refresh, the one Draft the engine overwrites."""
+    target = Path.cwd() / path
+    try:
+        target.write_bytes(text.encode("utf-8"))
+    except OSError as error:
+        raise Invalid(
+            "invalid_argument", f"cannot write the Draft {path}: {error.strerror}"
+        ) from error
+    return path
+
+
 def _write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():

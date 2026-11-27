@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from coach.core.check_in import DAY, Window
-from coach.core.closed_week.sessions import TargetSet
+from coach.core.closed_week.against import TargetSet
 from coach.core.cut import LightShape, light_shape
 from coach.core.exposure import ExposureSet
 from coach.core.flag import Flag, Scope, raise_flag
@@ -44,13 +44,26 @@ class Trigger:
     evidence: tuple[str, ...] = ()
 
 
+def nights_read(check_in: datetime.date) -> tuple[datetime.date, ...]:
+    """The 7 calendar nights ending the night before the check-in, oldest first."""
+    return tuple(check_in - DAY * n for n in range(NIGHTS_READ, 0, -1))
+
+
+def measured_nights(
+    nights: Mapping[datetime.date, float], check_in: datetime.date
+) -> dict[datetime.date, float]:
+    return {night: nights[night] for night in nights_read(check_in) if night in nights}
+
+
+def short_night(hours: float) -> bool:
+    return hours < SHORT_NIGHT_HOURS
+
+
 def short_sleep_week(
     nights: Mapping[datetime.date, float], check_in: datetime.date
 ) -> Trigger | None:
-    """The 7 calendar nights ending the night before the check-in."""
-    read = [check_in - DAY * n for n in range(1, NIGHTS_READ + 1)]
-    measured = {night: nights[night] for night in read if night in nights}
-    short = sorted(night for night, hours in measured.items() if hours < SHORT_NIGHT_HOURS)
+    measured = measured_nights(nights, check_in)
+    short = sorted(night for night, hours in measured.items() if short_night(hours))
     if len(measured) < MEASURED_NIGHTS or len(short) < SHORT_NIGHTS:
         return None
     return Trigger("short_sleep_week", tuple(night.isoformat() for night in short))

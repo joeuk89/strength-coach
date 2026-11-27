@@ -23,6 +23,8 @@ class Term:
 class Registry[E: Entry]:
     name: str
     entries: tuple[E, ...]
+    # What the rows alone do not say, such as codes another registry holds.
+    note: str | None = None
 
     def __post_init__(self) -> None:
         names = self.names()
@@ -43,6 +45,27 @@ class Registry[E: Entry]:
 
     def rows(self) -> list[Row]:
         return [entry.describe() for entry in self.entries]
+
+
+class Titled(Entry, Protocol):
+    """An entry with the display name a page shows in place of its name."""
+
+    @property
+    def title(self) -> str: ...
+
+
+@dataclass(frozen=True)
+class TitledTerm:
+    name: str
+    title: str
+
+    def describe(self) -> Row:
+        return {"name": self.name}
+
+
+def title_of[E: Titled](registry: Registry[E], name: str) -> str:
+    """A name the registry does not hold shows as it stands."""
+    return registry.get(name).title if name in registry else name
 
 
 def terms(name: str, *values: str) -> Registry[Term]:

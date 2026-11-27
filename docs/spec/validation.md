@@ -55,9 +55,9 @@ The key of a flag is `(code, scope)`. Nothing else enters it.
 Two flags with the same code on the same scope cannot exist: a code states one condition per
 scope, so the key is a key. The exceptions are `program adopt`'s, since a ladder line's rungs share
 its scope: one scope holds `hevy_template_missing` once per exercise, `hevy_template_value_unknown`
-once per exercise and bad column, `equipment_unsupplied` once per equipment kind, and
-`start_load_missing` and `start_load_off_rack` once per rung. Each carries the same key, and the
-params tell them apart. The message is
+once per exercise and bad column, `equipment_unsupplied` once per equipment kind,
+`start_load_missing` and `start_load_off_rack` once per rung, and `rung_repeated` once per
+repeated pair. Each carries the same key, and the params tell them apart. The message is
 display only and is never stored. The params (the facts of the condition: a streak length, a
 ceiling and its kind, a drift class) ride alongside the key and are hashed separately; they are
 condition facts only, never derived display numbers that move with rounding.
@@ -120,10 +120,14 @@ athlete request, coach judgement, progress); the text is the coach's voice, unpo
 optional (niggle, exposure, check-in). `plan apply --dry-run` refuses an acknowledgement with no
 `because`.
 
-In the plan Draft the agent writes an `[[acknowledge]]` table, which names the key as `flag`, as
-`program.md` and `overrides.md` show. It copies the two values from the warning's own `[[flag]]`
-table, whose `key` becomes `flag` and whose `params_hash` is copied as is. The engine writes each
-`[[flag]]` table at the top of the Draft, or under the `[[session.line]]` the flag is about:
+In the plan Draft an acknowledgement is an `[[acknowledge]]` table, which names the key as `flag`,
+as `program.md` and `overrides.md` show. The engine writes each `[[flag]]` table at the top of the
+Draft, or under the `[[session.line]]` the flag is about, one for every flag the dry run can raise,
+the second-week flags and `hevy_template_missing` included. For each warning a WeekPlan can leave,
+it also writes an `[[acknowledge]]` stub with `flag` and `params_hash` copied from that warning
+and `because` and `text` empty. The agent fills the two in, or deletes the stub. A stub left with
+both empty is ignored on read, so the warning stays unacknowledged and never blocks; one with
+only one of them filled is refused like any entry missing it. A filled entry:
 
 ```toml
 [[acknowledge]]
@@ -134,6 +138,10 @@ text = "The 121 was a mislabelled plate."
 evidence = ["niggle:n-0001"]  # optional
 ```
 
+- **Overrides raise flags.** An override added to the Draft can raise a warning the Draft did
+  not carry (a `pin_load` more than a row up raises `increment_over_step`). `plan draft --refresh
+  <path>` re-derives the Draft in place, keeping its overrides, position and filled entries and
+  adding the new flags with their stubs (`verbs.md`).
 - **Home.** The agent writes acknowledgements in the plan Draft next to the overrides. They freeze
   onto the WeekPlan at approval and show at the approval prompt as "left warnings" with their
   reasons, beside the overrides.
@@ -157,7 +165,10 @@ warning returns and the coach judges it again. When the coach wants it quiet for
 `repeated_decline` walk and the adherence suppression windows, which the parity checklist
 replaced with a snooze date), the acknowledgement is a **Decision** of kind `leave_warning`: the
 same `{key, params_hash, because, text, evidence}` plus an until date. The validator treats the
-warning as left while the Decision is in force and the params hash is unchanged.
+warning as left while the Decision is in force and the params hash is unchanged. A warning that
+recurs unchanged each week hashes only its standing facts, never the latest exposure, a dated ref
+or a week count, so the Decision keeps matching while the condition stands; the registry rows
+below name the params each such hash covers.
 
 A Decision names one full key, never a bare code: the coach cannot silence `session_dose_high`
 everywhere for a block. A pattern that holds across lines earns a program change or an override
@@ -195,9 +206,10 @@ verbs:
 | `phase_condition_met` | `checkin open` | the Phase closing (`goal adopt` or a check-in file) |
 | `training_max_unused` | `checkin open` | retiring the Decision, or a version giving the exercise a scheme that reads it |
 | `activity_cap_exceeded`, `run_spike` | `checkin open` | history; the week closing |
+| `session_near_empty` | `checkin open` | a `miss_tag` Annotation on the planned session (the athlete said it did not count), or the check-in that reviews it with none (it counted) |
 | `engine_pin_dev` (ADR 0007) | `status` | `coach upgrade` on a release build, the only writer of `[engine]`; `init` refuses to write a `.dev` pin (`verbs.md`) |
 | `generated_file_drift` (ADR 0007, 0013) | `status` | `coach upgrade` regenerating the file |
-| `plan_behind_program` | `status`, and the `program adopt` whose version creates it (its dry run included) | a superseding WeekPlan for the week through `plan apply`; it reads only the current week, so it also ends with the week |
+| `plan_behind_program` | `status`, and the `program adopt` whose version creates it (its dry run included) | a superseding WeekPlan for the week through `plan apply`, or next week's WeekPlan approved under the version in force; it reads only the current week, so it also ends with the week |
 
 A milestone reached is a `progress` figure, not a code (`goals.md`), so nothing here can only
 clear by time.
@@ -224,11 +236,11 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | Code | Scope | Params | Cleared by | `rn` |
 | --- | --- | --- | --- | --- |
 | `load_off_grid` | line | load, implement, location, nearest grid loads | a `pin load` override on a grid value; a kit change in `coach.toml` or in `kit/` through the `kit` skill (ADR 0021) | `null` |
-| `recovery_ceiling_exceeded` | line | ceiling kind (niggle, return band, illness, light week), ceiling, prescribed load or RPE, ref | a `[[niggle]]` record (close, or an event with a smaller constraint set); days off moved by a `trained_unlogged` Annotation or a hand-entered Workout; removing the light-week override or raising its `rpe_cap`; a lower `pin load` | by ceiling kind: return band rn:detraining-return.3, illness rn:detraining-return.4, light week rn:deloads.10, niggle `null` |
+| `recovery_ceiling_exceeded` | line | ceiling kind (niggle: raised on a `pin load` above a niggle's `load_cap` or `no_added_load`; a pin over a return band is `return_band_disagrees`, one an RPE ceiling lowers is `pin_load_capped`), ceiling, prescribed load, ref | a `[[niggle]]` record (close, or an event with a smaller constraint set); a lower `pin load` | by ceiling kind: return band rn:detraining-return.3, illness rn:detraining-return.4, light week rn:deloads.10, niggle `null` |
 | `return_band_disagrees` | line | days off, band, load, set delta, RPE cap | removing or correcting the conflicting override so the band, load, set delta and RPE cap derive together; no override waives the band | rn:detraining-return.3 |
 | `block_ceiling_exceeded` | week | hard-week count, ceiling, block id | a `decline_ceiling` Decision, a `light_week` override, or a `redesign` version | rn:deloads.3 |
 | `hevy_template_missing` | line | exercise id, missing columns | an Exercise with a `hevy_template_id`, or one with all four template columns so `plan apply` can create the template; an Exercise that has the id never needs the other three (`cutover.md`). Raised only when `coach.toml` has a `[hevy]` table: without Hevy no template is needed and the plan is approved on its numbers alone (ADR 0006) | `null` |
-| `hevy_template_value_unknown` | line | exercise id, column, value | a value from the column's registry (`hevy-exercise-types`, `hevy-equipment` or `hevy-muscle-groups`), listable with `coach schema --registry`. Raised under the same conditions as `hevy_template_missing`, once per present column outside its registry | `null` |
+| `hevy_template_value_unknown` | line | exercise id, column, value | a value from the column's registry (`hevy-exercise-types`, `hevy-equipment` or `hevy-muscle-groups`), listable with `coach schema --registry`. Raised under the same conditions as `hevy_template_missing`, once per exercise and present column outside its registry | `null` |
 | `load_mode_mismatch` | line | exercise load mode, line load mode | editing the Exercise or the line's `pin load` | `null` |
 | `rotation_unconfirmed` | week | inferred position, source | the agent confirming the rotation position in the Draft | `null` |
 | `goal_missing` | version | none | `goal adopt` | `null` |
@@ -254,6 +266,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `set_type_not_allowed` | line | set type, scheme | a permitted type (`test` is never authored: a max attempt is a `working` single) | `null` |
 | `set_groups_off_scheme` | line | scheme, expected shape | working groups that fit the scheme's registry row (`program.md`) | `null` |
 | `rpe_missing` | line | scheme, group index | an `rpe` on the working group the scheme's row requires it on, a rung's included | `null` |
+| `template_untimed` | line | exercise id, its `hevy_exercise_type` (null when unknown), the type the scheme needs (`weight_duration`) | an exercise on a `weight_duration` template, or another scheme (`program.md`, ADR 0026) | `null` |
 | `rung_exercise_unknown` | version | rung index, exercise id | an `[exercise.<id>]` declaration in the Draft, or a library id (`program.md`, "Schemes") | `null` |
 | `ladder_too_short` | line | rung count | a second rung, or another scheme | `null` |
 | `rung_repeated` | line | rung index, the previous rung's index | a rung that differs from the one before it in `sets` or `cues`; only neighbours are compared (ADR 0025) | `null` |
@@ -274,7 +287,8 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `top_set_above_e1rm` | line | e1RM, model, load, RPE target | rn:autoregulation.6 |
 | `no_e1rm` | line | exercise id, scheme | rn:autoregulation.5 |
 | `carried_e1rm` | line | pre-layoff exposure ref, pre-layoff e1RM, band factor, carried value, expiry date (`prescription.md`, **The carried e1RM**) | rn:detraining-return.5 |
-| `increment_over_step` | line | increment, scheme step, from exposure | `null` |
+| `increment_over_step` | line | increment, scheme step, from exposure; the params hash covers the increment and the scheme step only | `null` |
+| `load_too_light` | line | anchor exposure ref, the anchor's logged working sets (load, reps, RPE), the mean RPE gap, the e1RM with its exposure ref, date and session, the model load, the suggested load (the e1RM fields, model and suggestion null with no e1RM; `prescription.md`, **A line too light**) | `null` |
 | `offgrid_anchor_ignored` | line | exposure ref, logged load, anchor used | `null` |
 | `anchor_load_unusable` | line | skipped exposure ref, logged load, anchor used (`start_load` or the older exposure's ref) | `null` |
 | `over_rep_cap` | exposure | reps, cap | rn:autoregulation.5 |
@@ -284,13 +298,15 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `training_max_due` | line | training max, decision id or `start_load`, the three rep-out counts | rn:progression-training-age.9 |
 | `rung_met` | line | `rung` the standing rung (from 1), `next` the next rung's exercise id, `next_rung` its index, `exposures` the qualifying exposure refs (`prescription.md`, the `exercise_ladder` row); the message names the next rung by its label (ADR 0025); the params hash covers `rung` and `next` only, so a further qualifying exposure leaves an acknowledgement or `leave_warning` standing until the rung moves | rn:bodyweight-skill-progression.3 |
 | `ladder_top` | line | the standing rung, the ladder's last; raised instead of `rung_met` when the last rung's criterion holds | rn:bodyweight-skill-progression.3 |
-| `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref | rn:autoregulation.6 |
+| `held_without_effort` | line | weeks, the held load, the exposure refs (`prescription.md`, **A load held unread**) | `null` |
+| `rpe_ceiling_unchecked` | line | cap, clipped load (as the rack step leaves it, the load the line prescribes), anchor exposure ref; the params hash covers the cap only | rn:autoregulation.6 |
+| `pin_load_capped` | line | the pinned load, the prescribed load (as the rack step leaves it), ceiling kind (illness, light week, niggle: the RPE ceiling that lowered the pin; a return band's is `return_band_disagrees`), RPE cap, ref (the niggle, else none), outcome (`no_effect` when the line prescribes what it would without the pin, else `reduced`); the params hash covers every param but the prescribed load | `null` |
 | `unexplained_drift` | line | last prescription, this prescription, delta | `null` |
-| `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
+| `session_drop_suggested` | session | reason (`status_span`, `quality_stack`; `week.md` defines the stack), evidence refs; the params hash covers the reason only | `quality_stack` rn:concurrent-training.4 and .5; `status_span` `null` |
 | `dose_under_target` | week | muscle, target, the four weekly figures (`week.md`) | rn:volume-frequency.1 |
 | `lift_dose_under_target` | week | priority lift, target, the four weekly figures, the counted variants (`week.md`) | rn:volume-frequency.1, rn:minimum-effective-dose.4 |
 | `session_dose_high` | session | planned fractional sets, ceiling (`week.md`) | rn:volume-frequency.3 |
-| `override_persisting` | line | kind, weeks, plan ids | `null` |
+| `override_persisting` | line | kind, weeks, plan ids; the params hash covers the kind only | `null` |
 | `light_week_shape_off_trigger` | week | proposed shape, the plan's shape, triggers | rn:deloads.5, .8 to .10 |
 | `light_week_unprompted` | week | hard-week count, ceiling | rn:deloads.3 and .4 |
 | `minimum_week_floor` | week | priority lift, kept sessions | rn:minimum-effective-dose.4 |
@@ -320,7 +336,7 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 
 | Code | Scope | Params | `rn` |
 | --- | --- | --- | --- |
-| `routine_drift` | routine | class (structural, load), plan in force, diff summary | `null` |
+| `routine_drift` | routine | class (structural, load), plan in force, session id, the changes (each with field, exercise id, set, planned and found value, a load in athlete units), diff summary | `null` |
 | `workout_reappeared` | workout | tombstone noticed at, new version `updated_at` | `null` |
 | `followup_due` | instance | follow-up id, due date | `null` |
 | `niggle_unconstrained` | instance | niggle id, opened | `null` |
@@ -330,12 +346,13 @@ a pin, or a number this framework chose, which `research-notes.md` lists as opin
 | `cadence_slow` | exercise | scheme, the scheme's metric (resets, stall streak or e1RM slope), blocks, `may_schemes`, `may`, `never` (the per-scheme condition and the switching table's row, `goals.md`) | rn:training-level §2 |
 | `cadence_fast` | exercise | scheme, the scheme's metric (exposures at top of range, or exposures the one-row cap bound), `may_schemes`, `may`, `never`; raised only on `double_progression` and `top_backoff` | rn:training-level §2 |
 | `phase_condition_met` | instance | phase id, condition, value | `null` |
-| `phase_trend_off` | instance | phase id, target rate, observed rate, window | rn:training-level §4 |
+| `phase_trend_off` | instance | phase id, target rate, observed rate, rate units, window | rn:training-level §4 |
 | `activity_cap_exceeded` | week | cap, observed, activity refs; history, so it has no acknowledgement path and clears when the week closes | rn:running-load.5 and .6 |
 | `run_spike` | workout or activity | run distance, longest in the previous 30 days, ratio; history, clears when the week closes (`week.md`) | rn:running-load.1 and .4 |
+| `session_near_empty` | session | date, working sets logged, working sets prescribed; a matched core session under one-third of its prescribed working sets (`week.md`, "The session gate"; the one-third is opinion) | `null` |
 | `training_max_unused` | exercise | scheme, decision id | `null` |
 | `exercise_unmapped` | workout | Hevy template id, title; a view over logged sets whose template id no Exercise carries, so an `[[exercise]]` record mapping or declaring the Exercise clears it for every version at once (`cutover.md`) | `null` |
-| `plan_behind_program` | week | plan id, the version in force when the plan was approved (or none), the version in force now; raised while the current week's plan in force was approved before the version in force was recorded, so the hash moves only with the plan or the version | `null` |
+| `plan_behind_program` | week | plan id, the version in force when the plan was approved (or none), the version in force now; raised while the current week's plan in force was approved before the version in force was recorded and no plan for next week was approved under it, so the hash moves only with the plan or the version | `null` |
 
 ### Codes pending other tickets
 

@@ -8,13 +8,29 @@ from dataclasses import dataclass, field
 
 from coach.core.check_in import Window
 from coach.core.closed_week.adherence import Adherence
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.dose import lift_trailing_mean, trailing_mean
-from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import SessionOutcome
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.exercise_ladder import LadderRead
-from coach.core.fatigue import Proposal
+from coach.core.exposure import ExposureSet
+from coach.core.fatigue import (
+    SHORT_NIGHT_HOURS,
+    Proposal,
+    measured_nights,
+    nights_read,
+    short_night,
+    short_sleep_week,
+)
 from coach.core.flag import Flag
+from coach.core.lift_doubts import (
+    EFFORT_MISSING,
+    EXPOSURES_DISAGREE,
+    LiftDoubt,
+    LoggedLine,
+    lift_doubts,
+)
+from coach.core.phase_trend import RATE_UNITS
 
 FIELDS = (
     "header",
@@ -41,10 +57,15 @@ type Facts = Mapping[str, object]
 
 @dataclass(frozen=True)
 class Ask:
-    """A question the card leaves for the athlete, about one record when it names one."""
+    """A question the card leaves for the athlete, about one record when it names one;
+    `detail` states the form the answer takes where the kind alone does not. `reason` names the
+    rule that fired it and `params` the evidence the coach quotes."""
 
     kind: str
     about: str | None = None
+    detail: Facts = field(default_factory=dict[str, object])
+    reason: str | None = None
+    params: Facts = field(default_factory=dict[str, object])
 
 
 @dataclass(frozen=True)
@@ -90,7 +111,6 @@ class SessionRead:
     week, which is what makes an untrained session a Miss rather than still to come."""
 
     outcome: SessionOutcome
-    workout: WeekWorkout | None
     closes: bool
 
     @property
@@ -103,23 +123,32 @@ class SessionRead:
         outcome = self.outcome
         if outcome.cancelled:
             return "cancelled"
-        if self.workout is not None:
+        if outcome.workouts and outcome.trained:
             return "matched"
         if outcome.trained:
             return "trained_unlogged"
         if outcome.rested:
             return "status_span"
-        return "missed" if self.closes else "to_come"
+        return "missed" if self.closes or outcome.miss_tagged else "to_come"
+
+    @property
+    def minutes(self) -> int | None:
+        known = [w.minutes for w in self.outcome.workouts if w.minutes is not None]
+        return sum(known) if known else None
 
     @property
     def session_rpe(self) -> float | None:
-        """The mean working-set RPE; a hand-entered workout carries its own."""
-        if self.workout is None:
+        """The mean working-set RPE over every workout; a hand-entered workout carries its own.
+        A near-empty session has none: a single test set is no session's effort."""
+        if self.outcome.near_empty:
             return None
-        rated = [s.rpe for e in self.workout.exposures for s in e.working if s.rpe is not None]
-        if rated:
-            return round(sum(rated) / len(rated), 1)
-        return self.workout.session_rpe
+        workouts = self.outcome.workouts
+        rated = [
+            s.rpe for w in workouts for e in w.exposures for s in e.working if s.rpe is not None
+        ]
+        if not rated:
+            rated = [w.session_rpe for w in workouts if w.session_rpe is not None]
+        return round(sum(rated) / len(rated), 1) if rated else None
 
 
 def sessions(reads: Sequence[SessionRead]) -> CardField | None:
@@ -131,9 +160,9 @@ def sessions(reads: Sequence[SessionRead]) -> CardField | None:
     asks: list[Ask] = []
     for read in core:
         rows.append(_session_row(read))
-        if read.state == "missed":
+        if read.state == "missed" and not read.outcome.miss_tagged:
             asks.append(Ask("miss_tag", read.ref))
-        if read.state == "matched" and read.session_rpe is None:
+        if read.state == "matched" and read.session_rpe is None and not read.outcome.near_empty:
             asks.append(Ask("session_rpe", read.ref))
     done = sum(1 for r in optional if r.outcome.trained)
     return CardField(
@@ -149,12 +178,17 @@ def _session_row(read: SessionRead) -> Facts:
         "kind": read.outcome.session.kind,
         "state": read.state,
     }
-    if read.workout is not None:
+    if read.outcome.workouts:
         row |= {
-            "workout": read.workout.id,
-            "minutes": read.workout.minutes,
+            "workouts": list(read.outcome.workout_ids),
+            "minutes": read.minutes,
             "session_rpe": read.session_rpe,
         }
+    row |= {
+        "sets_logged": read.outcome.sets_logged,
+        "sets_prescribed": read.outcome.sets_prescribed,
+        "gate_passed": read.outcome.passed,
+    }
     against = read.outcome.against
     if against is not None:
         row["against"] = {
@@ -246,9 +280,20 @@ def dose(closing: Sequence[ClosedWeek], weeks: Sequence[ClosedWeek]) -> CardFiel
 
 
 @dataclass(frozen=True)
+class ExposureSource:
+    """The exposure a lift row's figure was read from, which may lie before the window."""
+
+    exposure: str
+    date: datetime.date
+    session: str | None
+
+
+@dataclass(frozen=True)
 class LiftRead:
     """A lift trained in the window: its last top set and its e1RM before and after the window,
-    in athlete units."""
+    in athlete units, with the exposure each was read from and how many exposures of the lift
+    the window holds. A timed lift adds the seconds of each working set of that exposure and
+    the seconds its line prescribed."""
 
     exercise_id: str
     priority: bool
@@ -256,40 +301,119 @@ class LiftRead:
     top_set: tuple[float | None, int | None, float | None]
     e1rm: float | None = None
     e1rm_before: float | None = None
+    seconds: tuple[int | None, ...] = ()
+    prescribed_seconds: int | None = None
+    top_from: ExposureSource | None = None
+    e1rm_from: ExposureSource | None = None
+    exposures: int = 1
 
     @property
-    def moved(self) -> bool:
-        return self.e1rm != self.e1rm_before
+    def timed(self) -> bool:
+        return any(s is not None for s in self.seconds)
 
 
-def lifts(reads: Sequence[LiftRead], *, emphasis: str) -> CardField | None:
-    """Priority lifts lead and are asked how the top set moved and felt; a `hypertrophy` version
-    asks reps and RIR on the lines that moved and a pump and soreness read; `maintenance` asks
-    whether the kept lifts held (goals.md, "What the skills ask"). e1RM rows compounds first."""
+def lifts(
+    reads: Sequence[LiftRead], *, emphasis: str, lines: Sequence[LoggedLine] = ()
+) -> CardField | None:
+    """Priority lifts lead, then compounds. A logged RPE is the athlete's answer: a lift is
+    asked about only where its `lines` leave a doubt, and soreness and niggles always; a line
+    logged well under its prescribed RPE is stated on the lift's row. e1RM rows compounds
+    first."""
     if not reads:
         return None
     ordered = sorted(reads, key=lambda r: (not r.priority, not r.compound, r.exercise_id))
-    asks = [Ask("top_set_feel", f"exercise:{r.exercise_id}") for r in ordered if r.priority]
-    if emphasis == "hypertrophy":
-        asks.extend(
-            Ask("reps_and_rir", f"exercise:{r.exercise_id}")
-            for r in ordered
-            if r.moved and not r.priority
-        )
-        asks.append(Ask("pump_and_soreness"))
-    elif emphasis == "maintenance":
-        asks.append(Ask("kept_lifts_held"))
-    rows = [
-        {
-            "exercise": r.exercise_id,
-            "priority": r.priority,
-            "top_set": {"load": r.top_set[0], "reps": r.top_set[1], "rpe": r.top_set[2]},
-            "e1rm": r.e1rm,
-            "e1rm_before": r.e1rm_before,
-        }
-        for r in ordered
-    ]
-    return CardField("lifts", {"emphasis": emphasis, "rows": rows}, tuple(asks))
+    shown = {r.exercise_id for r in reads}
+    mine = [line for line in lines if line.exercise in shown]
+    asks = (*(_doubt_ask(d) for d in lift_doubts(mine)), Ask("soreness_and_niggles"))
+    under: dict[str, list[Facts]] = {}
+    for line in mine:
+        if line.under_authored:
+            under.setdefault(line.exercise, []).append(
+                {"session": line.session_id, "date": line.date.isoformat(), "rpe_gap": line.rpe_gap}
+            )
+    rows = [_lift_row(r, under.get(r.exercise_id, [])) for r in ordered]
+    return CardField("lifts", {"emphasis": emphasis, "rows": rows}, asks)
+
+
+def _doubt_ask(doubt: LiftDoubt) -> Ask:
+    quote = _timed_quoted if doubt.reason == EFFORT_MISSING else _quoted
+    return Ask(
+        "lift_doubt",
+        f"exercise:{doubt.exercise}",
+        reason=doubt.reason,
+        params={
+            "exposures": [
+                quote(line, with_e1rm=doubt.reason == EXPOSURES_DISAGREE) for line in doubt.lines
+            ]
+        },
+    )
+
+
+def _timed_quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
+    """The quote with each set's seconds, and the positions and workout the answer is repaired
+    onto as each set's `rpe`."""
+    return _quoted(line, with_e1rm=with_e1rm) | {
+        "repair": f"workout:{line.workout_id}/{line.exercise}",
+        "logged": [
+            {"position": s.position, **_logged_row(s), "seconds": s.duration_s}
+            for s in line.line.logged
+        ],
+        "prescribed": [_prescribed_row(t) | {"seconds": t.seconds} for t in line.line.targets],
+    }
+
+
+def _quoted(line: LoggedLine, *, with_e1rm: bool) -> dict[str, object]:
+    quote: dict[str, object] = {
+        "session": line.session_id,
+        "date": line.date.isoformat(),
+        "logged": [_logged_row(s) for s in line.line.logged],
+        "prescribed": [_prescribed_row(t) for t in line.line.targets],
+    }
+    if with_e1rm:
+        e1rm = line.e1rm
+        quote["e1rm"] = None if e1rm is None else e1rm.amount
+    return quote
+
+
+def _logged_row(s: ExposureSet) -> dict[str, object]:
+    return {"load": None if s.load is None else s.load.amount, "reps": s.reps, "rpe": s.rpe}
+
+
+def _prescribed_row(t: TargetSet) -> dict[str, object]:
+    return {"reps": t.reps, "reps_top": t.top, "rpe": t.rpe, "load": t.load}
+
+
+def _lift_row(read: LiftRead, under_authored: Sequence[Facts]) -> Facts:
+    row: dict[str, object] = {
+        "exercise": read.exercise_id,
+        "priority": read.priority,
+        "top_set": {
+            "load": read.top_set[0],
+            "reps": read.top_set[1],
+            "rpe": read.top_set[2],
+            **_where(read.top_from),
+        },
+        "e1rm": read.e1rm,
+        "e1rm_before": read.e1rm_before,
+        "exposures": read.exposures,
+        "e1rm_from": None if read.e1rm_from is None else _source(read.e1rm_from),
+    }
+    if read.timed:
+        row["seconds"] = list(read.seconds)
+        row["prescribed_seconds"] = read.prescribed_seconds
+    if under_authored:
+        row["under_authored_rpe"] = list(under_authored)
+    return row
+
+
+def _source(source: ExposureSource) -> Facts:
+    return {"exposure": source.exposure, **_where(source)}
+
+
+def _where(source: ExposureSource | None) -> Facts:
+    if source is None:
+        return {}
+    return {"date": source.date.isoformat(), "session": source.session}
 
 
 def ladders(reads: Sequence[LadderRead]) -> CardField | None:
@@ -299,7 +423,7 @@ def ladders(reads: Sequence[LadderRead]) -> CardField | None:
         return None
     rows = [ladder_row(r) for r in reads]
     asks = tuple(
-        Ask("ready_for_next_rung", f"line:{r.line.session_id}/{r.line.line_key}")
+        Ask("ready_for_next_rung", f"line:{r.line.session_id}/{r.line.exercise}")
         for r in reads
         if r.needed is None and r.next is not None
     )
@@ -309,7 +433,7 @@ def ladders(reads: Sequence[LadderRead]) -> CardField | None:
 def ladder_row(read: LadderRead) -> Facts:
     return {
         "session": read.line.session_id,
-        "line": read.line.line_key,
+        "line": read.line.exercise,
         "rung": read.rung,
         "exercise": read.exercise,
         "rungs": read.rungs,
@@ -327,13 +451,30 @@ def readiness(previous: str | None) -> CardField:
     return CardField("readiness", {"previous": previous}, (Ask("readiness"),))
 
 
-def sleep(nights: Mapping[datetime.date, float], *, short_sleep_week: bool) -> CardField:
-    short = sum(1 for hours in nights.values() if hours < 7)
-    asks = () if nights else (Ask("sleep_nights"),)
-    return CardField(
-        "sleep",
-        {"nights": len(nights), "short_nights": short, "short_sleep_week": short_sleep_week},
-        asks,
+def sleep(nights: Mapping[datetime.date, float], check_in: datetime.date) -> CardField:
+    """The nights the Short-sleep week reads; with none of them stored, the ask names those
+    nights and the hours under which a night is short."""
+    measured = measured_nights(nights, check_in)
+    facts = {
+        "nights": len(measured),
+        "short_nights": sum(1 for hours in measured.values() if short_night(hours)),
+        "short_sleep_week": short_sleep_week(nights, check_in) is not None,
+    }
+    return CardField("sleep", facts, () if measured else (_sleep_ask(check_in),))
+
+
+def _sleep_ask(check_in: datetime.date) -> Ask:
+    return Ask(
+        "sleep_nights",
+        detail={
+            "record": "sleep_night",
+            "under_hours": SHORT_NIGHT_HOURS,
+            "nights": [night.isoformat() for night in nights_read(check_in)],
+            "give": (
+                f"night and hours for every night under {SHORT_NIGHT_HOURS} hours; "
+                "other nights optional"
+            ),
+        },
     )
 
 
@@ -360,6 +501,7 @@ def weight_phase(
             "kind": phase.kind,
             "target_rate": phase.target_rate,
             "observed_rate": phase.observed_rate,
+            "rate_units": RATE_UNITS,
             "until": phase.until,
         }
     return CardField("weight_phase", facts, () if weigh_ins else (Ask("weigh_in"),))

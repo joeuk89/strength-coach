@@ -15,8 +15,10 @@ README = "README.md"
 def render_pages(pages: Pages) -> dict[str, str]:
     rendered = {
         README: readme(pages),
-        f"{PAGES_DIR}/week.md": week_page(pages.week, units=pages.units, pin=pages.pin),
-        f"{PAGES_DIR}/athlete.md": athlete_page(pages.athlete),
+        f"{PAGES_DIR}/week.md": week_page(
+            pages.week, names=pages.names, units=pages.units, pin=pages.pin
+        ),
+        f"{PAGES_DIR}/athlete.md": athlete_page(pages.athlete, names=pages.names),
         f"{PAGES_DIR}/progress.md": progress_page(
             pages.progress,
             names=pages.names,
@@ -28,5 +30,5 @@ def render_pages(pages: Pages) -> dict[str, str]:
     rendered |= {
         routine_path(r.session_id): routine_page(r, units=pages.units) for r in pages.routines
     }
-    rendered |= {check_in_path(c): check_in_page(c) for c in pages.check_ins}
+    rendered |= {check_in_path(c): check_in_page(c, names=pages.names) for c in pages.check_ins}
     return rendered

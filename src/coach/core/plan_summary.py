@@ -3,28 +3,43 @@ and lines, its overrides and its flags (ADR 0006). A first approval shows the ch
 resume shows the WeekPlan's frozen rows (docs/spec/verbs.md, "Re-run safety")."""
 
 import datetime
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import cast
+from typing import Literal, cast
 
+from coach.core.ceilings import is_illness_cause
 from coach.core.config import Units
 from coach.core.flag import Flag
 from coach.core.frozen_prescription import frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import RotationPosition
-from coach.core.prescription import PlanOverride
-from coach.core.routine_projection import RungKey, RungLabels, authored_exercise, week_labels
+from coach.core.prescription import LinePrescription, PlanOverride
+from coach.core.routine_projection import (
+    RungKey,
+    RungLabels,
+    authored_exercise,
+    found_at,
+    week_labels,
+)
 
 type Json = Mapping[str, object]
 type SessionRungLabels = Mapping[str, Mapping[RungKey, RungLabels]]
+type PinOutcome = Literal["reduced", "no_effect"]
 
 
 @dataclass(frozen=True)
 class SummaryLine:
+    """`dropped_by` is the cause of the niggle step that dropped the line, if one did;
+    `pin_outcome` what an RPE ceiling left of the line's `pin_load`, if it lowered one;
+    `illness_cap` the cause of the illness cap that binds the line, naming its end."""
+
     exercise_id: str
     set_groups: Sequence[Json]
     change: str
     rung_labels: RungLabels | None = None
+    dropped_by: str | None = None
+    pin_outcome: PinOutcome | None = None
+    illness_cap: str | None = None
 
 
 @dataclass(frozen=True)
@@ -60,18 +75,7 @@ def fresh_summary(
                 prescribed.session.date,
                 prescribed.session.location,
                 tuple(
-                    SummaryLine(
-                        line.exercise_id,
-                        frozen_groups(line.groups, units),
-                        line.change,
-                        _labels(
-                            rung_labels,
-                            prescribed.session.session_id,
-                            line.exercise_id,
-                            [step.to_json() for step in line.steps],
-                            line.rung,
-                        ),
-                    )
+                    _fresh_line(line, prescribed.session.session_id, units, rung_labels)
                     for line in prescribed.lines
                 ),
             )
@@ -79,6 +83,21 @@ def fresh_summary(
         ),
         overrides=draft.overrides,
         flags=checked.flags,
+    )
+
+
+def _fresh_line(
+    line: LinePrescription, session_id: str, units: Units, rung_labels: SessionRungLabels
+) -> SummaryLine:
+    steps = [step.to_json() for step in line.steps]
+    return SummaryLine(
+        line.exercise_id,
+        frozen_groups(line.groups, units),
+        line.change,
+        _labels(rung_labels, session_id, line.exercise_id, steps, line.rung),
+        _dropped_by(line.change, steps),
+        _pin_outcome(line.flags, session_id, line.exercise_id),
+        _illness_cap(steps),
     )
 
 
@@ -126,6 +145,7 @@ def frozen_summary(
 
 def _line(row: Json, rung_labels: SessionRungLabels) -> SummaryLine:
     exercise_id = str(row["exercise_id"])
+    steps = cast(list[Json], row["steps"])
     return SummaryLine(
         exercise_id,
         cast(list[Json], row["set_groups"]),
@@ -134,10 +154,40 @@ def _line(row: Json, rung_labels: SessionRungLabels) -> SummaryLine:
             rung_labels,
             str(row["session_id"]),
             exercise_id,
-            cast(list[Json], row["steps"]),
+            steps,
             cast(int | None, row["rung"]),
         ),
+        _dropped_by(str(row["change"]), steps),
+        _pin_outcome(
+            (Flag.from_json(f) for f in cast(list[Json], row["flags"])),
+            str(row["session_id"]),
+            exercise_id,
+        ),
+        _illness_cap(steps),
     )
+
+
+def _dropped_by(change: str, steps: Sequence[Json]) -> str | None:
+    if change != "dropped":
+        return None
+    return next((str(s["cause"]) for s in steps if s.get("step") == "niggle"), None)
+
+
+def _illness_cap(steps: Sequence[Json]) -> str | None:
+    causes = (str(s["cause"]) for s in steps if s.get("step") == "rpe_ceiling")
+    return next((c for c in causes if is_illness_cause(c)), None)
+
+
+def _pin_outcome(flags: Iterable[Flag], session_id: str, exercise_id: str) -> PinOutcome | None:
+    for flag in flags:
+        scope = flag.scope
+        if (flag.code, scope.session_id, scope.exercise_id) == (
+            "pin_load_capped",
+            session_id,
+            exercise_id,
+        ):
+            return cast(PinOutcome, flag.params["outcome"])
+    return None
 
 
 def _labels(
@@ -147,7 +197,7 @@ def _labels(
     steps: Sequence[Json],
     rung: int | None,
 ) -> RungLabels | None:
-    found = rung_labels.get(session_id, {}).get((authored_exercise(exercise_id, steps), rung))
+    found = found_at(rung_labels.get(session_id, {}), authored_exercise(exercise_id, steps), rung)
     return None if found is None else week_labels(found, steps)
 
 

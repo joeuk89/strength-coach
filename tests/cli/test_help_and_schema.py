@@ -6,7 +6,6 @@ from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.fixture_instances import serving
 
-from coach.cli.envelope import BUDGET_BYTES
 from coach.cli.registry import declarations
 
 
@@ -80,12 +79,11 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 
 
-def test_schema_without_a_verb_gives_every_declaration_uncut_over_the_budget() -> None:
+def test_schema_without_a_verb_gives_every_declaration_whole() -> None:
     run = run_coach("schema")
 
     result = run.envelope["result"]
     assert run.code == 0
-    assert len(run.stdout.encode("utf-8")) > BUDGET_BYTES
     assert [row["name"] for row in result["rows"]] == [d.name for d in declarations()]
     assert result["rows"][0] == declarations()[0].describe()
     assert (result["count"], result["truncated"]) == (17, False)
@@ -105,7 +103,8 @@ def test_schema_of_the_schema_verb_declares_its_optional_verb_argument() -> None
     run = run_coach("schema", "schema")
 
     properties = run.envelope["result"]["input"]["properties"]
-    assert properties["verb"]["type"] == "string"
+    assert properties["verb"]["type"] == "array"
+    assert properties["verb"]["items"] == {"type": "string"}
     assert run.envelope["result"]["input"]["required"] == []
 
 
@@ -123,3 +122,39 @@ def test_schema_of_an_unknown_verb_is_invalid() -> None:
 
     assert run.code == 1
     assert run.envelope["error"]["code"] == "invalid_argument"
+
+
+def test_schema_of_a_two_word_verb_as_two_words_matches_the_quoted_form() -> None:
+    words = run_coach("schema", "checkin", "open")
+
+    assert words.code == 0
+    assert words.envelope["result"]["name"] == "checkin open"
+    assert words.stdout == run_coach("schema", "checkin open").stdout
+
+
+def test_schema_of_an_unknown_second_word_names_the_verb_as_typed() -> None:
+    run = run_coach("schema", "checkin", "bogus")
+
+    assert run.code == 1
+    assert run.envelope["error"]["code"] == "invalid_argument"
+    assert "'checkin bogus'" in run.envelope["error"]["message"]
+
+
+def test_schema_without_a_verb_marks_each_draft_verb_with_its_draft_kind_only() -> None:
+    rows = run_coach("schema").envelope["result"]["rows"]
+
+    drafts = {row["name"]: row["draft"] for row in rows if "draft" in row}
+    assert drafts == {
+        "checkin record": {"kind": "check-in"},
+        "goal adopt": {"kind": "goal"},
+        "plan apply": {"kind": "plan"},
+        "program adopt": {"kind": "program"},
+        "record": {"kind": "ledger"},
+        "report": {"kind": "report"},
+    }
+
+
+def test_query_help_points_to_the_verb_that_declares_the_plan_draft() -> None:
+    properties = run_coach("schema", "query").envelope["result"]["input"]["properties"]
+
+    assert "coach schema plan apply" in properties["draft"]["description"]

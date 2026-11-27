@@ -18,7 +18,6 @@ from support.fixture_instances import serving
 
 from coach.cli import app
 from coach.cli.declaration import Declaration
-from coach.cli.envelope import BUDGET_BYTES
 from coach.cli.registry import declarations
 from coach.core.registries.agent import RECORD_KINDS, VIEWS
 from coach.services.query import READING_KINDS
@@ -63,12 +62,14 @@ def example_drafts(root: Path, coach: Coach) -> None:
 PLAN = ".coach/drafts/2026-11-01-plan.toml"
 # Stands for the Write plan hash of the dry run, which is only known once it has run.
 APPROVED = "<the dry run's hash>"
-PUSH = ("plan", "apply", PLAN, "--expect", APPROVED)
+PUSH = ("plan", "apply", PLAN, "--expect", APPROVED, "--last", "1")
+# A list returns whole unless the agent cuts it, so each one some call cuts is cut here.
+CUT = (("program", "show", "--last", "1"), ("schema", "--registry", "flags", "--last", "1"))
 
 
 def calls() -> list[tuple[str, ...]]:
-    """Every declared example at its default size, every view and every list kind, and the
-    approved push of next week's plan."""
+    """Every declared example as the agent runs it, every view and every list kind, each list
+    cut once, and the approved push of next week's plan."""
     examples = [
         tuple(word for word in example.argv if word != "--full")
         for declaration in declarations()
@@ -80,14 +81,14 @@ def calls() -> list[tuple[str, ...]]:
         *(("query", "readings", "--kind", kind) for kind in READING_KINDS),
     ]
     drafts = [("schema", d.name) for d in declarations() if d.draft is not None]
-    return list(dict.fromkeys([*examples, *lists, *drafts, PUSH]))
+    return list(dict.fromkeys([*examples, *lists, *drafts, *CUT, PUSH]))
 
 
 @pytest.fixture(scope="module")
 def envelopes(tmp_path_factory: pytest.TempPathFactory) -> dict[tuple[str, ...], Run]:
     """Each call's run on the fixture instance, its store rebuilt once; a call that writes runs
     on its own copy."""
-    built = a_fixture_instance(tmp_path_factory.mktemp("budget") / "built")
+    built = a_fixture_instance(tmp_path_factory.mktemp("envelopes") / "built")
     found: dict[tuple[str, ...], Run] = {}
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(app, "engine_version", lambda: PIN)
@@ -111,55 +112,6 @@ def declared(argv: tuple[str, ...]) -> Declaration:
         (d for d in declarations() if list(argv[: len(d.name.split())]) == d.name.split()),
         key=lambda d: len(d.name.split()),
     )
-
-
-# Envelopes allowed over the budget because cutting them would cut what the agent needs to act
-# (docs/spec/verbs.md). They are exempt for what they carry, so one may also fit.
-OVER_BUDGET: dict[tuple[str, ...], str] = {
-    ("checkin", "open"): "the card's sessions, dose and notes are the check-in itself",
-    ("checkin", "open", "--date", "2026-11-01", "--tier", "deep"): "as checkin open",
-    ("plan", "apply", PLAN, "--dry-run"): "ADR 0006's 40-line approval prompt alone is about 3 KB",
-    ("program", "adopt", ".coach/drafts/2026-10-30-program.toml", "--dry-run"): (
-        "every adopt warning needs an answer before the version is adopted"
-    ),
-    ("report", ".coach/drafts/2026-11-07-report.toml", "--dry-run"): (
-        "the whole issue body is what the athlete approves, so it is never cut"
-    ),
-    ("schema",): "every verb and every registry name, the agent's one call to see them all",
-    **{
-        ("schema", d.name): "the whole Draft schema is what the agent writes the Draft against"
-        for d in declarations()
-        if d.draft is not None
-    },
-}
-
-
-def test_the_schema_verb_keeps_whole_exactly_the_declarations_carrying_a_draft() -> None:
-    schema = declared(("schema",))
-
-    assert {d.name for d in declarations() if schema.over_budget({"verb": d.name})} == {
-        "program adopt",
-        "plan apply",
-        "record",
-        "checkin record",
-        "goal adopt",
-        "report",
-    }
-    assert schema.over_budget({})
-    assert not schema.over_budget({"registry": "flags"})
-
-
-def size(run: Run) -> int:
-    return len(run.stdout.encode("utf-8"))
-
-
-# One test per check, not per call: the shared runs then build once, in one worker.
-def test_every_default_envelope_on_the_fixture_instance_is_under_the_budget(
-    envelopes: dict[tuple[str, ...], Run],
-) -> None:
-    over = {" ".join(a): size(r) for a, r in envelopes.items() if size(r) > BUDGET_BYTES}
-
-    assert over.keys() <= {" ".join(a) for a in OVER_BUDGET}, over
 
 
 def test_no_declared_field_is_dropped(envelopes: dict[tuple[str, ...], Run]) -> None:

@@ -38,6 +38,7 @@ TEMPLATE_REGISTRIES: Mapping[str, Registry[Term]] = {
     "hevy_muscle_group": HEVY_MUSCLE_GROUPS,
 }
 NO_LOAD_MODES = ("bodyweight", "duration", "distance")
+TIMED_LOAD_TEMPLATE = "weight_duration"
 # Warnings raised once per case; acknowledging the version-wide key names the per-case keys.
 PER_CASE_WARNINGS = {
     "dose_off_band": "dose target",
@@ -47,7 +48,7 @@ PER_CASE_WARNINGS = {
 
 
 @dataclass(frozen=True)
-class _Loaded:
+class _StartLoadRead:
     """A line, or a rung after the first, as the start-load checks read it."""
 
     exercise_id: str
@@ -382,6 +383,8 @@ class _Checks:
             self._ladder(session, line, line.ladder, scheme, scope)
         self._start_load(session, line, exercise, scope)
         self._template(line.exercise, exercise, scope)
+        if scheme is not None and scheme.name == "timed_load":
+            self._timed_template(line.exercise, exercise, scope)
 
     def _exercise(self, id_: str) -> Mapping[str, object] | None:
         stored = self.context.library.get(id_)
@@ -438,6 +441,7 @@ class _Checks:
                     {"rung": index, "previous_rung": index - 1},
                     f"rung {index} of {line.exercise} repeats rung {index - 1}: "
                     "a rung on one exercise differs from the one before it in sets or cues",
+                    distinct=f"rung {index}",
                 )
 
     def _set_groups(
@@ -504,9 +508,9 @@ class _Checks:
     def _start_load(
         self, session: Session, line: Line, exercise: Mapping[str, object], scope: Scope
     ) -> None:
-        self._loaded(
+        self._check_start_load(
             session,
-            _Loaded(
+            _StartLoadRead(
                 exercise_id=line.exercise,
                 exercise=exercise,
                 mode=line.load_mode or str(exercise.get("load_mode")),
@@ -539,9 +543,9 @@ class _Checks:
             return
         if exercise is None:
             return
-        self._loaded(
+        self._check_start_load(
             session,
-            _Loaded(
+            _StartLoadRead(
                 exercise_id=rung.exercise,
                 exercise=exercise,
                 mode=str(exercise.get("load_mode")),
@@ -555,7 +559,7 @@ class _Checks:
             scope,
         )
 
-    def _loaded(self, session: Session, loaded: _Loaded, scope: Scope) -> None:
+    def _check_start_load(self, session: Session, loaded: _StartLoadRead, scope: Scope) -> None:
         if loaded.mode in NO_LOAD_MODES:
             if loaded.start_load is not None:
                 self.unknown.append(loaded.key_path)
@@ -625,6 +629,20 @@ class _Checks:
                     f"coach schema --registry {registry.name}",
                     distinct=f"{id_}#{column}",
                 )
+
+    def _timed_template(self, id_: str, exercise: Mapping[str, object], scope: Scope) -> None:
+        """The scheme reads each set's seconds, which only a weight and duration template
+        records; a built-in carry records distance."""
+        kind = exercise.get("hevy_exercise_type")
+        if kind == TIMED_LOAD_TEMPLATE:
+            return
+        self.raise_(
+            "template_untimed",
+            scope,
+            {"exercise_id": id_, "hevy_exercise_type": kind, "needs": TIMED_LOAD_TEMPLATE},
+            f"{id_} logs as {kind or 'an unknown Hevy type'}, which records no seconds; "
+            f"timed_load needs a {TIMED_LOAD_TEMPLATE} exercise",
+        )
 
     def unknown_keys(self) -> None:
         if self.unknown:
@@ -711,6 +729,9 @@ def _off_shape(scheme: Scheme, groups: Sequence[SetGroup]) -> str | None:
     match scheme.set_groups:
         case "one_working":
             return None if len(groups) == 1 else "exactly one working group"
+        case "one_timed":
+            timed = len(groups) == 1 and groups[0].duration_s is not None and groups[0].reps is None
+            return None if timed else "exactly one working group stating duration_s"
         case "top_then_backoffs":
             top = groups[0]
             if top.count != 1 or not isinstance(top.reps, int) or len(groups) < 2:

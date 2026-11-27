@@ -8,14 +8,14 @@ No Block has closed yet.
 
 | lift | scheme | e1RM now | change over the block | change over three | best set | stall streak | resets | signal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Bench Press (Barbell) | double_progression | 336 | – | – | 240 × 10 on 2026-10-20 | 0 | 0 | – |
-| Back Squat (Barbell) | double_progression | 364 | – | – | 260 × 10 on 2026-10-19 | 0 | 0 | – |
+| Bench Press (Barbell) | double progression | 336 | – | – | 240 × 10 on 2026-10-20 | 0 | 0 | – |
+| Back Squat (Barbell) | double progression | 364 | – | – | 260 × 10 on 2026-10-19 | 0 | 0 | – |
 
 ## Milestones
 
 | lift | target | reached | to go |
 | --- | --- | --- | --- |
-| Bench Press (Barbell) | kind load_x_reps, load 185, reps 5 | 2026-05-19 | – |
+| Bench Press (Barbell) | load for reps: 185 × 5 | 2026-05-19 | – |
 
 ## Phase
 

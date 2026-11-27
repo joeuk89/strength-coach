@@ -7,12 +7,13 @@ from dataclasses import dataclass, replace
 from functools import cached_property
 from typing import cast
 
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.block import Block, blocks
 from coach.core.closed_week.close import WeekFacts, close_week, week_matches
 from coach.core.closed_week.dose import MuscleMap
 from coach.core.closed_week.kind import is_return_week
 from coach.core.closed_week.match import PlannedRef, WeekWorkout, workout_class
-from coach.core.closed_week.sessions import PlannedWork, TargetSet
+from coach.core.closed_week.sessions import PlannedWork
 from coach.core.closed_week.week import ClosedWeek
 from coach.core.config import Units
 from coach.core.days_off import SessionTrained
@@ -63,10 +64,15 @@ def status_spans(conn: Connection) -> tuple[StatusSpan, ...]:
         StatusSpan(
             str(row["kind"]),
             datetime.date.fromisoformat(str(row["from_date"])),
-            None if row["to_date"] is None else datetime.date.fromisoformat(str(row["to_date"])),
+            _date_or_none(row["to_date"]),
+            _date_or_none(row["cap_ends"]),
         )
         for row in readings.live(conn, "status_span")
     )
+
+
+def _date_or_none(value: object) -> datetime.date | None:
+    return None if value is None else datetime.date.fromisoformat(str(value))
 
 
 def muscle_map(conn: Connection) -> MuscleMap:
@@ -183,6 +189,7 @@ class WeekLog:
         self.claims = _claims(live, self.workouts, sessions)
         self.trained_unlogged = _planned_refs(live, "trained_unlogged")
         self.cancelled = _planned_refs(live, "cancelled")
+        self.miss_tagged = _planned_refs(live, "miss_tag")
         self.spans = status_spans(conn)
         self.routines = routine_map.mapped(conn)
         self.rehab = niggles.rehab_histories(conn)
@@ -218,6 +225,9 @@ class WeekLog:
 
     def workout(self, workout_id: str) -> WeekWorkout:
         return self._by_id[workout_id]
+
+    def week_of(self, workout_id: str) -> datetime.date:
+        return self._week_of(self.workout(workout_id))
 
     @cached_property
     def matched_exposures(self) -> tuple[Exposure, ...]:
@@ -269,6 +279,7 @@ class WeekLog:
             claims=self.claims,
             trained_unlogged=self.trained_unlogged,
             cancelled=self.cancelled,
+            miss_tagged=self.miss_tagged,
             spans=self.spans,
             carried=frozenset(o.kind for o in plan.overrides if o.kind in WEEK_OVERRIDES),
             returned=is_return_week(monday, self.lifting_dates),
@@ -324,14 +335,20 @@ class WeekLog:
             if line.scheme.name == "hold"
         }
         frozen = week_plans.prescriptions(self.conn, plan_id)
-        targets = _targets(frozen, hold_lines)
+        targets = _targets(frozen)
         returned = _returned(frozen)
+        lines = _lines(frozen)
         return tuple(
             PlannedWork(
                 s,
                 targets.get((s.date, s.session_id), {}),
                 dropped=s.session_id in week.dropped,
                 returned=returned.get((s.date, s.session_id), frozenset()),
+                held=frozenset(
+                    e for session, e in hold_lines if session == s.session_id and e is not None
+                ),
+                lines=lines.get((s.date, s.session_id))
+                or frozenset(line.exercise for line in s.lines),
             )
             for s in week.sessions
         )
@@ -380,18 +397,18 @@ def trained_without_sets(
     )
 
 
-def _targets(
-    rows: Sequence[Row], hold_lines: set[tuple[str | None, str | None]]
-) -> dict[PlannedRef, dict[str, tuple[TargetSet, ...]]]:
+def _targets(rows: Sequence[Row]) -> dict[PlannedRef, dict[str, tuple[TargetSet, ...]]]:
     found: dict[PlannedRef, dict[str, tuple[TargetSet, ...]]] = {}
     for row in rows:
         session_id, exercise_id = str(row["session_id"]), str(row["exercise_id"])
-        if (session_id, exercise_id) in hold_lines:
-            continue
         groups = cast(list[dict[str, object]], row["set_groups"])
         sets = tuple(
             TargetSet(
-                _bottom(group), _number(group.get("rpe")), _top(group), _number(group.get("load"))
+                _bottom(group),
+                _number(group.get("rpe")),
+                _top(group),
+                _number(group.get("load")),
+                _seconds(group.get("duration_s")),
             )
             for group in groups
             if group.get("type") == "working"
@@ -410,6 +427,16 @@ def _returned(rows: Sequence[Row]) -> dict[PlannedRef, frozenset[str]]:
         if any(str(step.get("cause", "")).startswith("return") for step in steps):
             ref = (_day(str(row["date"])), str(row["session_id"]))
             found.setdefault(ref, set()).add(str(row["exercise_id"]))
+    return {ref: frozenset(lines) for ref, lines in found.items()}
+
+
+def _lines(rows: Sequence[Row]) -> dict[PlannedRef, frozenset[str]]:
+    """Every frozen exercise by planned session; a swapped line froze as the exercise it swapped
+    to."""
+    found: dict[PlannedRef, set[str]] = {}
+    for row in rows:
+        ref = (_day(str(row["date"])), str(row["session_id"]))
+        found.setdefault(ref, set()).add(str(row["exercise_id"]))
     return {ref: frozenset(lines) for ref, lines in found.items()}
 
 
@@ -453,6 +480,10 @@ def _top(group: Mapping[str, object]) -> int | None:
     if isinstance(reps, str):
         return None
     return reps if isinstance(reps, int) else None
+
+
+def _seconds(value: object) -> int | None:
+    return value if isinstance(value, int) else None
 
 
 def _number(value: object) -> float | None:

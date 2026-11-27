@@ -71,3 +71,66 @@ def test_a_decision_carries_the_reason_triple(reason: str) -> None:
 def test_an_annotation_off_its_shape_is_refused(body: str) -> None:
     with pytest.raises(Invalid):
         parse(f"[[annotation]]\n{body}")
+
+
+def parse_annotation_of(kind: str, params: str = "") -> object:
+    table = f"params = {{ {params} }}\n" if params else ""
+    target = (
+        "planned_session:2026-11-04/upper-a"
+        if kind in ("trained_unlogged", "cancelled", "miss_tag")
+        else "workout:w-0001/bb_bench_press"
+    )
+    text = f'[[annotation]]\nkind = "{kind}"\ntarget = "{target}"\n{table}because = "kit"\n'
+    return parse_ledger_draft(text.encode("utf-8"), verb="record", file="d.toml")
+
+
+def test_a_load_mode_annotation_without_its_load_mode_param_is_refused() -> None:
+    with pytest.raises(Invalid) as raised:
+        parse_annotation_of("load_mode")
+
+    assert raised.value.code == "invalid_argument"
+    assert "params: load_mode is required" in raised.value.message
+
+
+def test_a_repair_with_an_unknown_param_is_refused_naming_it() -> None:
+    with pytest.raises(Invalid) as raised:
+        parse_annotation_of("repair", 'position = 0, field = "reps", value = 6, exercise = "x"')
+
+    assert raised.value.code == "unknown_key"
+    assert "unknown key exercise" in raised.value.message
+
+
+@pytest.mark.parametrize(
+    ("kind", "params"),
+    [
+        ("discount", ""),
+        ("discount", "position = 2"),
+        ("repair", 'position = 0, field = "weight_kg", value = 105'),
+        ("repair", 'position = 1, field = "set_type", value = "warm_up"'),
+        ("load_mode", 'load_mode = "per_hand_x2"'),
+        ("void", ""),
+        ("trained_unlogged", ""),
+        ("cancelled", ""),
+        ("miss_tag", ""),
+        ("match", 'planned_session = "planned_session:2026-11-04/upper-a"'),
+    ],
+)
+def test_each_annotation_kind_takes_the_params_its_reader_applies(kind: str, params: str) -> None:
+    parse_annotation_of(kind, params)
+
+
+@pytest.mark.parametrize(
+    ("kind", "params"),
+    [
+        ("void", "position = 1"),
+        ("discount", "sets = [2]"),
+        ("discount", "position = -1"),
+        ("repair", 'position = 0, field = "exercise_id", value = "x"'),
+        ("repair", 'field = "reps", value = 6'),
+        ("load_mode", 'load_mode = "sideways"'),
+        ("match", 'planned_session = "workout:w-0002"'),
+    ],
+)
+def test_an_annotation_param_off_its_kind_is_refused(kind: str, params: str) -> None:
+    with pytest.raises(Invalid):
+        parse_annotation_of(kind, params)

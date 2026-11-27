@@ -2,12 +2,12 @@ import datetime
 
 from support.exposures import an_exposure
 
+from coach.core.closed_week.against import TargetSet
 from coach.core.closed_week.kind import is_return_week, week_kind
 from coach.core.closed_week.match import WeekWorkout
 from coach.core.closed_week.sessions import (
     PlannedWork,
     SessionOutcome,
-    TargetSet,
     session_outcome,
 )
 from coach.core.prescription import PlannedSession, StatusSpan
@@ -21,7 +21,7 @@ def a_session(
 ) -> SessionOutcome:
     on = MONDAY + datetime.timedelta(days=n)
     work = PlannedWork(PlannedSession(f"s{n}", on, "home", "lifting", ()), {"bb_bench_press": SETS})
-    return session_outcome(work, workout=workout, spans=spans)
+    return session_outcome(work, workouts=() if workout is None else (workout,), spans=spans)
 
 
 def passed(n: int) -> SessionOutcome:

@@ -226,7 +226,8 @@ CREATE TABLE prescription (                -- frozen at approval, derivation ste
 the Draft's sessions. A plan's rows read back by date and position, which is the Draft's order
 because its sessions are always in date order. On an `exercise_ladder` line, `rung` freezes the
 rung the week prescribes, after any return-band step back: rungs may share an exercise (ADR 0025),
-so `exercise_id` alone does not tell them apart.
+so `exercise_id` alone does not tell them apart. A return band's `cut` step in `steps` also
+carries `rung`, the rung it stepped back to; a `cut` step frozen before it did carries none.
 
 A planned session has no table. It is `planned_session:<date>/<session>`, derived from the plan
 in force on that date; a past plan's sessions are read from its `prescription` rows.
@@ -315,6 +316,7 @@ CREATE TABLE status_span (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL CHECK (kind IN ('ill','injured','travel','no_training')),
   from_date TEXT NOT NULL, to_date TEXT,   -- NULL is open-ended
+  cap_ends TEXT,                           -- ill only: the last day of the illness cap, as the athlete stated it; NULL is no answer
   text TEXT,
   withdraws TEXT REFERENCES status_span(id),  -- as annotation: a withdrawing row names the one it withdraws
   check_in TEXT REFERENCES check_in(id), draft_hash TEXT NOT NULL, recorded_at TEXT NOT NULL
@@ -622,7 +624,7 @@ The twelve ledger record kinds (`verbs.md`) and what each writes:
 | `[[note]]` | `athlete_note` |
 | `[[workout]]` | `workout` (source `manual`), `logged_set` |
 | `[[weigh_in]]`, `[[sleep_night]]`, `[[activity]]` | the table of the same name; a weigh-in or sleep night is withdrawn by a new row whose `withdraws` names it |
-| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span |
+| `[[status_span]]` | `status_span`; a withdrawal is a new row whose `withdraws` names the span. A changed `cap_ends` is a withdrawal plus a fresh span in one Draft |
 | `[[exercise]]` | `exercise`, in place |
 | `[[observation]]` | `observation`, insert or retire in place; check-in file only |
 

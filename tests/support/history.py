@@ -2,6 +2,7 @@
 only through `store` functions."""
 
 import datetime
+import json
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +21,12 @@ def a_logged_workout(
     *exercises: tuple[str, tuple[Logged, ...]],
     session_id: str | None = None,
     set_type: str = "working",
+    routine_id: str | None = None,
+    minutes: int | None = None,
+    started: str | None = None,
 ) -> str:
     """A workout version: per (template id, sets), sets of (kg, reps, rpe) of `set_type`. An
-    id starting `w-` is a manual workout."""
+    id starting `w-` is a manual workout; `started` is Hevy's start time on the day, `HH:MM`."""
     manual = id_.startswith("w-")
     logged_sets = [(template, set_) for template, logged in exercises for set_ in logged]
     sets = [
@@ -46,12 +50,12 @@ def a_logged_workout(
                 source="manual" if manual else "hevy",
                 date=on,
                 title=None,
-                routine_id=None,
+                routine_id=routine_id,
                 session_id=session_id,
-                minutes=None,
+                minutes=minutes,
                 session_rpe=None,
                 notes=None,
-                raw=None if manual else "{}",
+                raw=None if manual else _raw(on, started),
                 check_in=None,
                 draft_hash="h" if manual else None,
                 recorded_at=RECORDED_AT,
@@ -120,3 +124,7 @@ def an_instance_with_eight_weeks(root: Path, *, pin: str) -> Path:
         a_logged_workout(conn, f"h-{week}", on, ("79D0BB3A", sets), ("D04AC939", ((140, 5, 8),)))
     conn.close()
     return root
+
+
+def _raw(on: str, started: str | None) -> str:
+    return json.dumps({"start_time": f"{on}T{started}:00+00:00"} if started else {})

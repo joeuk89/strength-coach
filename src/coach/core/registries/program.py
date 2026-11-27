@@ -45,6 +45,7 @@ class Pattern:
 class Muscle:
     name: str
     dosed: bool
+    title: str
 
     def describe(self) -> Row:
         return {"name": self.name, "dosed": self.dosed}
@@ -78,24 +79,24 @@ PATTERNS = Registry(
 MUSCLES = Registry(
     "muscles",
     (
-        Muscle("chest", dosed=True),
-        Muscle("lats", dosed=True),
-        Muscle("upper_back", dosed=True),
-        Muscle("front_delts", dosed=True),
-        Muscle("side_delts", dosed=True),
-        Muscle("rear_delts", dosed=True),
-        Muscle("biceps", dosed=True),
-        Muscle("triceps", dosed=True),
-        Muscle("quadriceps", dosed=True),
-        Muscle("hamstrings", dosed=True),
-        Muscle("glutes", dosed=True),
-        Muscle("calves", dosed=True),
-        Muscle("abdominals", dosed=True),
-        Muscle("adductors", dosed=False),
-        Muscle("abductors", dosed=False),
-        Muscle("lower_back", dosed=False),
-        Muscle("forearms", dosed=False),
-        Muscle("traps", dosed=False),
+        Muscle("chest", dosed=True, title="chest"),
+        Muscle("lats", dosed=True, title="lats"),
+        Muscle("upper_back", dosed=True, title="upper back"),
+        Muscle("front_delts", dosed=True, title="front delts"),
+        Muscle("side_delts", dosed=True, title="side delts"),
+        Muscle("rear_delts", dosed=True, title="rear delts"),
+        Muscle("biceps", dosed=True, title="biceps"),
+        Muscle("triceps", dosed=True, title="triceps"),
+        Muscle("quadriceps", dosed=True, title="quadriceps"),
+        Muscle("hamstrings", dosed=True, title="hamstrings"),
+        Muscle("glutes", dosed=True, title="glutes"),
+        Muscle("calves", dosed=True, title="calves"),
+        Muscle("abdominals", dosed=True, title="abdominals"),
+        Muscle("adductors", dosed=False, title="adductors"),
+        Muscle("abductors", dosed=False, title="abductors"),
+        Muscle("lower_back", dosed=False, title="lower back"),
+        Muscle("forearms", dosed=False, title="forearms"),
+        Muscle("traps", dosed=False, title="traps"),
     ),
 )
 # rn:concurrent-training.5: a heavy squat or hinge session drives the next-day activity rule.

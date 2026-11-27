@@ -198,7 +198,7 @@ def _ledger() -> str:
             {
                 "kind": "discount",
                 "target": f"workout:{_workout_id(week, 0)}/bb_back_squat",
-                "params": {"sets": [2]},
+                "params": {"position": 2},
                 "because": "fatigue",
                 "text": "the last set ground out",
             }

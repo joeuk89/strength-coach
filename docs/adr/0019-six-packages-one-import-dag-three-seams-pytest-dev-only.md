@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-31
-amended: 2026-11-09 by the owner's review of PR #305 (`Clock` also has `zone`), 2026-11-08 by the review of PR #271 (pyyaml joins the dev group, added by #249), 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
+amended: 2026-11-27 by the owner on #362 (the contract layer's envelope test checks declared fields, not a size), 2026-11-27 by the review of build v7 (the per-test guard counts CPU time), 2026-11-09 by the owner's review of PR #305 (`Clock` also has `zone`), 2026-11-08 by the review of PR #271 (pyyaml joins the dev group, added by #249), 2026-11-07 by #237 (`github` is a seventh package, an I/O layer beside `hevy` that imports `core` and itself and that `services` and `cli` may import; its `GitHubClient` protocol is injected into the `report` service the way `HevyClient` is, and `main` takes its factory beside the Hevy one), 2026-11-01 by the review fixes (the suite target is thirty seconds and the per-test guard two seconds, six on CI, so no test is cut to fit the budget), 2026-11-01 by the build (pytest-xdist joins the dev group and the suite runs across every core; the per-test guard does not charge shared module- or session-scoped fixture setup), 2026-10-31 by wayfinder #44 (the Write audit is the `HevyClient`'s own work, not a fourth seam; the plate-pool fetch is `cli`'s and its parse is `core`'s; the 429 retry sits below the protocol; seven test layers; `main` takes a client factory and a clock; the TOML emitter lives in `render`; the smoke test names its interpreter)
 ---
 
 # The engine is seven packages on one import DAG, with four injected seams; the suite is pytest, dev-only, under thirty seconds
@@ -112,10 +112,10 @@ the rebuild is clean, modular, maintainable and extendible code (KISS, SOLID).
   renderer, the 40-line prompt, the TOML round-trip), `tests/services/` (`:memory:` from
   `schema.sql` through scenario builders, `FakeHevy`, a fixed clock), `tests/cli/` (in-process
   `main` per exit class with the fixture instance, a `FakeHevy` factory and a fixed clock; the
-  one subprocess smoke test), `tests/contract/` (the generated tests the spec lists, the 3 KB
-  envelope test, the `rn:` registry test, the import DAG).
+  one subprocess smoke test), `tests/contract/` (the generated tests the spec lists, the
+  default-envelope test, the `rn:` registry test, the import DAG).
 - **Budget.** The whole suite aims to run in under thirty seconds locally, across every core under
-  pytest-xdist; a guard fails any single test over two seconds (six on CI). One GitHub Actions workflow runs ruff, pyright strict and pytest on every push
+  pytest-xdist; a guard fails any single test over two seconds of CPU time (six on CI). One GitHub Actions workflow runs ruff, pyright strict and pytest on every push
   and pull request through `uv run`. No pre-commit framework.
 - **Where the spec stops.** The module split inside each package, builder and fixture names, the
   CI file and the porting order from the old `coach/` are the first build ticket's own calls.

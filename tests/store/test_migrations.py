@@ -224,7 +224,7 @@ def test_m0002_numbers_a_v2_stores_rows_across_each_plan_in_the_order_readers_sh
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0002", "m0003", "m0004", "m0005")
+    assert migrated.steps == ("m0002", "m0003", "m0004", "m0005", "m0006")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
 
@@ -234,7 +234,7 @@ def test_a_v1_store_with_prescriptions_migrates_through_every_step() -> None:
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0001", "m0002", "m0003", "m0004", "m0005")
+    assert migrated.steps == ("m0001", "m0002", "m0003", "m0004", "m0005", "m0006")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
 
 
@@ -274,7 +274,7 @@ def test_m0004_gives_a_v4_stores_rows_no_rung_and_keeps_the_rest() -> None:
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0004", "m0005")
+    assert migrated.steps == ("m0004", "m0005", "m0006")
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02")} == {None}
 
@@ -324,8 +324,8 @@ def test_m0005_keeps_a_v5_stores_rows_and_refuses_a_second_row_at_one_position_i
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0005",)
-    assert schema_version(conn) == 6
+    assert migrated.steps == ("m0005", "m0006")
+    assert schema_version(conn) == ENGINE.version
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert positions(conn, "wp-2026-11-02-2") == [("lower", "2026-11-02", "bb_bench_press", 1)]
     assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02-2")} == {2}
@@ -342,10 +342,63 @@ def test_an_export_written_at_v5_rebuilds_with_its_rows_under_the_constraint(
 
     assert rebuilt == Rebuilt(schema_version=5)
     conn = connect(database)
-    assert schema_version(conn) == 6
+    assert schema_version(conn) == ENGINE.version
     assert positions(conn) == NUMBERED_ACROSS_THE_PLAN
     assert {r["rung"] for r in week_plans.prescriptions(conn, "wp-2026-11-02-2")} == {2}
     assert_a_second_row_at_position_1_is_refused(conn)
+
+
+V6_STATUS_SPAN = (
+    "INSERT INTO status_span (id, kind, from_date, to_date, withdraws, draft_hash, recorded_at) "
+    "VALUES (?, ?, ?, ?, ?, 'sha256:x', '2026-10-30T12:00:00Z')"
+)
+V6_SPANS = [
+    ("ss-0001", "ill", "2026-10-20", "2026-10-23", None),
+    ("ss-0002", "travel", "2026-10-26", None, None),
+    ("ss-0003", "ill", "2026-10-20", "2026-10-23", "ss-0001"),
+]
+
+
+def a_v6_store_with_status_spans() -> sqlite3.Connection:
+    conn = at_version(ENGINE, 6)
+    with conn:
+        conn.executemany(V6_STATUS_SPAN, V6_SPANS)
+    return conn
+
+
+def spans(conn: sqlite3.Connection) -> list[tuple[object, ...]]:
+    return conn.execute(
+        "SELECT id, kind, from_date, to_date, withdraws, cap_ends FROM status_span ORDER BY id"
+    ).fetchall()
+
+
+WITH_NO_STATED_END = [(*span, None) for span in V6_SPANS]
+
+
+def test_m0006_leaves_every_existing_status_span_without_a_stated_end() -> None:
+    conn = a_v6_store_with_status_spans()
+
+    migrated = migrate(conn)
+
+    assert migrated.steps == ("m0006",)
+    assert schema_version(conn) == 7
+    assert spans(conn) == WITH_NO_STATED_END
+    assert conn.execute("SELECT id FROM status_span_current").fetchall() == [("ss-0002",)]
+
+
+def test_an_export_written_at_v6_rebuilds_with_no_stated_end_on_its_spans(tmp_path: Path) -> None:
+    files = export(a_v6_store_with_status_spans(), "0.8.0").files
+    assert "cap_ends" not in json.loads(files["status_span.jsonl"].splitlines()[0])
+    database = tmp_path / "coach.db"
+
+    rebuilt = rebuild_missing(database, an_export_dir(tmp_path, files))
+
+    assert rebuilt == Rebuilt(schema_version=6)
+    conn = connect(database)
+    assert schema_version(conn) == 7
+    assert spans(conn) == WITH_NO_STATED_END
+    first = json.loads(export(conn, "0.8.0").files["status_span.jsonl"].splitlines()[0])
+    assert list(first)[:5] == ["id", "kind", "from_date", "to_date", "cap_ends"]
 
 
 def a_fresh_catalogue() -> sqlite3.Connection:
@@ -372,7 +425,7 @@ def test_m0003_gives_a_v3_stores_seeded_rows_the_muscles_the_catalogue_now_holds
 
     migrated = migrate(conn)
 
-    assert migrated.steps == ("m0003", "m0004", "m0005")
+    assert migrated.steps == ("m0003", "m0004", "m0005", "m0006")
     assert stored_muscles(conn, "burpee") == '{"primary":[],"secondary":[]}'
     assert stored_muscles(conn, "jump_rope") == '{"primary":[],"secondary":["calves"]}'
     assert (
@@ -446,7 +499,10 @@ def test_m0003_leaves_a_row_the_catalogue_did_not_seed_alone(source: str) -> Non
 
 @pytest.mark.parametrize(
     ("version", "steps"),
-    [(1, ("m0001", "m0002", "m0003", "m0004", "m0005")), (2, ("m0002", "m0003", "m0004", "m0005"))],
+    [
+        (1, ("m0001", "m0002", "m0003", "m0004", "m0005", "m0006")),
+        (2, ("m0002", "m0003", "m0004", "m0005", "m0006")),
+    ],
     ids=["v1", "v2"],
 )
 def test_a_seeded_store_below_v3_reaches_the_current_version_with_the_new_muscles(

@@ -15,6 +15,7 @@ from support.programs import a_config
 from support.pushes import a_pushed_week, push
 
 from coach.core.errors import Invalid
+from coach.core.flag import Flag
 from coach.hevy.protocol import ReadBack, RoutineDiff, WriteContext
 from coach.services.hevy_import import import_hevy
 from coach.services.program import adopt
@@ -358,3 +359,79 @@ def test_a_re_push_rewrites_a_routine_whose_next_line_alone_differs() -> None:
 
     assert [c for c in hevy.calls if c[0] == "PUT"] == [("PUT", f"/v1/routines/{routine}")]
     assert str(hevy.routine(routine).exercises[1].notes).endswith(RUNG_TWO_NEXT)
+
+
+def drift_flags(conn: Connection, hevy: FakeHevy) -> list[Flag]:
+    found = import_hevy(conn, hevy, LATER, full=False, units="lb").warnings
+    return [f for f in found if f.code == "routine_drift"]
+
+
+def _working_set_at_135_lb(routine: dict[str, Any]) -> None:
+    routine["exercises"][0]["sets"][2]["weight_kg"] = 61.234991
+
+
+def test_a_load_changed_in_hevy_names_the_session_exercise_set_and_both_loads() -> None:
+    conn, hevy, routine = a_pushed_week()
+
+    [flag] = drift_flags(conn, edited_in_app(hevy, _working_set_at_135_lb))
+
+    assert flag.params["session_id"] == "lower"
+    assert flag.params["changes"] == [
+        {"field": "load", "exercise_id": "bb_back_squat", "set": 3, "planned": 125, "found": 135}
+    ]
+    assert flag.params["diff"] == ["bb_back_squat set 3 load 125 → 135 lb"]
+    assert "session lower" in flag.message
+    assert "bb_back_squat set 3 load 125 → 135 lb" in flag.message
+    assert routine in flag.message
+
+
+def test_an_exercise_removed_in_hevy_names_it_in_the_structural_drift() -> None:
+    conn, hevy, _ = a_pushed_ladder()
+
+    [flag] = drift_flags(conn, edited_in_app(hevy, _exercise_removed))
+
+    assert flag.params["drift_class"] == "structural"
+    assert flag.params["changes"] == [
+        {
+            "field": "removed",
+            "exercise_id": "ab_wheel",
+            "set": None,
+            "planned": "ab_wheel",
+            "found": None,
+        }
+    ]
+    assert "ab_wheel removed" in flag.message
+
+
+class DroppingHevy(FakeHevy):
+    """Reads a routine back without its last exercise, once armed."""
+
+    dropping = False
+
+    def read_back(self, routine_id: str, context: WriteContext, diff: RoutineDiff) -> ReadBack:
+        if self.dropping:
+            self._routines[routine_id]["exercises"].pop()
+        return super().read_back(routine_id, context, diff)
+
+
+def test_a_read_back_missing_an_exercise_fails_verification_naming_it() -> None:
+    hevy = DroppingHevy(FixedClock())
+    conn, _, _ = a_pushed_ladder(hevy)
+    hevy.dropping = True
+
+    with pytest.raises(Invalid) as failed:
+        push(conn, hevy, a_plan_draft(conn, hevy=True, overrides=PIN_115))
+
+    assert failed.value.code == "verify_failed"
+    assert "session lower" in failed.value.message
+    assert "ab_wheel removed" in failed.value.message
+    assert failed.value.details["session_id"] == "lower"
+    assert failed.value.details["changes"] == [
+        {
+            "field": "removed",
+            "exercise_id": "ab_wheel",
+            "set": None,
+            "planned": "ab_wheel",
+            "found": None,
+        }
+    ]

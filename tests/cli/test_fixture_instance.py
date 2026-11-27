@@ -40,7 +40,7 @@ def test_exit_0_status_reads_the_fixture_instance(instance: Path) -> None:
     assert run.code == 0
     result = run.envelope["result"]
     assert result["plan"]["week"] == "2026-10-26"
-    assert result["plan"]["routines"] == {"verified": 11, "unverified": []}
+    assert result["plan"]["routines"] == {"plan": "wp-2026-10-26", "verified": 11, "unverified": []}
     assert result["workouts"] == {"hevy": 357, "manual": 11}
 
 

@@ -342,7 +342,7 @@ def test_program_show_reads_the_version_in_force(instance: Path) -> None:
         {"id": "pt-tuesday", "lines": 0},
         {"id": "a-mon-lower", "lines": 6},
     ]
-    assert (result["count"], result["truncated"]) == (11, True)
+    assert (len(result["sessions"]), result["count"], result["truncated"]) == (11, 11, False)
 
 
 def test_program_show_draft_writes_a_draft_that_re_adopts_as_an_amend_with_an_empty_diff(
@@ -360,6 +360,33 @@ def test_program_show_draft_writes_a_draft_that_re_adopts_as_an_amend_with_an_em
     assert dry.envelope["result"]["diff"]["empty"] is True
     assert adopted.envelope["result"]["kind"] == "amend"
     assert adopted.envelope["result"]["version"] == "pv-2"
+
+
+def test_program_show_draft_after_a_scheme_change_dry_adopts_without_the_change_acknowledgement(
+    instance: Path,
+) -> None:
+    coach("program", "adopt", a_draft_file(instance, WORKED_DRAFT_COMPLETE))
+    draft = tomllib.loads((instance / shown_path("v1.toml")).read_text())
+    [lower] = [s for s in draft["session"] if s["id"] == "a-mon-lower"]
+    [lunge] = [x for x in lower["line"] if x["exercise"] == "db_lunge"]
+    lunge["scheme"] = {"name": "linear"}
+    flag = "scheme_change_off_signal@line:a-mon-lower/db_lunge"
+    draft.setdefault("acknowledge", []).append(
+        {"flag": flag, "because": "coach_judgement", "text": "Linear."}
+    )
+    changed = coach("program", "adopt", a_draft_file(instance, toml(draft), "v2.toml"))
+
+    shown = shown_path("v2-shown.toml")
+    dry = coach("program", "adopt", shown, "--dry-run")
+
+    assert changed.envelope["result"]["version"] == "pv-2"
+    assert flag not in (instance / shown).read_text()
+    assert dry.code == 0
+    assert dry.envelope["result"]["diff"]["empty"] is True
+
+
+def shown_path(out: str) -> str:
+    return coach("program", "show", "--draft", "--out", out).envelope["result"]["path"]
 
 
 def test_program_show_draft_again_keeps_the_path_and_an_edited_draft_moves_to_a_suffix(

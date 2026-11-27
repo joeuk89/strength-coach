@@ -1,21 +1,30 @@
 """`coach progress` as a page (docs/spec/goals.md, "`coach progress`")."""
 
+import re
 from collections.abc import Mapping
 
 from coach.core.config import Units
 from coach.core.flag import Flag
+from coach.core.goal import Target
 from coach.core.pages import PageNames
 from coach.core.progress import Progress
+from coach.core.registries.ledger import MILESTONE_TARGET_KINDS
+from coach.core.registries.program import MUSCLES
+from coach.core.registries.registry import title_of
+from coach.core.registries.schemes import CADENCE_SIGNALS, SCHEMES
 from coach.render.markdown import (
     MANUAL_CLIMB,
     bullets,
     cell,
-    flag_text,
     marked_rung,
     page,
+    rn_link,
     section,
     table,
 )
+
+PER_MUSCLE = "per_muscle"
+SCHEME_CODE = re.compile(r"\b(?:" + "|".join(SCHEMES.names()) + r")\b")
 
 
 def progress_page(
@@ -23,7 +32,7 @@ def progress_page(
 ) -> str:
     block = report.block
     intro = (
-        f"Closed Block `{block.id}`, {block.start.isoformat()} to {block.end.isoformat()}."
+        f"The closed Block ran from {block.start.isoformat()} to {block.end.isoformat()}."
         if block
         else "No Block has closed yet."
     )
@@ -47,7 +56,7 @@ def progress_page(
                 [
                     [
                         names.exercise(lift.exercise_id),
-                        lift.scheme,
+                        None if lift.scheme is None else title_of(SCHEMES, lift.scheme),
                         lift.e1rm_now,
                         lift.change_over_block,
                         lift.change_over_three,
@@ -56,7 +65,7 @@ def progress_page(
                         else f"{cell(lift.best.load)} × {lift.best.reps} on {lift.best.date}",
                         lift.stall_streak,
                         lift.resets,
-                        lift.signal,
+                        None if lift.signal is None else title_of(CADENCE_SIGNALS, lift.signal),
                     ]
                     for lift in report.lifts
                 ],
@@ -69,7 +78,7 @@ def progress_page(
                 [
                     [
                         names.exercise(m.milestone.exercise),
-                        m.milestone.target.describe(),
+                        _target(m.milestone.target),
                         m.reached.isoformat() if m.reached else None,
                         m.to_go if m.computable else "not computable",
                     ]
@@ -90,7 +99,7 @@ def progress_page(
                 ],
                 [
                     [
-                        f"{names.session(r.line.session_id)}: {names.exercise(r.line.line_key)}",
+                        f"{names.session(r.line.session_id)}: {names.exercise(r.line.exercise)}",
                         names.exercise(r.exercise),
                         "<br>".join(
                             marked_rung(label, standing=index == r.rung)
@@ -112,11 +121,16 @@ def progress_page(
                     table(
                         ["week", "kind", "muscles", "priority lifts"],
                         [
-                            [w.monday.isoformat(), w.kind, w.muscles, _named(w.lifts, names)]
+                            [
+                                w.monday.isoformat(),
+                                w.kind,
+                                _muscles(w.muscles),
+                                _named(w.lifts, names),
+                            ]
                             for w in report.dose
                         ],
                     ),
-                    f"Target: {_named(report.dose_target, names)}." if report.dose_target else "",
+                    _dose_target(report.dose_target, names),
                 )
                 if part
             ),
@@ -163,8 +177,35 @@ def _named(by_exercise: Mapping[str, int], names: PageNames) -> str:
     return ", ".join(f"{names.exercise(id_)} {cell(n)}" for id_, n in by_exercise.items())
 
 
+def _muscles(by_muscle: Mapping[str, float]) -> str:
+    return ", ".join(f"{title_of(MUSCLES, m)} {cell(n)}" for m, n in by_muscle.items())
+
+
+def _dose_target(target: Mapping[str, int], names: PageNames) -> str:
+    """The muscle target sits under `per_muscle` beside the priority lifts' targets."""
+    if not target:
+        return ""
+    lifts = {key: n for key, n in target.items() if key != PER_MUSCLE}
+    parts = [f"per muscle {cell(target[PER_MUSCLE])}"] if PER_MUSCLE in target else []
+    if lifts:
+        parts.append(_named(lifts, names))
+    return f"Target: {', '.join(parts)}."
+
+
+def _target(target: Target) -> str:
+    title = title_of(MILESTONE_TARGET_KINDS, target.kind)
+    if target.kind == "load_x_reps":
+        return f"{title}: {cell(target.load)} × {cell(target.reps)}"
+    return f"{title}: {cell(target.value)}"
+
+
 def _signal(flag: Flag, names: PageNames, pin: str) -> str:
-    """A cadence signal's message opens with the exercise its scope names."""
+    """A cadence signal's message opens with the exercise its scope names and names schemes by
+    their codes."""
     exercise = str(flag.scope.exercise_id)
-    message = flag.message.replace(exercise, names.exercise(exercise), 1)
-    return flag_text({**flag.to_json(), "message": message}, pin)
+    message = SCHEME_CODE.sub(
+        lambda found: title_of(SCHEMES, found[0]),
+        flag.message.replace(exercise, names.exercise(exercise), 1),
+    )
+    text = f"{flag.severity}, {title_of(CADENCE_SIGNALS, flag.code)}: {message}"
+    return f"{text} ({rn_link(flag.rn, pin)})" if flag.rn else text

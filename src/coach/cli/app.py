@@ -94,8 +94,7 @@ def main(
             warnings.extend(outcome.warnings)
             result = _projected(outcome.result, options)
         document = envelope.success(engine_chain().version, verb, result, warnings)
-        whole = options.full or (declaration is not None and declaration.over_budget(options.args))
-        _write(stdout, document if whole else envelope.fit(document))
+        _write(stdout, document)
         return 0
     except CoachError as error:
         failed = Message(error.code, error.message, error.details)

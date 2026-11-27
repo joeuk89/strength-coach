@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
 from coach.core.plan_draft import PlanDraft
 from coach.core.planned_week import week_monday
+from coach.core.prescription import SessionPrescription
 from coach.core.program.checks import TEMPLATE_COLUMNS
+from coach.core.routine_projection import in_routine
 
 
 @dataclass(frozen=True)
@@ -39,32 +41,28 @@ class CheckedPlan:
         return tuple(f for f in self.flags if f.severity == "violation")
 
 
-def check_plan(
-    draft: PlanDraft,
-    *,
-    acknowledgements: Sequence[Acknowledgement],
-    templates: Mapping[str, TemplateFacts] | None,
-) -> CheckedPlan:
-    """`templates` is None without a `[hevy]` table: no template is needed then (ADR 0006)."""
-    raised = (*draft.flags, *_missing_templates(draft, templates))
+def check_plan(draft: PlanDraft, *, acknowledgements: Sequence[Acknowledgement]) -> CheckedPlan:
     # A daily session's line repeats on each day under one key; a key is one flag.
     unique: dict[str, Flag] = {}
-    for flag in raised:
+    for flag in draft.flags:
         unique.setdefault(flag.key, flag)
     left = [leave(flag, acknowledgements) for flag in unique.values()]
     ordered = sorted(left, key=lambda f: f.severity != "violation")
     return CheckedPlan(draft, tuple(ordered))
 
 
-def _missing_templates(
-    draft: PlanDraft, templates: Mapping[str, TemplateFacts] | None
+def missing_templates(
+    sessions: Sequence[SessionPrescription], templates: Mapping[str, TemplateFacts] | None
 ) -> tuple[Flag, ...]:
+    """`templates` is None without a `[hevy]` table: no template is needed then (ADR 0006)."""
     if templates is None:
         return ()
     found: list[Flag] = []
-    for prescribed in draft.sessions:
+    for prescribed in sessions:
         planned = prescribed.session
         for line in prescribed.lines:
+            if not in_routine(line.groups):
+                continue
             facts = templates.get(line.exercise_id)
             if facts is None or not facts.missing:
                 continue

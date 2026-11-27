@@ -23,20 +23,38 @@ A workout can match only a planned session whose **window** covers the workout's
 | `standing` | any day of the plan's week |
 | `daily` | the day itself (each day is its own planned session) |
 
-Among the planned sessions whose window covers the date, a workout whose `routine_id` equals the
-session's routine takes that session first, whatever its window. Otherwise it takes the unmatched
-candidate with the narrowest window: a `weekly` or `daily` session planned on that day before a
-`standing` one, so a standing session takes a workout only on a day no unmatched one-day session
-claims it. Session order breaks ties between candidates of the same window. Each workout
-matches at most one planned session and each planned session takes at most one workout, so two
-workouts on a day with one planned session leave the second unmatched. A routine id is a hint
-inside the window, never a Match on its own: a workout logged from a routine on a day no
-session's window covers is unmatched. Workouts are matched in date order, then by Hevy start
-time.
+A session's **lines** here are the exercises frozen in the WeekPlan for it, `hold` lines
+included, so a line under `swap_exercise` counts as the exercise it swapped to and no longer as
+the one it swapped out. A session with nothing frozen counts its lines as authored. Each workout
+matches at most one planned session; a planned session may hold several workouts, as when an
+athlete splits one session across two Hevy workouts. Workouts are matched in
+date order, then by Hevy start time, and each takes the first of these that applies among the
+planned sessions whose window covers its date:
 
-A `match` Annotation naming the planned session overrides the rule for that workout (two
-workouts on one day, a session logged on the wrong date). Pre-cutover workouts have no Match
-because no WeekPlan covers them (`cutover.md`).
+1. The unmatched session whose routine equals the workout's `routine_id`, whatever its window.
+2. An already-matched session holding a workout on that date, whose routine equals the
+   workout's `routine_id` or whose lines share an exercise with the workout. The routine wins,
+   then the larger number of shared exercises, then session order. A `standing` session matched
+   on another day of its week is not joined.
+3. The unmatched candidate with the narrowest window: a `weekly` or `daily` session planned on
+   that day before a `standing` one, so a standing session takes a workout only on a day no
+   unmatched one-day session claims it. Session order breaks ties between candidates of the same
+   window. A `conditioning` or `practice` session is a candidate here only when its lines share
+   an exercise with the workout.
+
+A workout none of these places is unmatched, so a second workout on a day whose one planned
+session it shares nothing with stays unmatched. A routine id is a hint inside the window, never a
+Match on its own: a workout logged from a routine on a day no session's window covers is
+unmatched.
+
+A matched session's figures cover all its workouts: its sets in start-time order are what the
+gate and the against-the-prescription read pair against the prescription, its minutes are their
+sum and its session RPE their mean working-set RPE.
+
+A `match` Annotation naming the planned session overrides the rule for that workout (a session
+logged on the wrong date, a workout the rule places elsewhere). Naming an already-matched session
+adds the workout to it. Pre-cutover workouts have no Match because no WeekPlan covers them
+(`cutover.md`).
 
 ### What an unmatched workout is
 
@@ -69,10 +87,12 @@ with zero prescribed working sets (every line `hold`, or none authored) is outsi
 denominator and neither passes nor fails (ADR 0005); it stays in the adherence denominator.
 
 A planned session is **trained** when it has a Match, a `trained_unlogged` Annotation, or is a
-coach-led session that happened (a Match, or a hand-entered Workout with no sets). A shortened
-session is trained. A `trained_unlogged` Annotation and a hand-entered Workout also count as a
+coach-led session that happened (a Match, or a hand-entered Workout with no sets), and carries no
+`miss_tag` Annotation. A shortened session is trained. A `miss_tag` on a matched session is the
+athlete saying it did not count: the session is untrained for adherence, the week kind and the
+Block count, while its workouts stay history and still yield their Exposures. A `trained_unlogged` Annotation and a hand-entered Workout also count as a
 lifting exposure date for the days off that set the return band (`prescription.md`). A Miss is a planned core session whose week has closed untrained, unmoved and
-uncancelled.
+uncancelled, a matched session carrying a `miss_tag` among them.
 
 ## The session gate
 
@@ -83,6 +103,14 @@ added by `add_session` is in the gate denominator like any other. The gate count
 for the fatigue count, not whether the prescription was met (rn:deloads.11). The
 against-the-prescription read (reps missed, effort off by 1.5 or more, RPE missing) is a card
 figure per session and never a gate.
+
+A matched core session with prescribed working sets and under **one-third** of them logged is
+**near-empty**: the sets counted are the logged working sets paired with a prescribed one, over
+every workout matched to the session, as the gate counts them. It raises `session_near_empty` on
+the planned session at `checkin open`, has no session RPE, and the coach asks the athlete whether
+it counted. A no is a `miss_tag` Annotation with the athlete's reason, which makes the session
+untrained; with no answer it stays trained. One-third is opinion: a session that short may be a
+started-and-stopped attempt rather than training, and the athlete knows which.
 
 ## Week kind
 
@@ -225,7 +253,7 @@ A week is **closed** when a `current` Check-in's window covers its Sunday.
 
 | Verb | Codes |
 | --- | --- |
-| `checkin open` | `phase_trend_off`, `phase_condition_met`, `followup_due`, `niggle_unconstrained`, `cadence_slow`, `cadence_fast`, `training_max_unused`, `activity_cap_exceeded`, `run_spike` |
+| `checkin open` | `phase_trend_off`, `phase_condition_met`, `followup_due`, `niggle_unconstrained`, `cadence_slow`, `cadence_fast`, `training_max_unused`, `activity_cap_exceeded`, `run_spike`, `session_near_empty` |
 | `import`, and every verb that pulls first (`verbs.md`, "The pull") | `routine_drift`, `workout_reappeared`, `exercise_unmapped` |
 | `status` | `engine_pin_dev`, `generated_file_drift`, `plan_behind_program`, and every code standing |
 | `program adopt` | `plan_behind_program`, when the version it records leaves this week's plan in force behind |

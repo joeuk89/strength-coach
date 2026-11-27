@@ -7,12 +7,13 @@ from dataclasses import dataclass, field, replace
 from typing import cast
 
 from coach.core.ceilings import (
+    ILLNESS,
     ILLNESS_RPE_CAP,
     constraints_on,
     easier,
     fewest_reps,
     harder,
-    ill_since,
+    illness_cap,
     niggle_load_caps,
     reps_within_model,
     safety_ceiling,
@@ -50,6 +51,24 @@ type Proposal = Load | tuple[Load, ...] | None
 
 
 @dataclass(frozen=True)
+class RpeCap:
+    """An RPE ceiling on the line: `kind` is the ceiling kind flags report, `cause` the step's."""
+
+    value: Number
+    kind: str
+    cause: str
+
+
+@dataclass(frozen=True)
+class Unpinned:
+    """The scheme's own proposal a pin replaced, bounded again to tell a pin an RPE ceiling
+    reduced from one it left with no effect."""
+
+    proposal: Proposal
+    rounding: Rounding
+
+
+@dataclass(frozen=True)
 class LineContext:
     request: PrescribeRequest
     line: Line
@@ -61,6 +80,7 @@ class LineContext:
     anchor_top: Load | None = None
     scheme_load: Load | None = None
     pin: Load | None = None
+    unpinned: Unpinned | None = None
     e1rm: E1rm | None = None
     rung_exercises: tuple[str, ...] = ()
 
@@ -94,6 +114,14 @@ def bound(
     return _Bounding(context, loads, per_set, rounding, steps, flags, sets).run()
 
 
+def _unpinned_load(context: LineContext) -> Bounded | None:
+    unpinned = context.unpinned
+    if unpinned is None:
+        return None
+    alone = replace(context, pin=None, unpinned=None)
+    return bound(alone, unpinned.proposal, unpinned.rounding, [], [])
+
+
 @dataclass
 class _Bounding:
     context: LineContext
@@ -103,9 +131,10 @@ class _Bounding:
     steps: list[Step]
     flags: list[Flag]
     sets: tuple[SetGroup, ...]
-    rpe_caps: list[tuple[Number, str]] = field(default_factory=list[tuple[Number, str]])
+    rpe_caps: list[RpeCap] = field(default_factory=list[RpeCap])
     load_ceilings: list[Load] = field(default_factory=list[Load])
     unchecked_cap: Number | None = None
+    pin_capped_by: RpeCap | None = None
 
     def run(self) -> Bounded:
         self._cut()
@@ -122,6 +151,7 @@ class _Bounding:
         cap = self._rpe_ceiling(constraints)
         self._rack()
         self._unchecked()
+        self._pin_capped()
         first = self.loads[0] if self.loads else None
         set_loads = self.loads if self.per_set else ()
         return Bounded(self.sets, first, cap, self._test(), set_loads=set_loads)
@@ -158,7 +188,7 @@ class _Bounding:
         self._set_count(one_working_set_fewer(self.sets))
         if self.context.line.scheme.name == "wave_531":
             self.sets = close_rep_outs(self.sets)
-        self.rpe_caps.append((band.rpe_cap, "return_band"))
+        self.rpe_caps.append(RpeCap(band.rpe_cap, "return_band", "return_band"))
 
     def _return_band_load(self, band: Band, days: int, cause: str) -> None:
         base = self.context.scheme_load
@@ -203,7 +233,7 @@ class _Bounding:
         self._set_count(cut_each_working_group(self.sets, shape.set_cut_pct))
         self.sets = close_rep_outs(self.sets)
         if shape.rpe_cap is not None:
-            self.rpe_caps.append((shape.rpe_cap, "light_week"))
+            self.rpe_caps.append(RpeCap(shape.rpe_cap, "light_week", "light_week"))
 
     def _set_count(self, cut: tuple[SetGroup, ...]) -> None:
         before, after = working_set_count(self.sets), working_set_count(cut)
@@ -244,48 +274,57 @@ class _Bounding:
 
     def _rpe_ceiling(self, constraints: tuple[NiggleConstraint, ...]) -> Number | None:
         self.rpe_caps += [
-            (c.value, f"niggle:{c.niggle_id}")
+            RpeCap(c.value, "niggle", f"niggle:{c.niggle_id}")
             for c in constraints
             if c.kind == "rpe_cap" and c.value is not None
         ]
         request = self.context.request
         anchor = self.context.anchor
-        if anchor is not None and ill_since(
-            request.status_spans,
-            request.exposures,
-            exercise_id=self.context.line.exercise,
-            anchor_date=anchor.date,
-            on=request.planned.date,
-        ):
-            self.rpe_caps.append((ILLNESS_RPE_CAP, "illness"))
+        illness = (
+            None
+            if anchor is None
+            else illness_cap(
+                request.status_spans,
+                request.exposures,
+                exercise_id=self.context.line.exercise,
+                anchor_date=anchor.date,
+                on=request.planned.date,
+            )
+        )
+        if illness is not None:
+            self.rpe_caps.append(RpeCap(ILLNESS_RPE_CAP, ILLNESS, illness.cause))
         if not self.rpe_caps:
             return None
-        cap, cause = min(self.rpe_caps, key=lambda c: c[0])
+        binding = min(self.rpe_caps, key=lambda c: c.value)
+        cap = binding.value
         authored = [g.rpe for g in self.sets if g.working and g.rpe is not None]
-        self.steps.append(Step("rpe_ceiling", max(authored) if authored else None, cap, cause))
-        for other, other_cause in self.rpe_caps:
-            if other_cause != cause:
-                self.steps.append(Step("rpe_ceiling", other, cap, "not_binding"))
+        self.steps.append(
+            Step("rpe_ceiling", max(authored) if authored else None, cap, binding.cause)
+        )
+        for other in self.rpe_caps:
+            if other.cause != binding.cause:
+                self.steps.append(Step("rpe_ceiling", other.value, cap, "not_binding"))
         self.sets = tuple(
             replace(g, rpe=cap if g.rpe is None else min(g.rpe, cap)) if g.working else g
             for g in self.sets
         )
-        self._limit_load(cap)
+        if self._limit_load(cap) and self._pin() is not None and binding.kind != "return_band":
+            self.pin_capped_by = binding
         return cap
 
-    def _limit_load(self, cap: Number) -> None:
+    def _limit_load(self, cap: Number) -> bool:
+        """Whether the cap lowered a load."""
         if not self.loads:
-            return
+            return False
         found = self.context.e1rm
         if found is None or self.loads[0].mode == "assisted":
-            self._clip_to_anchor(cap)
-            return
+            return self._clip_to_anchor(cap)
         self.sets = reps_within_model(self.sets, cap)
         reps = self._limiting_reps()
         if reps is None:
-            return
+            return False
         limit = model_load(found.load, reps, cap).as_mode(self.loads[0].mode)
-        self._limit("rpe_ceiling", limit, "e1rm")
+        return self._limit("rpe_ceiling", limit, "e1rm")
 
     def _limiting_reps(self) -> int | None:
         """Every working group carries the line's load, so the group with the most reps limits
@@ -296,11 +335,10 @@ class _Bounding:
         reps = [r for g in working if (r := fewest_reps(g.reps)) is not None]
         return max(reps, default=None)
 
-    def _clip_to_anchor(self, cap: Number) -> None:
-        top = self.context.anchor_top
-        if top is not None:
-            self._limit("rpe_ceiling", top, "anchor")
+    def _clip_to_anchor(self, cap: Number) -> bool:
         self.unchecked_cap = cap
+        top = self.context.anchor_top
+        return top is not None and self._limit("rpe_ceiling", top, "anchor")
 
     def _unchecked(self) -> None:
         """Raised after the rack step, so the load it quotes is the one the line prescribes."""
@@ -317,6 +355,32 @@ class _Bounding:
                 "anchor_exposure": None if anchor is None else anchor.ref,
             },
             f"no usable e1RM to check RPE {cap:g}; the load is held at {_describe(clipped)}",
+        )
+
+    def _pin_capped(self) -> None:
+        """Raised after the rack step, so the load it quotes is the one the line prescribes."""
+        pin, capped = self._pin(), self.pin_capped_by
+        if pin is None or capped is None:
+            return
+        cap, kind = capped.value, capped.kind
+        niggle = capped.cause.partition(":")[2] if kind == "niggle" else ""
+        prescribed = self._amounts()
+        alone = _unpinned_load(self.context)
+        same = alone is not None and _amounts(_loads(alone), self.per_set) == prescribed
+        outcome = "no_effect" if same else "reduced"
+        by = f"niggle {niggle}'s" if niggle else f"the {kind.replace('_', ' ')}"
+        self._raise(
+            "pin_load_capped",
+            {
+                "load": pin.amount,
+                "prescribed": list(prescribed) if isinstance(prescribed, tuple) else prescribed,
+                "ceiling_kind": kind,
+                "rpe_cap": cap,
+                "ref": capped.cause if niggle else None,
+                "outcome": outcome,
+            },
+            f"the pinned {pin.amount:g} is held at {_describe(prescribed)} by {by} RPE "
+            f"{cap:g} ceiling; the pin {'has no effect' if same else 'is reduced'}",
         )
 
     def _rack(self) -> None:
@@ -382,10 +446,10 @@ class _Bounding:
             return None
         if self.context.line.scheme.name not in TEST_SCHEMES:
             return None
-        other_caps = [(cap, cause) for cap, cause in self.rpe_caps if cause != "light_week"]
+        other_caps = [c for c in self.rpe_caps if c.kind != "light_week"]
         if other_caps:
-            _, cause = min(other_caps, key=lambda c: c[0])
-            self.steps.append(Step("test", None, None, cause))
+            binding = min(other_caps, key=lambda c: c.value)
+            self.steps.append(Step("test", None, None, binding.cause))
             return None
         found = self.context.e1rm
         if found is None:
@@ -441,6 +505,12 @@ def _amounts(loads: tuple[Load, ...], per_set: bool) -> StepValue:
     if per_set:
         return tuple(load.amount for load in loads)
     return loads[0].amount if loads else None
+
+
+def _loads(bounded: Bounded) -> tuple[Load, ...]:
+    if bounded.set_loads:
+        return bounded.set_loads
+    return () if bounded.load is None else (bounded.load,)
 
 
 def _describe(amounts: StepValue) -> str:

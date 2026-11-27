@@ -5,9 +5,10 @@ each verb is one transaction, self-described by `--help` and `coach schema`); th
 to ask the athlete, what to judge and how to explain, and names the verbs it uses in no order.
 
 Decided on wayfinder ticket [Shape of the thin skills](https://github.com/joeuk89/strength-coach/issues/18),
-2026-10-27. The budgets answer the benchmark's target of under 8k instruction tokens per check-in
-plus programming pass (`benchmark.md`); the old check-in and program-week skills alone were about
-101k characters across seventeen files.
+2026-10-27. The old check-in and program-week skills alone were about 101k characters across
+seventeen files. The per-skill budget is a guard against a runaway skill, not a target: the owner
+raised it to 3,000 tokens on 2026-11-27 rather than cut lines a skill needs. The benchmark's
+under-8k pass (`benchmark.md`) stays a measure, not what sizes a skill.
 
 ## The set
 
@@ -25,6 +26,17 @@ A ladder's rung moves only by a `ladder_rung` Decision on the athlete's yes (ADR
 `check-in` asks at the card's Ladders field, `plan-week` answers `rung_met` and `ladder_top` on
 the plan Draft, and `program` answers `ladder_top` at a block boundary with an `amend` giving
 the line a new scheme. No skill puts a ladder in `cues`.
+
+No pinned load lifts a line above a recovery ceiling: `plan-week` answers `pin_load_capped` by
+lowering the pin to the prescribed load, removing it, or acknowledging the warning with the reason.
+It answers `load_too_light` on the athlete's yes with a `pin_load` at the suggested load or the
+load they name, and acknowledges the warning; the agent never invents the load.
+
+The illness cap ends on the athlete's word: after an illness, `check-in` and `plan-week` ask the
+athlete how long they need at reduced effort and record the answer as the `ill` span's
+`cap_ends`, "fully recovered" as its last ill day. The agent never infers the answer; with none
+recorded, each lift stays capped until it is trained once. An answer that changes midweek is
+recorded again and the week replanned.
 
 Dropped: `hevy-sync` (drift is a warning on the plan draft, resolved by override or overwrite, ADR
 0011), `goals` (the Goal is a record written by `goal adopt` inside `onboard` and `program`, its
@@ -131,7 +143,7 @@ instruction tokens.
 
 | Budget | Limit | Held by |
 | --- | --- | --- |
-| One skill | 1,500 tokens (about 6k characters, roughly 80 lines of prose) | One test per skill |
+| One skill | 3,000 tokens (about 12k characters), a guard against a runaway skill | One test per skill |
 | Check-in plus plan pass | Under 8k: CLAUDE.md plus `check-in` plus `plan-week` | The benchmark script, re-run at each milestone |
 
 The old caps were line counts (120 per `SKILL.md`, 150 per step file) and every file filled them.
@@ -154,7 +166,7 @@ asserted skill or CLAUDE.md wording have no successor.
 
 ## Worked example: `check-in`
 
-The reference for register and length. Under budget (about 2.5k characters). The card and its
+The reference for register and length. Under budget (about 3.3k characters). The card and its
 fields are the check-in spec (`check-in.md`); the verb names follow the Verb set ticket and the
 contract test holds them to it. The per-emphasis asks of `goals.md`'s table are the card's Lifts
 field, so the skill cites no table: it judges what the card shows (ADR 0020). Every bullet in its
@@ -169,15 +181,22 @@ description: The weekly review. Use when a check-in is due, when the athlete rep
 ---
 
 ## Read first
-The profile, once. Ask the athlete's readiness (`poor`, `ok`, `good`) first and pass it to
-`coach checkin open --readiness`. The card it returns states what the store already knows and
+The profile, once. Take the athlete's readiness (`poor`, `ok`, `good`) from their opening words
+when they give it and state it back for confirmation; ask for it only when they have not. Pass it
+to `coach checkin open --readiness`. The card it returns states what the store already knows and
 asks only what it cannot. Never change its figures or the order of its fields.
 
 ## Ask
 Send the card as one message in the coach's voice; the athlete answers by number. A fact the log
-already answers is stated for confirmation, not asked. Follow up only for a gap that blocks the
-read or next week's plan. On a deep tier, settle every open niggle and follow-up with the athlete
-rather than carrying them.
+already answers is stated for confirmation, not asked. Logged RPE is trusted: never ask how a lift
+felt or how many reps were left when its sets carry an RPE. Ask about a lift only for the card's
+`lift_doubt` or a specific point you must settle, and make each such question answerable without
+opening Hevy: name the session and day, quote what was logged (load, reps and RPE per set) and
+state the exact doubt. On `effort_missing` (a timed carry Hevy takes no RPE on), ask the
+effort once for the line, quoting its load, sets and seconds, and record the answer as a
+`repair` of `rpe` on each quoted set at the card's `repair` target. Follow up only for a gap
+that blocks the read or next week's plan. On a deep tier, settle every open niggle and
+follow-up with the athlete rather than carrying them.
 
 ## Judge
 - **Readiness.** The athlete's own words and their Hevy set notes are the signal, and the card's
@@ -186,7 +205,9 @@ rather than carrying them.
 - **Misses.** A tag per missed core session. Pattern over blame: a run of `time` misses is a
   schedule problem for the plan, not a willpower problem.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
-  shapes next week's dose; one bad night does not.
+  shapes next week's dose; one bad night does not. Record the short nights the card's Sleep ask
+  names as `[[sleep_night]]` rows with their hours; a weekly average, when that is all the
+  athlete has, goes in verbatim as an athlete note, never as a night.
 - **Phase.** When the card says the until condition is met or the trend is off, propose
   closing or keeping it with the athlete; a new Phase opens in the record.
 - **Niggles.** Reported, aggravated, easing, resolved. Escalate to a professional when pain

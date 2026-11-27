@@ -16,7 +16,6 @@ from coach.store.rebuild import Rebuilt
 type Writes = Literal["none", "store", "hevy", "git", "github"]
 type Json = dict[str, object]
 type ArgValue = str | bool | tuple[str, ...]
-type OverBudget = Callable[[Mapping[str, ArgValue]], bool]
 # The real client's wiring: the API key, the Write audit path and the clock (ADR 0019).
 type MakeClient = Callable[[str, Path, Clock], HevyClient]
 type MakeClock = Callable[[str], Clock]
@@ -87,7 +86,7 @@ class Instance:
 class Call:
     args: Mapping[str, ArgValue]
     full: bool
-    last: int
+    last: int | None
     engine_version: str
     env: Mapping[str, str]
     make_client: MakeClient
@@ -116,14 +115,6 @@ class InInstance:
     run: Callable[[InstanceCall], Outcome]
 
 
-def never(args: Mapping[str, ArgValue]) -> bool:
-    return False
-
-
-def always(args: Mapping[str, ArgValue]) -> bool:
-    return True
-
-
 def on_dry_run(args: Mapping[str, ArgValue]) -> bool:
     return args.get("dry_run") is True
 
@@ -141,8 +132,6 @@ class Declaration:
     moves_pin: bool = False
     # A verb whose result derives from workouts pulls Hevy before it runs (verbs.md, "The pull").
     pulls_first: bool = False
-    # Output the agent must act on in full may run over the budget (verbs.md).
-    over_budget: OverBudget = never
     # The Draft the verb reads, whose schema and example `coach schema <verb>` shows.
     draft: Callable[[], DraftKind] | None = None
 
@@ -168,8 +157,9 @@ class Declaration:
             "input": self.input_schema(),
             "output": self.output,
         }
-        if with_draft and self.draft is not None:
-            described["draft"] = self.draft().describe()
+        if self.draft is not None:
+            draft = self.draft()
+            described["draft"] = draft.describe() if with_draft else {"kind": draft.kind}
         return described | {
             "examples": [
                 {"argv": ["coach", *example.argv], "description": example.description}

@@ -3,10 +3,12 @@ from typing import Any, cast
 
 import pytest
 
+from coach.core.exposure import LibraryEntry
 from coach.core.mirror import Routine, RoutineExercise, RoutineSet
 from coach.core.program.form import Advance, ExerciseLadder, Line, Rung, SchemeRef, SetGroup
 from coach.core.routine_projection import (
     FrozenLine,
+    RoutineChange,
     SessionRoutine,
     authored_exercise,
     drift_class,
@@ -29,6 +31,11 @@ SQUAT_GROUPS = [
 ]
 CURL_GROUPS = [{"type": "working", "count": 1, "reps": 12}]
 TEMPLATES = {"bb_back_squat": "SQ-1", "db_curl": "CU-1", "db_hammer_curl": "HC-1"}
+LIBRARY = {
+    "SQ-1": LibraryEntry("bb_back_squat", "total"),
+    "CU-1": LibraryEntry("db_curl", "per_hand_x2"),
+    "HC-1": LibraryEntry("db_hammer_curl", "per_hand_x2"),
+}
 
 
 def a_session(*lines: FrozenLine) -> SessionRoutine:
@@ -176,23 +183,87 @@ def test_a_faithful_read_back_has_no_diff_and_a_weight_within_a_gram_is_the_same
     body["exercises"][0]["sets"][1]["weight_kg"] = 56.6995
     read_back = as_routine(projected(FrozenLine("bb_back_squat", SQUAT_GROUPS)))
 
-    assert routine_diff(body, read_back) == ()
+    assert diff(body, read_back) == ()
 
 
-def test_a_moved_weight_is_a_load_drift_and_a_title_or_template_is_structural() -> None:
+def diff(body: dict[str, Any], routine: Routine) -> tuple[RoutineChange, ...]:
+    return routine_diff(body, routine, LIBRARY, "lb")
+
+
+def test_a_moved_weight_names_the_exercise_the_set_and_both_loads_in_athlete_units() -> None:
     body = projected(FrozenLine("bb_back_squat", SQUAT_GROUPS))
     heavier = json.loads(json.dumps(body))
-    heavier["exercises"][0]["sets"][1]["weight_kg"] = 61.2
+    heavier["exercises"][0]["sets"][1]["weight_kg"] = 61.234991
+
+    load = diff(body, as_routine(heavier))
+
+    assert [c.to_json() for c in load] == [
+        {"field": "load", "exercise_id": "bb_back_squat", "set": 2, "planned": 125, "found": 135}
+    ]
+    assert [c.text for c in load] == ["bb_back_squat set 2 load 125 → 135 lb"]
+    assert drift_class(load) == "load"
+
+
+def test_a_title_or_a_swapped_template_is_structural_and_names_both_exercises() -> None:
+    body = projected(FrozenLine("bb_back_squat", SQUAT_GROUPS))
     swapped = json.loads(json.dumps(body))
     swapped["exercises"][0]["exercise_template_id"] = "OTHER"
 
-    load = routine_diff(body, as_routine(heavier))
-    structural = routine_diff(body, as_routine(swapped, title="Leg day"))
+    structural = diff(body, as_routine(swapped, title="Leg day"))
 
-    assert load == ("exercise 1 set 2 weight_kg",)
-    assert drift_class(load) == "load"
-    assert structural == ("title", "exercise 1 template")
+    assert [c.text for c in structural] == [
+        "title Lower → Leg day",
+        "bb_back_squat swapped for OTHER",
+    ]
+    assert structural[1].to_json() == {
+        "field": "exercise",
+        "exercise_id": "bb_back_squat",
+        "set": None,
+        "planned": "bb_back_squat",
+        "found": "OTHER",
+    }
     assert drift_class(structural) == "structural"
+
+
+def test_a_per_hand_load_is_reported_per_hand() -> None:
+    curl = [{"type": "working", "count": 1, "reps": 12, "load": 25.0, "load_kg": 22.679619}]
+    body = projected(FrozenLine("db_curl", curl))
+    heavier = json.loads(json.dumps(body))
+    heavier["exercises"][0]["sets"][0]["weight_kg"] = 27.215542
+
+    assert [c.text for c in diff(body, as_routine(heavier))] == ["db_curl set 1 load 25 → 30 lb"]
+
+
+def test_an_exercise_removed_in_hevy_is_named() -> None:
+    body = projected(FrozenLine("bb_back_squat", SQUAT_GROUPS), FrozenLine("db_curl", CURL_GROUPS))
+    removed = json.loads(json.dumps(body))
+    del removed["exercises"][1]
+
+    found = diff(body, as_routine(removed))
+
+    assert [c.to_json() for c in found] == [
+        {
+            "field": "removed",
+            "exercise_id": "db_curl",
+            "set": None,
+            "planned": "db_curl",
+            "found": None,
+        }
+    ]
+    assert [c.text for c in found] == ["db_curl removed"]
+    assert drift_class(found) == "structural"
+
+
+def test_an_exercise_added_in_hevy_is_named_by_its_exercise_or_its_template() -> None:
+    body = projected(FrozenLine("bb_back_squat", SQUAT_GROUPS))
+    added = json.loads(json.dumps(body))
+    added["exercises"] += [
+        {**body["exercises"][0], "exercise_template_id": t} for t in ("HC-1", "X")
+    ]
+
+    found = diff(body, as_routine(added))
+
+    assert [c.text for c in found] == ["db_hammer_curl added", "template X added"]
 
 
 def test_a_retired_routine_keeps_its_exercises_under_the_unused_title_in_the_retired_folder() -> (
@@ -203,7 +274,7 @@ def test_a_retired_routine_keeps_its_exercises_under_the_unused_title_in_the_ret
     body = cast(dict[str, Any], retired_routine(live, "9002"))
 
     assert (body["title"], body["folder_id"]) == ("(unused) Upper", 9002)
-    assert routine_diff(body, as_routine(body)) == ()
+    assert diff(body, as_routine(body)) == ()
     assert retired_routine(as_routine(body), "9002")["title"] == "(unused) Upper"
 
 
@@ -213,7 +284,7 @@ def test_a_faithful_read_back_of_a_rep_out_has_no_diff() -> None:
     for one in hevy_holds["exercises"][0]["sets"]:
         one["reps"] = 5
 
-    assert routine_diff(body, as_routine(hevy_holds)) == ()
+    assert diff(body, as_routine(hevy_holds)) == ()
 
 
 TEMPO_SETS = (SetGroup(3, reps=4, rpe=8),)
@@ -292,6 +363,21 @@ def test_a_stepped_back_rung_names_only_its_index_and_no_next_rung() -> None:
     ]
 
 
+def test_a_stepped_back_rung_reads_the_rung_the_step_stored_not_its_wording() -> None:
+    step = [
+        {
+            "step": "cut",
+            "from": "the third rung",
+            "to": "the first rung",
+            "cause": "return 43+, 52 days off",
+            "rung": 1,
+        }
+    ]
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, step, rung=1)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 4 s", "This week: rung 1"]
+
+
 def test_a_step_back_frozen_naming_exercises_keeps_the_note_it_pushed() -> None:
     step = [
         {
@@ -313,6 +399,27 @@ def test_a_row_frozen_before_rungs_were_recorded_finds_its_rung_by_exercise() ->
     frozen = FrozenLine("weighted_negative", TEMPO_GROUPS)
 
     assert the_ladder_note(frozen) == ["Cues: lower for 6 s, loaded"]
+
+
+def test_a_row_off_the_ladder_finds_its_own_line_not_a_rung_on_its_exercise() -> None:
+    plain = Line("weighted_negative", TEMPO_SETS, 90, SchemeRef("hold"), cues="own cues")
+    session = SessionRoutine(
+        title="Pull",
+        folder_id="9000",
+        week_line="Week of 2026-11-02, rotation week A",
+        authored=(plain, TEMPO_LADDER),
+        lines=(
+            FrozenLine("weighted_negative", TEMPO_GROUPS),
+            FrozenLine("pull_up_negative", TEMPO_GROUPS, rung=1),
+        ),
+        names={"pull_up_negative": "Negative", "weighted_negative": "Weighted"},
+    )
+
+    body = cast(dict[str, Any], project_routine(session, LADDER_TEMPLATES, "lb"))
+
+    off_ladder = body["exercises"][0]
+    assert off_ladder["notes"].splitlines()[2:] == ["Cues: own cues"]
+    assert off_ladder["rest_seconds"] == 90
 
 
 def test_the_balance_ladder_note_names_the_next_rungs_exercise() -> None:

@@ -226,6 +226,12 @@ VIOLATIONS = (
     violation("set_type_not_allowed", ("line",), ("set_type", "scheme"), ("program adopt",)),
     violation("set_groups_off_scheme", ("line",), ("scheme", "expected_shape"), ("program adopt",)),
     violation("rpe_missing", ("line",), ("scheme", "group_index"), ("program adopt",)),
+    violation(
+        "template_untimed",
+        ("line",),
+        ("exercise_id", "hevy_exercise_type", "needs"),
+        ("program adopt",),
+    ),
     violation("rung_exercise_unknown", ("version",), ("rung", "exercise_id"), ("program adopt",)),
     violation("ladder_too_short", ("line",), ("rungs",), ("program adopt",)),
     violation("rung_repeated", ("line",), ("rung", "previous_rung"), ("program adopt",)),
@@ -278,7 +284,25 @@ PLAN_WARNINGS = (
         ("rn:detraining-return.5",),
     ),
     acknowledgeable_warning(
-        "increment_over_step", ("line",), ("increment", "scheme_step", "from_exposure")
+        "increment_over_step",
+        ("line",),
+        ("increment", "scheme_step", "from_exposure"),
+        hashed=("increment", "scheme_step"),
+    ),
+    acknowledgeable_warning(
+        "load_too_light",
+        ("line",),
+        (
+            "anchor_exposure",
+            "logged_sets",
+            "rpe_gap",
+            "e1rm",
+            "e1rm_exposure",
+            "e1rm_date",
+            "e1rm_session",
+            "model_load",
+            "suggested_load",
+        ),
     ),
     acknowledgeable_warning(
         "offgrid_anchor_ignored", ("line",), ("exposure", "logged_load", "anchor_used")
@@ -319,11 +343,19 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "ladder_top", ("line",), ("rung",), ("rn:bodyweight-skill-progression.3",)
     ),
+    acknowledgeable_warning("held_without_effort", ("line",), ("weeks", "load", "exposures")),
     acknowledgeable_warning(
         "rpe_ceiling_unchecked",
         ("line",),
         ("cap", "clipped_load", "anchor_exposure"),
         ("rn:autoregulation.6",),
+        hashed=("cap",),
+    ),
+    acknowledgeable_warning(
+        "pin_load_capped",
+        ("line",),
+        ("load", "prescribed", "ceiling_kind", "rpe_cap", "ref", "outcome"),
+        hashed=("load", "ceiling_kind", "rpe_cap", "ref", "outcome"),
     ),
     acknowledgeable_warning(
         "unexplained_drift", ("line",), ("last_prescription", "this_prescription", "delta")
@@ -339,6 +371,7 @@ PLAN_WARNINGS = (
                 ("status_span", ()),
             ),
         ),
+        hashed=("reason",),
     ),
     acknowledgeable_warning(
         "dose_under_target",
@@ -355,7 +388,9 @@ PLAN_WARNINGS = (
     acknowledgeable_warning(
         "session_dose_high", ("session",), ("planned_sets", "ceiling"), ("rn:volume-frequency.3",)
     ),
-    acknowledgeable_warning("override_persisting", ("line",), ("kind", "weeks", "plan_ids")),
+    acknowledgeable_warning(
+        "override_persisting", ("line",), ("kind", "weeks", "plan_ids"), hashed=("kind",)
+    ),
     acknowledgeable_warning(
         "light_week_shape_off_trigger",
         ("week",),
@@ -439,7 +474,11 @@ ADOPT_WARNINGS = (
 )
 
 OUTSIDE_WARNINGS = (
-    outside_warning("routine_drift", ("routine",), ("drift_class", "plan_in_force", "diff")),
+    outside_warning(
+        "routine_drift",
+        ("routine",),
+        ("drift_class", "plan_in_force", "session_id", "changes", "diff"),
+    ),
     outside_warning("workout_reappeared", ("workout",), ("noticed_at", "updated_at")),
     outside_warning("followup_due", ("instance",), ("follow_up_id", "due")),
     outside_warning("niggle_unconstrained", ("instance",), ("niggle_id", "opened")),
@@ -466,7 +505,7 @@ OUTSIDE_WARNINGS = (
     outside_warning(
         "phase_trend_off",
         ("instance",),
-        ("phase_id", "target_rate", "observed_rate", "window"),
+        ("phase_id", "target_rate", "observed_rate", "rate_units", "window"),
         ("rn:training-level §4",),
     ),
     outside_warning(
@@ -482,6 +521,7 @@ OUTSIDE_WARNINGS = (
         ("distance", "longest_30_days", "ratio"),
         ("rn:running-load.1", "rn:running-load.4"),
     ),
+    outside_warning("session_near_empty", ("session",), ("date", "sets_logged", "sets_prescribed")),
     outside_warning("training_max_unused", ("exercise",), ("scheme", "decision_id")),
     outside_warning("exercise_unmapped", ("workout",), ("hevy_template_id", "title")),
     outside_warning("plan_behind_program", ("week",), ("plan_id", "approved_under", "version_id")),

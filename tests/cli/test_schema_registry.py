@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 from support.cli import run_coach
 
-from coach.cli.envelope import BUDGET_BYTES
 from coach.core.registries import REGISTRIES
 
 
@@ -129,7 +128,7 @@ def test_the_flags_registry_shows_each_code_with_severity_scope_and_rn() -> None
 
     rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
     assert run.envelope["result"]["truncated"] is False
-    assert len(rows) == run.envelope["result"]["count"] == 98
+    assert len(rows) == run.envelope["result"]["count"] == 103
     assert rows["stall_streak"]["severity"] == "warning"
     assert rows["stall_streak"]["scope"] == ["line"]
     assert rows["stall_streak"]["rn"] == "rn:progression-methods §4"
@@ -209,6 +208,21 @@ def test_the_flags_registry_names_the_params_rung_mets_hash_covers() -> None:
     }
 
 
+def test_the_flags_registry_lists_a_capped_pin_as_a_line_warning_a_plan_can_leave() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["pin_load_capped"] == {
+        "code": "pin_load_capped",
+        "severity": "warning",
+        "left_by": ["weekplan", "decision"],
+        "scope": ["line"],
+        "params": ["load", "prescribed", "ceiling_kind", "rpe_cap", "ref", "outcome"],
+        "rn": None,
+        "hashed": ["load", "ceiling_kind", "rpe_cap", "ref", "outcome"],
+    }
+
+
 def test_the_flags_registry_cites_the_one_rung_step_for_ladder_top() -> None:
     run = run_coach("schema", "--registry", "flags", "--full")
 
@@ -216,14 +230,10 @@ def test_the_flags_registry_cites_the_one_rung_step_for_ladder_top() -> None:
     assert rows["ladder_top"]["rn"] == "rn:bodyweight-skill-progression.3"
 
 
-def test_the_default_flags_envelope_truncates_under_the_budget() -> None:
-    run = run_coach("schema", "--registry", "flags")
+def test_the_flags_registry_returns_every_row_with_no_options() -> None:
+    result = run_coach("schema", "--registry", "flags").envelope["result"]
 
-    result = run.envelope["result"]
-    assert len(run.stdout.encode("utf-8")) < BUDGET_BYTES
-    assert result["truncated"] is True
-    assert len(result["rows"]) == 10
-    assert result["count"] == 98
+    assert (len(result["rows"]), result["count"], result["truncated"]) == (103, 103, False)
 
 
 def test_last_keeps_that_many_rows() -> None:
@@ -319,3 +329,92 @@ def test_the_muscles_registry_flags_dosed_on_each_row() -> None:
     assert rows["traps"] == {"name": "traps", "dosed": False}
     assert "cardio" not in rows
     assert "full_body" not in rows
+
+
+def test_the_annotation_kinds_registry_shows_each_kind_s_target_and_params() -> None:
+    rows = run_coach("schema", "--registry", "annotation-kinds").envelope["result"]["rows"]
+
+    by_kind = {row["name"]: row for row in rows}
+    assert by_kind["match"]["target"] == "workout"
+    assert [(p["name"], p["required"]) for p in by_kind["match"]["params"]] == [
+        ("planned_session", True)
+    ]
+    assert [(p["name"], p["required"]) for p in by_kind["repair"]["params"]] == [
+        ("position", True),
+        ("field", True),
+        ("value", True),
+    ]
+    assert [(p["name"], p["required"]) for p in by_kind["discount"]["params"]] == [
+        ("position", False)
+    ]
+    assert by_kind["miss_tag"] == {"name": "miss_tag", "target": "planned_session", "params": []}
+    assert all(p["about"] for row in rows for p in row["params"])
+
+
+def test_the_annotation_kinds_registry_counts_a_set_s_position_across_the_workout() -> None:
+    rows = run_coach("schema", "--registry", "annotation-kinds").envelope["result"]["rows"]
+
+    abouts = [p["about"] for row in rows for p in row["params"] if p["name"] == "position"]
+    assert len(abouts) == 2
+    assert all("across every exercise" in about for about in abouts)
+
+
+def test_the_record_draft_schema_lists_the_annotation_params() -> None:
+    draft = run_coach("schema", "record").envelope["result"]["draft"]
+
+    annotation = draft["schema"]["properties"]["annotation"]["items"]
+    params = annotation["properties"]["params"]
+    assert set(params["properties"]) == {
+        "position",
+        "field",
+        "value",
+        "load_mode",
+        "planned_session",
+    }
+    assert params["additionalProperties"] is False
+
+
+def test_the_plan_apply_draft_schema_requires_because_and_text_on_an_acknowledgement() -> None:
+    draft = run_coach("schema", "plan", "apply").envelope["result"]["draft"]
+
+    acknowledge = draft["schema"]["properties"]["acknowledge"]["items"]
+    assert {"flag", "params_hash", "because", "text"} <= set(acknowledge["required"])
+
+
+def test_the_errors_registry_points_to_the_flags_registry_for_adopt_violations() -> None:
+    result = run_coach("schema", "--registry", "errors").envelope["result"]
+
+    assert "coach schema --registry flags" in result["note"]
+    assert "program adopt" in result["note"]
+
+
+def test_a_registry_without_a_note_carries_no_note() -> None:
+    assert "note" not in run_coach("schema", "--registry", "reasons").envelope["result"]
+
+
+def test_the_flags_registry_lists_the_rate_units_beside_phase_trend_offs_rates() -> None:
+    run = run_coach("schema", "--registry", "flags", "--full")
+
+    rows = {row["code"]: row for row in run.envelope["result"]["rows"]}
+    assert rows["phase_trend_off"]["params"] == [
+        "phase_id",
+        "target_rate",
+        "observed_rate",
+        "rate_units",
+        "window",
+    ]
+
+
+def test_the_views_registry_names_the_page_of_each_history_view() -> None:
+    rows = run_coach("schema", "--registry", "views").envelope["result"]["rows"]
+
+    assert {row["name"]: row["page"] for row in rows} == {
+        "exposures": 50,
+        "readings": 50,
+        "flags": None,
+        "lines": None,
+        "routines": None,
+        "ledger": 50,
+        "exercises": 50,
+        "against": None,
+    }

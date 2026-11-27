@@ -9,6 +9,7 @@ from coach.core.assistance_ladder import next_rung, rung_of, rungs
 from coach.core.bounds import Proposal
 from coach.core.carried_e1rm import E1rmRead
 from coach.core.e1rm import PRECISION, WINDOW_DAYS, E1rm
+from coach.core.effort import held_unread, weeks_spanned
 from coach.core.exercise_ladder import StandingRung
 from coach.core.exposure import Exposure
 from coach.core.flag import Flag, Scope, raise_flag
@@ -137,6 +138,23 @@ class SchemeMoves:
                 f"{self.line.scheme.name} metric",
             )
 
+    def unread(self, exposure: Exposure) -> None:
+        """A load-bearing line held `WEEKS_UNREAD` weeks with no effort reading is flagged."""
+        if not self.given.loaded:
+            return
+        history = ordinary(line_history(self.given.request.exposures, exposure, on=self.given.on))
+        run = held_unread(history)
+        top = run[-1].top_load if run else None
+        if top is None:
+            return
+        weeks = weeks_spanned(run)
+        load = top.as_mode(self.given.mode).amount
+        self._raise(
+            "held_without_effort",
+            {"weeks": weeks, "load": load, "exposures": [e.ref for e in run]},
+            f"held at {load:g} for {weeks} weeks with no effort reading",
+        )
+
     def held(self, exposure: Exposure, before: Load | None) -> Move:
         """A `hold` override: the anchor's dose repeated with no scheme step."""
         if self.line.scheme.name == "wave_531":
@@ -208,9 +226,14 @@ class SchemeMoves:
         top = top_set(e1rm_load, self.line, floor, self.given.rack)
         if top.load == before:
             return Move(top.load, "hold", self.given.sets)
-        cause, source = top.cause, None
         if top.cause == "e1rm":
             cause, source = f"e1rm {found.exposure}", self._e1rm_source(found, e1rm_load)
+        else:
+            cause = (
+                f"{top.cause}, e1rm {e1rm_load.amount:g} from {found.exposure}, "
+                f"model {top.model.amount:g}"
+            )
+            source = None
         self.steps.append(Step("scheme", before.amount, top.load.amount, cause))
         return Move(top.load, "hold", self.given.sets, e1rm_source=source)
 

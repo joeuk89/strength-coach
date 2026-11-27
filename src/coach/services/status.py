@@ -16,6 +16,7 @@ from coach.core.flag import Flag
 from coach.core.instant import utc_instant
 from coach.core.kit import KitFiles, TablesState, tables_state
 from coach.core.planned_week import RotationPosition, week_monday
+from coach.core.routine_projection import row_in_routine
 from coach.services.cadence import cadence_signals
 from coach.services.check_in_warnings import check_in_warnings
 from coach.services.closed_weeks import ClosedWeeks, WeekLog
@@ -78,6 +79,7 @@ class PlanInForce:
     week: str
     approved_at: str
     write_plan_hash: str
+    routines_plan: str
     routines_verified: int = 0
     routines_unverified: tuple[str, ...] = ()
 
@@ -279,19 +281,24 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     row = week_plans.in_force(conn, monday.isoformat())
     if row is None:
         return None
-    plan_id = str(row["id"])
+    routines_plan = str((week_plans.latest_week(conn) or row)["id"])
     live = routine_map.live(conn)
-    projected = {str(r["session_id"]) for r in week_plans.prescriptions(conn, plan_id)}
+    projected = {
+        str(r["session_id"])
+        for r in week_plans.prescriptions(conn, routines_plan)
+        if row_in_routine(r)
+    }
     verified = [
         m
         for m in live
-        if m.status == "active" and (m.plan_id == plan_id or m.session_id not in projected)
+        if m.status == "active" and (m.plan_id == routines_plan or m.session_id not in projected)
     ]
     return PlanInForce(
-        plan_id,
+        str(row["id"]),
         str(row["week"]),
         str(row["approved_at"]),
         str(row["write_plan_hash"]),
+        routines_plan=routines_plan,
         routines_verified=len(verified),
         routines_unverified=tuple(m.session_id for m in live if m not in verified),
     )

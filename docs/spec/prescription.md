@@ -111,12 +111,13 @@ cut.
 | `double_progression` | reps and RPE per working set | every working set reached the top of its range at or under the authored RPE | load to the next rack row; reps back to the bottom of the range | hold load and range | a set at RPE ≥ authored + 2, or below the bottom of the range: hold and warn `rep_range_missed`. The rule never cuts |
 | `linear` | reps per working set at the anchor load | every working set at the authored reps at or under the authored RPE | load to the next rack row | a short attempted set is a **miss**: hold. A set never logged is incomplete, not a miss | see **Stalls**: the second consecutive miss at one load resets |
 | `hold` | nothing | | the authored sets at the anchor load (`start_load` with no anchor) | | |
+| `timed_load` | seconds per working set at the anchor load, and the stored effort: the highest RPE on those sets, logged or repaired (`check-in.md`) | every authored working set logged at or over the authored `duration_s` at the anchor load, and the stored effort at or under the authored RPE | load to the next rack row | a set short of the seconds, an effort over the target, or no stored effort: hold. A set with no RPE is unread here, not on target, since its template takes none | none: a step down is the coach's |
 | `assistance_ladder` | reps and RPE per set on the current rung | every working set at the group's reps at or under its RPE | one rung up (less assistance); hold at the last rung | hold the rung | hold the rung and warn `rep_range_missed` on a set at RPE ≥ the group's RPE + 2 |
-| `exercise_ladder` | the standing rung (below), its exercise's ordinary exposures from the rung's start, its `start_load` on a load-bearing rung | the rung's advance criterion (`program.md`) on its run of the newest exposures | never moves: warn `rung_met` naming the next rung, or `ladder_top` on the last; a `manual` rung raises neither | hold the rung | hold the rung |
+| `exercise_ladder` | the standing rung (below), its exercise's ordinary exposures that count on the rung (from the day after its Decision, below), its `start_load` on a load-bearing rung | the rung's advance criterion (`program.md`) on its run of the newest exposures | never moves: warn `rung_met` naming the next rung, or `ladder_top` on the last; a `manual` rung raises neither | hold the rung | hold the rung |
 | `top_backoff` | the exercise's best e1RM in the window, or the carried e1RM while it binds (**The carried e1RM**, below) | not a hit test: the top load is `load_for(e1RM, reps, rpe)` of the top group (the first working group, `program.md`) rounded down, **capped at one rack row above the heaviest top load in the e1RM window (the anchor's included; while the carried e1RM binds, the pre-layoff heaviest top × the band factor too)**; every later working group is a back-off at `pct_of_top` of the top, rounded nearest | | no e1RM in the window and no carried e1RM: hold the anchor's top load and warn `no_e1rm` | a top set logged above the model raises the e1RM; nothing else |
 | `wave_531` | the current `training_max` Decision (`start_load` until one exists), the Block's hard-week count and the last rep-out | the wave is `hard weeks completed in the block mod 3`; loads are the wave's percentages of the training max rounded down; the last working set is open | | a rep-out below its wave's reps: warn `rep_range_missed` | after the third wave is logged at one training max: warn `training_max_due` with the three rep-out counts. The rule **never** moves the training max; the agent records a `training_max` Decision: the published step, 2.5 kg upper body or 5 kg lower body, in athlete units (rn:progression-training-age.9), or about 10 % down (rn:progression-methods §4) |
 
-Citations: `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
+Citations: `timed_load` is this framework's (opinion, ADR 0026); `double_progression` rn:progression-training-age.2; `linear` rn:progression-training-age.3;
 `assistance_ladder` and `exercise_ladder` rn:bodyweight-skill-progression.3; `top_backoff` rn:progression-training-age.6
 and .8, rn:autoregulation.1; `wave_531` rn:progression-training-age.9. The one-row cap, the
 "RPE 2 over" test and `load_for` rounding down are this framework's (opinion). The catalogue
@@ -126,14 +127,17 @@ Notes:
 
 - The one-row cap on `top_backoff` is a rule, not a warning: a bigger jump is the model
   over-reading one great day. Because every scheme's own step is at most one row,
-  `increment_over_step` fires only on a `pin_load` more than one row above the anchor. After a
+  `increment_over_step` fires only on a `pin_load` more than one row above the anchor, and not
+  on one at or under a `load_too_light` suggestion (below). After a
   return week the cap counts from the pre-layoff heaviest top scaled by the band, so the line
   gets back to its pre-layoff level in about one week rather than one row a week.
 - `top_backoff` reads the **best** point in the window, so one bad day never drops the top set;
   only a recovery ceiling or the window expiring lowers it.
 - When the e1RM moves the `top_backoff` top (the one-row cap does not bind), the `scheme` step
   records `cause = e1rm <exposure ref>`, the exposure the e1RM came from (the pre-layoff one
-  while the carried e1RM binds), and the line's `change` ends with it (below).
+  while the carried e1RM binds), and the line's `change` ends with it (below). When the cap
+  binds, the cause records the e1RM and the model load it discarded:
+  `one_row_cap, e1rm 215.83 from <exposure ref>, model 175`.
 - With no next rack row (a band at the top of its ladder, a dumbbell rack's heaviest pair) a
   hit holds and the step records `cause = rack_top`; the agent swaps or the version changes.
 - A `test` single is never authored; the deload policy prescribes it in a light week, below.
@@ -151,12 +155,54 @@ Notes:
   workout that earned the climb is often logged that day, so a session trained on the new rung on
   that date does not count. From adoption they count on the date itself, since no earlier rung
   earned the first. The load, the criterion and `stall_streak` read only the standing rung's
-  exercise's exposures that count, and exposures on another rung's exercise, or on its own before
-  they count, count for nothing, so two rungs may share an exercise (ADR 0025). The line's key
+  exercise's exposures that count: ordinary ones (light-week and return-band exposures skipped)
+  from the rung's start, in the session or unmatched. Exposures on another rung's exercise, on
+  its own before they count, or from a week a return band stepped the line back, count for
+  nothing, so two rungs may share an exercise (ADR 0025). The line's key
   stays its first rung's exercise for every flag and override; the prescription and history
   matching carry the standing rung's. A
   light week holds the rung with its sets cut. The climb is the agent's: a `ladder_rung` Decision
   after the athlete's yes.
+
+## A line too light
+
+The one-row step stands, so a line far under what the athlete can lift climbs slowly. The
+engine says so and suggests the jump; the athlete agrees or names another load, and the coach
+pins it. A `double_progression`, `linear` or `top_backoff` line in a rack mode with an anchor
+exposure warns `load_too_light` when either holds:
+
+- the mean of logged minus authored RPE over the anchor's working sets, paired in order with the
+  authored working sets and counting only pairs that carry both, is 1.5 or more under. An anchor
+  from a week a return band capped the line's RPE is not read this way.
+- the rack row nearest the model load is more than one rack row above the prescribed load. The
+  model load is `model_load` of the line's e1RM (exercise-wide, every session included, the
+  carried e1RM while it binds) for the top working group's reps, the top of a range, at its RPE,
+  before any rack. The prescribed load is the scheme's own move on the rack, before the cut and
+  the ceilings.
+
+Both thresholds are opinion: the 1.5 is the session gate's slack (`week.md`), one number the
+engine reads as effort well off the authored RPE, and the one row matches the scheme's step.
+
+The params carry the anchor's logged sets, the e1RM with its source exposure (date, session),
+the model load and one suggested load: the rack row nearest the model load, no heavier than any
+safety ceiling. With no e1RM the warning still raises on the RPE gap, with no model and no
+suggestion. A line a return band cuts raises none: the carried e1RM is its catch-up, and a pin
+above the band is `return_band_disagrees`.
+
+The warning never moves a load and never changes the anchor: another session's exposure is
+evidence only. The coach answers with `pin_load`. A pin at or under the suggested load needs one
+acknowledgement, of this warning, and raises no `increment_over_step`; a pin above it raises
+`increment_over_step` as before. The pin is bounded like any other: an RPE ceiling still lowers
+it and warns `pin_load_capped`. The warning recurs each week until neither condition holds.
+
+## A load held unread
+
+A load-bearing line whose newest ordinary exposures (light-week and return-week exposures
+skipped) sit at one top load with no RPE on any working set, across three or more calendar
+weeks, warns `held_without_effort` with the weeks, the load and the exposure refs. Any scheme
+raises it, `hold` included, so a carry or a held accessory with no effort reading cannot sit
+unnoticed. Three weeks is opinion: long enough to be a pattern, short of a Block. The warning
+moves nothing; the coach asks the effort, records it, or changes the line.
 
 ## Stalls
 
@@ -179,8 +225,9 @@ and `cadence_slow` relies on it surviving the Block boundary (`goals.md`). The m
 | --- | --- | --- |
 | `double_progression` | total reps at or under the authored RPE at the anchor load | none: hold. Sets, a deload or a swap are the agent's (`goals.md`, the cadence table at the boundary) |
 | `linear` | a miss | the **reset**: the second consecutive miss at one load (`misses_before_reset = 2`, Starting Strength's "the 2nd time in a row", rn:training-level §2) sets the load to `reset_factor` × the anchor load, rounded **down** to the rack. Both are `linear` params (`program.md`); the registry default `reset_factor = 0.9` is the over-40 reset (5 % under 40, 10 % over 40, rn:training-level §2), so a coach names `reset_factor = 0.95` on the line for a younger athlete. The miss count restarts once an exposure at a lighter load is logged. Resets per lift are derived from history; `cadence_slow` reads them |
+| `timed_load` | the top load, then the seconds held at it: a heavier load is a gain whatever the seconds | none: hold |
 | `assistance_ladder` | the rung | hold the rung |
-| `exercise_ladder` | total reps, or seconds on a duration rung, at or under the authored RPE on the standing rung, reading only exposures since the rung's start | hold the rung |
+| `exercise_ladder` | total reps, or seconds on a duration rung, at or under the authored RPE on the standing rung, reading only exposures that count on the rung (from the day after its Decision) | hold the rung |
 | `top_backoff` | e1RM | none: the model holds the top set |
 | `wave_531` | the rep-out's e1RM (counts fall wave to wave by design) | none: `training_max_due` or `rep_range_missed` says what happened |
 
@@ -235,9 +282,16 @@ move, the `top_backoff` top, the wave loads of the training max), so it is defin
 scheme, and back-offs follow their top; at 0 the load is held. A `hold` line is cut like any
 other (ADR 0017).
 
-Illness is not a cut and not a week kind here: an `ill` span since the line's anchor with no
-exposure since it ended caps every set of the line at RPE 7 in step 6 (rn:detraining-return.4),
-where it binds by `min` with the other ceilings.
+Illness is not a cut and not a week kind here: an `ill` span caps every set of the line at RPE 7
+in step 6 (rn:detraining-return.4), where it binds by `min` with the other ceilings. The cap ends
+on the athlete's word: the span's `cap_ends`, the last day they say they need reduced effort,
+caps every line dated after the span began up to that day and none after, trained or not; a
+`cap_ends` on the last ill day is fully recovered and caps nothing after it. With no answer the
+cap stays on the cautious side: a span since the line's anchor with no exposure of the lift since
+it ended caps the line, so each lift is capped until it has been trained once. The step's cause
+names the end, `illness until 2026-11-12` or `illness until this lift is trained once`, and the
+approval prompt prints it on the line. A new answer midweek is a withdrawal and a fresh span,
+and a superseding WeekPlan replans the sessions left.
 
 The closed week's kind for the Block's count (light, return, break, minimum, one_off, hard,
 missed, partial) is `week.md`'s read after the fact. `week.md`'s `return` is the athlete's
@@ -271,14 +325,25 @@ set delta and RPE cap, no Decision written, its days off read across every rung'
 return week only, with no rep-out set. A return line whose band, load, set delta and RPE cap do
 not all derive together (an override fought the band) is `return_band_disagrees`.
 
+A load-bearing rung a return band steps back to reads no exposure, so it opens on its own
+`start_load` (the line's on the first rung) with the band's load factor; its log never anchors
+the standing rung, which returns at the load it held before the layoff (`program.md`, **Start
+loads**).
+
 A week an `exercise_ladder` line steps back offers no climb, since the line returns to its standing
 rung next: it raises no `rung_met` or `ladder_top`, and they return with the rung. The approval
 prompt and the Hevy note name that week's rung by index alone, since the band cut the dose a label
 would print, with no `Next:`; the note says it on a `This week:` line. The `cut` step names both
 rungs by index, for example from `rung 3` to `rung 1`, with its cause, and the plan Draft and the week page show that step. The
+step also stores the week's rung as `rung`, and the note and prompt read that, never the step's
+text; a plan frozen before the step stored it reads the index from its `to`. The
 check-in card still measures from the standing rung. All of this reads the frozen line's `rung` and
 steps, not the Decisions in force, so a Decision recorded after approval leaves the note alone. A
 line in a band that steps back no rung, because it stands on the first, keeps its `Next:`.
+
+A week whose rung a `swap_exercise` or `restate_sets` override changed, from the plan or a
+Decision, still offers the climb, but the approval prompt names its rung by index alone, since the
+rung's label would print an exercise or sets the line no longer runs.
 
 Illness alone (gap ≤ 10 days) is not a cut: the RPE 7 cap is the whole return. Illness with
 days off > 10 is a return line with the cap at 7.
@@ -342,7 +407,9 @@ its load limited to `load_for(e1RM, fewest allowed reps, cap)` rounded down (the
 limits, rn:autoregulation.5 and .6). A set whose implied reps to failure would exceed 12 has its
 reps cut to fit the model. With no usable e1RM the load
 is clipped to the anchor's top load and the line warns `rpe_ceiling_unchecked`, quoting the
-load as the rack step leaves it.
+load as the rack step leaves it. No `pin_load` lifts a line above an RPE ceiling: a pin the
+illness, light-week or niggle cap lowers warns `pin_load_capped`, saying whether the pin was
+reduced or had no effect, and the approval prompt marks the pin the same way.
 
 ### The test set
 
@@ -350,7 +417,7 @@ In a `light_week`, when the version's deload policy has `test_priority_lifts`, a
 under `top_backoff` or `wave_531` is prescribed one `test` single at `load_for(e1RM, 1, 9)`
 rounded down (RPE 9 is opinion), before its working groups under the light cut. No test single
 is prescribed on a line a return band or the illness RPE cap binds; the step records which
-(`cause = return_band` or `illness`). This is the only `test` set there is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
+(`cause = return_band`, or the illness cap's cause with its end). This is the only `test` set there is: `test` is never authored (`set_type_not_allowed`, `program.md`), so a weekly max attempt is a
 `working` single. The rule writes nothing from the result; the agent reads it at the block
 boundary and records a `training_max` Decision if the lift moves to `wave_531`.
 
