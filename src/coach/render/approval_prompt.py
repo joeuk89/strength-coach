@@ -67,6 +67,8 @@ def _session(group: list[SummarySession], units: Units) -> list[str]:
 
 def _line(line: SummaryLine, units: Units) -> str:
     shown = f"{line.exercise_id} {dose(line.set_groups, units)} · {line.change}"
+    if line.dropped_by is not None:
+        shown += f" ({line.dropped_by})"
     labels = line.rung_labels
     if labels is None:
         return shown
