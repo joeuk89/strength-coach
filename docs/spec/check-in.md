@@ -38,6 +38,7 @@ answer lands:
 | Answer | Record |
 | --- | --- |
 | Missed core session, with its reason tag | Annotation of kind `miss_tag` on the planned session; the tag is its `because`, one of the seven reasons (`schema.md`). Miss stays derived; only the tag is stored |
+| A near-empty session the athlete says did not count (`week.md`, "The session gate") | Annotation of kind `miss_tag` on the matched planned session, the athlete's reason as its `because`; the session becomes untrained and a Miss. A session they say counted needs no record |
 | Planned session called off on purpose, not a miss (a rest day agreed, a session the plan should not have held) | Annotation of kind `cancelled` on the planned session; it leaves both of `week.md`'s denominators |
 | Coach-led session done | Normally nothing: the Hevy workout already fulfils it (see Matching). A hand-entered Workout with no sets, with minutes and session RPE, only when Hevy has nothing for that day |
 | Trained but not logged | Annotation of kind `trained_unlogged` on the planned session |
@@ -103,7 +104,7 @@ All of these are pure functions of the store at a date and are never stored:
   | # | Field | Prefill and ask |
   | --- | --- | --- |
   | 1 | Header | window, derived tier, catch-up or not, plan in force |
-  | 2 | Sessions | every planned core session in the window: matched (every matched workout, minutes summed over them, session RPE), trained-unlogged, cancelled or missed; asks a miss tag per miss and session RPE only where the sets carry none; the against-the-prescription read per session; optional sessions as a done streak |
+  | 2 | Sessions | every planned core session in the window: matched (every matched workout, minutes summed over them, session RPE), trained-unlogged, cancelled or missed, a matched session carrying a `miss_tag` read as missed; working sets logged against working sets prescribed and the session's gate result; asks a miss tag per untagged miss and session RPE only where the sets carry none; a near-empty session (`week.md`) has no session RPE and raises `session_near_empty`, and its session RPE is asked only once the athlete says it counted; the against-the-prescription read per session; optional sessions as a done streak |
   | 3 | Week kind | the closed week's kind, trained fraction, gate passes (`week.md`) |
   | 4 | Block | hard weeks against the ceiling, triggers fired with evidence refs, the proposal: a light week with the proposed shape (`week.md`), `none` or `skipped (<n> hard weeks)` |
   | 5 | Adherence | figure, weeks counted, state (`ok`, `watch`, `low`, `insufficient`) |

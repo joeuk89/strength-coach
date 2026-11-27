@@ -22,7 +22,9 @@ rather than carrying them.
   Readiness field records it; an RPE drift trigger on the card's Block line matters on the
   compound lifts, elsewhere a rising RPE is a note.
 - **Misses.** A tag per missed core session. Pattern over blame: a run of `time` misses is a
-  schedule problem for the plan, not a willpower problem.
+  schedule problem for the plan, not a willpower problem. On `session_near_empty`, ask the
+  athlete whether the session counted: a no is a `miss_tag` on it with their reason; a yes needs
+  no record, and only then ask its session RPE.
 - **Sleep and weight.** Read the trend, not the week. A short-sleep week (`short_sleep_week`)
   shapes next week's dose; one bad night does not. Record the short nights the card's Sleep ask
   names as `[[sleep_night]]` rows with their hours; a weekly average, when that is all the

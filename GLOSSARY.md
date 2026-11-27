@@ -290,6 +290,11 @@ Whether a trained core lifting session counted as training stress for the hard-w
 of its working sets logged, close enough to the prescribed effort. Not a measure of compliance.
 _Avoid_: compliance, completion, hard-week gate (fine in prose for the same test)
 
+**Near-empty session**:
+A matched core session with under one-third of its prescribed working sets logged. The athlete is
+asked whether it counted; a no makes it a Miss, and with no answer it stays trained.
+_Avoid_: partial session (the week kind is `partial`), abandoned session
+
 **Hit**:
 A set, or an exposure, that met its scheme's target: every working set at the authored reps at or
 under the authored RPE. The scheme moves the dose on a hit and holds otherwise. A miss in this
@@ -362,8 +367,8 @@ workout carries it.
 _Avoid_: mapping, reconciliation
 
 **Miss**:
-A planned session whose week has ended with no match, no move and no cancellation. Derived, never
-stored.
+A planned session whose week has ended with no match, no move and no cancellation, or one the
+athlete said did not count (a near-empty session given a miss tag). Derived, never stored.
 _Avoid_: skipped session (an optional session skipped is not a miss)
 
 **Activity**:

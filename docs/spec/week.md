@@ -87,10 +87,12 @@ with zero prescribed working sets (every line `hold`, or none authored) is outsi
 denominator and neither passes nor fails (ADR 0005); it stays in the adherence denominator.
 
 A planned session is **trained** when it has a Match, a `trained_unlogged` Annotation, or is a
-coach-led session that happened (a Match, or a hand-entered Workout with no sets). A shortened
-session is trained. A `trained_unlogged` Annotation and a hand-entered Workout also count as a
+coach-led session that happened (a Match, or a hand-entered Workout with no sets), and carries no
+`miss_tag` Annotation. A shortened session is trained. A `miss_tag` on a matched session is the
+athlete saying it did not count: the session is untrained for adherence, the week kind and the
+Block count, while its workouts stay history and still yield their Exposures. A `trained_unlogged` Annotation and a hand-entered Workout also count as a
 lifting exposure date for the days off that set the return band (`prescription.md`). A Miss is a planned core session whose week has closed untrained, unmoved and
-uncancelled.
+uncancelled, a matched session carrying a `miss_tag` among them.
 
 ## The session gate
 
@@ -101,6 +103,14 @@ added by `add_session` is in the gate denominator like any other. The gate count
 for the fatigue count, not whether the prescription was met (rn:deloads.11). The
 against-the-prescription read (reps missed, effort off by 1.5 or more, RPE missing) is a card
 figure per session and never a gate.
+
+A matched core session with prescribed working sets and under **one-third** of them logged is
+**near-empty**: the sets counted are the logged working sets paired with a prescribed one, over
+every workout matched to the session, as the gate counts them. It raises `session_near_empty` on
+the planned session at `checkin open`, has no session RPE, and the coach asks the athlete whether
+it counted. A no is a `miss_tag` Annotation with the athlete's reason, which makes the session
+untrained; with no answer it stays trained. One-third is opinion: a session that short may be a
+started-and-stopped attempt rather than training, and the athlete knows which.
 
 ## Week kind
 
@@ -243,7 +253,7 @@ A week is **closed** when a `current` Check-in's window covers its Sunday.
 
 | Verb | Codes |
 | --- | --- |
-| `checkin open` | `phase_trend_off`, `phase_condition_met`, `followup_due`, `niggle_unconstrained`, `cadence_slow`, `cadence_fast`, `training_max_unused`, `activity_cap_exceeded`, `run_spike` |
+| `checkin open` | `phase_trend_off`, `phase_condition_met`, `followup_due`, `niggle_unconstrained`, `cadence_slow`, `cadence_fast`, `training_max_unused`, `activity_cap_exceeded`, `run_spike`, `session_near_empty` |
 | `import`, and every verb that pulls first (`verbs.md`, "The pull") | `routine_drift`, `workout_reappeared`, `exercise_unmapped` |
 | `status` | `engine_pin_dev`, `generated_file_drift`, `plan_behind_program`, and every code standing |
 | `program adopt` | `plan_behind_program`, when the version it records leaves this week's plan in force behind |
