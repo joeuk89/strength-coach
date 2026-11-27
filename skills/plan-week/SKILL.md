@@ -22,11 +22,9 @@ that blocks the plan.
 
 ## Judge
 Every answer is an override with its reason, an override Decision, or an Acknowledgement with
-its reason. A load the engine derived is never retyped. The Draft holds an empty
-`[[acknowledge]]` stub per warning: fill in `because` and `text`, or delete it. After adding
-overrides, run `coach plan draft --refresh <path>` for the flags they raise. A warning that
-recurs unchanged each week takes a standing answer: a `leave_warning` Decision through
-`coach record`, naming the key without the week's date, with an until date.
+its reason. A load the engine derived is never retyped. Fill each warning's stub
+or delete it; after adding overrides, `coach plan draft --refresh <path>` adds their flags. A
+warning recurring unchanged takes a standing `leave_warning` Decision, its key undated.
 - **Stalls.** `stall_streak` wants `hold`, `restate_sets` or `swap_exercise`, chosen by the
   emphasis. Under hypertrophy, read dose against target: a flat line early in a block wants sets,
   late it wants the deload. On a priority lift, read the e1RM trend, not the week; a flat block
