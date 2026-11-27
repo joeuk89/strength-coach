@@ -62,7 +62,7 @@ warning recurring unchanged takes a standing `leave_warning` Decision, its key u
   A changed answer midweek is recorded again and the week replanned.
 - **Pins.** `pin_load_capped`: a recovery ceiling lowered a pin or left it with no effect.
   Lower the pin to the prescribed load, remove it, or acknowledge the warning with the reason.
-  `load_too_light`: on a yes, pin its suggested load or the athlete's; acknowledge it.
+  `load_too_light`: pin its load.
 - **Rack.** `frozen_load_off_rack`: a load in the plan in force is gone from the location's
   rack. Say which planned loads move and to what, each load from the Draft.
 - **Drift.** `routine_drift`: the athlete changed a routine in Hevy. Its changes name the
@@ -74,8 +74,8 @@ warning recurring unchanged takes a standing `leave_warning` Decision, its key u
 What the week is for in one sentence, then each session as the athlete will live it. Explain a
 changed line by its emphasis: under hypertrophy, last week's reps at the authored RPE from the
 steps; on a priority lift, the e1RM and what the scheme makes of it; under maintenance, held.
-Say each change and its reason plainly, every load from the Draft. Lines with no flag and no
-override are shown, not explained.
+Every load and change comes from the Draft or the dry run; never retype one. Say each change
+and its reason in plain words. Lines with no flag and no override are shown, not explained.
 
 Run the verb's dry run and tell the athlete what it will record, every load quoted from it and
 nothing of the system named; they say yes before the verb records it.
