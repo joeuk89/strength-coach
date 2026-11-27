@@ -79,6 +79,7 @@ class PlanInForce:
     week: str
     approved_at: str
     write_plan_hash: str
+    routines_plan: str
     routines_verified: int = 0
     routines_unverified: tuple[str, ...] = ()
 
@@ -280,7 +281,8 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
     row = week_plans.in_force(conn, monday.isoformat())
     if row is None:
         return None
-    plan_id = str(row["id"])
+    newest = week_plans.latest_week(conn) or row
+    plan_id = str(newest["id"])
     live = routine_map.live(conn)
     projected = {
         str(r["session_id"]) for r in week_plans.prescriptions(conn, plan_id) if row_in_routine(r)
@@ -291,10 +293,11 @@ def _plan_in_force(conn: Connection, monday: datetime.date) -> PlanInForce | Non
         if m.status == "active" and (m.plan_id == plan_id or m.session_id not in projected)
     ]
     return PlanInForce(
-        plan_id,
+        str(row["id"]),
         str(row["week"]),
         str(row["approved_at"]),
         str(row["write_plan_hash"]),
+        routines_plan=plan_id,
         routines_verified=len(verified),
         routines_unverified=tuple(m.session_id for m in live if m not in verified),
     )
