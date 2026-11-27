@@ -4,7 +4,7 @@ prescription.md). Ceilings bind by the strictest and never compose (ADR 0017).""
 import datetime
 import math
 from collections.abc import Iterable, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from coach.core.e1rm import MAX_REPS_TO_FAILURE
 from coach.core.exposure import Exposure
@@ -12,6 +12,7 @@ from coach.core.load import Load, LoadMode
 from coach.core.prescription import DecisionInForce, NiggleConstraint, StatusSpan
 from coach.core.program.form import Number, Reps, SetGroup
 
+ILLNESS = "illness"
 ILLNESS_RPE_CAP = 7
 ILLNESS_RPE_CAP_RN = "rn:detraining-return.4"
 
@@ -53,23 +54,49 @@ def niggle_load_caps(
     return tuple(caps)
 
 
-def ill_since(
+@dataclass(frozen=True)
+class IllnessCap:
+    """The `ill` span that caps a line, and the last day it caps: the athlete's stated end, or
+    None while it holds until the lift is trained once."""
+
+    span: StatusSpan
+
+    @property
+    def ends(self) -> datetime.date | None:
+        return self.span.cap_ends
+
+    @property
+    def cause(self) -> str:
+        return f"{ILLNESS} until {self.ends or 'this lift is trained once'}"
+
+
+def is_illness_cause(cause: str) -> bool:
+    return cause.startswith(f"{ILLNESS} until ")
+
+
+def illness_cap(
     spans: Iterable[StatusSpan],
     exposures: Iterable[Exposure],
     *,
     exercise_id: str,
     anchor_date: datetime.date,
     on: datetime.date,
-) -> bool:
-    """An `ill` span since the anchor with no exposure of the lift after it ended."""
+) -> IllnessCap | None:
+    """The latest `ill` span begun before `on` that caps it: up to the athlete's stated end, else
+    since the anchor with no exposure of the lift after the span ended."""
     later = [e.date for e in exposures if e.exercise_id == exercise_id and e.date < on]
+    found: IllnessCap | None = None
     for span in spans:
         if span.kind != "ill" or span.from_date >= on:
             continue
-        ended = span.to_date or on
-        if ended >= anchor_date and not any(day > ended for day in later):
-            return True
-    return False
+        if span.cap_ends is not None:
+            capped = on <= span.cap_ends
+        else:
+            ended = span.to_date or on
+            capped = ended >= anchor_date and not any(day > ended for day in later)
+        if capped and (found is None or span.from_date > found.span.from_date):
+            found = IllnessCap(span)
+    return found
 
 
 def safety_ceiling(decisions: Iterable[DecisionInForce], exercise_id: str) -> Number | None:

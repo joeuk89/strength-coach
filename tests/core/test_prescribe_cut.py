@@ -18,6 +18,7 @@ from coach.core.prescription import (
 )
 from coach.core.program.form import Dose, LiftDose, Line, SetGroup
 
+UNTIL_TRAINED = "illness until this lift is trained once"
 RUNGS = [60, 50, 40, 30, 20, 10, 0]
 PULL_UP = a_line("assisted_pull_up", working(4, 8), scheme="assistance_ladder", rungs=RUNGS)
 
@@ -160,11 +161,12 @@ def test_a_pin_load_above_a_niggle_cap_is_recovery_ceiling_exceeded() -> None:
     assert line.groups[-1].load == Load(100, "total")
 
 
-def ill(from_date: str, to_date: str | None) -> StatusSpan:
+def ill(from_date: str, to_date: str | None, cap_ends: str | None = None) -> StatusSpan:
     return StatusSpan(
         "ill",
         datetime.date.fromisoformat(from_date),
         None if to_date is None else datetime.date.fromisoformat(to_date),
+        None if cap_ends is None else datetime.date.fromisoformat(cap_ends),
     )
 
 
@@ -176,9 +178,52 @@ def test_an_ill_span_with_no_exposure_after_it_caps_every_set_at_rpe_7_and_is_no
     )
 
     assert [s.step for s in line.steps].count("cut") == 0
-    assert Step("rpe_ceiling", 8, 7, "illness") in line.steps
+    assert Step("rpe_ceiling", 8, 7, UNTIL_TRAINED) in line.steps
     working = line.groups[-1]
     assert (working.count, working.rpe, working.rpe_cap) == (4, 7, 7)
+
+
+def test_a_stated_cap_end_caps_a_line_on_that_day_and_names_it() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        status_spans=(ill("2026-10-28", "2026-10-30", "2026-11-02"),),
+    )
+
+    assert Step("rpe_ceiling", 8, 7, "illness until 2026-11-02") in line.steps
+    assert line.groups[-1].rpe_cap == 7
+
+
+def test_a_stated_cap_end_caps_nothing_after_it() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        status_spans=(ill("2026-10-28", "2026-10-30", "2026-11-01"),),
+    )
+
+    assert line.groups[-1].rpe_cap is None
+    assert [s for s in line.steps if s.step == "rpe_ceiling"] == []
+
+
+def test_a_stated_cap_end_on_the_last_ill_day_is_fully_recovered_and_caps_nothing() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        status_spans=(ill("2026-10-28", "2026-10-30", "2026-10-30"),),
+    )
+
+    assert line.groups[-1].rpe_cap is None
+
+
+def test_a_stated_cap_end_holds_after_the_lift_is_trained_once() -> None:
+    line = derive(
+        a_line(),
+        squat_on("2026-10-26", *SQUAT_HELD),
+        an_exposure("2026-10-31", (60, 10, 6), exercise_id="bb_back_squat"),
+        status_spans=(ill("2026-10-20", "2026-10-24", "2026-11-04"),),
+    )
+
+    assert Step("rpe_ceiling", 8, 7, "illness until 2026-11-04") in line.steps
 
 
 def test_an_exposure_after_the_ill_span_lifts_the_illness_cap() -> None:
@@ -200,7 +245,7 @@ def test_illness_with_days_off_over_10_is_a_return_line_with_the_cap_at_7() -> N
     assert line.steps[:4] == (
         Step("cut", 120, 114, "return 11–21, 18 days off"),
         Step("cut", 4, 3, "sets"),
-        Step("rpe_ceiling", 8, 7, "illness"),
+        Step("rpe_ceiling", 8, 7, UNTIL_TRAINED),
         Step("rpe_ceiling", 8, 7, "not_binding"),
     )
     assert (line.groups[-1].count, line.groups[-1].rpe_cap) == (3, 7)
@@ -278,7 +323,7 @@ def test_illness_inside_a_light_week_prescribes_no_test_single_and_says_why() ->
     )
 
     assert "test" not in [g.type for g in line.groups]
-    assert Step("test", None, None, "illness") in line.steps
+    assert Step("test", None, None, UNTIL_TRAINED) in line.steps
 
 
 def test_a_light_week_alone_records_no_test_step() -> None:
@@ -311,7 +356,7 @@ def test_an_rpe_ceiling_limits_the_load_through_the_e1rm_rounded_down() -> None:
 
     # e1RM 120 × (1 + 7/30) = 148; six reps at RPE 7 is 148 / (1 + 9/30) = 113.85
     assert line.steps[:3] == (
-        Step("rpe_ceiling", 8, 7, "illness"),
+        Step("rpe_ceiling", 8, 7, UNTIL_TRAINED),
         Step("rpe_ceiling", 120, 113.85, "e1rm"),
         Step("rack", 113.85, 110, "row"),
     )
