@@ -221,3 +221,22 @@ def test_first_rung_exposures_before_its_adoption_raise_no_cadence_slow() -> Non
     )
 
     assert "pull_up" not in signals_at_check_in(conn)
+
+
+def test_a_lift_whose_session_was_renamed_between_blocks_still_raises_cadence_slow() -> None:
+    conn = two_closed_blocks()
+    adopt(
+        conn,
+        toml(a_draft(a_session("upper", BENCH_LINE, PULL_UP_LINE), kind="amend", because="name")),
+        file="d.toml",
+        config=a_config(),
+        kits=(kit_files(),),
+        clock=FixedClock(at(BOUNDARY - datetime.timedelta(days=1))),
+    )
+
+    found = signals_at_check_in(conn)
+
+    assert (found["bb_bench_press"].code, found["bb_bench_press"].params["scheme"]) == (
+        "cadence_slow",
+        "top_backoff",
+    )

@@ -9,6 +9,7 @@ from coach.core.config import Units
 from coach.core.flag import Flag, leave
 from coach.core.planned_week import week_monday
 from coach.core.program.form import Line, ProgramForm
+from coach.core.stall import judged_line
 from coach.services.closed_weeks import ClosedWeeks
 from coach.services.history import read_history
 from coach.services.ladders import rung_decisions, standing_line
@@ -88,9 +89,13 @@ def _form_at(conn: Connection, span: BlockSpan) -> ProgramForm | None:
 
 
 def _scheme_of(form: ProgramForm, session_id: str, exercise_id: str) -> str | None:
+    """The scheme of the exercise's line in the session, or, in a version without that session,
+    of its judged line: a renamed session keeps the lift's read."""
     session = form.session(session_id)
-    lines = session.lines if session else ()
-    return next((line.scheme.name for line in lines if line.exercise == exercise_id), None)
+    if session is None:
+        judged = judged_line(form, exercise_id)
+        return None if judged is None else judged.line.scheme.name
+    return next((line.scheme.name for line in session.lines if line.exercise == exercise_id), None)
 
 
 def _adherence(closed: ClosedWeeks, *spans: BlockSpan) -> float | None:
