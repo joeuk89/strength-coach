@@ -75,7 +75,9 @@ def test_a_timed_exposure_shows_the_seconds_of_each_set() -> None:
 
 def test_a_distance_exposure_shows_the_metres_of_each_set() -> None:
     conn = a_library()
-    logged(conn, "h-1", "2026-11-14", (WALK, None, None, None, 20.0), (WALK, None, None, None, 15.5))
+    logged(
+        conn, "h-1", "2026-11-14", (WALK, None, None, None, 20.0), (WALK, None, None, None, 15.5)
+    )
 
     row = row_of(conn, "sled_push")
 
