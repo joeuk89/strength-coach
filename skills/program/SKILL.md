@@ -41,8 +41,7 @@ show. One message; follow up only for a gap that blocks the design.
   prose in the cues, a longer hold is its own rung. A timed line meant to progress goes on an
   `exercise_ladder` with duration rungs; a loaded carry meant to progress goes on `timed_load`,
   on a custom `weight_duration` exercise with a `start_load` (a built-in carry logs distance).
-  A stance gets its own exercise only when the athlete wants it as its own history. A
-  load-bearing rung after the first carries `start_load`.
+  A stance gets its own exercise only when the athlete wants it as its own history.
   Never a whole ladder in one rung's `cues`. The line opens on rung 1, and the rung it stands on
   is a `ladder_rung` Decision, never an edit to the version. Answer `ladder_top` at a block
   boundary with an `amend` giving the line a new scheme.
