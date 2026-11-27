@@ -29,7 +29,7 @@ from support.instances import an_instance
 from support.kit_fixtures import kit_files
 from support.ledger import a_store, a_weigh_in
 from support.plan_drafts import a_plan_draft
-from support.plans import a_frozen_prescription, a_squat_program, an_approved_plan
+from support.plans import a_frozen_prescription, a_squat_program, an_approved_plan, squat_logged
 from support.program_drafts import a_draft, a_line, a_session, toml
 from support.programs import a_config
 from support.pushes import a_pushed_week, push
@@ -181,6 +181,30 @@ def run_spike(_: Path, __: pytest.MonkeyPatch) -> Standing:
     an_activity(conn, "2026-11-05", distance_km=10)
     an_activity(conn, "2026-11-29", distance_km=12)
     return Standing(status_codes(conn), the_week_closed(conn))
+
+
+def session_near_empty(_: Path, __: pytest.MonkeyPatch) -> Standing:
+    """One squat set of the four `lower` prescribes on 23 Nov; the athlete says it did not
+    count."""
+    conn = a_squat_program()
+    plan_id = an_approved_plan(conn, "2026-11-23")
+    a_frozen_prescription(
+        conn,
+        plan_id,
+        "lower",
+        "2026-11-23",
+        "bb_back_squat",
+        set_groups=[{"type": "working", "count": 4, "range": [6, 8], "rpe": 8}],
+        change="held",
+    )
+    squat_logged(conn, "h-1", "2026-11-23", (120, 1, 10.0))
+    raised = status_codes(conn)
+    recorded(
+        conn,
+        '[[annotation]]\nkind = "miss_tag"\ntarget = "planned_session:2026-11-23/lower"\n'
+        'because = "fatigue"\n',
+    )
+    return Standing(raised, status_codes(conn))
 
 
 def a_new_version(conn: Connection, *lines: dict[str, object]) -> None:
@@ -345,6 +369,7 @@ SCENARIOS: dict[str, Scenario] = {
     "training_max_unused": training_max_unused,
     "activity_cap_exceeded": activity_cap_exceeded,
     "run_spike": run_spike,
+    "session_near_empty": session_near_empty,
     "cadence_slow": cadence_slow,
     "cadence_fast": cadence_fast,
     "plan_behind_program": plan_behind_program,

@@ -491,6 +491,7 @@ OUTSIDE_WARNINGS = (
         ("distance", "longest_30_days", "ratio"),
         ("rn:running-load.1", "rn:running-load.4"),
     ),
+    outside_warning("session_near_empty", ("session",), ("date", "sets_logged", "sets_prescribed")),
     outside_warning("training_max_unused", ("exercise",), ("scheme", "decision_id")),
     outside_warning("exercise_unmapped", ("workout",), ("hevy_template_id", "title")),
     outside_warning("plan_behind_program", ("week",), ("plan_id", "approved_under", "version_id")),

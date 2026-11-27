@@ -153,6 +153,9 @@ def test_the_core_sessions_row_reads_against_minutes_and_rpe_over_both_workouts(
         "workouts": ["h-1", "h-2"],
         "minutes": 65,
         "session_rpe": 8.4,
+        "sets_logged": 7,
+        "sets_prescribed": 7,
+        "gate_passed": True,
         "against": {"reps_missed": 3, "effort_off": 0, "rpe_missing": 0},
     }
 

@@ -111,13 +111,13 @@ class SessionRead:
         outcome = self.outcome
         if outcome.cancelled:
             return "cancelled"
-        if outcome.workouts:
+        if outcome.workouts and outcome.trained:
             return "matched"
         if outcome.trained:
             return "trained_unlogged"
         if outcome.rested:
             return "status_span"
-        return "missed" if self.closes else "to_come"
+        return "missed" if self.closes or outcome.miss_tagged else "to_come"
 
     @property
     def minutes(self) -> int | None:
@@ -126,7 +126,10 @@ class SessionRead:
 
     @property
     def session_rpe(self) -> float | None:
-        """The mean working-set RPE over every workout; a hand-entered workout carries its own."""
+        """The mean working-set RPE over every workout; a hand-entered workout carries its own.
+        A near-empty session has none: a single test set is no session's effort."""
+        if self.outcome.near_empty:
+            return None
         workouts = self.outcome.workouts
         rated = [
             s.rpe for w in workouts for e in w.exposures for s in e.working if s.rpe is not None
@@ -145,9 +148,9 @@ def sessions(reads: Sequence[SessionRead]) -> CardField | None:
     asks: list[Ask] = []
     for read in core:
         rows.append(_session_row(read))
-        if read.state == "missed":
+        if read.state == "missed" and not read.outcome.miss_tagged:
             asks.append(Ask("miss_tag", read.ref))
-        if read.state == "matched" and read.session_rpe is None:
+        if read.state == "matched" and read.session_rpe is None and not read.outcome.near_empty:
             asks.append(Ask("session_rpe", read.ref))
     done = sum(1 for r in optional if r.outcome.trained)
     return CardField(
@@ -169,6 +172,11 @@ def _session_row(read: SessionRead) -> Facts:
             "minutes": read.minutes,
             "session_rpe": read.session_rpe,
         }
+    row |= {
+        "sets_logged": read.outcome.sets_logged,
+        "sets_prescribed": read.outcome.sets_prescribed,
+        "gate_passed": read.outcome.passed,
+    }
     against = read.outcome.against
     if against is not None:
         row["against"] = {

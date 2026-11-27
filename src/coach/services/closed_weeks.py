@@ -184,6 +184,7 @@ class WeekLog:
         self.claims = _claims(live, self.workouts, sessions)
         self.trained_unlogged = _planned_refs(live, "trained_unlogged")
         self.cancelled = _planned_refs(live, "cancelled")
+        self.miss_tagged = _planned_refs(live, "miss_tag")
         self.spans = status_spans(conn)
         self.routines = routine_map.mapped(conn)
         self.rehab = niggles.rehab_histories(conn)
@@ -273,6 +274,7 @@ class WeekLog:
             claims=self.claims,
             trained_unlogged=self.trained_unlogged,
             cancelled=self.cancelled,
+            miss_tagged=self.miss_tagged,
             spans=self.spans,
             carried=frozenset(o.kind for o in plan.overrides if o.kind in WEEK_OVERRIDES),
             returned=is_return_week(monday, self.lifting_dates),
