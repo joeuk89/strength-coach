@@ -75,7 +75,6 @@ class GoalDraft:
 
 
 def goal_diff(previous: Goal | None, new: Goal) -> dict[str, object] | None:
-    """`why` shows only as changed: both texts in full could pass the envelope's budget."""
     if previous is None:
         return None
     diff: dict[str, object] = {}
@@ -91,7 +90,7 @@ def goal_diff(previous: Goal | None, new: Goal) -> dict[str, object] | None:
     if added or removed:
         diff["milestones"] = {"added": added, "removed": removed}
     if previous.why != new.why:
-        diff["why"] = True
+        diff["why"] = {"from": previous.why, "to": new.why}
     return diff
 
 

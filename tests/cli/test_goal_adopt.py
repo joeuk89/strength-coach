@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from support.cli import Run, run_coach
 from support.clock import FixedClock
-from support.goals import STRENGTH, WORKED, opening, with_phase
+from support.goals import STRENGTH, WORKED, WORKED_WHY, opening, with_phase
 from support.instances import an_instance
 
 from coach.cli import app
@@ -65,7 +65,7 @@ def test_a_second_goal_supersedes_the_first_and_the_envelope_carries_the_diff(
     result = run.envelope["result"]
     assert (result["goal_id"], result["superseded"]) == ("g-0002", "g-0001")
     assert result["diff"]["kind"] == {"from": "hypertrophy", "to": "strength"}
-    assert result["diff"]["why"] is True
+    assert result["diff"]["why"] == {"from": WORKED_WHY, "to": "a bigger bench"}
     assert run_coach("status").envelope["result"]["goal"]["id"] == "g-0002"
 
 

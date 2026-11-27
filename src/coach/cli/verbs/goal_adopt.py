@@ -64,7 +64,7 @@ DECLARATION = Declaration(
                 "type": ["object", "null"],
                 "description": (
                     "what changed from the superseded Goal, null for a first Goal: kind and "
-                    "priority_lifts as {from, to}, milestones as {added, removed}, why as true"
+                    "priority_lifts and why as {from, to}, milestones as {added, removed}"
                 ),
             },
             **DRY_RUN_OUTPUT,
