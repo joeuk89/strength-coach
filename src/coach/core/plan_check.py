@@ -8,6 +8,7 @@ from coach.core.flag import Acknowledgement, Flag, Scope, leave, raise_flag
 from coach.core.plan_draft import PlanDraft
 from coach.core.planned_week import week_monday
 from coach.core.program.checks import TEMPLATE_COLUMNS
+from coach.core.routine_projection import in_routine
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,8 @@ def _missing_templates(
     for prescribed in draft.sessions:
         planned = prescribed.session
         for line in prescribed.lines:
+            if not in_routine(line.groups):
+                continue
             facts = templates.get(line.exercise_id)
             if facts is None or not facts.missing:
                 continue

@@ -32,6 +32,16 @@ class FrozenLine:
     rung: int | None = None
 
 
+def in_routine(set_groups: Sequence[object]) -> bool:
+    """Hevy drops an exercise with no sets, so a line frozen with none, such as one an `avoid`
+    constraint drops, is left out of its routine."""
+    return bool(set_groups)
+
+
+def row_in_routine(row: Mapping[str, object]) -> bool:
+    return in_routine(cast(Sequence[object], row["set_groups"]))
+
+
 def authored_exercise(exercise_id: str, steps: Sequence[Mapping[str, object]]) -> str:
     """The exercise the version authored, before any swap."""
     for step in steps:

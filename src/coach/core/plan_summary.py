@@ -12,7 +12,7 @@ from coach.core.flag import Flag
 from coach.core.frozen_prescription import frozen_groups
 from coach.core.plan_check import CheckedPlan
 from coach.core.planned_week import RotationPosition
-from coach.core.prescription import PlanOverride
+from coach.core.prescription import LinePrescription, PlanOverride
 from coach.core.routine_projection import RungKey, RungLabels, authored_exercise, week_labels
 
 type Json = Mapping[str, object]
@@ -21,10 +21,13 @@ type SessionRungLabels = Mapping[str, Mapping[RungKey, RungLabels]]
 
 @dataclass(frozen=True)
 class SummaryLine:
+    """`dropped_by` is the cause of the niggle step that dropped the line, if one did."""
+
     exercise_id: str
     set_groups: Sequence[Json]
     change: str
     rung_labels: RungLabels | None = None
+    dropped_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -60,18 +63,7 @@ def fresh_summary(
                 prescribed.session.date,
                 prescribed.session.location,
                 tuple(
-                    SummaryLine(
-                        line.exercise_id,
-                        frozen_groups(line.groups, units),
-                        line.change,
-                        _labels(
-                            rung_labels,
-                            prescribed.session.session_id,
-                            line.exercise_id,
-                            [step.to_json() for step in line.steps],
-                            line.rung,
-                        ),
-                    )
+                    _fresh_line(line, prescribed.session.session_id, units, rung_labels)
                     for line in prescribed.lines
                 ),
             )
@@ -79,6 +71,19 @@ def fresh_summary(
         ),
         overrides=draft.overrides,
         flags=checked.flags,
+    )
+
+
+def _fresh_line(
+    line: LinePrescription, session_id: str, units: Units, rung_labels: SessionRungLabels
+) -> SummaryLine:
+    steps = [step.to_json() for step in line.steps]
+    return SummaryLine(
+        line.exercise_id,
+        frozen_groups(line.groups, units),
+        line.change,
+        _labels(rung_labels, session_id, line.exercise_id, steps, line.rung),
+        _dropped_by(line.change, steps),
     )
 
 
@@ -126,6 +131,7 @@ def frozen_summary(
 
 def _line(row: Json, rung_labels: SessionRungLabels) -> SummaryLine:
     exercise_id = str(row["exercise_id"])
+    steps = cast(list[Json], row["steps"])
     return SummaryLine(
         exercise_id,
         cast(list[Json], row["set_groups"]),
@@ -134,10 +140,17 @@ def _line(row: Json, rung_labels: SessionRungLabels) -> SummaryLine:
             rung_labels,
             str(row["session_id"]),
             exercise_id,
-            cast(list[Json], row["steps"]),
+            steps,
             cast(int | None, row["rung"]),
         ),
+        _dropped_by(str(row["change"]), steps),
     )
+
+
+def _dropped_by(change: str, steps: Sequence[Json]) -> str | None:
+    if change != "dropped":
+        return None
+    return next((str(s["cause"]) for s in steps if s.get("step") == "niggle"), None)
 
 
 def _labels(

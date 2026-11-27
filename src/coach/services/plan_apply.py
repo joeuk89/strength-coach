@@ -28,6 +28,7 @@ from coach.core.plan_input import PlanInput, parse_plan_input
 from coach.core.plan_summary import PlanSummary, fresh_summary, frozen_summary
 from coach.core.prescription import PlanOverride
 from coach.core.program.checks import TEMPLATE_COLUMNS
+from coach.core.routine_projection import row_in_routine
 from coach.core.write_plan import (
     moved_routines,
     override_params,
@@ -198,7 +199,7 @@ def _frozen_actions(
     now. Every session the plan projects stays in force, so a resume never retires one."""
     facts = session_facts(conn, approved)
     projected = frozen_sessions(
-        [(str(r["session_id"]), str(r["exercise_id"])) for r in rows],
+        [(str(r["session_id"]), str(r["exercise_id"])) for r in rows if row_in_routine(r)],
         standing={s for s, f in facts.items() if f.standing},
     )
     return hevy_actions(

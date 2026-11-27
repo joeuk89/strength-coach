@@ -9,6 +9,7 @@ from typing import Literal
 from coach.core.mirror import ENGINE_FOLDER_TITLES, FolderRole
 from coach.core.plan_check import TemplateFacts
 from coach.core.prescription import PlannedSession, SessionPrescription
+from coach.core.routine_projection import in_routine
 
 type MapStatus = Literal["active", "retired", "missing", "unverified"]
 
@@ -135,17 +136,18 @@ def spare_routines(routine_map: Sequence[MappedRoutine]) -> tuple[str, ...]:
 
 
 def projected_sessions(sessions: Sequence[SessionPrescription]) -> tuple[ProjectedSession, ...]:
-    """A push projects only the week's planned sessions that carry a line, one routine per
-    session however many days it is planned on."""
+    """A push projects only the week's planned sessions that carry a line in the routine, one
+    routine per session however many days it is planned on."""
     found: dict[str, ProjectedSession] = {}
     for prescribed in sessions:
-        if not prescribed.lines:
+        lines = [line for line in prescribed.lines if in_routine(line.groups)]
+        if not lines:
             continue
         session = prescribed.session
         known = found.get(session.session_id)
         exercises = (
             *(known.exercises if known else ()),
-            *(line.exercise_id for line in prescribed.lines),
+            *(line.exercise_id for line in lines),
         )
         found[session.session_id] = ProjectedSession(
             session.session_id, _standing(session), tuple(dict.fromkeys(exercises))

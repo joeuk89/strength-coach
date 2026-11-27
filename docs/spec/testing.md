@@ -75,7 +75,7 @@ templates and workouts in memory. It satisfies `HevyClient` and nothing more: th
 allow-listed writes (ADR 0011), the GETs the protocol declares (workout events and pages,
 routines, folders, exercise templates, body measurements) and `open_audit()`; it has no method
 for any other endpoint, so a service that wanted one fails by construction. Like Hevy, it drops
-routine-level notes on PUT. A test can tell it to move a routine's `updated_at`, fail the next
+routine-level notes on PUT and an exercise with no sets on every routine write. A test can tell it to move a routine's `updated_at`, fail the next
 GET, or return a read-back that differs from the PUT. It keeps the audit lines the real client
 would write in a list the test reads. It has no 429 fault: the retry lives inside
 `hevy/client.py`, below the protocol, and is tested there.

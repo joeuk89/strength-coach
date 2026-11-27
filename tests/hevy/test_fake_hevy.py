@@ -134,6 +134,26 @@ def test_a_routine_post_keeps_its_note_and_gets_a_new_id() -> None:
     assert {r.id for r in fake.routines()} == {first.id, second.id, ROUTINE_ID}
 
 
+def with_an_exercise_of_no_sets() -> dict[str, Any]:
+    routine = dict(PUT_BODY["routine"])
+    routine["exercises"] = [
+        {"exercise_template_id": "D0000002", "notes": "Target: no working set", "sets": []},
+        *routine["exercises"],
+    ]
+    return {"routine": routine}
+
+
+def test_a_routine_write_drops_an_exercise_with_no_sets_as_hevy_does() -> None:
+    fake = a_fake()
+
+    put = fake.update_routine(ROUTINE_ID, with_an_exercise_of_no_sets(), CONTEXT)
+    posted = fake.create_routine(with_an_exercise_of_no_sets(), CONTEXT)
+
+    assert [e.hevy_template_id for e in put.exercises] == ["F0000001"]
+    assert [e.hevy_template_id for e in posted.exercises] == ["F0000001"]
+    assert [e.index for e in fake.routine(ROUTINE_ID).exercises] == [0]
+
+
 def test_a_folder_and_a_template_post_add_to_what_the_fake_lists() -> None:
     fake = a_fake()
 
