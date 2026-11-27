@@ -37,7 +37,8 @@ class FakeHevy:
     """The in-process `HevyClient` every service test uses (testing.md, "The fake Hevy").
 
     It holds Hevy-shaped payloads and answers through the real parsers, so it returns the values
-    the real client would. Like Hevy, a PUT drops the routine-level note.
+    the real client would. Like Hevy, a PUT drops the routine-level note, and every write drops
+    an exercise with no sets.
     """
 
     def __init__(
@@ -214,7 +215,7 @@ class FakeHevy:
                     "superset_id": exercise.get("superset_id"),
                     "sets": [{"index": n, **s} for n, s in enumerate(exercise.get("sets") or [])],
                 }
-                for index, exercise in enumerate(sent.get("exercises") or [])
+                for index, exercise in enumerate(_with_sets(sent.get("exercises") or []))
             ],
         }
 
@@ -232,6 +233,10 @@ class FakeHevy:
 
 def _routine_body(body: Payload) -> Json:
     return copy.deepcopy(cast(Json, body["routine"]))
+
+
+def _with_sets(exercises: list[Json]) -> list[Json]:
+    return [e for e in exercises if e.get("sets")]
 
 
 def _event_moment(event: Json) -> datetime.datetime:
