@@ -326,6 +326,11 @@ PLAN_WARNINGS = (
         ("rn:autoregulation.6",),
     ),
     acknowledgeable_warning(
+        "pin_load_capped",
+        ("line",),
+        ("load", "prescribed", "ceiling_kind", "rpe_cap", "ref", "outcome"),
+    ),
+    acknowledgeable_warning(
         "unexplained_drift", ("line",), ("last_prescription", "this_prescription", "delta")
     ),
     acknowledgeable_warning(
