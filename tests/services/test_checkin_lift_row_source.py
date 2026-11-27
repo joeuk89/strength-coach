@@ -21,11 +21,17 @@ def squat_row(conn: Connection) -> Mapping[str, object]:
     return next(r for r in rows if r["exercise"] == "bb_back_squat")
 
 
-def a_heavy_session_then_a_light_one() -> Connection:
-    """`lower` on Monday at 176 lb for 5 at RPE 8; an unplanned workout on Thursday at 110 lb."""
+def a_heavy_session() -> Connection:
+    """`lower` on Monday at 176 lb for 5 at RPE 8."""
     conn = a_squat_program()
     a_planned_squat_week(conn, monday(0))
     squat_logged(conn, "h-1", monday(0), *[(176, 5, 8)] * 4)
+    return conn
+
+
+def a_heavy_session_then_a_light_one() -> Connection:
+    """`a_heavy_session`, then an unplanned workout on Thursday at 110 lb."""
+    conn = a_heavy_session()
     squat_logged(conn, "h-2", THURSDAY, *[(110, 5, 6)] * 4)
     return conn
 
@@ -49,11 +55,7 @@ def test_an_e1rm_from_the_older_heavier_exposure_names_it_beside_the_newer_top_s
 
 
 def test_one_exposure_whose_top_set_gives_the_e1rm_is_its_source() -> None:
-    conn = a_squat_program()
-    a_planned_squat_week(conn, monday(0))
-    squat_logged(conn, "h-1", monday(0), *[(176, 5, 8)] * 4)
-
-    row = squat_row(conn)
+    row = squat_row(a_heavy_session())
 
     top = cast(Mapping[str, object], row["top_set"])
     assert row["e1rm_from"] == {
@@ -104,11 +106,7 @@ def test_the_page_names_the_e1rm_source_where_it_is_not_the_top_sets_exposure() 
 
 
 def test_the_page_leaves_the_source_out_where_the_top_set_gave_the_e1rm() -> None:
-    conn = a_squat_program()
-    a_planned_squat_week(conn, monday(0))
-    squat_logged(conn, "h-1", monday(0), *[(176, 5, 8)] * 4)
-
-    section = lifts_section(conn)
+    section = lifts_section(a_heavy_session())
 
     assert "Back Squat" in section
     assert "from" not in section
