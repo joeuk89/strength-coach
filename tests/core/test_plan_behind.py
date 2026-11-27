@@ -3,6 +3,7 @@ import datetime
 from coach.core.plan_behind import ApprovedPlan, plan_behind_program
 
 MONDAY = datetime.date(2026, 11, 2)
+NEXT_MONDAY = datetime.date(2026, 11, 9)
 PLAN = ApprovedPlan("wp-2026-11-02", MONDAY, approved_under="pv-1")
 
 
@@ -45,3 +46,18 @@ def test_the_params_hash_moves_only_with_the_plan_or_the_version() -> None:
     assert first.params_hash == again.params_hash
     assert newer.params_hash != first.params_hash
     assert other_plan.params_hash != first.params_hash
+
+
+def test_next_weeks_plan_approved_under_the_version_in_force_clears_this_weeks_warning() -> None:
+    next_week = ApprovedPlan("wp-2026-11-09", NEXT_MONDAY, approved_under="pv-2")
+
+    assert plan_behind_program(PLAN, "pv-2", next_week=next_week) == ()
+
+
+def test_next_weeks_plan_approved_under_an_older_version_leaves_the_warning() -> None:
+    next_week = ApprovedPlan("wp-2026-11-09", NEXT_MONDAY, approved_under="pv-1")
+
+    (flag,) = plan_behind_program(PLAN, "pv-2", next_week=next_week)
+
+    assert flag.key == "plan_behind_program@week:2026-11-02"
+    assert flag.params["plan_id"] == "wp-2026-11-02"

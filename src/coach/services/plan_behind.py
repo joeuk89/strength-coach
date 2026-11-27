@@ -15,12 +15,19 @@ def plan_behind(
     """`version_id` names the version in force, by default the latest; an adopt's dry run passes
     the one it would record."""
     monday = week_monday(today)
-    row = week_plans.in_force(conn, monday.isoformat())
-    if row is None:
+    plan = _approved(conn, monday)
+    if plan is None:
         return ()
     if version_id is None:
         latest = programs.latest(conn)
         version_id = latest.id if latest else None
+    next_week = _approved(conn, monday + datetime.timedelta(days=7))
+    return plan_behind_program(plan, version_id, next_week=next_week)
+
+
+def _approved(conn: Connection, monday: datetime.date) -> ApprovedPlan | None:
+    row = week_plans.in_force(conn, monday.isoformat())
+    if row is None:
+        return None
     under = programs.in_force_at(conn, str(row["approved_at"]))
-    plan = ApprovedPlan(str(row["id"]), monday, under.id if under else None)
-    return plan_behind_program(plan, version_id)
+    return ApprovedPlan(str(row["id"]), monday, under.id if under else None)

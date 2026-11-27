@@ -230,7 +230,7 @@ def test_status_shows_the_plan_in_force_this_week() -> None:
     result = status_of(conn, hevy_on=False)
 
     assert result.plan == PlanInForce(
-        "wp-2026-10-26", "2026-10-26", "2026-10-25T18:00:00+00:00", "sha256:w"
+        "wp-2026-10-26", "2026-10-26", "2026-10-25T18:00:00+00:00", "sha256:w", "wp-2026-10-26"
     )
     assert result.rotation == WeekPosition(
         datetime.date(2026, 10, 26), RotationPosition("A", "plan_in_force")
