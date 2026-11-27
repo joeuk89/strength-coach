@@ -48,11 +48,7 @@ def _at_the_top(draft: PlanDraft) -> tuple[Flag, ...]:
         for prescribed in draft.sessions
         for line in prescribed.lines
     }
-    beside = (
-        f
-        for f in draft.beside_lines
-        if f.scope.kind != "line" or (f.scope.session_id, f.scope.exercise_id) not in lines
-    )
+    beside = (f for f in draft.beside_lines if _line_of(f) not in lines)
     return (*draft.week_flags, *draft.conflicts, *draft.week_checks, *beside)
 
 
@@ -97,12 +93,12 @@ def _line(
 
 
 def _about(flags: tuple[Flag, ...], session_id: str, exercise_id: str) -> tuple[Flag, ...]:
-    return tuple(
-        f
-        for f in flags
-        if f.scope.kind == "line"
-        and (f.scope.session_id, f.scope.exercise_id) == (session_id, exercise_id)
-    )
+    return tuple(f for f in flags if _line_of(f) == (session_id, exercise_id))
+
+
+def _line_of(flag: Flag) -> tuple[str | None, str | None] | None:
+    scope = flag.scope
+    return (scope.session_id, scope.exercise_id) if scope.kind == "line" else None
 
 
 def _group(group: PrescribedGroup, units: Units) -> Table:

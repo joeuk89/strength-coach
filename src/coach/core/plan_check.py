@@ -42,10 +42,9 @@ class CheckedPlan:
 
 
 def check_plan(draft: PlanDraft, *, acknowledgements: Sequence[Acknowledgement]) -> CheckedPlan:
-    raised = draft.flags
     # A daily session's line repeats on each day under one key; a key is one flag.
     unique: dict[str, Flag] = {}
-    for flag in raised:
+    for flag in draft.flags:
         unique.setdefault(flag.key, flag)
     left = [leave(flag, acknowledgements) for flag in unique.values()]
     ordered = sorted(left, key=lambda f: f.severity != "violation")
