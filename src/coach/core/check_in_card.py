@@ -272,9 +272,19 @@ def dose(closing: Sequence[ClosedWeek], weeks: Sequence[ClosedWeek]) -> CardFiel
 
 
 @dataclass(frozen=True)
+class ExposureSource:
+    """The exposure a lift row's figure was read from, which may lie before the window."""
+
+    exposure: str
+    date: datetime.date
+    session: str | None
+
+
+@dataclass(frozen=True)
 class LiftRead:
     """A lift trained in the window: its last top set and its e1RM before and after the window,
-    in athlete units. A timed lift adds the seconds of each working set of that exposure and
+    in athlete units, with the exposure each was read from and how many exposures of the lift
+    the window holds. A timed lift adds the seconds of each working set of that exposure and
     the seconds its line prescribed."""
 
     exercise_id: str
@@ -285,6 +295,9 @@ class LiftRead:
     e1rm_before: float | None = None
     seconds: tuple[int | None, ...] = ()
     prescribed_seconds: int | None = None
+    top_from: ExposureSource | None = None
+    e1rm_from: ExposureSource | None = None
+    exposures: int = 1
 
     @property
     def timed(self) -> bool:
@@ -350,9 +363,16 @@ def _lift_row(read: LiftRead, under_authored: Sequence[Facts]) -> Facts:
     row: dict[str, object] = {
         "exercise": read.exercise_id,
         "priority": read.priority,
-        "top_set": {"load": read.top_set[0], "reps": read.top_set[1], "rpe": read.top_set[2]},
+        "top_set": {
+            "load": read.top_set[0],
+            "reps": read.top_set[1],
+            "rpe": read.top_set[2],
+            **_where(read.top_from),
+        },
         "e1rm": read.e1rm,
         "e1rm_before": read.e1rm_before,
+        "exposures": read.exposures,
+        "e1rm_from": None if read.e1rm_from is None else _source(read.e1rm_from),
     }
     if read.timed:
         row["seconds"] = list(read.seconds)
@@ -360,6 +380,16 @@ def _lift_row(read: LiftRead, under_authored: Sequence[Facts]) -> Facts:
     if under_authored:
         row["under_authored_rpe"] = list(under_authored)
     return row
+
+
+def _source(source: ExposureSource) -> Facts:
+    return {"exposure": source.exposure, **_where(source)}
+
+
+def _where(source: ExposureSource | None) -> Facts:
+    if source is None:
+        return {}
+    return {"date": source.date.isoformat(), "session": source.session}
 
 
 def ladders(reads: Sequence[LadderRead]) -> CardField | None:
