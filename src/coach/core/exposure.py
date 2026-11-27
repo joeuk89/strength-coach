@@ -34,6 +34,7 @@ class ExposureSet:
     reps: int | None
     rpe: float | None
     duration_s: int | None = None
+    distance_m: float | None = None
 
 
 @dataclass(frozen=True)
@@ -185,6 +186,7 @@ class _Corrected:
                 s.reps,
                 s.rpe,
                 s.duration_s,
+                s.distance_m,
             )
             for s in self.sets
             if s.set_type in EXPOSURE_SET_TYPES

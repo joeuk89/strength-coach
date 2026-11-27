@@ -132,15 +132,22 @@ def _exposure(exposure: Exposure) -> Row:
         key=lambda p: p.load.amount,
         default=None,
     )
-    return {
+    working = exposure.working
+    row: Row = {
         "exposure": exposure.ref,
         "exercise": exposure.exercise_id,
         "date": exposure.date.isoformat(),
         "session": exposure.session_id,
         "load": None if top is None else top.amount,
         "load_mode": None if top is None else top.mode,
-        "reps": [s.reps for s in exposure.working],
-        "rpe": [s.rpe for s in exposure.working],
+        "reps": [s.reps for s in working],
+        "rpe": [s.rpe for s in working],
+    }
+    if any(s.duration_s is not None for s in working):
+        row["duration_s"] = [s.duration_s for s in working]
+    if any(s.distance_m is not None for s in working):
+        row["distance_m"] = [s.distance_m for s in working]
+    return row | {
         "e1rm": None if best is None else best.load.amount,
         "e1rm_lower_bound": None if best is None else best.lower_bound,
         "annotations": list(exposure.annotations),
