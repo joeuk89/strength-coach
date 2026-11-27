@@ -7,7 +7,9 @@ from support.exposures import an_exposure
 from support.prescribe import a_line, a_request
 
 from coach.core.flag import Acknowledgement, Flag, FlagKey, Scope, raise_flag
+from coach.core.overrides import parse_plan_overrides
 from coach.core.plan_draft import AthleteNote, PlanDraft
+from coach.core.plan_input import parse_plan_input
 from coach.core.planned_week import RotationPosition
 from coach.core.prescribe import prescribe
 from coach.core.prescription import PlanOverride
@@ -173,3 +175,58 @@ def test_a_kept_acknowledgement_stands_in_place_of_the_stub_it_binds() -> None:
         },
         {"flag": NO_E1RM.key, "params_hash": NO_E1RM.params_hash, "because": "", "text": ""},
     ]
+
+
+OVERRIDES = """
+[[override]]
+kind = "light_week"
+load_cut_pct = 10
+because = "fatigue"
+text = "a lighter week"
+evidence = ["check_in:ci-0004"]
+
+[[override]]
+kind = "move_session"
+session = "lower"
+to = 2026-11-04
+because = "schedule"
+text = "moved to Wednesday"
+
+[[override]]
+kind = "swap_exercise"
+session = "lower"
+exercise = "bb_bench_press"
+to = "db_bench_press"
+start_load = 30
+load_mode = "per_hand_x2"
+because = "pain"
+text = "the shoulder prefers dumbbells"
+
+[[override]]
+kind = "pin_load"
+session = "lower"
+exercise = "bb_back_squat"
+load = 115
+because = "coach_judgement"
+text = "hold the squat"
+
+[[override]]
+kind = "restate_sets"
+session = "lower"
+exercise = "bb_deadlift"
+sets = [{ count = 1, type = "warm_up", reps = 5 }, { count = 3, reps = [6, 8], rpe = 8 }]
+because = "fatigue"
+text = "fewer sets"
+"""
+
+
+def test_the_overrides_and_acknowledgements_a_draft_carries_read_back_as_they_were() -> None:
+    overrides = parse_plan_overrides(tomllib.loads(OVERRIDES), file="plan.toml")
+    kept = Acknowledgement(FlagKey.parse(STALL.key), STALL.params_hash, "stall", "Hold.")
+    draft = a_flagged_draft(STALL, overrides=overrides, acknowledgements=(kept,), confirmed=True)
+
+    read = parse_plan_input(plan_draft(draft, units="lb").encode(), file="plan.toml")
+
+    assert read.overrides == overrides
+    assert read.acknowledgements == (kept,)
+    assert read.position == "A"
