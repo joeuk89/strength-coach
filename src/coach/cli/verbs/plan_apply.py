@@ -6,7 +6,6 @@ from coach.cli.declaration import (
     InstanceCall,
     Json,
     Outcome,
-    on_dry_run,
 )
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
@@ -15,7 +14,6 @@ from coach.cli.kit import read_kit_files
 from coach.cli.terminal import Terminal
 from coach.core.config import Units
 from coach.core.draft_kinds.plan import PLAN
-from coach.core.flag import Flag
 from coach.render.approval_prompt import approval_prompt
 from coach.services.plan_apply import DryRun, dry_run, expected, push_approved
 
@@ -88,12 +86,11 @@ def _prompt(found: DryRun, *, units: Units, full: bool) -> str:
 
 
 def dry_run_result(found: DryRun, *, units: Units, full: bool) -> Json:
-    """The dry run's result: the Write plan, its hash and the approval prompt. Every flag is
-    listed, never cut, because the agent approves against them. By default each flag carries
-    only what an acknowledgement needs, since the prompt already holds its text."""
+    """The dry run's result: the Write plan, its hash, every flag whole and the approval prompt,
+    which `full` lays out in full."""
     summary = found.summary
     prompt = _prompt(found, units=units, full=full)
-    flags = [flag.to_json() if full else _brief(flag) for flag in found.flags]
+    flags = [flag.to_json() for flag in found.flags]
     return {
         "week": summary.week.isoformat(),
         "supersedes": summary.supersedes,
@@ -108,16 +105,6 @@ def dry_run_result(found: DryRun, *, units: Units, full: bool) -> Json:
     }
 
 
-def _brief(flag: Flag) -> Json:
-    return {
-        "key": flag.key,
-        "code": flag.code,
-        "severity": flag.severity,
-        "params_hash": flag.params_hash,
-        "left": flag.left.to_json() if flag.left else None,
-    }
-
-
 DECLARATION = Declaration(
     name="plan apply",
     summary=(
@@ -129,7 +116,6 @@ DECLARATION = Declaration(
         "terminal it shows the approval prompt and asks [y/N] first; no writes nothing."
     ),
     writes="hevy",
-    over_budget=on_dry_run,
     draft=lambda: PLAN,
     arguments=(
         Argument("draft", "path of the TOML plan Draft", required=True),
@@ -171,10 +157,24 @@ DECLARATION = Declaration(
                         "key": {"type": "string"},
                         "code": {"type": "string"},
                         "severity": {"enum": ["violation", "warning"]},
+                        "scope": {"type": "object"},
+                        "params": {"type": "object"},
                         "params_hash": {"type": "string"},
+                        "rn": {"type": ["string", "null"]},
+                        "message": {"type": "string"},
                         "left": {"type": ["object", "null"]},
                     },
-                    "required": ["key", "code", "severity", "params_hash", "left"],
+                    "required": [
+                        "key",
+                        "code",
+                        "severity",
+                        "scope",
+                        "params",
+                        "params_hash",
+                        "rn",
+                        "message",
+                        "left",
+                    ],
                 },
             },
             "flag_count": {"type": "integer"},

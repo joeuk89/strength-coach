@@ -6,7 +6,6 @@ from coach.cli.declaration import (
     InstanceCall,
     Json,
     Outcome,
-    on_dry_run,
 )
 from coach.cli.drafts import read_draft
 from coach.cli.instance import open_instance_store
@@ -64,7 +63,6 @@ DECLARATION = Declaration(
     ),
     writes="store",
     pulls_first=True,
-    over_budget=on_dry_run,
     draft=lambda: PROGRAM,
     arguments=(
         Argument("draft", "path of the TOML program Draft", required=True),

@@ -6,7 +6,6 @@ from support.clock import FixedClock
 from support.fake_hevy import FakeHevy
 from support.fixture_instances import serving
 
-from coach.cli.envelope import BUDGET_BYTES
 from coach.cli.registry import declarations
 
 
@@ -80,12 +79,11 @@ def test_schema_of_one_verb_is_its_declaration_as_json_schema() -> None:
     assert declaration["examples"][0]["argv"] == ["coach", "status"]
 
 
-def test_schema_without_a_verb_gives_every_declaration_uncut_over_the_budget() -> None:
+def test_schema_without_a_verb_gives_every_declaration_whole() -> None:
     run = run_coach("schema")
 
     result = run.envelope["result"]
     assert run.code == 0
-    assert len(run.stdout.encode("utf-8")) > BUDGET_BYTES
     assert [row["name"] for row in result["rows"]] == [d.name for d in declarations()]
     assert result["rows"][0] == declarations()[0].describe()
     assert (result["count"], result["truncated"]) == (17, False)

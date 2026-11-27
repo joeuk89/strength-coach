@@ -116,7 +116,6 @@ DECLARATION = Declaration(
         "required": ["labels"],
     },
     run=InInstance(run),
-    over_budget=on_dry_run,
     draft=_draft_kind,
     examples=(
         Example(

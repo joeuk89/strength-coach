@@ -44,26 +44,31 @@ RECORD_KINDS = Registry(
 )
 
 
+# The rows a view over history that grows without end returns unless the agent asks for more.
+HISTORY_PAGE = 50
+
+
 @dataclass(frozen=True)
 class View:
     name: str
     params: tuple[str, ...]
+    page: int | None = None
 
     def describe(self) -> Row:
-        return {"name": self.name, "params": list(self.params)}
+        return {"name": self.name, "params": list(self.params), "page": self.page}
 
 
 # docs/spec/verbs.md, "Read views".
 VIEWS = Registry(
     "views",
     (
-        View("exposures", ("--exercise", "--since", "--last")),
-        View("readings", ("--kind", "--last")),
+        View("exposures", ("--exercise", "--since", "--last"), page=HISTORY_PAGE),
+        View("readings", ("--kind", "--last"), page=HISTORY_PAGE),
         View("flags", ("--code", "--severity", "--scope", "--summary", "--draft")),
         View("lines", ("--exercise", "--session", "--date", "--changed", "--draft")),
         View("routines", ()),
-        View("ledger", ("--kind", "--id", "--open")),
-        View("exercises", ("--match", "--pattern", "--muscle", "--last")),
+        View("ledger", ("--kind", "--id", "--open"), page=HISTORY_PAGE),
+        View("exercises", ("--match", "--pattern", "--muscle", "--last"), page=HISTORY_PAGE),
         View("against", ("--week", "--session", "--off", "--last")),
     ),
 )

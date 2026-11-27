@@ -72,4 +72,8 @@ def test_schema_declares_the_exercises_filters_and_the_registry_lists_the_view()
     assert declared["match"]["type"] == "string"
     assert declared["pattern"]["type"] == "array"
     assert declared["muscle"]["type"] == "array"
-    assert {"name": "exercises", "params": ["--match", "--pattern", "--muscle", "--last"]} in views
+    assert {
+        "name": "exercises",
+        "params": ["--match", "--pattern", "--muscle", "--last"],
+        "page": 50,
+    } in views
