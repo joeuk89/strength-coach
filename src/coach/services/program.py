@@ -58,10 +58,9 @@ class AdoptResult:
 
 @dataclass(frozen=True)
 class ShownLadder:
-    """An `exercise_ladder` line's key, its session and every rung, the standing one marked."""
+    """An `exercise_ladder` line and every rung, the standing one marked."""
 
-    session_id: str
-    exercise: str
+    line: LineRef
     rungs: tuple[RungShape, ...]
 
 
@@ -225,11 +224,8 @@ def show(conn: Connection, *, units: Units, zone: datetime.tzinfo) -> ShowResult
         sessions=tuple(programs.line_counts(conn, version.id)),
         ladders=tuple(
             ShownLadder(
-                session.id,
-                line.exercise,
-                rung_shapes(
-                    line, ladder, standing[LineRef(session.id, line.exercise)], naming=naming
-                ),
+                ref := LineRef(session.id, line.exercise),
+                rung_shapes(line, ladder, standing[ref], naming=naming),
             )
             for session in version.form.sessions
             for line in session.lines
