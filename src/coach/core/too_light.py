@@ -129,10 +129,8 @@ def _message(
             f"the e1RM from {source.date.isoformat()}{where} gives {model.amount:g} "
             "for the authored dose"
         )
-    said = "; ".join(parts)
-    if suggested is None:
-        return f"{said}: the line prescribes {prescribed.amount:g}"
-    return f"{said}: the line prescribes {prescribed.amount:g}, suggested {suggested.amount:g}"
+    tail = "" if suggested is None else f", suggested {suggested.amount:g}"
+    return f"{'; '.join(parts)}: the line prescribes {prescribed.amount:g}{tail}"
 
 
 def _amount(load: Load) -> float:

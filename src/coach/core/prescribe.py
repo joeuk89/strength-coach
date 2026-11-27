@@ -190,9 +190,8 @@ class _Derivation:
         schemes.stall(found.exposure)
         line = replace(line, sets=move.sets)
         moved = _first(move.proposal)
-        light = self._too_light(
-            authored, found.exposure, _racked(moved, rack, move.rounding), rack, read
-        )
+        racked = _racked(moved, rack, move.rounding)
+        light = self._too_light(authored, found.exposure, racked, rack, read)
         pinned = None if pin is None or moved is None else self._pin(moved, moved.mode, *pin)
         context = LineContext(
             self.request,
@@ -216,7 +215,7 @@ class _Derivation:
         if pin is not None:
             suggested = None if light is None else light.suggested
             self._check_increment(found.exposure, rack, before, bounded.load, suggested)
-        change = _change(line, before, bounded, move.change, _racked(moved, rack, move.rounding))
+        change = _change(line, before, bounded, move.change, racked)
         if move.e1rm_source is not None:
             change = f"{change} ({move.e1rm_source})"
         return self._bounded(line, found.derived_from, rack, bounded, change, read)
