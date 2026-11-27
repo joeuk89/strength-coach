@@ -14,21 +14,25 @@ PRECISION = 4
 
 @dataclass(frozen=True)
 class TopSet:
+    """`model` is the model's load for the top group before any rack."""
+
     load: Load
     cause: str
+    model: Load
 
 
 def top_set(e1rm: Load, line: Line, anchor_top: Load, rack: Rack | None) -> TopSet:
     top_group = line.working_groups()[0]
     assert isinstance(top_group.reps, int) and top_group.rpe is not None
     reps, rpe = top_group.reps, float(top_group.rpe)
+    model = model_load(e1rm, reps, rpe)
     if rack is None:
-        return TopSet(model_load(e1rm, reps, rpe), "e1rm")
-    model = load_for(e1rm, reps, rpe, rack)
+        return TopSet(model, "e1rm", model)
+    racked = load_for(e1rm, reps, rpe, rack)
     cap = next_row_up(rack, anchor_top).load
-    if model.amount > cap.amount:
-        return TopSet(cap, "one_row_cap")
-    return TopSet(model, "e1rm")
+    if racked.amount > cap.amount:
+        return TopSet(cap, "one_row_cap", model)
+    return TopSet(racked, "e1rm", model)
 
 
 def back_off_load(top: Load, line: Line, rack: Rack | None) -> Load:

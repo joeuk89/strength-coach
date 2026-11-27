@@ -211,6 +211,11 @@ class SchemeMoves:
         cause, source = top.cause, None
         if top.cause == "e1rm":
             cause, source = f"e1rm {found.exposure}", self._e1rm_source(found, e1rm_load)
+        else:
+            cause = (
+                f"{top.cause}, e1rm {e1rm_load.amount:g} from {found.exposure}, "
+                f"model {top.model.amount:g}"
+            )
         self.steps.append(Step("scheme", before.amount, top.load.amount, cause))
         return Move(top.load, "hold", self.given.sets, e1rm_source=source)
 
