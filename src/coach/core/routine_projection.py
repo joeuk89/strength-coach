@@ -119,7 +119,7 @@ def week_labels(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> Ru
     """A stepped-back week offers no climb, since the line returns to its standing rung next, and
     names its rung by index alone, since the band cut the dose the label would print."""
     to = stepped_back_to(steps)
-    return labels if to is None else RungLabels(own=to, next=None)
+    return labels if to is None else RungLabels(own=f"rung {to}", next=None)
 
 
 def rung_labels(lines: Sequence[Line], naming: RungNaming) -> dict[RungKey, RungLabels]:
@@ -371,7 +371,7 @@ def _notes(frozen: FrozenLine, line: Line | None, units: Units) -> list[str]:
 def _rung_notes(labels: RungLabels, steps: Sequence[Mapping[str, object]]) -> list[str]:
     to = stepped_back_to(steps)
     if to is not None:
-        return [f"This week: {to}"]
+        return [f"This week: rung {to}"]
     return [] if labels.next is None else [f"{NEXT_LINE_PREFIX}{labels.next}"]
 
 

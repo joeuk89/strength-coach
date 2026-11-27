@@ -13,7 +13,9 @@ from support.program_drafts import a_ladder_line, a_rung
 from support.programs import a_config
 
 from coach.cli.verbs.plan_apply import dry_run_result
+from coach.core import prescribe
 from coach.core.mirror import RoutineExercise
+from coach.core.prescription import Step
 from coach.core.routine_projection import routine_diff
 from coach.services.plan_apply import DryRun, apply, dry_run
 from coach.services.projections import projection, session_facts
@@ -191,3 +193,50 @@ def test_the_card_still_measures_from_the_standing_rung_in_a_stepped_back_week()
 
     assert row["rung"] == 3
     assert row["next_label"] == "rung 4 · 3×8 @8 · lower for 10 s"
+
+
+def no_drift_on(conn: Connection, hevy: FakeHevy) -> bool:
+    [routine] = hevy.routines()
+    plan = week_plans.by_id(conn, "wp-2026-11-02")
+    sent = projection(conn, plan, "lower", session_facts(conn, plan)["lower"], "lb")
+    return routine_diff(sent, routine, exercises.library(conn), "lb") == ()
+
+
+def test_a_step_back_worded_otherwise_still_names_its_rung_and_raises_no_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def reworded(standing: int, week: int, cause: str) -> Step:
+        return Step("cut", f"standing on {standing}", f"back to {week}", cause, rung=week)
+
+    monkeypatch.setattr(prescribe, "rung_step_back", reworded)
+    conn = standing_after_a_layoff(3, EIGHTEEN_DAYS_OFF)
+    hevy = FakeHevy(FixedClock())
+
+    pushed(conn, hevy, a_plan_draft(conn, hevy=True))
+    monkeypatch.undo()
+
+    assert str(the_dead_bug_on(hevy).notes).splitlines()[-1] == "This week: rung 2"
+    assert no_drift_on(conn, hevy)
+
+
+def test_a_step_back_frozen_before_it_stored_its_rung_raises_no_drift() -> None:
+    conn = standing_after_a_layoff(3, EIGHTEEN_DAYS_OFF)
+    hevy = FakeHevy(FixedClock())
+    pushed(conn, hevy, a_plan_draft(conn, hevy=True))
+
+    with conn:
+        conn.execute(
+            "UPDATE prescription SET steps = json_remove(steps, '$[0].rung') "
+            "WHERE exercise_id = 'dead_bug'"
+        )
+
+    [step] = [
+        s
+        for r in week_plans.prescriptions(conn, "wp-2026-11-02")
+        if r["exercise_id"] == "dead_bug"
+        for s in cast(list[dict[str, object]], r["steps"])
+        if s["step"] == "cut" and s["from"] == "rung 3"
+    ]
+    assert step == {"step": "cut", "from": "rung 3", "to": "rung 2", "cause": step["cause"]}
+    assert str(the_dead_bug_on(hevy).notes).splitlines()[-1] == "This week: rung 2"
+    assert no_drift_on(conn, hevy)

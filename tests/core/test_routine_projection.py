@@ -363,6 +363,21 @@ def test_a_stepped_back_rung_names_only_its_index_and_no_next_rung() -> None:
     ]
 
 
+def test_a_stepped_back_rung_reads_the_rung_the_step_stored_not_its_wording() -> None:
+    step = [
+        {
+            "step": "cut",
+            "from": "the third rung",
+            "to": "the first rung",
+            "cause": "return 43+, 52 days off",
+            "rung": 1,
+        }
+    ]
+    frozen = FrozenLine("pull_up_negative", TEMPO_GROUPS, step, rung=1)
+
+    assert the_ladder_note(frozen) == ["Cues: lower for 4 s", "This week: rung 1"]
+
+
 def test_a_step_back_frozen_naming_exercises_keeps_the_note_it_pushed() -> None:
     step = [
         {

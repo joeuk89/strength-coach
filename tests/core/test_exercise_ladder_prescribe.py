@@ -290,7 +290,7 @@ def test_a_return_band_of_22_to_42_days_prescribes_two_rungs_back_with_the_bands
 
     assert line.exercise_id == "negative_pull_up"
     assert [(g.count, g.reps, g.rpe_cap) for g in line.groups] == [(2, 5, 8)]
-    assert line.steps[0] == Step("cut", "rung 3", "rung 1", "return 22–42, 25 days off")
+    assert line.steps[0] == Step("cut", "rung 3", "rung 1", "return 22–42, 25 days off", rung=1)
 
 
 def test_after_the_return_week_the_line_stands_on_its_rung_again() -> None:
@@ -585,7 +585,7 @@ def test_a_return_band_steps_back_by_rungs_on_a_shared_exercise() -> None:
 
     assert line.exercise_id == "negative_pull_up"
     assert [(g.count, g.reps, g.rpe_cap) for g in line.groups] == [(2, 4, 8)]
-    assert line.steps[0] == Step("cut", "rung 3", "rung 1", "return 22–42, 25 days off")
+    assert line.steps[0] == Step("cut", "rung 3", "rung 1", "return 22–42, 25 days off", rung=1)
 
 
 def test_standing_on_a_later_shared_rung_prescribes_that_rungs_sets() -> None:
