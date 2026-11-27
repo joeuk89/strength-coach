@@ -111,7 +111,8 @@ reused, a folder is forever.
   `unverified`, so a re-run re-PUTs only unverified routines and those whose stored projection
   differs from live, and sends nothing when all match. A second POST never duplicates a routine.
 - Routine body rules and the note format carry from the parity checklist: `weight_kg` is the
-  load's Hevy kg only; `Target:`, `Focus:`, `Cues:` per exercise; the week line sits on the first
+  load's Hevy kg only; `Target:`, `Focus:`, `Cues:` per exercise, and a
+  ladder line's `Next:` naming the next rung; the week line sits on the first
   exercise because Hevy drops routine-level notes on PUT.
 
 ## Write audit
