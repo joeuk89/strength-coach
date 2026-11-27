@@ -16,7 +16,7 @@ type ParamType = Literal[
     "rungs",
     "criterion",
 ]
-type SetGroupShape = Literal["any", "one_working", "top_then_backoffs", "count_only"]
+type SetGroupShape = Literal["any", "one_working", "one_timed", "top_then_backoffs", "count_only"]
 type RpeOn = Literal["every_working", "top", "none"]
 
 
@@ -65,6 +65,7 @@ class Scheme:
     holds: Mapping[str, object] = field(default_factory=dict[str, object])
     reads_training_max: bool = False
     cadence_signals: tuple[CadenceSignal, ...] = ()
+    effort_asked: bool = False
 
     def param(self, name: str) -> Param | None:
         return next((p for p in self.params if p.name == name), None)
@@ -85,6 +86,8 @@ class Scheme:
         row["reads"] = self.reads
         if self.holds:
             row["holds"] = dict(self.holds)
+        if self.effort_asked:
+            row["effort_asked"] = True
         return row | {
             "reads_training_max": self.reads_training_max,
             "cadence_signals": list(self.cadence_signals),
@@ -126,6 +129,18 @@ SCHEMES = Registry(
             reads="the anchor's top load, nothing else",
             set_types=LINE_SET_TYPES,
             opening="the authored sets, start_load where load-bearing",
+        ),
+        Scheme(
+            "timed_load",
+            "line",
+            title="timed load",
+            reads="the anchor's load, each working set's seconds and the stored effort",
+            set_types=("working",),
+            set_groups="one_timed",
+            rpe_on="every_working",
+            opening="start_load, the authored sets",
+            # Its Hevy template records seconds and no RPE, so the check-in asks the effort.
+            effort_asked=True,
         ),
         Scheme(
             "assistance_ladder",

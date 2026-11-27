@@ -1,6 +1,7 @@
 """The hit test each scheme runs on its anchor (docs/spec/prescription.md, "The move, per
 scheme"). It reads the version's authored groups, never a past plan."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from coach.core.exposure import Exposure, ExposureSet
@@ -40,6 +41,8 @@ def judge(line: Line, anchor: Exposure, load: Load | None = None) -> Verdict:
         (group.reps, group.rpe) for group in line.working_groups() for _ in range(group.count)
     ]
     logged = anchor.working[: len(authored)]
+    if line.scheme.name == "timed_load":
+        return _timed_load(line, logged, load)
     # Fewer working sets logged than authored is not a hit and raises nothing.
     if len(logged) < len(authored) or any(s.reps is None for s in logged):
         return INCOMPLETE
@@ -63,6 +66,23 @@ def short(line: Line, anchor: Exposure) -> bool:
         logged.reps is not None and logged.reps < _top(reps)
         for reps, logged in zip(authored, anchor.working, strict=False)
     )
+
+
+def _timed_load(line: Line, logged: Sequence[ExposureSet], load: Load | None) -> Verdict:
+    """Every authored set held for its seconds at the anchor load, and the highest stored effort
+    at or under the target. No stored effort is not a hit: the template takes no RPE, so a set
+    with none is unread, not on target."""
+    authored = [group for group in line.working_groups() for _ in range(group.count)]
+    if len(logged) < len(authored):
+        return INCOMPLETE
+    held = all(
+        s.duration_s is not None and s.duration_s >= (group.duration_s or 0) and _at_load(s, load)
+        for s, group in zip(logged, authored, strict=True)
+    )
+    efforts = [s.rpe for s in logged if s.rpe is not None]
+    target = authored[0].rpe if authored else None
+    on_target = bool(efforts) and (target is None or max(efforts) <= target)
+    return Verdict(held and on_target)
 
 
 type Pair = tuple[tuple[Reps | None, Number | None], ExposureSet]

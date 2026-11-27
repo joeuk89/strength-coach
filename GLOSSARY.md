@@ -85,6 +85,14 @@ what it reads from history, how it moves the dose, when it counts a stall and wh
 deload. Declared once in the engine's registry; the form names it.
 _Avoid_: progression (alone), plugin, model
 
+**Timed load**:
+The scheme for a loaded set held for time, such as a carry: the authored sets, seconds and
+effort target. When every set is held for its seconds at an effort at or under the target,
+the load moves one rack row up. A short set, an effort over the target or no effort given
+holds the load. The effort is the athlete's answer at the check-in, since the log records the
+seconds but no effort.
+_Avoid_: loaded hold, carry scheme
+
 **Ladder**:
 The ordered rungs a line climbs when there is no load to add: assisted loads on one exercise,
 or a run of exercises and set shapes each harder than the last. Declared whole on the line; the
